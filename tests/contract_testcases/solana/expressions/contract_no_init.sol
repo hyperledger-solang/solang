@@ -5,14 +5,13 @@
 
         contract testing {
             function test(int x) public returns (int) {
-                other o;
                 do {
                     x--;
-                    o = new other();
+                    other.new();
                 }while(x > 0);
 
-                return o.a();
+                return other.a();
             }
         }
 // ---- Expect: diagnostics ----
-// error: 11:25-36: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external
+// error: 10:21-32: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external

@@ -72,6 +72,18 @@ impl RecurseData<'_> {
             },
         );
     }
+
+    fn add_program_id(&mut self, contract_name: &String) {
+        self.add_account(
+            format!("{}_programId", contract_name),
+            &SolanaAccount {
+                loc: Loc::Codegen,
+                is_signer: false,
+                is_writer: false,
+                generated: true,
+            },
+        )
+    }
 }
 
 /// Collect the accounts this contract needs
@@ -333,10 +345,21 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 // If the one passes the AccountMeta vector to the constructor call, there is no
                 // need to collect accounts for the IDL.
                 if let Some(constructor_no) = constructor_no {
-                    transfer_accounts(loc, *contract_no, *constructor_no, data, false);
+                    transfer_accounts(loc, *contract_no, *constructor_no, data);
+                } else {
+                    data.add_account(
+                        format!("{}_dataAccount", data.contracts[*contract_no].name),
+                        &SolanaAccount {
+                            loc: *loc,
+                            is_signer: false,
+                            is_writer: true,
+                            generated: true,
+                        },
+                    );
                 }
             }
 
+            data.add_program_id(&data.contracts[*contract_no].name);
             data.add_system_account();
         }
         Instr::ExternalCall {
@@ -387,8 +410,15 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
 
             if let Some(accounts) = accounts {
                 accounts.recurse(data, check_expression);
-            } else if let Some((contract_no, function_no)) = contract_function_no {
-                transfer_accounts(loc, *contract_no, *function_no, data, program_id_populated);
+            }
+
+            if let Some((contract_no, function_no)) = contract_function_no {
+                if !program_id_populated {
+                    data.add_program_id(&data.contracts[*contract_no].name);
+                }
+                if accounts.is_none() {
+                    transfer_accounts(loc, *contract_no, *function_no, data);
+                }
             }
         }
         Instr::EmitEvent {
@@ -464,7 +494,6 @@ fn transfer_accounts(
     contract_no: usize,
     function_no: usize,
     data: &mut RecurseData,
-    program_id_present: bool,
 ) {
     let accounts_to_add = data.functions[function_no].solana_accounts.borrow().clone();
 
@@ -513,21 +542,6 @@ fn transfer_accounts(
             }
         }
         data.add_account(name, &account);
-    }
-
-    if !program_id_present {
-        data.functions[data.ast_no]
-            .solana_accounts
-            .borrow_mut()
-            .insert(
-                format!("{}_programId", data.contracts[contract_no].name),
-                SolanaAccount {
-                    is_signer: false,
-                    is_writer: false,
-                    generated: true,
-                    loc: *loc,
-                },
-            );
     }
 
     let cfg_no = data.contracts[contract_no].all_functions[&function_no];

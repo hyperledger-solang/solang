@@ -4,4 +4,4 @@ abstract contract test {
             }
         }
 // ---- Expect: diagnostics ----
-// error: 3:17-30: function declared 'pure' but this expression reads from state
+// error: 3:24-30: function declared 'pure' but this expression reads from state

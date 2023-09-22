@@ -10,6 +10,7 @@ use super::expression::{ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::sema::ast::{RetrieveType, Tag, UserTypeDecl};
 use crate::sema::expression::resolve_expression::expression;
+use crate::sema::namespace::ResolveTypeContext;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -1082,7 +1083,7 @@ pub(super) fn resolve_namespace_call(
                         let ty = ns.resolve_type(
                             context.file_no,
                             context.contract_no,
-                            false,
+                            ResolveTypeContext::None,
                             &param.ty,
                             diagnostics,
                         )?;
@@ -1123,7 +1124,7 @@ pub(super) fn resolve_namespace_call(
                 let ty = ns.resolve_type(
                     context.file_no,
                     context.contract_no,
-                    false,
+                    ResolveTypeContext::None,
                     args[1].remove_parenthesis(),
                     diagnostics,
                 )?;

@@ -1,15 +1,15 @@
 contract C {
 	function f() public {
 		// Three different parse tree for callargs with new
-		D d = (new D{value: 1})();
-		D dd = (new D){value: 1}();
-		D ddd = new D{value: 1}();
+		(D.new{value: 1})();
+		(D.new){value: 1}();
+		D.new{value: 1}();
 	}
-	function g(D d) public {
+	function g() public {
 		// Three different parse tree for callargs
-		d.func{value: 1}();
-		(d.func){value: 1}();
-		(d.func{value: 1})();
+		D.func{value: 1}();
+		(D.func){value: 1}();
+		(D.func{value: 1})();
 	}
 }
 
@@ -20,8 +20,8 @@ contract D {
 }
 
 // ---- Expect: diagnostics ----
-// error: 4:9-28: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external
-// error: 4:16-24: Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer
+// error: 4:3-22: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external
+// error: 4:10-18: Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer
 // error: 10:10-18: Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer
 // error: 11:12-20: Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer
 // error: 12:11-19: Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer

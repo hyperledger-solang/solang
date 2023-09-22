@@ -12,16 +12,15 @@ use super::{
     yul::inline_assembly_cfg,
     Builtin, Expression, Options,
 };
-use crate::sema::{
-    ast::{
-        self, ArrayLength, DestructureField, Function, Namespace, RetrieveType, Statement, Type,
-        Type::Uint,
-    },
-    Recurse,
+use crate::sema::ast::{
+    self, ArrayLength, DestructureField, Function, Namespace, RetrieveType, SolanaAccount,
+    Statement, Type, Type::Uint,
 };
+use crate::sema::solana_accounts::BuiltinAccounts;
+use crate::sema::Recurse;
 use num_bigint::BigInt;
 use num_traits::Zero;
-use solang_parser::pt::{self, CodeLocation, Loc::Codegen};
+use solang_parser::pt::{self, CodeLocation, Loc, Loc::Codegen};
 
 mod try_catch;
 
@@ -1154,6 +1153,15 @@ impl Namespace {
 
         func.body = vec![Statement::Return(Codegen, None)];
         func.has_body = true;
+        func.solana_accounts.borrow_mut().insert(
+            BuiltinAccounts::DataAccount.to_string(),
+            SolanaAccount {
+                loc: Loc::Codegen,
+                is_signer: false,
+                is_writer: true,
+                generated: true,
+            },
+        );
 
         func
     }

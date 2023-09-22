@@ -103,7 +103,7 @@ fn idl_instructions(
 ) -> Vec<IdlInstruction> {
     let mut instructions: Vec<IdlInstruction> = Vec::new();
 
-    if !contract.have_constructor(ns) {
+    if contract.constructors(ns).is_empty() {
         instructions.push(IdlInstruction {
             name: "new".to_string(),
             docs: None,

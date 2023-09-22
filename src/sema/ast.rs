@@ -807,14 +807,17 @@ impl Contract {
 
     /// Does the constructor require arguments. Should be false is there is no constructor
     pub fn constructor_needs_arguments(&self, ns: &Namespace) -> bool {
-        self.have_constructor(ns) && self.no_args_constructor(ns).is_none()
+        !self.constructors(ns).is_empty() && self.no_args_constructor(ns).is_none()
     }
 
-    /// Does the contract have a constructor defined
-    pub fn have_constructor(&self, ns: &Namespace) -> bool {
+    /// Does the contract have a constructor defined?
+    /// Returns all the constructor function numbers if any
+    pub fn constructors(&self, ns: &Namespace) -> Vec<usize> {
         self.functions
             .iter()
-            .any(|func_no| ns.functions[*func_no].is_constructor())
+            .copied()
+            .filter(|func_no| ns.functions[*func_no].is_constructor())
+            .collect::<Vec<usize>>()
     }
 
     /// Return the constructor with no arguments
@@ -1229,6 +1232,7 @@ pub struct CallArgs {
     pub accounts: Option<Box<Expression>>,
     pub seeds: Option<Box<Expression>>,
     pub flags: Option<Box<Expression>>,
+    pub program_id: Option<Box<Expression>>,
 }
 
 impl Recurse for CallArgs {

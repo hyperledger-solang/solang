@@ -4,7 +4,7 @@ use crate::{
     build_solidity, create_program_address, AccountMeta, AccountState, BorshToken, Instruction,
     Pubkey, VirtualMachine,
 };
-use base58::{FromBase58, ToBase58};
+use base58::FromBase58;
 use num_bigint::BigInt;
 use num_traits::One;
 
@@ -17,8 +17,8 @@ fn simple_external_call() {
                 print("bar0 says: " + v);
             }
 
-            function test_other(bar1 x) public {
-                x.test_bar("cross contract call");
+            function test_other(address x) public {
+                bar1.test_bar{program_id: x}("cross contract call");
             }
         }
 
@@ -86,8 +86,8 @@ fn external_call_with_returns() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other(bar1 x) public returns (int64) {
-                return x.test_bar(7) + 5;
+            function test_other(address x) public returns (int64) {
+                return bar1.test_bar{program_id: x}(7) + 5;
             }
         }
 
@@ -166,7 +166,7 @@ fn external_raw_call_with_returns() {
         contract bar0 {
             bytes8 private constant SELECTOR = bytes8(sha256(bytes('global:test_bar')));
 
-            function test_other(bar1 x) public returns (int64) {
+            function test_other(address x) public returns (int64) {
                 bytes select = abi.encodeWithSelector(SELECTOR, int64(7));
                 bytes signature = abi.encodeWithSignature("global:test_bar", int64(7));
                 require(select == signature, "must be the same");
@@ -293,14 +293,14 @@ fn external_call_with_string_returns() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other(bar1 x) public returns (string) {
-                string y = x.test_bar(7);
+            function test_other(address x) public returns (string) {
+                string y = bar1.test_bar{program_id: x}(7);
                 print(y);
                 return y;
             }
 
-            function test_this(bar1 x) public {
-                address a = x.who_am_i();
+            function test_this(address x) public {
+                address a = bar1.who_am_i{program_id: x}();
                 assert(a == address(x));
             }
         }
@@ -392,7 +392,7 @@ fn encode_call() {
         contract bar0 {
             bytes8 private constant SELECTOR = bytes8(sha256(bytes('global:test_bar')));
 
-            function test_other(bar1 x) public returns (int64) {
+            function test_other(address x) public returns (int64) {
                 bytes select = abi.encodeWithSelector(SELECTOR, int64(7));
                 bytes signature = abi.encodeCall(bar1.test_bar, 7);
                 require(select == signature, "must be the same");
@@ -439,7 +439,6 @@ fn encode_call() {
         .accounts(vec![("dataAccount", bar0_account)])
         .call();
 
-    std::println!("bar_acc: {}", bar1_account.to_base58());
     let res = vm
         .function("test_other")
         .arguments(&[BorshToken::Address(bar1_program_id)])

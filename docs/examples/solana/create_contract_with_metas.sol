@@ -1,9 +1,6 @@
 import 'solana';
 
 contract creator {
-    Child public c;
-    Child public c_metas;
-
     function create_with_metas(address data_account_to_initialize, address payer) public {
         AccountMeta[3] metas = [
             AccountMeta({
@@ -20,9 +17,9 @@ contract creator {
                 is_signer: false})
         ];
 
-        c_metas = new Child{accounts: metas}(payer);        
+        Child.new{accounts: metas}(payer);        
   
-        c_metas.use_metas();
+        Child.use_metas();
     }
 }
 

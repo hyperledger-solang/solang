@@ -18,6 +18,7 @@ use crate::sema::expression::function_call::{
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::function_annotation::function_body_annotations;
 use crate::sema::function_annotation::{unexpected_parameter_annotation, UnresolvedAnnotation};
+use crate::sema::namespace::ResolveTypeContext;
 use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use crate::sema::yul::resolve_inline_assembly;
@@ -888,17 +889,38 @@ fn statement(
                 return Err(());
             }
 
+            let mut memory_safe = None;
+
             if let Some(flags) = flags {
                 for flag in flags {
-                    ns.diagnostics.push(Diagnostic::error(
-                        flag.loc,
-                        format!("flag '{}' not supported", flag.string),
-                    ));
+                    if flag.string == "memory-safe" && ns.target == Target::EVM {
+                        if let Some(prev) = &memory_safe {
+                            ns.diagnostics.push(Diagnostic::error_with_note(
+                                flag.loc,
+                                format!("flag '{}' already specified", flag.string),
+                                *prev,
+                                "previous location".into(),
+                            ));
+                        } else {
+                            memory_safe = Some(flag.loc);
+                        }
+                    } else {
+                        ns.diagnostics.push(Diagnostic::error(
+                            flag.loc,
+                            format!("flag '{}' not supported", flag.string),
+                        ));
+                    }
                 }
             }
 
-            let resolved_asm =
-                resolve_inline_assembly(loc, &block.statements, context, symtable, ns);
+            let resolved_asm = resolve_inline_assembly(
+                loc,
+                memory_safe.is_some(),
+                &block.statements,
+                context,
+                symtable,
+                ns,
+            );
             res.push(Statement::Assembly(resolved_asm.0, resolved_asm.1));
             Ok(resolved_asm.1)
         }
@@ -1817,8 +1839,13 @@ fn resolve_var_decl_ty(
     diagnostics: &mut Diagnostics,
 ) -> Result<(Type, pt::Loc), ()> {
     let mut loc_ty = ty.loc();
-    let mut var_ty =
-        ns.resolve_type(context.file_no, context.contract_no, false, ty, diagnostics)?;
+    let mut var_ty = ns.resolve_type(
+        context.file_no,
+        context.contract_no,
+        ResolveTypeContext::None,
+        ty,
+        diagnostics,
+    )?;
 
     if let Some(storage) = storage {
         if !var_ty.can_have_data_location() {

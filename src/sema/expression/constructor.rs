@@ -5,9 +5,9 @@ use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::function_call::{collect_call_args, parse_call_args};
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
+use crate::sema::namespace::ResolveTypeContext;
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::used_variable;
-use crate::Target;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, Visibility};
@@ -59,8 +59,6 @@ fn constructor(
 
         return Err(());
     }
-
-    solana_constructor_check(loc, no, diagnostics, context, &call_args, ns);
 
     // check for circular references
     if circular_reference(no, context_contract_no, ns) {
@@ -214,15 +212,30 @@ pub fn constructor_named_args(
 ) -> Result<Expression, ()> {
     let (ty, call_args, _) = collect_call_args(ty, diagnostics)?;
 
-    let call_args = parse_call_args(loc, &call_args, false, context, ns, symtable, diagnostics)?;
-
-    let no = match ns.resolve_type(context.file_no, context.contract_no, false, ty, diagnostics)? {
+    let no = match ns.resolve_type(
+        context.file_no,
+        context.contract_no,
+        ResolveTypeContext::None,
+        ty,
+        diagnostics,
+    )? {
         Type::Contract(n) => n,
         _ => {
             diagnostics.push(Diagnostic::error(*loc, "contract expected".to_string()));
             return Err(());
         }
     };
+
+    let call_args = parse_call_args(
+        loc,
+        &call_args,
+        Some(no),
+        false,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+    )?;
 
     // The current contract cannot be constructed with new. In order to create
     // the contract, we need the code hash of the contract. Part of that code
@@ -259,8 +272,6 @@ pub fn constructor_named_args(
 
         return Err(());
     }
-
-    solana_constructor_check(loc, no, diagnostics, context, &call_args, ns);
 
     // check for circular references
     if circular_reference(no, context_contract_no, ns) {
@@ -436,7 +447,13 @@ pub fn new(
         ty
     };
 
-    let ty = ns.resolve_type(context.file_no, context.contract_no, false, ty, diagnostics)?;
+    let ty = ns.resolve_type(
+        context.file_no,
+        context.contract_no,
+        ResolveTypeContext::None,
+        ty,
+        diagnostics,
+    )?;
 
     match &ty {
         Type::Array(ty, dim) => {
@@ -461,8 +478,16 @@ pub fn new(
         }
         Type::String | Type::DynamicBytes => {}
         Type::Contract(n) => {
-            let call_args =
-                parse_call_args(loc, &call_args, false, context, ns, symtable, diagnostics)?;
+            let call_args = parse_call_args(
+                loc,
+                &call_args,
+                Some(*n),
+                false,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+            )?;
 
             return constructor(loc, *n, args, call_args, context, ns, symtable, diagnostics);
         }
@@ -577,26 +602,48 @@ pub(super) fn deprecated_constructor_arguments(
 
 /// When calling a constructor on Solana, we must verify it the contract we are instantiating has
 /// a program id annotation and require the accounts call argument if the call is inside a loop.
-fn solana_constructor_check(
+pub(super) fn solana_constructor_check(
     loc: &pt::Loc,
     constructor_contract_no: usize,
     diagnostics: &mut Diagnostics,
     context: &ExprContext,
     call_args: &CallArgs,
-    ns: &Namespace,
+    ns: &mut Namespace,
 ) {
-    if ns.target != Target::Solana {
-        return;
-    }
-
-    if ns.contracts[constructor_contract_no].program_id.is_none() {
+    if !ns.contracts[constructor_contract_no].instantiable {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
-                "in order to instantiate contract '{}', a @program_id is required on contract '{}'",
+                "cannot construct '{}' of type '{}'",
                 ns.contracts[constructor_contract_no].name,
-                ns.contracts[constructor_contract_no].name
+                ns.contracts[constructor_contract_no].ty
             ),
+        ));
+    }
+
+    if let Some(context_contract) = context.contract_no {
+        if circular_reference(constructor_contract_no, context_contract, ns) {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "circular reference creating contract '{}'",
+                    ns.contracts[constructor_contract_no].name
+                ),
+            ));
+        }
+
+        if !ns.contracts[context_contract]
+            .creates
+            .contains(&constructor_contract_no)
+        {
+            ns.contracts[context_contract]
+                .creates
+                .push(constructor_contract_no);
+        }
+    } else {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "constructors not allowed in free standing functions".to_string(),
         ));
     }
 

@@ -2,15 +2,14 @@
 
 @program_id("SoLDxXQ9GMoa15i4NavZc61XGkas2aom4aNiWT6KUER")
 contract Builder {
-    Built other;
     // BEGIN-CHECK: Builder::Builder::function::build_this
     function build_this() external {
-        // CHECK: constructor(no: 4) salt: value: gas:uint64 0 address:address 0x69be884fd55a2306354c305323cc6b7ce91768be33d32a021155ef608806bcb seeds: Built encoded buffer: %abi_encoded.temp.18 accounts: [3] [ struct { (load (struct (subscript struct AccountInfo[] (builtin Accounts ())[uint32 2]) field 0)), true, false }, struct { (load (struct (subscript struct AccountInfo[] (builtin Accounts ())[uint32 1]) field 0)), true, true }, struct { (load (struct (subscript struct AccountInfo[] (builtin Accounts ())[uint32 4]) field 0)), false, false } ]
-        other = new Built("my_seed");
+        // CHECK: external call::regular address:address 0x69be884fd55a2306354c305323cc6b7ce91768be33d32a021155ef608806bcb payload:%abi_encoded.temp.17 value:uint64 0 gas:uint64 0 accounts:[3] [ struct { (load (struct (subscript struct AccountInfo[] (builtin Accounts ())[uint32 3]) field 0)), true, false }, struct { (load (struct (subscript struct AccountInfo[] (builtin Accounts ())[uint32 2]) field 0)), true, true }, struct { (load (struct (subscript struct AccountInfo[] (builtin Accounts ())[uint32 0]) field 0)), false, false } ] seeds: contract|function:(1, 4) flags:
+        Built.new("my_seed");
     }
 
     function call_that() public view {
-        other.say_this("Hold up! I'm calling!");
+        Built.say_this("Hold up! I'm calling!");
     }
 }
 

@@ -39,8 +39,11 @@ release = os.popen('git describe --tags').readline().strip()
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx_tabs.tabs'
 ]
 
+# Do not allow tabs to be closed
+sphinx_tabs_disable_tab_closing = True
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
