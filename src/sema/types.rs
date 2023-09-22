@@ -1299,7 +1299,7 @@ impl Type {
             Type::Unreachable => "unreachable".into(),
             // A slice of bytes1 is like bytes
             Type::Slice(ty) if **ty == Type::Bytes(1) => "bytes".into(),
-            Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
+            Type::Slice(ty) => format!("{}[]", ty.to_string(ns)),
             Type::Unresolved => "unresolved".into(),
             Type::BufferPointer => "buffer_pointer".into(),
             Type::FunctionSelector => "function_selector".into(),

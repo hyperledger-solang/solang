@@ -698,10 +698,7 @@ pub(super) fn array_literal(
                 } else {
                     diagnostics.push(Diagnostic::error(
                         expr.loc(),
-                        format!(
-                            "type {} found where array of slices expected",
-                            ty.to_string(ns)
-                        ),
+                        format!("type {} found where array expected", ty.to_string(ns)),
                     ));
                     has_errors = true;
                 }
