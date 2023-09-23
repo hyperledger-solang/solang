@@ -2303,9 +2303,18 @@ fn basic_value_to_slice<'a>(
 
             let from_elem = from.array_elem();
 
-            let input_elem =
+            let load = if let Type::Array(_, dims) = &from_elem {
+                matches!(dims.last(), Some(ArrayLength::Dynamic))
+            } else {
+                true
+            };
+
+            let input_elem = if load {
                 bin.builder
-                    .build_load(bin.llvm_field_ty(&from_elem, ns), input_elem, "elem");
+                    .build_load(bin.llvm_field_ty(&from_elem, ns), input_elem, "elem")
+            } else {
+                input_elem.into()
+            };
 
             let (data, len) =
                 basic_value_to_slice(bin, input_elem, &from_elem, &to_elem, function, ns);
