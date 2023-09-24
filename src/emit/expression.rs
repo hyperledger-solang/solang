@@ -2303,6 +2303,8 @@ fn basic_value_to_slice<'a>(
 
             let from_elem = from.array_elem();
 
+            // If the element is a fixed-length array, do not load it as it's stored in place and not
+            // as a pointer.
             let load = if let Type::Array(_, dims) = &from_elem {
                 matches!(dims.last(), Some(ArrayLength::Dynamic))
             } else {

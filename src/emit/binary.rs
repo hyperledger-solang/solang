@@ -805,25 +805,15 @@ impl<'a> Binary<'a> {
                     self.module.get_struct_type("struct.vector").unwrap().into()
                 }
                 Type::Array(base_ty, dims) => {
-                    let ty = self.llvm_field_ty(base_ty, ns);
-
-                    let mut dims = dims.iter();
-
-                    let mut aty = match dims.next().unwrap() {
-                        ArrayLength::Fixed(d) => ty.array_type(d.to_u32().unwrap()),
-                        ArrayLength::Dynamic => {
-                            return self.module.get_struct_type("struct.vector").unwrap().into()
-                        }
-                        ArrayLength::AnyFixed => {
-                            unreachable!()
-                        }
-                    };
+                    let mut aty = self.llvm_field_ty(base_ty, ns);
 
                     for dim in dims {
                         match dim {
-                            ArrayLength::Fixed(d) => aty = aty.array_type(d.to_u32().unwrap()),
+                            ArrayLength::Fixed(d) => {
+                                aty = aty.array_type(d.to_u32().unwrap()).into();
+                            }
                             ArrayLength::Dynamic => {
-                                return self.module.get_struct_type("struct.vector").unwrap().into()
+                                aty = self.module.get_struct_type("struct.vector").unwrap().into();
                             }
                             ArrayLength::AnyFixed => {
                                 unreachable!()
@@ -831,7 +821,7 @@ impl<'a> Binary<'a> {
                         }
                     }
 
-                    BasicTypeEnum::ArrayType(aty)
+                    aty
                 }
                 Type::Struct(StructType::SolParameters) => self
                     .module
