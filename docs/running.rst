@@ -244,8 +244,8 @@ for an example of how to use this.
 
   There is only supported on Solana.
 
-Submitting extrinsics to Solana on-chain
-________________________________________
+Interacting with Solana running programs on-chain
+_________________________________________________
 
   solang solana [SUBCOMMAND] [OPTIONS]... <PROGRAM_LOCATION>
 
