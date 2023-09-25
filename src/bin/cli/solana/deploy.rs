@@ -32,10 +32,17 @@ pub struct SolanaDeploy {
 }
 
 impl SolanaDeploy {
+    /// Handle the deployment of a Solana program
+    ///
+    /// This function is responsible for managing the deployment process,
+    /// including checking the current directory, parsing command-line arguments,
+    /// configuring settings, and executing the deployment command. It also handles
+    /// loading the necessary configuration and signers, defining output formats,
+    /// and processing the deployment command using the provided configuration.
     pub fn handle(&self) {
         // Make sure the command is run in the correct directory
         // Fails if the command is run in a Solang Polkadot project directory
-        if !check_target_match("solana") {
+        if !check_target_match("solana", None).unwrap() {
             exit(1);
         }
 
