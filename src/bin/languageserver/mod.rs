@@ -145,6 +145,15 @@ struct GlobalCache {
     implementations: Implementations,
 }
 
+impl GlobalCache {
+    fn extend(&mut self, other: Self) {
+        self.definitions.extend(other.definitions);
+        self.types.extend(other.types);
+        self.declarations.extend(other.declarations);
+        self.implementations.extend(other.implementations);
+    }
+}
+
 // The language server currently stores some of the data grouped by the file to which the data belongs (Files struct).
 // Other data (Definitions) is not grouped by file due to problems faced during cleanup,
 // but is stored as a "global" field which is common to all files.
@@ -293,20 +302,20 @@ impl SolangServer {
 
             let res = self.client.publish_diagnostics(uri, diags, None);
 
-            let (caches, definitions, types, declarations, implementations) = Builder::build(&ns);
+            let (file_caches, global_cache) = {
+                let builder = Builder::new(&ns);
+                builder.build()
+            };
 
             let mut files = self.files.lock().await;
-            for (f, c) in ns.files.iter().zip(caches.into_iter()) {
+            for (f, c) in ns.files.iter().zip(file_caches.into_iter()) {
                 if f.cache_no.is_some() {
                     files.caches.insert(f.path.clone(), c);
                 }
             }
 
             let mut gc = self.global_cache.lock().await;
-            gc.definitions.extend(definitions);
-            gc.types.extend(types);
-            gc.declarations.extend(declarations);
-            gc.implementations.extend(implementations);
+            gc.extend(global_cache);
 
             res.await;
         }
@@ -358,6 +367,20 @@ struct Builder<'a> {
 }
 
 impl<'a> Builder<'a> {
+    fn new(ns: &'a ast::Namespace) -> Self {
+        Self {
+            hovers: Vec::new(),
+            references: Vec::new(),
+
+            definitions: HashMap::new(),
+            types: HashMap::new(),
+            declarations: HashMap::new(),
+            implementations: HashMap::new(),
+
+            ns,
+        }
+    }
+
     // Constructs lookup table for the given statement by traversing the
     // statements and traversing inside the contents of the statements.
     fn statement(&mut self, stmt: &ast::Statement, symtab: &symtable::Symtable) {
@@ -1332,32 +1355,12 @@ impl<'a> Builder<'a> {
 
     /// Traverses namespace to extract information used later by the language server
     /// This includes hover messages, locations where code objects are declared and used
-    fn build(
-        ns: &ast::Namespace,
-    ) -> (
-        Vec<FileCache>,
-        Definitions,
-        Types,
-        Declarations,
-        Implementations,
-    ) {
-        let mut builder = Builder {
-            hovers: Vec::new(),
-            references: Vec::new(),
-
-            definitions: HashMap::new(),
-            types: HashMap::new(),
-            declarations: HashMap::new(),
-            implementations: HashMap::new(),
-
-            ns,
-        };
-
-        for (ei, enum_decl) in builder.ns.enums.iter().enumerate() {
+    fn build(mut self) -> (Vec<FileCache>, GlobalCache) {
+        for (ei, enum_decl) in self.ns.enums.iter().enumerate() {
             for (discriminant, (nam, loc)) in enum_decl.values.iter().enumerate() {
                 let file_no = loc.file_no();
-                let file = &ns.files[file_no];
-                builder.hovers.push((
+                let file = &self.ns.files[file_no];
+                self.hovers.push((
                     file_no,
                     HoverEntry {
                         start: loc.start(),
@@ -1373,17 +1376,15 @@ impl<'a> Builder<'a> {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Variant(ei, discriminant),
                 };
-                builder
-                    .definitions
-                    .insert(di.clone(), loc_to_range(loc, file));
+                self.definitions.insert(di.clone(), loc_to_range(loc, file));
 
                 let dt = DefinitionType::Enum(ei);
-                builder.types.insert(di, dt.into());
+                self.types.insert(di, dt.into());
             }
 
             let file_no = enum_decl.loc.file_no();
-            let file = &ns.files[file_no];
-            builder.hovers.push((
+            let file = &self.ns.files[file_no];
+            self.hovers.push((
                 file_no,
                 HoverEntry {
                     start: enum_decl.loc.start(),
@@ -1391,7 +1392,7 @@ impl<'a> Builder<'a> {
                     val: render(&enum_decl.tags[..]),
                 },
             ));
-            builder.definitions.insert(
+            self.definitions.insert(
                 DefinitionIndex {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Enum(ei),
@@ -1400,15 +1401,15 @@ impl<'a> Builder<'a> {
             );
         }
 
-        for (si, struct_decl) in builder.ns.structs.iter().enumerate() {
+        for (si, struct_decl) in self.ns.structs.iter().enumerate() {
             if let pt::Loc::File(_, start, _) = &struct_decl.loc {
                 for (fi, field) in struct_decl.fields.iter().enumerate() {
-                    builder.field(si, fi, field);
+                    self.field(si, fi, field);
                 }
 
                 let file_no = struct_decl.loc.file_no();
-                let file = &ns.files[file_no];
-                builder.hovers.push((
+                let file = &self.ns.files[file_no];
+                self.hovers.push((
                     file_no,
                     HoverEntry {
                         start: *start,
@@ -1416,7 +1417,7 @@ impl<'a> Builder<'a> {
                         val: render(&struct_decl.tags[..]),
                     },
                 ));
-                builder.definitions.insert(
+                self.definitions.insert(
                     DefinitionIndex {
                         def_path: file.path.clone(),
                         def_type: DefinitionType::Struct(si),
@@ -1426,7 +1427,7 @@ impl<'a> Builder<'a> {
             }
         }
 
-        for (i, func) in builder.ns.functions.iter().enumerate() {
+        for (i, func) in self.ns.functions.iter().enumerate() {
             if func.is_accessor || func.loc == pt::Loc::Builtin {
                 // accessor functions are synthetic; ignore them, all the locations are fake
                 continue;
@@ -1437,11 +1438,11 @@ impl<'a> Builder<'a> {
                     ast::ConstructorAnnotation::Bump(expr)
                     | ast::ConstructorAnnotation::Seed(expr)
                     | ast::ConstructorAnnotation::Space(expr) => {
-                        builder.expression(expr, &func.symtable)
+                        self.expression(expr, &func.symtable)
                     }
 
                     ast::ConstructorAnnotation::Payer(loc, name) => {
-                        builder.hovers.push((
+                        self.hovers.push((
                             loc.file_no(),
                             HoverEntry {
                                 start: loc.start(),
@@ -1454,33 +1455,32 @@ impl<'a> Builder<'a> {
             }
 
             for (i, param) in func.params.iter().enumerate() {
-                builder.hovers.push((
+                self.hovers.push((
                     param.loc.file_no(),
                     HoverEntry {
                         start: param.loc.start(),
                         stop: param.loc.exclusive_end(),
-                        val: builder.expanded_ty(&param.ty),
+                        val: self.expanded_ty(&param.ty),
                     },
                 ));
                 if let Some(Some(var_no)) = func.symtable.arguments.get(i) {
                     if let Some(id) = &param.id {
                         let file_no = id.loc.file_no();
-                        let file = &builder.ns.files[file_no];
+                        let file = &self.ns.files[file_no];
                         let di = DefinitionIndex {
                             def_path: file.path.clone(),
                             def_type: DefinitionType::Variable(*var_no),
                         };
-                        builder
-                            .definitions
+                        self.definitions
                             .insert(di.clone(), loc_to_range(&id.loc, file));
                         if let Some(dt) = get_type_definition(&param.ty) {
-                            builder.types.insert(di, dt.into());
+                            self.types.insert(di, dt.into());
                         }
                     }
                 }
                 if let Some(loc) = param.ty_loc {
                     if let Some(dt) = get_type_definition(&param.ty) {
-                        builder.references.push((
+                        self.references.push((
                             loc.file_no(),
                             ReferenceEntry {
                                 start: loc.start(),
@@ -1493,35 +1493,34 @@ impl<'a> Builder<'a> {
             }
 
             for (i, ret) in func.returns.iter().enumerate() {
-                builder.hovers.push((
+                self.hovers.push((
                     ret.loc.file_no(),
                     HoverEntry {
                         start: ret.loc.start(),
                         stop: ret.loc.exclusive_end(),
-                        val: builder.expanded_ty(&ret.ty),
+                        val: self.expanded_ty(&ret.ty),
                     },
                 ));
 
                 if let Some(id) = &ret.id {
                     if let Some(var_no) = func.symtable.returns.get(i) {
                         let file_no = id.loc.file_no();
-                        let file = &ns.files[file_no];
+                        let file = &self.ns.files[file_no];
                         let di = DefinitionIndex {
                             def_path: file.path.clone(),
                             def_type: DefinitionType::Variable(*var_no),
                         };
-                        builder
-                            .definitions
+                        self.definitions
                             .insert(di.clone(), loc_to_range(&id.loc, file));
                         if let Some(dt) = get_type_definition(&ret.ty) {
-                            builder.types.insert(di, dt.into());
+                            self.types.insert(di, dt.into());
                         }
                     }
                 }
 
                 if let Some(loc) = ret.ty_loc {
                     if let Some(dt) = get_type_definition(&ret.ty) {
-                        builder.references.push((
+                        self.references.push((
                             loc.file_no(),
                             ReferenceEntry {
                                 start: loc.start(),
@@ -1534,12 +1533,12 @@ impl<'a> Builder<'a> {
             }
 
             for stmt in &func.body {
-                builder.statement(stmt, &func.symtable);
+                self.statement(stmt, &func.symtable);
             }
 
             let file_no = func.loc.file_no();
-            let file = &ns.files[file_no];
-            builder.definitions.insert(
+            let file = &self.ns.files[file_no];
+            self.definitions.insert(
                 DefinitionIndex {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Function(i),
@@ -1548,26 +1547,26 @@ impl<'a> Builder<'a> {
             );
         }
 
-        for (i, constant) in builder.ns.constants.iter().enumerate() {
+        for (i, constant) in self.ns.constants.iter().enumerate() {
             let samptb = symtable::Symtable::new();
-            builder.contract_variable(constant, &samptb, None, i);
+            self.contract_variable(constant, &samptb, None, i);
         }
 
-        for (ci, contract) in builder.ns.contracts.iter().enumerate() {
+        for (ci, contract) in self.ns.contracts.iter().enumerate() {
             for base in &contract.bases {
                 let file_no = base.loc.file_no();
-                builder.hovers.push((
+                self.hovers.push((
                     file_no,
                     HoverEntry {
                         start: base.loc.start(),
                         stop: base.loc.exclusive_end(),
                         val: make_code_block(format!(
                             "contract {}",
-                            builder.ns.contracts[base.contract_no].name
+                            self.ns.contracts[base.contract_no].name
                         )),
                     },
                 ));
-                builder.references.push((
+                self.references.push((
                     file_no,
                     ReferenceEntry {
                         start: base.loc.start(),
@@ -1582,12 +1581,12 @@ impl<'a> Builder<'a> {
 
             for (i, variable) in contract.variables.iter().enumerate() {
                 let symtable = symtable::Symtable::new();
-                builder.contract_variable(variable, &symtable, Some(ci), i);
+                self.contract_variable(variable, &symtable, Some(ci), i);
             }
 
             let file_no = contract.loc.file_no();
-            let file = &ns.files[file_no];
-            builder.hovers.push((
+            let file = &self.ns.files[file_no];
+            self.hovers.push((
                 file_no,
                 HoverEntry {
                     start: contract.loc.start(),
@@ -1601,8 +1600,7 @@ impl<'a> Builder<'a> {
                 def_type: DefinitionType::Contract(ci),
             };
 
-            builder
-                .definitions
+            self.definitions
                 .insert(cdi.clone(), loc_to_range(&contract.loc, file));
 
             let impls = contract
@@ -1614,7 +1612,7 @@ impl<'a> Builder<'a> {
                 })
                 .collect();
 
-            builder.implementations.insert(cdi, impls);
+            self.implementations.insert(cdi, impls);
 
             let decls = contract
                 .virtual_functions
@@ -1639,7 +1637,7 @@ impl<'a> Builder<'a> {
                         .bases
                         .iter()
                         .map(|b| {
-                            let p = &builder.ns.contracts[b.contract_no];
+                            let p = &self.ns.contracts[b.contract_no];
                             HashSet::from_iter(p.functions.iter().copied())
                                 .intersection(&all_decls)
                                 .copied()
@@ -1652,9 +1650,9 @@ impl<'a> Builder<'a> {
                         let decls = parent_decls
                             .iter()
                             .map(|&i| {
-                                let loc = builder.ns.functions[i].loc;
+                                let loc = self.ns.functions[i].loc;
                                 DefinitionIndex {
-                                    def_path: builder.ns.files[loc.file_no()].path.clone(),
+                                    def_path: self.ns.files[loc.file_no()].path.clone(),
                                     def_type: DefinitionType::Function(i),
                                 }
                             })
@@ -1664,17 +1662,17 @@ impl<'a> Builder<'a> {
                     })
                 });
 
-            builder.declarations.extend(decls);
+            self.declarations.extend(decls);
         }
 
-        for (ei, event) in builder.ns.events.iter().enumerate() {
+        for (ei, event) in self.ns.events.iter().enumerate() {
             for (fi, field) in event.fields.iter().enumerate() {
-                builder.field(ei, fi, field);
+                self.field(ei, fi, field);
             }
 
             let file_no = event.loc.file_no();
-            let file = &ns.files[file_no];
-            builder.hovers.push((
+            let file = &self.ns.files[file_no];
+            self.hovers.push((
                 file_no,
                 HoverEntry {
                     start: event.loc.start(),
@@ -1683,7 +1681,7 @@ impl<'a> Builder<'a> {
                 },
             ));
 
-            builder.definitions.insert(
+            self.definitions.insert(
                 DefinitionIndex {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Event(ei),
@@ -1692,12 +1690,12 @@ impl<'a> Builder<'a> {
             );
         }
 
-        for lookup in &mut builder.hovers {
-            if let Some(msg) = builder.ns.hover_overrides.get(&pt::Loc::File(
-                lookup.0,
-                lookup.1.start,
-                lookup.1.stop,
-            )) {
+        for lookup in &mut self.hovers {
+            if let Some(msg) =
+                self.ns
+                    .hover_overrides
+                    .get(&pt::Loc::File(lookup.0, lookup.1.start, lookup.1.stop))
+            {
                 lookup.1.val = msg.clone();
             }
         }
@@ -1706,27 +1704,28 @@ impl<'a> Builder<'a> {
         // previously, a dummy path was filled.
         // In a single namespace, there can't be two (or more) code objects with a given `DefinitionType`.
         // So, there exists a one-to-one mapping between `DefinitionIndex` and `DefinitionType` when we are dealing with just one namespace.
-        let defs_to_files = builder
+        let defs_to_files = self
             .definitions
             .keys()
             .map(|key| (key.def_type.clone(), key.def_path.clone()))
             .collect::<HashMap<DefinitionType, PathBuf>>();
 
-        let defs_to_file_nos = ns
+        let defs_to_file_nos = self
+            .ns
             .files
             .iter()
             .enumerate()
             .map(|(i, f)| (f.path.clone(), i))
             .collect::<HashMap<PathBuf, usize>>();
 
-        for val in builder.types.values_mut() {
+        for val in self.types.values_mut() {
             val.def_path = defs_to_files[&val.def_type].clone();
         }
 
-        for (di, range) in &builder.definitions {
+        for (di, range) in &self.definitions {
             let file_no = defs_to_file_nos[&di.def_path];
-            let file = &ns.files[file_no];
-            builder.references.push((
+            let file = &self.ns.files[file_no];
+            self.references.push((
                 file_no,
                 ReferenceEntry {
                     start: file
@@ -1740,7 +1739,8 @@ impl<'a> Builder<'a> {
             ));
         }
 
-        let caches = ns
+        let file_caches = self
+            .ns
             .files
             .iter()
             .enumerate()
@@ -1748,8 +1748,7 @@ impl<'a> Builder<'a> {
                 file: f.clone(),
                 // get `hovers` that belong to the current file
                 hovers: Lapper::new(
-                    builder
-                        .hovers
+                    self.hovers
                         .iter()
                         .filter(|h| h.0 == i)
                         .map(|(_, i)| i.clone())
@@ -1757,8 +1756,7 @@ impl<'a> Builder<'a> {
                 ),
                 // get `references` that belong to the current file
                 references: Lapper::new(
-                    builder
-                        .references
+                    self.references
                         .iter()
                         .filter(|h| h.0 == i)
                         .map(|(_, i)| {
@@ -1771,13 +1769,14 @@ impl<'a> Builder<'a> {
             })
             .collect();
 
-        (
-            caches,
-            builder.definitions,
-            builder.types,
-            builder.declarations,
-            builder.implementations,
-        )
+        let global_cache = GlobalCache {
+            definitions: self.definitions,
+            types: self.types,
+            declarations: self.declarations,
+            implementations: self.implementations,
+        };
+
+        (file_caches, global_cache)
     }
 
     /// Render the type with struct/enum fields expanded
