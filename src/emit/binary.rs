@@ -41,6 +41,94 @@ use solang_parser::pt;
 
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
 
+#[macro_export]
+macro_rules! emit_context {
+    ($binary:expr) => {
+        #[allow(unused_macros)]
+        macro_rules! byte_ptr {
+            () => {
+                $binary.context.i8_type().ptr_type(AddressSpace::default())
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i32_const {
+            ($val:expr) => {
+                $binary.context.i32_type().const_int($val, false)
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i32_zero {
+            () => {
+                $binary.context.i32_type().const_zero()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i64_const {
+            ($val:expr) => {
+                $binary.context.i64_type().const_int($val, false)
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i64_zero {
+            () => {
+                $binary.context.i64_type().const_zero()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! call {
+            ($name:expr, $args:expr) => {
+                $binary
+                    .builder
+                    .build_call($binary.module.get_function($name).unwrap(), $args, "")
+            };
+            ($name:expr, $args:expr, $call_name:literal) => {
+                $binary.builder.build_call(
+                    $binary.module.get_function($name).unwrap(),
+                    $args,
+                    $call_name,
+                )
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! seal_get_storage {
+            ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
+                call!("get_storage", &[$key_ptr, $key_len, $value_ptr, $value_len])
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! seal_set_storage {
+            ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
+                call!("set_storage", &[$key_ptr, $key_len, $value_ptr, $value_len])
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! scratch_buf {
+            () => {
+                (
+                    $binary.scratch.unwrap().as_pointer_value(),
+                    $binary.scratch_len.unwrap().as_pointer_value(),
+                )
+            };
+        }
+    };
+}
+
 pub struct Binary<'a> {
     pub name: String,
     pub module: Module<'a>,
