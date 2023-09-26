@@ -3,6 +3,7 @@
 use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 use primitive_types::U256;
+use rand::{thread_rng, Rng};
 
 #[derive(Debug, Encode, Decode)]
 struct Val256(U256);
@@ -259,7 +260,7 @@ contract Testing {
 }
 
 #[test]
-fn storage_slot() {
+fn storage_slot_on_return_data() {
     let mut runtime = build_solidity(
         r#"
     library StorageSlot {
@@ -288,24 +289,28 @@ fn storage_slot() {
     }"#,
     );
 
-    let mut key = [0u8; 32];
-
-    runtime.function("get", key.to_vec());
-    let zero = runtime.output();
-
-    key[0] = 1;
-    runtime.function("get", key.to_vec());
-    let one = runtime.output();
-
-    key[0] = 2;
-    runtime.function("get", key.to_vec());
-    let two = runtime.output();
+    let default_address = [0u8; 32];
 
     // Without setting any key, they all shuld be default
-    assert_eq!(zero, one);
-    assert_eq!(zero, two);
+    let key = [0u8; 32];
+    runtime.function("get", key.to_vec());
+    assert_eq!(runtime.output(), default_address);
+
+    let key = [0xffu8; 32];
+    runtime.function("get", key.to_vec());
+    assert_eq!(runtime.output(), default_address);
+
+    let mut key = [0u8; 32];
+    thread_rng().try_fill(&mut key).unwrap();
+    runtime.function("get", key.to_vec());
+    assert_eq!(runtime.output(), default_address);
 
     // Setting the key should write to the correct storage slot
+    runtime.function("set", key.to_vec());
+    runtime.function("get", key.to_vec());
+    assert_eq!(runtime.output(), runtime.caller());
+
+    let key = [0u8; 32];
     runtime.function("set", key.to_vec());
     runtime.function("get", key.to_vec());
     assert_eq!(runtime.output(), runtime.caller())
