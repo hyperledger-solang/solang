@@ -302,10 +302,7 @@ impl SolangServer {
 
             let res = self.client.publish_diagnostics(uri, diags, None);
 
-            let (file_caches, global_cache) = {
-                let builder = Builder::new(&ns);
-                builder.build()
-            };
+            let (file_caches, global_cache) = Builder::new(&ns).build();
 
             let mut files = self.files.lock().await;
             for (f, c) in ns.files.iter().zip(file_caches.into_iter()) {
