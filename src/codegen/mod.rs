@@ -502,10 +502,6 @@ pub enum Expression {
         ty: Type,
         exprs: Vec<Expression>,
     },
-    List {
-        loc: pt::Loc,
-        exprs: Vec<Expression>,
-    },
     Less {
         loc: pt::Loc,
         signed: bool,
@@ -718,7 +714,6 @@ impl CodeLocation for Expression {
             | Expression::StringCompare { loc, .. }
             | Expression::StringConcat { loc, .. }
             | Expression::FunctionArg { loc, .. }
-            | Expression::List { loc, .. }
             | Expression::ShiftRight { loc, .. }
             | Expression::ShiftLeft { loc, .. }
             | Expression::RationalNumberLiteral { loc, .. }
@@ -881,12 +876,6 @@ impl RetrieveType for Expression {
             | Expression::Equal { .. }
             | Expression::StringCompare { .. }
             | Expression::LessEqual { .. } => Type::Bool,
-
-            Expression::List { exprs, .. } => {
-                assert_eq!(exprs.len(), 1);
-
-                exprs[0].ty()
-            }
 
             Expression::AdvancePointer { .. } => Type::BufferPointer,
             Expression::FormatString { .. } => Type::String,
