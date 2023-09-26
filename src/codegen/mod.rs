@@ -1738,6 +1738,7 @@ pub enum Builtin {
     BlockNumber,
     Calldata,
     ChainId,
+    ContractCode,
     Gasleft,
     GasLimit,
     Gasprice,
@@ -1834,6 +1835,7 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::ChainId => Builtin::ChainId,
             ast::Builtin::BaseFee => Builtin::BaseFee,
             ast::Builtin::PrevRandao => Builtin::PrevRandao,
+            ast::Builtin::ContractCode => Builtin::ContractCode,
             _ => panic!("Builtin should not be in the cfg"),
         }
     }
