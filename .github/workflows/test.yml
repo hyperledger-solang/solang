@@ -293,7 +293,7 @@ jobs:
     - run: nohup solana-test-validator -q > validator.out &
     # Generate a new keypair for the test
     # This is needed to be able to send transactions on the local test network
-    - run: solana-keygen new
+    - run: solana-keygen new --no-bip39-passphrase
     - run: npm install
       working-directory: ./integration/solana
     - name: Build Solang contracts
