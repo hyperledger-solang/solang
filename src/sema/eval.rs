@@ -14,12 +14,22 @@ use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, Loc};
 use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Shl, Shr, Sub};
 
+/// This enum specifies the error `eval_const_number` is returning
+pub enum EvaluationError {
+    NotAConstant,
+    MathError,
+}
+
+impl From<EvaluationError> for () {
+    fn from(_value: EvaluationError) -> Self {}
+}
+
 /// Resolve an expression where a compile-time constant is expected
 pub fn eval_const_number(
     expr: &Expression,
     ns: &Namespace,
     diagnostics: &mut Diagnostics,
-) -> Result<(pt::Loc, BigInt), ()> {
+) -> Result<(pt::Loc, BigInt), EvaluationError> {
     match expr {
         Expression::Add {
             loc, left, right, ..
@@ -50,7 +60,7 @@ pub fn eval_const_number(
             if divisor.is_zero() {
                 diagnostics.push(Diagnostic::error(*loc, "divide by zero".to_string()));
 
-                Err(())
+                Err(EvaluationError::MathError)
             } else {
                 Ok((*loc, eval_const_number(left, ns, diagnostics)?.1 / divisor))
             }
@@ -63,7 +73,7 @@ pub fn eval_const_number(
             if divisor.is_zero() {
                 diagnostics.push(Diagnostic::error(*loc, "divide by zero".to_string()));
 
-                Err(())
+                Err(EvaluationError::MathError)
             } else {
                 Ok((*loc, eval_const_number(left, ns, diagnostics)?.1 % divisor))
             }
@@ -99,7 +109,7 @@ pub fn eval_const_number(
                     "power cannot take negative number as exponent".to_string(),
                 ));
 
-                Err(())
+                Err(EvaluationError::MathError)
             } else if e.sign() == Sign::NoSign {
                 Ok((*loc, BigInt::one()))
             } else {
@@ -122,7 +132,7 @@ pub fn eval_const_number(
                 None => {
                     diagnostics.push(Diagnostic::error(*loc, format!("cannot left shift by {r}")));
 
-                    return Err(());
+                    return Err(EvaluationError::MathError);
                 }
             };
             Ok((*loc, l << r))
@@ -137,7 +147,7 @@ pub fn eval_const_number(
                 None => {
                     diagnostics.push(Diagnostic::error(*loc, format!("right left shift by {r}")));
 
-                    return Err(());
+                    return Err(EvaluationError::MathError);
                 }
             };
             Ok((*loc, l >> r))
@@ -170,7 +180,7 @@ pub fn eval_const_number(
                 eval_const_number(init, ns, diagnostics)
             } else {
                 // we should have errored about this already
-                Err(())
+                Err(EvaluationError::NotAConstant)
             }
         }
         Expression::ConstantVariable {
@@ -184,7 +194,7 @@ pub fn eval_const_number(
                 eval_const_number(init, ns, diagnostics)
             } else {
                 // we should have errored about this already
-                Err(())
+                Err(EvaluationError::NotAConstant)
             }
         }
         _ => {
@@ -193,7 +203,7 @@ pub fn eval_const_number(
                 "expression not allowed in constant number expression".to_string(),
             ));
 
-            Err(())
+            Err(EvaluationError::NotAConstant)
         }
     }
 }

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    ast::{ConstructorAnnotation, Diagnostic, Expression, Function, Namespace, Type},
+    ast::{Diagnostic, Expression, Function, Namespace, Type},
     diagnostics::Diagnostics,
     eval::overflow_diagnostic,
     expression::literals::{hex_number_literal, unit_literal},
     expression::{ExprContext, ResolveTo},
     Symtable,
 };
-use crate::sema::ast::SolanaAccount;
-use crate::sema::eval::eval_const_number;
+use crate::sema::ast::{ConstructorAnnotations, SolanaAccount};
+use crate::sema::eval::{eval_const_number, EvaluationError};
 use crate::sema::expression::literals::number_literal;
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::solana_accounts::BuiltinAccounts;
@@ -185,11 +185,9 @@ pub(super) fn function_body_annotations(
     // @bump(param2)
     // constructor(bytes param1, uint8 param2) {}
 
-    let mut resolved_annotations = Vec::new();
-    let mut bump = None;
-    let mut space = None;
-    let mut payer = None;
+    let mut has_annotation = false;
 
+    let mut annotations = ConstructorAnnotations::default();
     let is_solana_constructor =
         ns.target == Target::Solana && ns.functions[function_no].ty == pt::FunctionTy::Constructor;
 
@@ -202,19 +200,23 @@ pub(super) fn function_body_annotations(
             "seed" if is_solana_constructor => {
                 let ty = Type::Slice(Box::new(Type::Bytes(1)));
 
-                let mut fake_loc = None;
+                let mut resolved = None;
 
                 body_annotation(
                     note.id.name.as_str(),
                     &ty,
-                    &mut fake_loc,
+                    &mut resolved,
                     note,
                     &mut diagnostics,
-                    &mut resolved_annotations,
                     context,
                     ns,
                     symtable,
+                    &mut has_annotation,
                 );
+
+                if let Some(resolved) = resolved {
+                    annotations.seeds.push(resolved);
+                }
             }
             "bump" if is_solana_constructor => {
                 let ty = Type::Bytes(1);
@@ -222,13 +224,13 @@ pub(super) fn function_body_annotations(
                 body_annotation(
                     note.id.name.as_str(),
                     &ty,
-                    &mut bump,
+                    &mut annotations.bump,
                     note,
                     &mut diagnostics,
-                    &mut resolved_annotations,
                     context,
                     ns,
                     symtable,
+                    &mut has_annotation,
                 );
             }
             "space" if is_solana_constructor => {
@@ -237,13 +239,13 @@ pub(super) fn function_body_annotations(
                 body_annotation(
                     note.id.name.as_str(),
                     &ty,
-                    &mut space,
+                    &mut annotations.space,
                     note,
                     &mut diagnostics,
-                    &mut resolved_annotations,
                     context,
                     ns,
                     symtable,
+                    &mut has_annotation,
                 );
             }
             "payer" if is_solana_constructor => {
@@ -277,7 +279,7 @@ pub(super) fn function_body_annotations(
                             ));
                         }
                         Entry::Vacant(vacancy) => {
-                            if let Some(prev) = &payer {
+                            if let Some((prev, _)) = &annotations.payer {
                                 duplicate_annotation(
                                     &mut diagnostics,
                                     "payer",
@@ -286,15 +288,13 @@ pub(super) fn function_body_annotations(
                                     ns.functions[function_no].ty.as_str(),
                                 );
                             } else {
-                                payer = Some(loc);
                                 vacancy.insert(SolanaAccount {
                                     loc: note.loc,
                                     is_signer: true,
                                     is_writer: true,
                                     generated: false,
                                 });
-                                resolved_annotations
-                                    .push(ConstructorAnnotation::Payer(loc, id.name.clone()));
+                                annotations.payer = Some((loc, id.name.clone()));
                             }
                         }
                     }
@@ -326,17 +326,21 @@ pub(super) fn function_body_annotations(
         {
             "seed" => {
                 let ty = Type::Slice(Box::new(Type::Bytes(1)));
-                let mut fake_loc = None;
+                let mut resolved = None;
                 parameter_annotation(
                     function_no,
                     unresolved,
                     &ty,
-                    &mut fake_loc,
+                    &mut resolved,
                     &mut diagnostics,
-                    &mut resolved_annotations,
                     ns,
                     symtable,
+                    &mut has_annotation,
                 );
+
+                if let Some(resolved) = resolved {
+                    annotations.seeds.push(resolved);
+                }
             }
             "bump" => {
                 let ty = Type::Bytes(1);
@@ -344,11 +348,11 @@ pub(super) fn function_body_annotations(
                     function_no,
                     unresolved,
                     &ty,
-                    &mut bump,
+                    &mut annotations.bump,
                     &mut diagnostics,
-                    &mut resolved_annotations,
                     ns,
                     symtable,
+                    &mut has_annotation,
                 );
             }
             "space" => {
@@ -357,11 +361,11 @@ pub(super) fn function_body_annotations(
                     function_no,
                     unresolved,
                     &ty,
-                    &mut space,
+                    &mut annotations.space,
                     &mut diagnostics,
-                    &mut resolved_annotations,
                     ns,
                     symtable,
+                    &mut has_annotation,
                 );
             }
 
@@ -392,7 +396,7 @@ pub(super) fn function_body_annotations(
         }
     }
 
-    if !resolved_annotations.is_empty() && diagnostics.is_empty() && payer.is_none() {
+    if has_annotation && diagnostics.is_empty() && annotations.payer.is_none() {
         diagnostics.push(Diagnostic::error(
             ns.functions[function_no].loc,
             "@payer annotation required for constructor".into(),
@@ -401,43 +405,22 @@ pub(super) fn function_body_annotations(
 
     ns.diagnostics.extend(diagnostics);
 
-    ns.functions[function_no].annotations = resolved_annotations;
+    ns.functions[function_no].annotations = annotations;
 }
 
 /// Resolve the body annotations
 fn body_annotation(
     name: &str,
     ty: &Type,
-    previous: &mut Option<pt::Loc>,
+    resolved_annotation: &mut Option<(pt::Loc, Expression)>,
     annotation: &Annotation,
     diagnostics: &mut Diagnostics,
-    resolved_annotations: &mut Vec<ConstructorAnnotation>,
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
+    has_annotation: &mut bool,
 ) {
     let annotation_value = annotation.value.as_ref().unwrap();
-    let mut dry_run = Diagnostics::default();
-    if let Ok(expr) = expression(
-        annotation_value,
-        context,
-        ns,
-        symtable,
-        &mut dry_run,
-        ResolveTo::Type(ty),
-    ) {
-        // We only accept literals or constant expressions.
-        if !annotation_value.is_literal() && eval_const_number(&expr, ns, &mut dry_run).is_err() {
-            diagnostics.push(Diagnostic::error(
-                annotation.value.as_ref().unwrap().loc(),
-                format!(
-                    "'@{}' annotation on top of a constructor only accepts literals",
-                    name
-                ),
-            ));
-            return;
-        }
-    }
 
     if let Ok(expr) = expression(
         annotation_value,
@@ -447,12 +430,33 @@ fn body_annotation(
         diagnostics,
         ResolveTo::Type(ty),
     ) {
-        if let Ok(expr) = expr.cast(&expr.loc(), ty, true, ns, diagnostics) {
-            if let Some(prev) = previous {
+        if let Ok(expr) = expr.cast(&annotation.loc, ty, true, ns, diagnostics) {
+            if let Some((prev, _)) = resolved_annotation {
                 duplicate_annotation(diagnostics, name, expr.loc(), *prev, "constructor");
+            } else if annotation_value.is_literal() {
+                *has_annotation = true;
+                *resolved_annotation = Some((annotation.loc, expr));
             } else {
-                *previous = Some(annotation.loc);
-                resolved_annotations.push(ConstructorAnnotation::initialize_annotation(name, expr));
+                let mut eval_diagnostics = Diagnostics::default();
+                match eval_const_number(&expr, ns, &mut eval_diagnostics) {
+                    Ok((_, _)) => {
+                        *has_annotation = true;
+                        *resolved_annotation = Some((annotation.loc, expr));
+                    }
+                    Err(EvaluationError::MathError) => {
+                        diagnostics.extend(eval_diagnostics);
+                    }
+
+                    Err(EvaluationError::NotAConstant) => {
+                        diagnostics.push(Diagnostic::error(
+                            annotation.value.as_ref().unwrap().loc(),
+                            format!(
+                                "'@{}' annotation on a constructor only accepts constant values",
+                                name
+                            ),
+                        ));
+                    }
+                }
             }
         }
     }
@@ -463,15 +467,15 @@ fn parameter_annotation(
     function_no: usize,
     unresolved_annotation: &UnresolvedAnnotation,
     ty: &Type,
-    previous: &mut Option<pt::Loc>,
+    resolved_annotation: &mut Option<(pt::Loc, Expression)>,
     diagnostics: &mut Diagnostics,
-    resolved_annotations: &mut Vec<ConstructorAnnotation>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
+    has_annotation: &mut bool,
 ) {
     let parameter = &ns.functions[function_no].params[unresolved_annotation.parameter_no];
     let annotation = parameter.annotation.as_ref().unwrap();
-    if let Some(prev) = previous {
+    if let Some((prev, _)) = resolved_annotation {
         duplicate_annotation(
             diagnostics,
             annotation.id.name.as_str(),
@@ -496,22 +500,8 @@ fn parameter_annotation(
         .read = true;
 
     if let Ok(casted) = expr.cast(&annotation.loc, ty, true, ns, diagnostics) {
-        *previous = Some(annotation.loc);
-        resolved_annotations.push(ConstructorAnnotation::initialize_annotation(
-            annotation.id.name.as_str(),
-            casted,
-        ));
-    }
-}
-
-impl ConstructorAnnotation {
-    fn initialize_annotation(name: &str, value: Expression) -> ConstructorAnnotation {
-        match name {
-            "seed" => ConstructorAnnotation::Seed(value),
-            "space" => ConstructorAnnotation::Space(value),
-            "bump" => ConstructorAnnotation::Bump(value),
-            _ => unreachable!("function should not be called with {}", name),
-        }
+        *has_annotation = true;
+        *resolved_annotation = Some((annotation.loc, casted));
     }
 }
 

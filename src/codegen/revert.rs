@@ -405,7 +405,7 @@ pub(crate) fn error_msg_with_loc(ns: &Namespace, error: String, loc: Option<Loc>
     }
 }
 
-fn string_to_expr(string: String) -> Expression {
+pub(super) fn string_to_expr(string: String) -> Expression {
     Expression::FormatString {
         loc: Loc::Codegen,
         args: vec![(
