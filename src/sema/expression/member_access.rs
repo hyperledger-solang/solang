@@ -347,37 +347,52 @@ pub(super) fn member_access(
             }
             _ => {}
         },
-        Type::Address(_) => {
-            if id.name == "balance" {
-                if ns.target.is_polkadot() {
-                    let mut is_this = false;
+        Type::Address(_) if id.name == "balance" => {
+            if ns.target.is_polkadot() {
+                let mut is_this = false;
 
-                    if let Expression::Cast { expr: this, .. } = &expr {
-                        if let Expression::Builtin {
-                            kind: Builtin::GetAddress,
-                            ..
-                        } = this.as_ref()
-                        {
-                            is_this = true;
-                        }
-                    }
-
-                    if !is_this {
-                        diagnostics.push(Diagnostic::error(
-                            expr.loc(),
-                            "polkadot can only retrieve balance of this, like 'address(this).balance'".to_string(),
-                        ));
-                        return Err(());
+                if let Expression::Cast { expr: this, .. } = &expr {
+                    if let Expression::Builtin {
+                        kind: Builtin::GetAddress,
+                        ..
+                    } = this.as_ref()
+                    {
+                        is_this = true;
                     }
                 }
-                used_variable(ns, &expr, symtable);
-                return Ok(Expression::Builtin {
-                    loc: *loc,
-                    tys: vec![Type::Value],
-                    kind: Builtin::Balance,
-                    args: vec![expr],
-                });
+
+                if !is_this {
+                    diagnostics.push(Diagnostic::error(
+                        expr.loc(),
+                        "polkadot can only retrieve balance of 'this', like 'address(this).balance'"
+                            .to_string(),
+                    ));
+                    return Err(());
+                }
             }
+            used_variable(ns, &expr, symtable);
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![Type::Value],
+                kind: Builtin::Balance,
+                args: vec![expr],
+            });
+        }
+        Type::Address(_) if id.name == "code" => {
+            if ns.target != Target::EVM {
+                diagnostics.push(Diagnostic::error(
+                    expr.loc(),
+                    format!("'address.code' is not supported on {}", ns.target),
+                ));
+                return Err(());
+            }
+            used_variable(ns, &expr, symtable);
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![Type::DynamicBytes],
+                kind: Builtin::ContractCode,
+                args: vec![expr],
+            });
         }
         Type::Contract(ref_contract_no) => {
             let mut name_matches = 0;
