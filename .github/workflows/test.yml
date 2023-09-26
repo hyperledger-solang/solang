@@ -52,8 +52,15 @@ jobs:
       uses: actions/checkout@v3
       with:
         submodules: recursive
-    - name: Rust stable
-      run: rustup default 1.72.0
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: |
+          llvm-tools
+          clippy
+          rustfmt
+    - name: cargo install cargo-llvm-cov
+      uses: taiki-e/install-action@cargo-llvm-cov
     - name: Run cargo clippy
       run: cargo clippy --workspace --tests --bins -- -D warnings
     - name: Run cargo clippy without wasm_opt feature
@@ -64,16 +71,35 @@ jobs:
       run: cargo doc --workspace --bins
     - name: Run cargo fmt
       run: cargo fmt --all -- --check
-    - name: Build
-      if: always()
-      run: cargo build --verbose
-    - name: Run tests
-      if: always()
-      run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v3.1.0
+    - name: Configure llvm-cov and build
+      run: |
+        pwd
+        cargo llvm-cov clean --workspace
+        cargo build
+        echo $LLVM_PROFILE_FILE
+        pwd
+      env:
+        RUSTFLAGS: -C instrument-coverage -C llvm-args=--instrprof-atomic-counter-update-all --cfg=coverage --cfg=trybuild_no_target
+        LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
+        CARGO_INCREMENTAL: 0
+        CARGO_LLVM_COV: 1
+        CARGO_LLVM_COV_TARGET_DIR: /home/runner/work/solang/solang/target
+    - name: Upload binary
+      uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-linux-x86-64
         path: ./target/debug/solang
+    - name: Run tests
+      if: always()
+      run: cargo llvm-cov --all-features --workspace --no-report
+    - name: Compress test coverage files
+      run: tar -czvf rust-tests.tar.gz *.profraw
+      working-directory: ./target
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: rust-tests.tar.gz
+        path: ./target/rust-tests.tar.gz
 
   linux-arm:
     name: Linux Arm
@@ -224,6 +250,8 @@ jobs:
     runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
+    env:
+     LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -265,12 +293,22 @@ jobs:
     - name: Test Anchor
       run: anchor test --skip-local-validator
       working-directory: ./integration/anchor
+    - name: Compress test coverage files
+      run: tar -czvf anchor-tests.tar.gz *.profraw
+      working-directory: ./target
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+       name: anchor-tests.tar.gz
+       path: ./target/anchor-tests.tar.gz
 
   solana:
     name: Solana Integration test
     runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
+    env:
+      LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -299,11 +337,21 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/solana
+    - name: Compress test coverage files
+      run: tar -czvf solana-tests.tar.gz *.profraw
+      working-directory: ./target
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: solana-tests.tar.gz
+        path: ./target/solana-tests.tar.gz
 
   polkadot:
     name: Polkadot Integration test
     runs-on: solang-ubuntu-latest
     needs: linux-x86-64
+    env:
+      LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -338,11 +386,22 @@ jobs:
     - name: cleanup
       if: always()
       run: docker kill ${{steps.substrate.outputs.id}}
+    - name: Compress test coverage files
+      run: tar -czvf polkadot-tests.tar.gz *.profraw
+      working-directory: ./target
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: polkadot-tests.tar.gz
+        path: ./target/polkadot-tests.tar.gz
+
 
   polkadot-subxt:
     name: Polkadot Integration test with subxt
     runs-on: ubuntu-22.04
     needs: linux-x86-64
+    env:
+      LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
@@ -370,11 +429,21 @@ jobs:
     - name: cleanup
       if: always()
       run: docker kill ${{steps.substrate.outputs.id}}
+    - name: Compress test coverage files
+      run: tar -czvf polkadot-subxt-tests.tar.gz *.profraw
+      working-directory: ./target
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: polkadto-subxt-tests.tar.gz
+        path: ./target/polkadot-subxt-tests.tar.gz
 
   vscode:
     name: Visual Code Extension
     runs-on: solang-ubuntu-latest
     needs: linux-x86-64
+    env:
+      LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -400,6 +469,14 @@ jobs:
       working-directory: ./vscode
     - run: vsce package
       working-directory: ./vscode
+    - name: Compress test coverage files
+      run: tar -czvf vscode-tests.tar.gz *.profraw
+      working-directory: ./target
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: vscode-tests.tar.gz
+        path: ./target/vscode-tests.tar.gz
 
   std-lib-tests:
     name: Stdlib
@@ -417,27 +494,27 @@ jobs:
           ./test
         working-directory: ./stdlib
 
-  coverage:
-    runs-on: ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: llvm-tools
-      - name: cargo install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-      - name: cargo llvm-cov
-        run: cargo llvm-cov --all-features --lcov --output-path lcov.info
-        env:
-          CARGO_HUSKY_DONT_INSTALL_HOOKS: true
-      - name: Upload coverage report to codecov.io
-        uses: codecov/codecov-action@v3
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        with:
-          fail_ci_if_error: true
+#  coverage:
+#    runs-on: ubuntu-latest
+#    container: ghcr.io/hyperledger/solang-llvm:ci-5
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#        with:
+#          submodules: recursive
+#      - name: Install Rust
+#        uses: dtolnay/rust-toolchain@stable
+#        with:
+#          components: llvm-tools
+#      - name: cargo install cargo-llvm-cov
+#        uses: taiki-e/install-action@cargo-llvm-cov
+#      - name: cargo llvm-cov
+#        run: cargo llvm-cov --all-features --lcov --output-path lcov.info
+#        env:
+#          CARGO_HUSKY_DONT_INSTALL_HOOKS: true
+#      - name: Upload coverage report to codecov.io
+#        uses: codecov/codecov-action@v3
+#        env:
+#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+#        with:
+#          fail_ci_if_error: true
