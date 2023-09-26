@@ -2185,7 +2185,7 @@ pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.build_store(output_len, len);
             }
 
-            return (output, llvm_length);
+            (output, llvm_length)
         }
         Expression::AllocDynamicBytes {
             initializer: Some(initializer),
@@ -2194,16 +2194,16 @@ pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
             let ptr = bin.emit_global_string("slice_constant", initializer, true);
             let len = i64_const!(initializer.len() as u64);
 
-            return (ptr, len);
+            (ptr, len)
         }
-        _ => (),
+        _ => {
+            let from = e.ty();
+
+            let val = expression(target, bin, e, vartab, function, ns);
+
+            basic_value_to_slice(bin, val, &from, to, function, ns)
+        }
     }
-
-    let from = e.ty();
-
-    let val = expression(target, bin, e, vartab, function, ns);
-
-    basic_value_to_slice(bin, val, &from, to, function, ns)
 }
 
 /// Convert basic enum value to a slice. This function calls itself recursively

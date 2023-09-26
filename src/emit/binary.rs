@@ -893,23 +893,14 @@ impl<'a> Binary<'a> {
                     self.module.get_struct_type("struct.vector").unwrap().into()
                 }
                 Type::Array(base_ty, dims) => {
-                    let mut aty = self.llvm_field_ty(base_ty, ns);
-
-                    for dim in dims {
-                        match dim {
-                            ArrayLength::Fixed(d) => {
-                                aty = aty.array_type(d.to_u32().unwrap()).into();
-                            }
+                    dims.iter()
+                        .fold(self.llvm_field_ty(base_ty, ns), |aty, dim| match dim {
+                            ArrayLength::Fixed(d) => aty.array_type(d.to_u32().unwrap()).into(),
                             ArrayLength::Dynamic => {
-                                aty = self.module.get_struct_type("struct.vector").unwrap().into();
+                                self.module.get_struct_type("struct.vector").unwrap().into()
                             }
-                            ArrayLength::AnyFixed => {
-                                unreachable!()
-                            }
-                        }
-                    }
-
-                    aty
+                            ArrayLength::AnyFixed => unreachable!(),
+                        })
                 }
                 Type::Struct(StructType::SolParameters) => self
                     .module
