@@ -247,12 +247,19 @@ for an example of how to use this.
 Interacting with Solana running programs on-chain
 _________________________________________________
 
+The command line syntax for interacting with a program deployed on Solana is as follows:
+
   solang solana [SUBCOMMAND] [OPTIONS]... <PROGRAM_LOCATION>
 
-This means that the command line is ``solang solana`` followed by a subcommand 
-followed by any of the options described below and then the program location.
+It consists of a subcommand followed by its options, both of which are described below. The last argument is the program location.
+
+.. note::
+
+  Solang relies on the local default Solana configuration file to obtain information for transaction submissions. 
+  For comprehensive management of this configuration file, you can refer to `Solana's CLI command documentation <https://docs.solana.com/cli/usage#solana-config>`_.
 
 General Options (for all subcommands):
+++++++++++++++++++++++++++++++++++++++
 
 \-\-output-json
   Specifies whether to export the call output in JSON format.
@@ -261,16 +268,22 @@ General Options (for all subcommands):
   This displays a short description of all the options.
 
 Subcommands:
+++++++++++++
 
-  solang solana deploy [OPTIONS]... <PROGRAM_LOCATION>
+Deploy Subcommand
+-----------------
 
-Deploys a program to Solana.
+Allows you to deploy Solana compiled programs to Solana.
 
 Options specific to the ``deploy`` subcommand:
 
 \-\-verbose, -v
   Specifies whether to display verbose program deployment information
   (Conflicts with ``--output-json``).
+
+.. code-block:: bash
+
+  solang solana deploy --verbose flipper.so
 
 Running Solang using a container
 ________________________________

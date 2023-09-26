@@ -16,7 +16,7 @@ use solana_rpc_client_api::config::RpcSendTransactionConfig;
 use solana_sdk::{commitment_config::CommitmentConfig, signer::keypair::read_keypair_file};
 
 #[derive(Clone, Debug, clap::Args)]
-#[clap(name = "deploy", about = "Deploy a program to the Solana cluster")]
+#[clap(name = "deploy", about = "Deploy a program to Solana")]
 pub struct SolanaDeploy {
     #[clap(help = "Specifies the path to the program file to deploy (.so)")]
     program_location: String,
