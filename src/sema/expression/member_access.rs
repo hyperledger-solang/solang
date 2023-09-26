@@ -364,7 +364,7 @@ pub(super) fn member_access(
                 if !is_this {
                     diagnostics.push(Diagnostic::error(
                         expr.loc(),
-                        "polkadot can only retrieve balance of this, like 'address(this).balance'"
+                        "polkadot can only retrieve balance of 'this', like 'address(this).balance'"
                             .to_string(),
                     ));
                     return Err(());
