@@ -683,7 +683,7 @@ pub(super) fn array_literal(
 
                 let ty = expr.ty();
 
-                if let Type::Array(elem, _) = &ty {
+                if let Type::Array(elem, _) = ty.deref_any() {
                     if expr
                         .cast(loc, slice, true, ns, &mut Diagnostics::default())
                         .is_err()

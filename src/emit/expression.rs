@@ -2016,7 +2016,7 @@ fn runtime_cast<'a>(
                 "int_to_ptr",
             )
             .into(),
-        (Type::DynamicBytes, Type::Slice(_)) => {
+        (Type::DynamicBytes | Type::String, Type::Slice(_)) => {
             let slice_ty = bin.llvm_type(to, ns);
             let slice = bin.build_alloca(function, slice_ty, "slice");
 
@@ -2218,7 +2218,7 @@ fn basic_value_to_slice<'a>(
 ) -> (PointerValue<'a>, IntValue<'a>) {
     emit_context!(bin);
 
-    match &from {
+    match from.deref_memory() {
         Type::Slice(_) | Type::DynamicBytes | Type::String => {
             let data = bin.vector_bytes(val);
             let len = bin.vector_len(val);
