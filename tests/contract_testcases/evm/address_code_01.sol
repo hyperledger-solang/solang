@@ -7,4 +7,4 @@ contract UpgradeableProxy {
 }
 
 // ---- Expect: diagnostics ----
-// error: 5:9-38: conversion from uint8 slice to uint256 not possible
+// error: 5:9-38: conversion from bytes to uint256 not possible

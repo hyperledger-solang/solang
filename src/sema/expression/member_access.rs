@@ -389,7 +389,7 @@ pub(super) fn member_access(
             used_variable(ns, &expr, symtable);
             return Ok(Expression::Builtin {
                 loc: *loc,
-                tys: vec![Type::Slice(Type::Uint(8).into())],
+                tys: vec![Type::DynamicBytes],
                 kind: Builtin::ContractCode,
                 args: vec![expr],
             });
