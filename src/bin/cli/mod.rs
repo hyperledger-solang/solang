@@ -739,16 +739,16 @@ fn check_target_match(
     };
 
     // Parse the TOML content and extract the target name
-    let parsed_toml: toml::Value = toml::from_str(&content).map_err(|err| {
+    let parsed_toml: Compile = toml::from_str(&content).map_err(|err| {
         anyhow::anyhow!(
             "Failed to parse solang.toml file in the current directory: {}",
             err
         )
     })?;
-    let config_target = parsed_toml["target"]["name"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("Failed to get target name from solang.toml"))?
-        .to_string();
+    let config_target = parsed_toml
+        .target_arg
+        .name
+        .ok_or_else(|| anyhow::anyhow!("Failed to get target name from solang.toml"))?;
 
     // Compare the target name with the provided argument
     if config_target != target_name {
@@ -769,25 +769,139 @@ fn test_check_target_match() {
     let target_name = "solana";
     let config_file_content = Some(
         r#"
+            [package]
+            version = "0.1.0"
+            
+            # Source files to be compiled.
+            input_files = ["flipper.sol"]
+            
+            # Contracts to be compiled.
+            # If no contracts are specified, solang will compile all non-virtual contracts.
+            contracts = ["flipper"]
+            
+            # Specify required import paths.
+            import_path = []
+            
+            # Define any importmaps. 
+            # import_map = { "@openzeppelin" = "/home/user/libraries/openzeppelin-contracts/" }
+            import_map = {}
+            
+            
             [target]
             name = "solana"
+            
+            [debug-features]
+            # Log debug prints to the environment.
+            prints = true
+            
+            # Log runtime errors to the environment.
+            log-runtime-errors = true
+            
+            # Add debug info to the generated llvm IR.
+            generate-debug-info = false
+            
+            [optimizations]
+            dead-storage = true
+            constant-folding = true
+            strength-reduce = true
+            vector-to-slice = true
+            common-subexpression-elimination = true
+            
+            # Valid LLVM optimization levels are: none, less, default, aggressive
+            llvm-IR-optimization-level = "aggressive"
+            
+            [compiler-output]
+            verbose = false
+            
+            # Emit compiler state at early stages. Valid options are: ast-dot, cfg, llvm-ir, llvm-bc, object, asm
+            # emit = "llvm-ir" 
+            
+            # Output directory for binary artifacts.
+            # output_directory = "path/to/dir"   
+            
+            # Output directory for the metadata.
+            # output_meta = "path/to/dir" 
+            
+            # Output everything in a JSON format on STDOUT instead of writing output files.
+            std_json_output = false
             "#
         .to_string(),
     );
     let result = check_target_match(target_name, config_file_content);
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "Error: {:?}", result);
     assert!(result.unwrap());
 
     // Test that the function returns false if the target names do not match
     let target_name = "solana";
     let config_file_content = Some(
         r#"
+            [package]
+            authors = ["Your Name <your@email.com>"]
+            version = "0.1.0"
+            
+            # Source files to be compiled.
+            input_files = ["flipper.sol"]
+            
+            # Contracts to be compiled.
+            # If no contracts are specified, solang will compile all non-virtual contracts.
+            contracts = ["flipper"]
+            
+            # Specify required import paths. 
+            import_path = []   
+            
+            # Define any importmaps. 
+            # import_map = { "@openzeppelin" = "/home/user/libraries/openzeppelin-contracts/" }
+            import_map = {}
+            
+            
             [target]
             name = "polkadot"
+            address_length = 32
+            value_length = 16
+            
+            
+            [debug-features]
+            # Log debug prints to the environment.
+            prints = true
+            
+            # Log runtime errors to the environment.
+            log-runtime-errors = true
+            
+            # Add debug info to the generated llvm IR.
+            generate-debug-info = false
+            
+            [optimizations]
+            dead-storage = true
+            constant-folding = true
+            strength-reduce = true
+            vector-to-slice = true
+            common-subexpression-elimination = true
+            
+            
+            # Valid wasm-opt passes are: Zero, One, Two, Three, Four, S, (focusing on code size) or Z (super-focusing on code size)
+            wasm-opt = "Z"
+            
+            # Valid LLVM optimization levels are: none, less, default, aggressive
+            llvm-IR-optimization-level = "aggressive"
+            
+            [compiler-output]
+            verbose = false
+            
+            # Emit compiler state at early stages. Valid options are: ast-dot, cfg, llvm-ir, llvm-bc, object, asm
+            # emit = "llvm-ir"
+            
+            # Output directory for binary artifacts.
+            # output_directory = "path/to/dir"
+            
+            # Output directory for the metadata.
+            # output_meta = "path/to/dir"
+            
+            # Output everything in a JSON format on STDOUT instead of writing output files.
+            std_json_output = false
             "#
         .to_string(),
     );
     let result = check_target_match(target_name, config_file_content);
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "Error: {:?}", result);
     assert!(!result.unwrap());
 }
