@@ -2123,7 +2123,9 @@ fn runtime_cast<'a>(
     }
 }
 
-/// Emit expression into a slice
+/// Emit a codegen expression as a slice; the result is a pointer to the data and a length. This is
+/// needed for Solana syscalls that take slices, and will be useful for when we start supporting
+/// slices in Solidity.
 pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
     target: &T,
     bin: &Binary<'a>,
