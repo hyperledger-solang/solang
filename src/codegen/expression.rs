@@ -1077,16 +1077,6 @@ pub fn expression(
             ty: ty.clone(),
             var_no: *var_no,
         },
-        ast::Expression::List {
-            loc,
-            list: elements,
-        } => Expression::List {
-            loc: *loc,
-            exprs: elements
-                .iter()
-                .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
-                .collect::<Vec<Expression>>(),
-        },
         ast::Expression::GetRef { loc, ty, expr: exp } => Expression::GetRef {
             loc: *loc,
             ty: ty.clone(),
@@ -1151,6 +1141,8 @@ pub fn expression(
                 ty,
             }
         }
+
+        ast::Expression::List { .. } => unreachable!("List shall not appear in the CFG"),
     }
 }
 

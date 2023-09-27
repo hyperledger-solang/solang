@@ -1843,7 +1843,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         }
 
         Expression::RationalNumberLiteral { .. }
-        | Expression::List { .. }
         | Expression::Undefined { .. }
         | Expression::Poison
         | Expression::BytesCast { .. } => {

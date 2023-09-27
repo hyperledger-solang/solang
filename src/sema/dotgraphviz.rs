@@ -214,33 +214,30 @@ impl Dot {
         }
 
         // Annotations
-        if !func.annotations.is_empty() {
-            let node = self.add_node(
-                Node::new("annotations", vec!["annotations".into()]),
-                Some(func_node),
-                Some(String::from("annotations")),
-            );
+        let node = self.add_node(
+            Node::new("annotations", vec!["annotations".into()]),
+            Some(func_node),
+            Some(String::from("annotations")),
+        );
 
-            for note in &func.annotations {
-                match note {
-                    ConstructorAnnotation::Seed(expr) => {
-                        self.add_expression(expr, Some(func), ns, node, "seed".into());
-                    }
-                    ConstructorAnnotation::Space(expr) => {
-                        self.add_expression(expr, Some(func), ns, node, "space".into());
-                    }
-                    ConstructorAnnotation::Bump(expr) => {
-                        self.add_expression(expr, Some(func), ns, node, "bump".into());
-                    }
-                    ConstructorAnnotation::Payer(_, name) => {
-                        self.add_node(
-                            Node::new("payer", vec![name.clone()]),
-                            Some(node),
-                            Some(String::from("payer declaration")),
-                        );
-                    }
-                };
-            }
+        for seed in &func.annotations.seeds {
+            self.add_expression(&seed.1, Some(func), ns, node, "seed".into());
+        }
+
+        if let Some(space) = &func.annotations.space {
+            self.add_expression(&space.1, Some(func), ns, node, "space".into());
+        }
+
+        if let Some(bump) = &func.annotations.bump {
+            self.add_expression(&bump.1, Some(func), ns, node, "bump".into());
+        }
+
+        if let Some((_, name)) = &func.annotations.payer {
+            self.add_node(
+                Node::new("payer", vec![name.clone()]),
+                Some(node),
+                Some(String::from("payer declaration")),
+            );
         }
 
         // bases
