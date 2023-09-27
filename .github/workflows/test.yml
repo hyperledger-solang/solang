@@ -272,6 +272,11 @@ jobs:
     container: ghcr.io/hyperledger/solang-llvm:ci-6
     needs: linux-x86-64
     steps:
+    # Install jq to parse JSON (used in cli_test.sh)
+    - name: Install jq
+      run: |
+        apt-get update
+        apt-get install -y jq
     - name: Checkout sources
       uses: actions/checkout@v3
     - uses: actions/setup-node@v3
@@ -291,9 +296,6 @@ jobs:
     # If we don't, solana-test-validator might not be able to write its
     # output and exit
     - run: nohup solana-test-validator -q > validator.out &
-    # Generate a new keypair for the test
-    # This is needed to be able to send transactions on the local test network
-    - run: solana-keygen new --no-bip39-passphrase
     - run: npm install
       working-directory: ./integration/solana
     - name: Build Solang contracts
@@ -302,6 +304,12 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/solana
+    # Generate a new keypair for the test
+    # This is needed to be able to send transactions on the local test network
+    - run: solana-keygen new --no-bip39-passphrase
+    # Set the URL to localhost
+    - run: solana config set --url localhost
+    - run: solana airdrop 50
     - name: Test Solana CLI
       run: ./cli_test.sh
       working-directory: ./integration/solana
