@@ -2125,7 +2125,7 @@ fn runtime_cast<'a>(
 
 /// Emit a codegen expression as a slice; the result is a pointer to the data and a length. This is
 /// needed for Solana syscalls that take slices, and will be useful for when we start supporting
-/// slices in Solidity.
+/// slices in Solidity (e.g. foo[2:3])
 pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
     target: &T,
     bin: &Binary<'a>,
@@ -2164,6 +2164,8 @@ pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
                     ns,
                 );
 
+                // SAFETY: llvm_to is an array of slices, so i is slice no and 0 is the data ptr
+                // of the slice struct. Since indexes are correct for type it is safe.
                 let output_ptr = unsafe {
                     bin.builder.build_gep(
                         llvm_to,
@@ -2175,6 +2177,8 @@ pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 bin.builder.build_store(output_ptr, ptr);
 
+                // SAFETY: llvm_to is an array of slices, so i is slice no and 1 is the len ptr
+                // of the slice struct. Since indexes are correct for type it is safe.
                 let output_len = unsafe {
                     bin.builder.build_gep(
                         llvm_to,
@@ -2323,6 +2327,8 @@ fn basic_value_to_slice<'a>(
             let (data, len) =
                 basic_value_to_slice(bin, input_elem, &from_elem, &to_elem, function, ns);
 
+            // SAFETY: to is an array of slices, so index is slice no and 0 is the data ptr
+            // of the slice struct. Since indexes are correct from type it is safe.
             let output_data = unsafe {
                 bin.builder
                     .build_gep(to, output, &[index, i32_zero!()], "output_data")
@@ -2330,6 +2336,8 @@ fn basic_value_to_slice<'a>(
 
             bin.builder.build_store(output_data, data);
 
+            // SAFETY: to is an array of slices, so index is slice no and 1 is the len ptr
+            // of the slice struct. Since indexes are correct from type it is safe.
             let output_len = unsafe {
                 bin.builder
                     .build_gep(to, output, &[index, i32_const!(1)], "output_len")
