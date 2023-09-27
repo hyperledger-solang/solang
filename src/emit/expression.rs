@@ -2267,6 +2267,18 @@ fn basic_value_to_slice<'a>(
 
             let to = bin.llvm_type(to, ns);
 
+            let (val, from) = if let Type::Ref(ty) = from {
+                let val = bin.builder.build_load(
+                    bin.llvm_type(from, ns),
+                    val.into_pointer_value(),
+                    "val",
+                );
+
+                (val, ty.as_ref())
+            } else {
+                (val, from)
+            };
+
             let length = match dims.last().unwrap() {
                 ArrayLength::Dynamic => bin.vector_len(val),
                 ArrayLength::Fixed(len) => i32_const!(len.to_u64().unwrap()),
