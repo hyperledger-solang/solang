@@ -2218,7 +2218,7 @@ fn basic_value_to_slice<'a>(
 ) -> (PointerValue<'a>, IntValue<'a>) {
     emit_context!(bin);
 
-    match from.deref_memory() {
+    match from {
         Type::Slice(_) | Type::DynamicBytes | Type::String => {
             let data = bin.vector_bytes(val);
             let len = bin.vector_len(val);
@@ -2266,18 +2266,6 @@ fn basic_value_to_slice<'a>(
             let to_elem = to.array_elem();
 
             let to = bin.llvm_type(to, ns);
-
-            let (val, from) = if let Type::Ref(ty) = from {
-                let val = bin.builder.build_load(
-                    bin.llvm_type(from, ns),
-                    val.into_pointer_value(),
-                    "val",
-                );
-
-                (val, ty.as_ref())
-            } else {
-                (val, from)
-            };
 
             let length = match dims.last().unwrap() {
                 ArrayLength::Dynamic => bin.vector_len(val),

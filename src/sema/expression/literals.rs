@@ -666,24 +666,28 @@ pub(super) fn array_literal(
                     unreachable!()
                 };
 
-                let expr = match expression(
+                let Ok(expr) = expression(
                     expr,
                     context,
                     ns,
                     symtable,
                     diagnostics,
                     ResolveTo::Type(&Type::Array(elem.clone(), vec![ArrayLength::Dynamic])),
-                ) {
-                    Ok(expr) => expr,
-                    Err(_) => {
-                        has_errors = true;
-                        continue;
-                    }
+                ) else {
+                    has_errors = true;
+                    continue;
                 };
 
                 let ty = expr.ty();
 
-                if let Type::Array(elem, _) = ty.deref_any() {
+                let deref_ty = ty.deref_any();
+
+                let Ok(expr) = expr.cast(&expr.loc(), deref_ty, true, ns, diagnostics) else {
+                    has_errors = true;
+                    continue;
+                };
+
+                if let Type::Array(elem, _) = deref_ty {
                     if expr
                         .cast(loc, slice, true, ns, &mut Diagnostics::default())
                         .is_err()
