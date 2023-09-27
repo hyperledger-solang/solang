@@ -355,6 +355,11 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
 
 fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     match expr {
+        Expression::StructMember { loc, expr, .. } if expr.ty().is_contract_storage() => {
+            state.data_account |= DataAccountUsage::READ;
+            state.read(loc);
+            return false;
+        }
         Expression::PreIncrement { expr, .. }
         | Expression::PreDecrement { expr, .. }
         | Expression::PostIncrement { expr, .. }
