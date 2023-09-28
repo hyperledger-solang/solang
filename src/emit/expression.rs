@@ -2279,7 +2279,7 @@ fn basic_value_to_slice<'a>(
                 _ => unreachable!(),
             };
 
-            // In Program Runtime v1, we can't do dynamic alloca. Remove the malloc once we move to
+            // FIXME: In Program Runtime v1, we can't do dynamic alloca. Remove the malloc once we move to
             // program runtime v2
             let size = bin.builder.build_int_mul(
                 bin.builder.build_int_truncate(
