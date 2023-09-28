@@ -10,12 +10,13 @@ describe('ChildContract', function () {
     this.timeout(150000);
 
     let program: Program;
-    let storage: Keypair
+    let storage: Keypair;
+    let program_key: PublicKey;
     let payer: Keypair;
     let provider: Provider;
 
     before(async function () {
-        ({ program, storage, payer, provider } = await loadContractAndCallConstructor('creator'));
+        ({ program, storage, payer, program_key, provider } = await loadContractAndCallConstructor('creator'));
     });
 
     it('Create Contract', async function () {
@@ -46,7 +47,7 @@ describe('ChildContract', function () {
         let seed_program = new PublicKey("SeedHw4CsFsDEGu2AVwFM1toGXsbAJSKnb7kS8TrLxu");
         let seed = Buffer.from("chai");
 
-        let [address, bump] = await PublicKey.findProgramAddress([seed], seed_program);
+        let [address, bump] = PublicKey.findProgramAddressSync([seed], seed_program);
 
         const signature = await program.methods.createSeed1(
             seed, Buffer.from([bump]), new BN(711))
@@ -68,13 +69,23 @@ describe('ChildContract', function () {
         const info = await provider.connection.getAccountInfo(address);
 
         expect(info?.data.length).toEqual(711);
+
+        const idl = JSON.parse(fs.readFileSync('Seed1.json', 'utf8'));
+
+        const seed1 = new Program(idl, seed_program, provider);
+
+        let res = await seed1.methods.sign(program_key)
+            .accounts({ dataAccount: address, creator_programId: program_key })
+            .simulate();
+
+        expect(res.raw.toString()).toContain('Signer found');
     });
 
     it('Creates Contract with seed2', async function () {
         let seed_program = new PublicKey("Seed23VDZ9HFCfKvFwmemB6dpi25n5XjZdP52B2RUmh");
         let bare_seed = Buffer.from("poppy");
 
-        let [address, bump] = await PublicKey.findProgramAddress([Buffer.from("sunflower"), bare_seed], seed_program);
+        let [address, bump] = PublicKey.findProgramAddressSync([Buffer.from("sunflower"), bare_seed], seed_program);
 
         let seed = Buffer.concat([bare_seed, Buffer.from([bump])]);
 
@@ -107,6 +118,12 @@ describe('ChildContract', function () {
             .simulate();
 
         expect(res.raw.toString()).toContain('I am PDA.');
+
+        res = await seed2.methods.sign(program_key)
+            .accounts({ dataAccount: address, creator_programId: program_key })
+            .simulate();
+
+        expect(res.raw.toString()).toContain('Signer found');
     });
 
     it('Create Contract with account metas vector', async function () {

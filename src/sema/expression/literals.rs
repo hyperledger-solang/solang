@@ -662,25 +662,36 @@ pub(super) fn array_literal(
             let mut has_errors = false;
 
             for expr in exprs {
-                let expr = match expression(
+                let Type::Slice(elem) = slice.as_ref() else {
+                    unreachable!()
+                };
+
+                let Ok(expr) = expression(
                     expr,
                     context,
                     ns,
                     symtable,
                     diagnostics,
-                    ResolveTo::Type(&Type::Array(slice.clone(), vec![ArrayLength::Dynamic])),
-                ) {
-                    Ok(expr) => expr,
-                    Err(_) => {
-                        has_errors = true;
-                        continue;
-                    }
+                    ResolveTo::Type(&Type::Array(elem.clone(), vec![ArrayLength::Dynamic])),
+                ) else {
+                    has_errors = true;
+                    continue;
                 };
 
                 let ty = expr.ty();
 
-                if let Type::Array(elem, dims) = &ty {
-                    if elem != slice || dims.len() != 1 {
+                let deref_ty = ty.deref_any();
+
+                let Ok(expr) = expr.cast(&expr.loc(), deref_ty, true, ns, diagnostics) else {
+                    has_errors = true;
+                    continue;
+                };
+
+                if let Type::Array(elem, _) = deref_ty {
+                    if expr
+                        .cast(loc, slice, true, ns, &mut Diagnostics::default())
+                        .is_err()
+                    {
                         diagnostics.push(Diagnostic::error(
                             expr.loc(),
                             format!(
@@ -691,13 +702,11 @@ pub(super) fn array_literal(
                         ));
                         has_errors = true;
                     }
+                    used_variable(ns, &expr, symtable);
                 } else {
                     diagnostics.push(Diagnostic::error(
                         expr.loc(),
-                        format!(
-                            "type {} found where array of slices expected",
-                            ty.to_string(ns)
-                        ),
+                        format!("type {} found where array expected", ty.to_string(ns)),
                     ));
                     has_errors = true;
                 }
