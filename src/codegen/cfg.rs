@@ -1443,6 +1443,7 @@ fn is_there_virtual_function(
     if func.ty == pt::FunctionTy::Receive {
         // if there is a virtual receive function, and it's not this one, ignore it
         if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@receive") {
+            let receive = receive.last().unwrap();
             if Some(*receive) != function_no {
                 return true;
             }
@@ -1452,6 +1453,7 @@ fn is_there_virtual_function(
     if func.ty == pt::FunctionTy::Fallback {
         // if there is a virtual fallback function, and it's not this one, ignore it
         if let Some(fallback) = ns.contracts[contract_no].virtual_functions.get("@fallback") {
+            let fallback = fallback.last().unwrap();
             if Some(*fallback) != function_no {
                 return true;
             }
@@ -1537,6 +1539,9 @@ fn resolve_modifier_call<'a>(
             // is it a virtual function call
             let function_no = if let Some(signature) = signature {
                 contract.virtual_functions[signature]
+                    .last()
+                    .copied()
+                    .unwrap()
             } else {
                 *function_no
             };
@@ -2130,6 +2135,7 @@ impl Namespace {
             && self.contracts[contract_no]
                 .virtual_functions
                 .get(&func.signature)
+                .and_then(|v| v.last())
                 != function_no.as_ref()
         {
             return false;

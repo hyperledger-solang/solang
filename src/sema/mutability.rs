@@ -186,6 +186,9 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
             {
                 let function_no = if let Some(signature) = signature {
                     state.ns.contracts[contract_no].virtual_functions[signature]
+                        .last()
+                        .copied()
+                        .unwrap()
                 } else {
                     *function_no
                 };
