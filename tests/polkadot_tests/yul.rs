@@ -3,6 +3,7 @@
 use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 use primitive_types::U256;
+use rand::{thread_rng, Rng};
 
 #[derive(Debug, Encode, Decode)]
 struct Val256(U256);
@@ -256,4 +257,61 @@ contract Testing {
 
     runtime.function("switch_no_case", Val256(U256::from(3)).encode());
     assert_eq!(runtime.output(), Val256(U256::from(4)).encode());
+}
+
+#[test]
+fn storage_slot_on_return_data() {
+    let mut runtime = build_solidity(
+        r#"
+    library StorageSlot {
+        struct AddressSlot {
+            address value;
+        }
+    
+        function getAddressSlot(
+            bytes32 slot
+        ) internal pure returns (AddressSlot storage r) {
+            assembly {
+                r.slot := slot
+            }
+        }
+    }
+    
+    contract StorageKeys {
+        function set(bytes32 key) public {
+            StorageSlot.AddressSlot storage slot = StorageSlot.getAddressSlot(key);
+            slot.value = msg.sender;
+        }
+    
+        function get(bytes32 key) public returns (address a) {
+            a = StorageSlot.getAddressSlot(key).value;
+        }
+    }"#,
+    );
+
+    let default_address = [0u8; 32];
+
+    // Without setting any key, they all shuld be default
+    let key = [0u8; 32];
+    runtime.function("get", key.to_vec());
+    assert_eq!(runtime.output(), default_address);
+
+    let key = [0xffu8; 32];
+    runtime.function("get", key.to_vec());
+    assert_eq!(runtime.output(), default_address);
+
+    let mut key = [0u8; 32];
+    thread_rng().try_fill(&mut key).unwrap();
+    runtime.function("get", key.to_vec());
+    assert_eq!(runtime.output(), default_address);
+
+    // Setting the key should write to the correct storage slot
+    runtime.function("set", key.to_vec());
+    runtime.function("get", key.to_vec());
+    assert_eq!(runtime.output(), runtime.caller());
+
+    let key = [0u8; 32];
+    runtime.function("set", key.to_vec());
+    runtime.function("get", key.to_vec());
+    assert_eq!(runtime.output(), runtime.caller())
 }

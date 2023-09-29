@@ -347,7 +347,7 @@ pub struct Function {
     /// For overloaded functions this is the mangled (unique) name.
     pub mangled_name: String,
     /// Solana constructors may have seeds specified using @seed tags
-    pub annotations: Vec<ConstructorAnnotation>,
+    pub annotations: ConstructorAnnotations,
     /// Which contracts should we use the mangled name in?
     pub mangled_name_contracts: HashSet<usize>,
     /// This indexmap stores the accounts this functions needs to be called on Solana
@@ -366,26 +366,17 @@ pub struct SolanaAccount {
     pub generated: bool,
 }
 
-#[derive(Debug)]
-pub enum ConstructorAnnotation {
-    Seed(Expression),
-    Payer(pt::Loc, String),
-    Space(Expression),
-    Bump(Expression),
+#[derive(Debug, Default)]
+pub struct ConstructorAnnotations {
+    // (annotation location, annotation expression)
+    pub seeds: Vec<(pt::Loc, Expression)>,
+    pub space: Option<(pt::Loc, Expression)>,
+    pub bump: Option<(pt::Loc, Expression)>,
+    // (annotation location, account name)
+    pub payer: Option<(pt::Loc, String)>,
 }
 
-impl CodeLocation for ConstructorAnnotation {
-    fn loc(&self) -> pt::Loc {
-        match self {
-            ConstructorAnnotation::Seed(expr)
-            | ConstructorAnnotation::Space(expr)
-            | ConstructorAnnotation::Bump(expr) => expr.loc(),
-            ConstructorAnnotation::Payer(loc, _) => *loc,
-        }
-    }
-}
-
-/// This trait provides a single interface for fetching paramenters, returns and the symbol table
+/// This trait provides a single interface for fetching parameters, returns and the symbol table
 /// for both yul and solidity functions
 pub trait FunctionAttributes {
     fn get_symbol_table(&self) -> &Symtable;
@@ -464,7 +455,7 @@ impl Function {
             symtable: Symtable::new(),
             emits_events: Vec::new(),
             mangled_name,
-            annotations: Vec::new(),
+            annotations: ConstructorAnnotations::default(),
             mangled_name_contracts: HashSet::new(),
             solana_accounts: IndexMap::new().into(),
         }
@@ -509,16 +500,12 @@ impl Function {
 
     /// Does this function have an @payer annotation?
     pub fn has_payer_annotation(&self) -> bool {
-        self.annotations
-            .iter()
-            .any(|note| matches!(note, ConstructorAnnotation::Payer(..)))
+        self.annotations.payer.is_some()
     }
 
     /// Does this function have an @seed annotation?
     pub fn has_seed_annotation(&self) -> bool {
-        self.annotations
-            .iter()
-            .any(|note| matches!(note, ConstructorAnnotation::Seed(..)))
+        !self.annotations.seeds.is_empty()
     }
 
     /// Does this function have the pure state
@@ -1589,6 +1576,7 @@ pub enum StringLocation<T> {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Builtin {
+    ContractCode,
     GetAddress,
     Balance,
     PayableSend,
@@ -1665,6 +1653,7 @@ pub enum Builtin {
     Accounts,
     UserTypeWrap,
     UserTypeUnwrap,
+    ECRecover,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]

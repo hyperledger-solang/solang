@@ -987,7 +987,6 @@ impl ControlFlowGraph {
             Expression::GetRef { expr, .. } => {
                 format!("(deref {}", self.expr_to_string(contract, ns, expr))
             }
-            _ => panic!("{expr:?}"),
         }
     }
 

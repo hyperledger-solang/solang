@@ -1963,7 +1963,11 @@ pub(super) fn parse_call_args(
                     return Err(());
                 }
 
-                let ty = Type::Slice(Box::new(Type::Slice(Box::new(Type::Bytes(1)))));
+                // sol_invoke_signed_c() takes of a slice of a slice of slice of bytes
+                // 1. A single seed value is a slice of bytes.
+                // 2. A signer for single address can have multiple seeds
+                // 3. A single call to sol_invoke_signed_c can sign for multiple addresses
+                let ty = Type::Slice(Type::Slice(Type::Slice(Type::Bytes(1).into()).into()).into());
 
                 let expr = expression(
                     &arg.expr,
@@ -1974,7 +1978,7 @@ pub(super) fn parse_call_args(
                     ResolveTo::Type(&ty),
                 )?;
 
-                res.seeds = Some(Box::new(expr));
+                res.seeds = Some(expr.cast(&expr.loc(), &ty, true, ns, diagnostics)?.into());
             }
             "program_id" => {
                 if ns.target != Target::Solana {

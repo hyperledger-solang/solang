@@ -247,7 +247,7 @@ pub fn resolve_function_body(
                 ns,
                 VariableInitializer::Solidity(None),
                 VariableUsage::ReturnVariable,
-                None,
+                p.1.as_ref().unwrap().storage.clone(),
             ) {
                 ns.check_shadowing(file_no, contract_no, name);
                 symtable.returns.push(pos);
@@ -270,7 +270,7 @@ pub fn resolve_function_body(
                     ns,
                     VariableInitializer::Solidity(None),
                     VariableUsage::AnonymousReturnVariable,
-                    None,
+                    p.1.as_ref().unwrap().storage.clone(),
                 )
                 .unwrap();
 

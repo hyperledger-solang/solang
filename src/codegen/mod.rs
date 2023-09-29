@@ -42,12 +42,15 @@ use std::cmp::Ordering;
 use crate::codegen::cfg::ASTFunction;
 use crate::codegen::solana_accounts::account_management::manage_contract_accounts;
 use crate::codegen::yul::generate_yul_function_cfg;
+use crate::sema::diagnostics::Diagnostics;
+use crate::sema::eval::eval_const_number;
 use crate::sema::Recurse;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
+use solang_parser::diagnostics::Diagnostic;
 use solang_parser::{pt, pt::CodeLocation};
 
 // The sizeof(struct account_data_header)
@@ -55,6 +58,10 @@ pub const SOLANA_FIRST_OFFSET: u64 = 16;
 
 /// Name of the storage initializer function
 pub const STORAGE_INITIALIZER: &str = "storage_initializer";
+
+/// Maximum permitted size of account data (10 MiB).
+/// https://github.com/solana-labs/solana/blob/08aba38d3507c8cb66f85074d8f1249d43e64a75/sdk/program/src/system_instruction.rs#L85
+pub const MAXIMUM_ACCOUNT_SIZE: u64 = 10 * 1024 * 1024;
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum OptimizationLevel {
@@ -330,6 +337,27 @@ fn layout(contract_no: usize, ns: &mut Namespace) {
         }
     }
 
+    let constructors = ns.contracts[contract_no].constructors(ns);
+    if !constructors.is_empty() {
+        if let Some((_, exp)) = &ns.functions[constructors[0]].annotations.space {
+            // This code path is only reachable on Solana
+            assert_eq!(ns.target, Target::Solana);
+            if let Ok((_, value)) = eval_const_number(exp, ns, &mut Diagnostics::default()) {
+                if slot > value {
+                    ns.diagnostics.push(Diagnostic::error(
+                        exp.loc(),
+                        format!("contract requires at least {} bytes of space", slot),
+                    ));
+                } else if value > BigInt::from(MAXIMUM_ACCOUNT_SIZE) {
+                    ns.diagnostics.push(Diagnostic::error(
+                        exp.loc(),
+                        "Solana's runtime does not permit accounts larger than 10 MB".to_string(),
+                    ));
+                }
+            }
+        }
+    }
+
     ns.contracts[contract_no].fixed_layout_size = slot;
 }
 
@@ -472,10 +500,6 @@ pub enum Expression {
     Keccak256 {
         loc: pt::Loc,
         ty: Type,
-        exprs: Vec<Expression>,
-    },
-    List {
-        loc: pt::Loc,
         exprs: Vec<Expression>,
     },
     Less {
@@ -690,7 +714,6 @@ impl CodeLocation for Expression {
             | Expression::StringCompare { loc, .. }
             | Expression::StringConcat { loc, .. }
             | Expression::FunctionArg { loc, .. }
-            | Expression::List { loc, .. }
             | Expression::ShiftRight { loc, .. }
             | Expression::ShiftLeft { loc, .. }
             | Expression::RationalNumberLiteral { loc, .. }
@@ -853,12 +876,6 @@ impl RetrieveType for Expression {
             | Expression::Equal { .. }
             | Expression::StringCompare { .. }
             | Expression::LessEqual { .. } => Type::Bool,
-
-            Expression::List { exprs, .. } => {
-                assert_eq!(exprs.len(), 1);
-
-                exprs[0].ty()
-            }
 
             Expression::AdvancePointer { .. } => Type::BufferPointer,
             Expression::FormatString { .. } => Type::String,
@@ -1738,6 +1755,7 @@ pub enum Builtin {
     BlockNumber,
     Calldata,
     ChainId,
+    ContractCode,
     Gasleft,
     GasLimit,
     Gasprice,
@@ -1834,6 +1852,7 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::ChainId => Builtin::ChainId,
             ast::Builtin::BaseFee => Builtin::BaseFee,
             ast::Builtin::PrevRandao => Builtin::PrevRandao,
+            ast::Builtin::ContractCode => Builtin::ContractCode,
             _ => panic!("Builtin should not be in the cfg"),
         }
     }

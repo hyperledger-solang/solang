@@ -5,6 +5,7 @@ use crate::{
     BorshToken, Pubkey,
 };
 use base58::{FromBase58, ToBase58};
+use num_bigint::BigInt;
 
 #[test]
 fn simple_create_contract_no_seed() {
@@ -748,5 +749,76 @@ contract Child {
     assert_eq!(
         vm.logs,
         "Going to create childIn child constructorHello there"
+    );
+}
+
+#[test]
+fn not_enough_space() {
+    let mut vm = build_solidity(
+        r#"
+        contract Test {
+    address a;
+    address b;
+
+    @payer(acc)
+    constructor(address c, address d, @space uint64 mySpace) {
+        a = c;
+        b = d;
+    }
+}
+        "#,
+    );
+
+    let data_account = account_new();
+    vm.account_data
+        .insert(data_account, AccountState::default());
+    let payer = account_new();
+    vm.account_data.insert(payer, AccountState::default());
+    let dummy_account_1 = account_new();
+    let dummy_account_2 = account_new();
+
+    // This should work
+    vm.function("new")
+        .arguments(&[
+            BorshToken::Address(dummy_account_1),
+            BorshToken::Address(dummy_account_2),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(120),
+            },
+        ])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("acc", payer),
+            ("systemProgram", [0; 32]),
+        ])
+        .call();
+
+    let other_account = account_new();
+    vm.account_data
+        .insert(other_account, AccountState::default());
+
+    // This must fail
+    let res = vm
+        .function("new")
+        .arguments(&[
+            BorshToken::Address(dummy_account_1),
+            BorshToken::Address(dummy_account_2),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(8),
+            },
+        ])
+        .accounts(vec![
+            ("dataAccount", other_account),
+            ("acc", payer),
+            ("systemProgram", [0; 32]),
+        ])
+        .must_fail();
+
+    assert_eq!(res.unwrap(), 5u64 << 32);
+    assert_eq!(
+        vm.logs,
+        "value passed for space is insufficient. Contract requires at least 80 bytes"
     );
 }
