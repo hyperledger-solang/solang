@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+
 use super::{
     ast::{
         Builtin, CallTy, DestructureField, Diagnostic, Expression, Function, Mutability, Namespace,
@@ -16,7 +18,7 @@ use bitflags::bitflags;
 use solang_parser::pt::Loc;
 use solang_parser::{helpers::CodeLocation, pt};
 
-#[derive(PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq, PartialOrd)]
 enum Access {
     None,
     Read,
@@ -59,6 +61,7 @@ pub fn mutability(file_no: usize, ns: &mut Namespace) {
 /// While we recurse through the AST, maintain some state
 struct StateCheck<'a> {
     diagnostics: Vec<Diagnostic>,
+    expr_errors: HashMap<Access, Diagnostic>,
     declared_access: Access,
     required_access: Access,
     func: &'a Function,
@@ -69,81 +72,58 @@ struct StateCheck<'a> {
 
 impl<'a> StateCheck<'a> {
     fn value(&mut self, loc: &pt::Loc) {
-        if self.declared_access != Access::Value {
-            if let Some(modifier_loc) = &self.modifier {
-                self.diagnostics.push(Diagnostic::error_with_note(
-                    *modifier_loc,
-                    format!(
-                        "function declared '{}' but modifier accesses value sent, which is only allowed for payable functions",
-                        self.func.mutability
-                    ),
-                    *loc,
-                    "access of value sent".into()
-                ));
-            } else {
-                self.diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "function declared '{}' but this expression accesses value sent, which is only allowed for payable functions",
-                        self.func.mutability
-                    ),
-                ));
-            }
-        }
-
+        self.diagnose(loc, Access::Value);
         self.required_access.increase_to(Access::Value);
     }
 
     fn write(&mut self, loc: &pt::Loc) {
-        if self.declared_access < Access::Write {
-            if let Some(modifier_loc) = &self.modifier {
-                self.diagnostics.push(Diagnostic::error_with_note(
-                    *modifier_loc,
-                    format!(
-                        "function declared '{}' but modifier writes to state",
-                        self.func.mutability
-                    ),
-                    *loc,
-                    "write to state".into(),
-                ));
-            } else {
-                self.diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "function declared '{}' but this expression writes to state",
-                        self.func.mutability
-                    ),
-                ));
-            }
-        }
-
+        self.diagnose(loc, Access::Write);
         self.required_access.increase_to(Access::Write);
     }
 
     fn read(&mut self, loc: &pt::Loc) {
-        if self.declared_access < Access::Read {
-            if let Some(modifier_loc) = &self.modifier {
-                self.diagnostics.push(Diagnostic::error_with_note(
-                    *modifier_loc,
-                    format!(
-                        "function declared '{}' but modifier reads from state",
-                        self.func.mutability
-                    ),
-                    *loc,
-                    "read to state".into(),
-                ));
-            } else {
-                self.diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "function declared '{}' but this expression reads from state",
-                        self.func.mutability
-                    ),
-                ));
-            }
+        self.diagnose(loc, Access::Read);
+        self.required_access.increase_to(Access::Read);
+    }
+
+    fn diagnose(&mut self, loc: &pt::Loc, access_level: Access) {
+        if self.declared_access >= access_level {
+            return;
         }
 
-        self.required_access.increase_to(Access::Read);
+        let (message, note) = match access_level {
+            Access::Read => ("reads from state", "read to state"),
+            Access::Write => ("writes to state", "write to state"),
+            Access::Value => (
+                "accesses value sent, which is only allowed for payable functions",
+                "access of value sent",
+            ),
+            Access::None => unreachable!("declared access can't be lower than None; qed"),
+        };
+
+        let diagnostic = self
+            .modifier
+            .map(|modifier_loc| {
+                let message = format!(
+                    "function declared '{}' but modifier {}",
+                    self.func.mutability, message
+                );
+                Diagnostic::error_with_note(modifier_loc, message, *loc, note.into())
+            })
+            .unwrap_or_else(|| {
+                let message = format!(
+                    "function declared '{}' but this expression {}",
+                    self.func.mutability, message
+                );
+                Diagnostic::error(*loc, message)
+            });
+
+        self.expr_errors.insert(access_level, diagnostic);
+    }
+
+    fn conclude(mut self) -> Vec<Diagnostic> {
+        self.diagnostics.extend(self.expr_errors.into_values());
+        self.diagnostics
     }
 }
 
@@ -154,6 +134,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
 
     let mut state = StateCheck {
         diagnostics: Vec::new(),
+        expr_errors: HashMap::new(),
         declared_access: match func.mutability {
             Mutability::Pure(_) => Access::None,
             Mutability::View(_) => Access::Read,
@@ -271,7 +252,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
         );
     }
 
-    state.diagnostics
+    state.conclude()
 }
 
 fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateCheck) {
@@ -359,10 +340,9 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
 
 fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     match expr {
-        Expression::StructMember { loc, expr, .. } if expr.ty().is_contract_storage() => {
+        Expression::StorageLoad { loc, .. } => {
             state.data_account |= DataAccountUsage::READ;
             state.read(loc);
-            return false;
         }
         Expression::PreIncrement { expr, .. }
         | Expression::PreDecrement { expr, .. }
