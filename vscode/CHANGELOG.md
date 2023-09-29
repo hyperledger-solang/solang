@@ -4,7 +4,7 @@ All notable changes to the "solang" extension will be documented in this file.
 
 ## Unreleased
 
-- The same version of solang should be used by the language server as for on the command line,
+- The same version of solang should be used by the language server as on the command line,
   so first look in the $PATH for solang before downloading the solang binary. As a result, the
   `forceSolangExecutable` option is no longer needed. [seanyoung](https://github.com/seanyoung)
 - Go to definition, go to type definition, go to implementation is implemented. [chioni16](https://github.com/chioni16)
