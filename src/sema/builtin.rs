@@ -10,6 +10,7 @@ use super::expression::{ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::sema::ast::{RetrieveType, Tag, UserTypeDecl};
 use crate::sema::expression::resolve_expression::expression;
+use crate::sema::namespace::ResolveTypeContext;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -32,7 +33,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
+static BUILTIN_FUNCTIONS: Lazy<[Prototype; 25]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::Assert,
@@ -304,6 +305,22 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             target: vec![],
             doc: "unwrap user defined type",
             constant: true,
+        },
+        Prototype {
+            builtin: Builtin::ECRecover,
+            namespace: None,
+            method: vec![],
+            name: "ecrecover",
+            params: vec![
+                Type::Bytes(32),
+                Type::Uint(8),
+                Type::Bytes(32),
+                Type::Bytes(32),
+            ],
+            ret: vec![Type::Address(false)],
+            target: vec![Target::EVM],
+            doc: "Recover the address associated with the public key from elliptic curve signature",
+            constant: false,
         },
     ]
 });
@@ -1082,7 +1099,7 @@ pub(super) fn resolve_namespace_call(
                         let ty = ns.resolve_type(
                             context.file_no,
                             context.contract_no,
-                            false,
+                            ResolveTypeContext::None,
                             &param.ty,
                             diagnostics,
                         )?;
@@ -1123,7 +1140,7 @@ pub(super) fn resolve_namespace_call(
                 let ty = ns.resolve_type(
                     context.file_no,
                     context.contract_no,
-                    false,
+                    ResolveTypeContext::None,
                     args[1].remove_parenthesis(),
                     diagnostics,
                 )?;

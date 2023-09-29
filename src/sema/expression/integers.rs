@@ -188,8 +188,6 @@ pub fn bigint_to_expression(
     resolve_to: ResolveTo,
     hex_str_len: Option<usize>,
 ) -> Result<Expression, ()> {
-    let bits = n.bits();
-
     if let ResolveTo::Type(resolve_to) = resolve_to {
         if *resolve_to != Type::Unresolved {
             if !(resolve_to.is_integer(ns) || matches!(resolve_to, Type::Bytes(_)) && n.is_zero()) {
@@ -207,6 +205,14 @@ pub fn bigint_to_expression(
             });
         }
     }
+
+    // BigInt bits() returns the bits used without the sign. Negative value is allowed to be one
+    // larger than positive value, e.g int8 has inclusive range -128 to 127.
+    let bits = if n.sign() == Sign::Minus {
+        (n + 1u32).bits()
+    } else {
+        n.bits()
+    };
 
     // Return smallest type; hex literals with odd length are not allowed.
     let int_size = hex_str_len

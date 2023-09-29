@@ -1,0 +1,63 @@
+[package]
+authors = ["Your Name <your@email.com>"]
+version = "0.1.0"
+
+# Source files to be compiled.
+input_files = ["flipper.sol"]
+
+# Contracts to be compiled.
+# If no contracts are specified, solang will compile all non-virtual contracts.
+contracts = ["flipper"]
+
+# Specify required import paths. 
+import_path = []   
+
+# Define any importmaps. 
+# import_map = { "@openzeppelin" = "/home/user/libraries/openzeppelin-contracts/" }
+import_map = {}
+
+
+[target]
+name = "polkadot"
+address_length = 32
+value_length = 16
+
+
+[debug-features]
+# Log debug prints to the environment.
+prints = true
+
+# Log runtime errors to the environment.
+log-runtime-errors = true
+
+# Add debug info to the generated llvm IR.
+generate-debug-info = false
+
+[optimizations]
+dead-storage = true
+constant-folding = true
+strength-reduce = true
+vector-to-slice = true
+common-subexpression-elimination = true
+
+
+# Valid wasm-opt passes are: Zero, One, Two, Three, Four, S, (focusing on code size) or Z (super-focusing on code size)
+wasm-opt = "Z"
+
+# Valid LLVM optimization levels are: none, less, default, aggressive
+llvm-IR-optimization-level = "aggressive"
+
+[compiler-output]
+verbose = false
+
+# Emit compiler state at early stages. Valid options are: ast-dot, cfg, llvm-ir, llvm-bc, object, asm
+# emit = "llvm-ir"
+
+# Output directory for binary artifacts.
+# output_directory = "path/to/dir"
+
+# Output directory for the metadata.
+# output_meta = "path/to/dir"
+
+# Output everything in a JSON format on STDOUT instead of writing output files.
+std_json_output = false

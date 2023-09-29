@@ -19,7 +19,7 @@ contract Contract {
         // get shares and eth required for each share
         Struct1[] memory struct_1 = new Struct1[](size);
 
-        (struct_1[0].a, struct_1[0].b,) = IUniswapV2Pair(_tokens[0]).getReserves();
+        (struct_1[0].a, struct_1[0].b,) = IUniswapV2Pair.getReserves{program_id: _tokens[0]}();
 
     }
 }

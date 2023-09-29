@@ -26,5 +26,4 @@ contract c1 {
 // 	note 10:2-11: previous @space
 // error: 16:14-19: duplicate @bump annotation for constructor
 // 	note 15:2-11: previous @bump
-// error: 19:31-36: conversion from string to bytes not possible
 // error: 19:66-71: implicit conversion to bytes1 from uint64 not allowed

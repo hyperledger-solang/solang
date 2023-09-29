@@ -61,8 +61,8 @@ contract RuntimeErrors {
     }
 
     // external call failed
-    function call_ext(Creature e) public {
-        e.say_my_name();
+    function call_ext() public {
+        Creature.say_my_name();
     }
 
     function i_will_revert() public {

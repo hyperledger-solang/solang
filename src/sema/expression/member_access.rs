@@ -10,6 +10,7 @@ use crate::sema::expression::function_call::function_type;
 use crate::sema::expression::integers::bigint_to_expression;
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
+use crate::sema::namespace::ResolveTypeContext;
 use crate::sema::solana_accounts::BuiltinAccounts;
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::{assigned_variable, used_variable};
@@ -346,37 +347,52 @@ pub(super) fn member_access(
             }
             _ => {}
         },
-        Type::Address(_) => {
-            if id.name == "balance" {
-                if ns.target.is_polkadot() {
-                    let mut is_this = false;
+        Type::Address(_) if id.name == "balance" => {
+            if ns.target.is_polkadot() {
+                let mut is_this = false;
 
-                    if let Expression::Cast { expr: this, .. } = &expr {
-                        if let Expression::Builtin {
-                            kind: Builtin::GetAddress,
-                            ..
-                        } = this.as_ref()
-                        {
-                            is_this = true;
-                        }
-                    }
-
-                    if !is_this {
-                        diagnostics.push(Diagnostic::error(
-                            expr.loc(),
-                            "polkadot can only retrieve balance of this, like 'address(this).balance'".to_string(),
-                        ));
-                        return Err(());
+                if let Expression::Cast { expr: this, .. } = &expr {
+                    if let Expression::Builtin {
+                        kind: Builtin::GetAddress,
+                        ..
+                    } = this.as_ref()
+                    {
+                        is_this = true;
                     }
                 }
-                used_variable(ns, &expr, symtable);
-                return Ok(Expression::Builtin {
-                    loc: *loc,
-                    tys: vec![Type::Value],
-                    kind: Builtin::Balance,
-                    args: vec![expr],
-                });
+
+                if !is_this {
+                    diagnostics.push(Diagnostic::error(
+                        expr.loc(),
+                        "polkadot can only retrieve balance of 'this', like 'address(this).balance'"
+                            .to_string(),
+                    ));
+                    return Err(());
+                }
             }
+            used_variable(ns, &expr, symtable);
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![Type::Value],
+                kind: Builtin::Balance,
+                args: vec![expr],
+            });
+        }
+        Type::Address(_) if id.name == "code" => {
+            if ns.target != Target::EVM {
+                diagnostics.push(Diagnostic::error(
+                    expr.loc(),
+                    format!("'address.code' is not supported on {}", ns.target),
+                ));
+                return Err(());
+            }
+            used_variable(ns, &expr, symtable);
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![Type::DynamicBytes],
+                kind: Builtin::ContractCode,
+                args: vec![expr],
+            });
         }
         Type::Contract(ref_contract_no) => {
             let mut name_matches = 0;
@@ -648,7 +664,7 @@ fn type_name_expr(
     let ty = ns.resolve_type(
         context.file_no,
         context.contract_no,
-        false,
+        ResolveTypeContext::FunctionType,
         &args[0],
         diagnostics,
     )?;

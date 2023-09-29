@@ -1,7 +1,7 @@
 
-function doThis(bar1 bb) returns (int) {
+function doThis(address id) returns (int) {
     // This is allwoed
-    return bb.this_is_external(1, 2);
+    return bar1.this_is_external{program_id: id}(1, 2);
 }
 
 contract bar1 {
@@ -46,5 +46,6 @@ contract bar2 is bar1 {
 // 	note 19:5-61: declaration of function 'hello'
 // error: 30:16-35: functions declared external cannot be called via an internal function call
 // 	note 19:5-61: declaration of function 'hello'
+// error: 35:16-43: a contract needs a program id to be called. Either a '@program_id' must be declared above a contract or the {program_id: ...} call argument must be present
 // error: 40:16-38: functions declared external cannot be called via an internal function call
 // 	note 10:5-72: declaration of function 'this_is_external'

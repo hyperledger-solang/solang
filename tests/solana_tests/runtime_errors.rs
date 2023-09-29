@@ -10,9 +10,6 @@ fn runtime_errors() {
 contract RuntimeErrors {
     bytes b = hex"0000_00fa";
     uint256[] arr;
-    child public c;
-    child public c2;
-
     constructor() {}
 
     function print_test(int8 num) public returns (int8) {
@@ -149,7 +146,7 @@ contract calle_contract {
         .must_fail();
     assert_eq!(
         vm.logs,
-        "runtime_error: math overflow in test.sol:22:20-29,\n"
+        "runtime_error: math overflow in test.sol:19:20-29,\n"
     );
     vm.logs.clear();
 
@@ -163,7 +160,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: sesa require condition failed in test.sol:28:27-33,\n"
+        "runtime_error: sesa require condition failed in test.sol:25:27-33,\n"
     );
 
     vm.logs.clear();
@@ -175,7 +172,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: storage array index out of bounds in test.sol:48:19-23,\n"
+        "runtime_error: storage array index out of bounds in test.sol:45:19-23,\n"
     );
 
     vm.logs.clear();
@@ -187,7 +184,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: storage index out of bounds in test.sol:41:11-12,\n"
+        "runtime_error: storage index out of bounds in test.sol:38:11-12,\n"
     );
     vm.logs.clear();
 
@@ -201,7 +198,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: read integer out of bounds in test.sol:74:18-30,\n"
+        "runtime_error: read integer out of bounds in test.sol:71:18-30,\n"
     );
     vm.logs.clear();
 
@@ -215,7 +212,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: truncated type overflows in test.sol:79:37-42,\n"
+        "runtime_error: truncated type overflows in test.sol:76:37-42,\n"
     );
     vm.logs.clear();
 
@@ -223,7 +220,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: reached invalid instruction in test.sol:90:13-22,\n"
+        "runtime_error: reached invalid instruction in test.sol:87:13-22,\n"
     );
 
     vm.logs.clear();
@@ -235,7 +232,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: pop from empty storage array in test.sol:54:9-12,\n"
+        "runtime_error: pop from empty storage array in test.sol:51:9-12,\n"
     );
 
     vm.logs.clear();
@@ -250,7 +247,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: data does not fit into buffer in test.sol:69:18-28,\n"
+        "runtime_error: data does not fit into buffer in test.sol:66:18-28,\n"
     );
 
     vm.logs.clear();
@@ -265,7 +262,7 @@ contract calle_contract {
     println!("{}", vm.logs);
     assert_eq!(
         vm.logs,
-        "runtime_error: assert failure in test.sol:34:16-24,\n"
+        "runtime_error: assert failure in test.sol:31:16-24,\n"
     );
     vm.logs.clear();
 
@@ -279,7 +276,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: array index out of bounds in test.sol:85:16-21,\n"
+        "runtime_error: array index out of bounds in test.sol:82:16-21,\n"
     );
 
     vm.logs.clear();
@@ -294,7 +291,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: integer too large to write in buffer in test.sol:63:18-31,\n"
+        "runtime_error: integer too large to write in buffer in test.sol:60:18-31,\n"
     );
 
     vm.logs.clear();
@@ -309,7 +306,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: bytes cast error in test.sol:98:23-40,\n"
+        "runtime_error: bytes cast error in test.sol:95:23-40,\n"
     );
 
     vm.logs.clear();
@@ -318,7 +315,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: unspecified revert encountered in test.sol:58:9-17,\n"
+        "runtime_error: unspecified revert encountered in test.sol:55:9-17,\n"
     );
 
     vm.logs.clear();
@@ -326,7 +323,7 @@ contract calle_contract {
     _res = vm.function("revert_with_message").must_fail();
     assert_eq!(
         vm.logs,
-        "runtime_error: I reverted! revert encountered in test.sol:103:9-30,\n"
+        "runtime_error: I reverted! revert encountered in test.sol:100:9-30,\n"
     );
     assert!(vm.return_data.is_none());
 }

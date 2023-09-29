@@ -15,6 +15,9 @@ fn contract() {
         /// @author Mr Foo
         /// @dev this is
         ///  a contract
+        /// @custom:meh words for
+        /// @custom:meh custom tag
+        /// @custom: custom tag
         @program_id("Seed23VDZ9HFCfKvFwmemB6dpi25n5XjZdP52B2RUmh")
         contract test {
             /// @dev construct this
@@ -22,6 +25,11 @@ fn contract() {
             constructor() {}
         }"#,
         Target::Solana,
+    );
+
+    assert_eq!(
+        ns.diagnostics.first_error(),
+        "custom tag '@custom:' is missing a name"
     );
 
     assert_eq!(ns.contracts[0].tags[0].tag, "notice");
@@ -35,6 +43,9 @@ fn contract() {
 
     assert_eq!(ns.contracts[0].tags[3].tag, "dev");
     assert_eq!(ns.contracts[0].tags[3].value, "this is\na contract");
+
+    assert_eq!(ns.contracts[0].tags[4].tag, "custom:meh");
+    assert_eq!(ns.contracts[0].tags[4].value, "words for custom tag");
 
     let constructor = ns
         .functions
@@ -200,6 +211,40 @@ fn functions() {
     assert_eq!(func.tags[2].tag, "inheritdoc");
     assert_eq!(func.tags[2].value, "b");
     assert_eq!(func.tags[2].no, 0);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract c is b {
+            /// @return x sadad
+            /// @param k is a boolean
+            /// @custom:smtchecker abstract-function-nondet
+            function foo(int x) public pure returns (int a, bool k) {}
+        }
+
+        contract b {}"#,
+        Target::Solana,
+    );
+
+    assert_eq!(ns.diagnostics.len(), 4);
+
+    assert_eq!(
+        ns.diagnostics.first_error(),
+        "function return value named 'x' not found"
+    );
+
+    assert_eq!(
+        ns.diagnostics.first_warning().message,
+        "'@param' used in stead of '@return' for 'k'"
+    );
+
+    let func = ns.functions.iter().find(|func| func.name == "foo").unwrap();
+
+    assert_eq!(func.tags[0].tag, "return");
+    assert_eq!(func.tags[0].value, "is a boolean");
+    assert_eq!(func.tags[0].no, 1);
+    assert_eq!(func.tags[1].tag, "custom:smtchecker");
+    assert_eq!(func.tags[1].value, "abstract-function-nondet");
+    assert_eq!(func.tags[1].no, 0);
 }
 
 #[test]

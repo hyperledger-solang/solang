@@ -47,14 +47,24 @@ pub(super) fn call_constructor(
         .as_ref()
         .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
     let address = if ns.target == Target::Solana {
-        Some(Expression::NumberLiteral {
-            loc: Loc::Codegen,
-            ty: Type::Address(false),
-            value: BigInt::from_bytes_be(
-                Sign::Plus,
-                ns.contracts[contract_no].program_id.as_ref().unwrap(),
-            ),
-        })
+        if let Some(literal_id) = &ns.contracts[contract_no].program_id {
+            Some(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Address(false),
+                value: BigInt::from_bytes_be(Sign::Plus, literal_id),
+            })
+        } else {
+            let address = expression(
+                call_args.program_id.as_ref().unwrap(),
+                cfg,
+                callee_contract_no,
+                func,
+                ns,
+                vartab,
+                opt,
+            );
+            Some(address)
+        }
     } else {
         None
     };

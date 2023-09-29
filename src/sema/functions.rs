@@ -10,6 +10,7 @@ use super::{
 };
 use crate::sema::ast::ParameterAnnotation;
 use crate::sema::function_annotation::unexpected_parameter_annotation;
+use crate::sema::namespace::ResolveTypeContext;
 use crate::Target;
 use solang_parser::pt::FunctionTy;
 use solang_parser::{
@@ -881,7 +882,13 @@ pub fn resolve_params(
 
         let mut ty_loc = p.ty.loc();
 
-        match ns.resolve_type(file_no, contract_no, false, &p.ty, diagnostics) {
+        match ns.resolve_type(
+            file_no,
+            contract_no,
+            ResolveTypeContext::None,
+            &p.ty,
+            diagnostics,
+        ) {
             Ok(ty) => {
                 if !is_internal {
                     if ty.contains_internal_function(ns) {
@@ -1002,7 +1009,13 @@ pub fn resolve_returns(
 
         let mut ty_loc = r.ty.loc();
 
-        match ns.resolve_type(file_no, contract_no, false, &r.ty, diagnostics) {
+        match ns.resolve_type(
+            file_no,
+            contract_no,
+            ResolveTypeContext::None,
+            &r.ty,
+            diagnostics,
+        ) {
             Ok(ty) => {
                 if !is_internal {
                     if ty.contains_internal_function(ns) {

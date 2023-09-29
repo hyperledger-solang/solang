@@ -31,6 +31,6 @@ contract C {
 }
 
 // ---- Expect: diagnostics ----
-// error: 21:15-18: tag '@return' no matching return value 'feh'
-// error: 22:15-18: tag '@return' no matching return value 'foo'
-// error: 28:15-18: tag '@return' no matching return value 'foo'
+// error: 21:15-18: function return value named 'feh' not found
+// error: 22:15-18: function return value named 'foo' not found
+// error: 28:15-18: function return value named 'foo' not found

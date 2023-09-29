@@ -63,8 +63,6 @@ impl ast::Contract {
 
 /// Resolve the following contract
 pub fn resolve(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::Namespace) {
-    resolve_using(contracts, file_no, ns);
-
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
     let mut delayed: ResolveLater = Default::default();
@@ -72,6 +70,9 @@ pub fn resolve(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::N
     for def in contracts {
         resolve_declarations(def, file_no, ns, &mut delayed);
     }
+
+    // using may use functions declared in contracts
+    resolve_using(contracts, file_no, ns);
 
     // Resolve base contract constructor arguments on contract definition (not constructor definitions)
     resolve_base_args(contracts, file_no, ns);
@@ -597,7 +598,9 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
             if cur.is_override.is_some() || cur.is_virtual {
                 ns.contracts[contract_no]
                     .virtual_functions
-                    .insert(signature, function_no);
+                    .entry(signature)
+                    .or_insert_with(Vec::new)
+                    .push(function_no); // there is always at least 1 element in the vector
             }
 
             ns.contracts[contract_no]
@@ -1090,7 +1093,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
         })
         .collect::<Vec<usize>>();
 
-    if contract.have_constructor(ns) {
+    if !contract.constructors(ns).is_empty() {
         for constructor_no in contract
             .functions
             .iter()

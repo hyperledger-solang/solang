@@ -41,6 +41,94 @@ use solang_parser::pt;
 
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
 
+#[macro_export]
+macro_rules! emit_context {
+    ($binary:expr) => {
+        #[allow(unused_macros)]
+        macro_rules! byte_ptr {
+            () => {
+                $binary.context.i8_type().ptr_type(AddressSpace::default())
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i32_const {
+            ($val:expr) => {
+                $binary.context.i32_type().const_int($val, false)
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i32_zero {
+            () => {
+                $binary.context.i32_type().const_zero()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i64_const {
+            ($val:expr) => {
+                $binary.context.i64_type().const_int($val, false)
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i64_zero {
+            () => {
+                $binary.context.i64_type().const_zero()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! call {
+            ($name:expr, $args:expr) => {
+                $binary
+                    .builder
+                    .build_call($binary.module.get_function($name).unwrap(), $args, "")
+            };
+            ($name:expr, $args:expr, $call_name:literal) => {
+                $binary.builder.build_call(
+                    $binary.module.get_function($name).unwrap(),
+                    $args,
+                    $call_name,
+                )
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! seal_get_storage {
+            ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
+                call!("get_storage", &[$key_ptr, $key_len, $value_ptr, $value_len])
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! seal_set_storage {
+            ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
+                call!("set_storage", &[$key_ptr, $key_len, $value_ptr, $value_len])
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! scratch_buf {
+            () => {
+                (
+                    $binary.scratch.unwrap().as_pointer_value(),
+                    $binary.scratch_len.unwrap().as_pointer_value(),
+                )
+            };
+        }
+    };
+}
+
 pub struct Binary<'a> {
     pub name: String,
     pub module: Module<'a>,
@@ -805,33 +893,14 @@ impl<'a> Binary<'a> {
                     self.module.get_struct_type("struct.vector").unwrap().into()
                 }
                 Type::Array(base_ty, dims) => {
-                    let ty = self.llvm_field_ty(base_ty, ns);
-
-                    let mut dims = dims.iter();
-
-                    let mut aty = match dims.next().unwrap() {
-                        ArrayLength::Fixed(d) => ty.array_type(d.to_u32().unwrap()),
-                        ArrayLength::Dynamic => {
-                            return self.module.get_struct_type("struct.vector").unwrap().into()
-                        }
-                        ArrayLength::AnyFixed => {
-                            unreachable!()
-                        }
-                    };
-
-                    for dim in dims {
-                        match dim {
-                            ArrayLength::Fixed(d) => aty = aty.array_type(d.to_u32().unwrap()),
+                    dims.iter()
+                        .fold(self.llvm_field_ty(base_ty, ns), |aty, dim| match dim {
+                            ArrayLength::Fixed(d) => aty.array_type(d.to_u32().unwrap()).into(),
                             ArrayLength::Dynamic => {
-                                return self.module.get_struct_type("struct.vector").unwrap().into()
+                                self.module.get_struct_type("struct.vector").unwrap().into()
                             }
-                            ArrayLength::AnyFixed => {
-                                unreachable!()
-                            }
-                        }
-                    }
-
-                    BasicTypeEnum::ArrayType(aty)
+                            ArrayLength::AnyFixed => unreachable!(),
+                        })
                 }
                 Type::Struct(StructType::SolParameters) => self
                     .module

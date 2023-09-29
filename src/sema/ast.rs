@@ -347,7 +347,7 @@ pub struct Function {
     /// For overloaded functions this is the mangled (unique) name.
     pub mangled_name: String,
     /// Solana constructors may have seeds specified using @seed tags
-    pub annotations: Vec<ConstructorAnnotation>,
+    pub annotations: ConstructorAnnotations,
     /// Which contracts should we use the mangled name in?
     pub mangled_name_contracts: HashSet<usize>,
     /// This indexmap stores the accounts this functions needs to be called on Solana
@@ -366,26 +366,17 @@ pub struct SolanaAccount {
     pub generated: bool,
 }
 
-#[derive(Debug)]
-pub enum ConstructorAnnotation {
-    Seed(Expression),
-    Payer(pt::Loc, String),
-    Space(Expression),
-    Bump(Expression),
+#[derive(Debug, Default)]
+pub struct ConstructorAnnotations {
+    // (annotation location, annotation expression)
+    pub seeds: Vec<(pt::Loc, Expression)>,
+    pub space: Option<(pt::Loc, Expression)>,
+    pub bump: Option<(pt::Loc, Expression)>,
+    // (annotation location, account name)
+    pub payer: Option<(pt::Loc, String)>,
 }
 
-impl CodeLocation for ConstructorAnnotation {
-    fn loc(&self) -> pt::Loc {
-        match self {
-            ConstructorAnnotation::Seed(expr)
-            | ConstructorAnnotation::Space(expr)
-            | ConstructorAnnotation::Bump(expr) => expr.loc(),
-            ConstructorAnnotation::Payer(loc, _) => *loc,
-        }
-    }
-}
-
-/// This trait provides a single interface for fetching paramenters, returns and the symbol table
+/// This trait provides a single interface for fetching parameters, returns and the symbol table
 /// for both yul and solidity functions
 pub trait FunctionAttributes {
     fn get_symbol_table(&self) -> &Symtable;
@@ -464,7 +455,7 @@ impl Function {
             symtable: Symtable::new(),
             emits_events: Vec::new(),
             mangled_name,
-            annotations: Vec::new(),
+            annotations: ConstructorAnnotations::default(),
             mangled_name_contracts: HashSet::new(),
             solana_accounts: IndexMap::new().into(),
         }
@@ -509,16 +500,12 @@ impl Function {
 
     /// Does this function have an @payer annotation?
     pub fn has_payer_annotation(&self) -> bool {
-        self.annotations
-            .iter()
-            .any(|note| matches!(note, ConstructorAnnotation::Payer(..)))
+        self.annotations.payer.is_some()
     }
 
     /// Does this function have an @seed annotation?
     pub fn has_seed_annotation(&self) -> bool {
-        self.annotations
-            .iter()
-            .any(|note| matches!(note, ConstructorAnnotation::Seed(..)))
+        !self.annotations.seeds.is_empty()
     }
 
     /// Does this function have the pure state
@@ -768,7 +755,10 @@ pub struct Contract {
     pub fixed_layout_size: BigInt,
     pub functions: Vec<usize>,
     pub all_functions: BTreeMap<usize, usize>,
-    pub virtual_functions: HashMap<String, usize>,
+    /// maps the name of virtual functions to a vector of overriden functions.
+    /// Each time a virtual function is overriden, there will be an entry pushed to the vector. The last
+    /// element represents the current overriding function - there will be at least one entry in this vector.
+    pub virtual_functions: HashMap<String, Vec<usize>>,
     pub yul_functions: Vec<usize>,
     pub variables: Vec<Variable>,
     /// List of contracts this contract instantiates
@@ -804,14 +794,17 @@ impl Contract {
 
     /// Does the constructor require arguments. Should be false is there is no constructor
     pub fn constructor_needs_arguments(&self, ns: &Namespace) -> bool {
-        self.have_constructor(ns) && self.no_args_constructor(ns).is_none()
+        !self.constructors(ns).is_empty() && self.no_args_constructor(ns).is_none()
     }
 
-    /// Does the contract have a constructor defined
-    pub fn have_constructor(&self, ns: &Namespace) -> bool {
+    /// Does the contract have a constructor defined?
+    /// Returns all the constructor function numbers if any
+    pub fn constructors(&self, ns: &Namespace) -> Vec<usize> {
         self.functions
             .iter()
-            .any(|func_no| ns.functions[*func_no].is_constructor())
+            .copied()
+            .filter(|func_no| ns.functions[*func_no].is_constructor())
+            .collect::<Vec<usize>>()
     }
 
     /// Return the constructor with no arguments
@@ -1226,6 +1219,7 @@ pub struct CallArgs {
     pub accounts: Option<Box<Expression>>,
     pub seeds: Option<Box<Expression>>,
     pub flags: Option<Box<Expression>>,
+    pub program_id: Option<Box<Expression>>,
 }
 
 impl Recurse for CallArgs {
@@ -1582,6 +1576,7 @@ pub enum StringLocation<T> {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Builtin {
+    ContractCode,
     GetAddress,
     Balance,
     PayableSend,
@@ -1658,6 +1653,7 @@ pub enum Builtin {
     Accounts,
     UserTypeWrap,
     UserTypeUnwrap,
+    ECRecover,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]

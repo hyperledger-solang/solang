@@ -25,6 +25,14 @@ use solang_parser::{
 };
 use std::collections::HashMap;
 
+/// Provides context information for the `resolve_type` function.
+#[derive(PartialEq, Eq)]
+pub(super) enum ResolveTypeContext {
+    None,
+    Casting,
+    FunctionType,
+}
+
 impl Namespace {
     /// Create a namespace and populate with the parameters for the target
     pub fn new(target: Target) -> Self {
@@ -356,9 +364,10 @@ impl Namespace {
     }
 
     /// Resolve a free function name with namespace
-    pub(super) fn resolve_free_function_with_namespace(
+    pub(super) fn resolve_function_with_namespace(
         &mut self,
         file_no: usize,
+        contract_no: Option<usize>,
         name: &pt::IdentifierPath,
         diagnostics: &mut Diagnostics,
     ) -> Result<Vec<(pt::Loc, usize)>, ()> {
@@ -368,12 +377,12 @@ impl Namespace {
             .map(|(id, namespace)| (id, namespace.iter().collect()))
             .unwrap();
 
-        let s = self.resolve_namespace(namespace, file_no, None, id, diagnostics)?;
+        let symbol = self.resolve_namespace(namespace, file_no, contract_no, id, diagnostics)?;
 
-        if let Some(Symbol::Function(list)) = s {
+        if let Some(Symbol::Function(list)) = symbol {
             Ok(list.clone())
         } else {
-            let error = Namespace::wrong_symbol(s, id);
+            let error = Namespace::wrong_symbol(symbol, id);
 
             diagnostics.push(error);
 
@@ -892,7 +901,7 @@ impl Namespace {
         &mut self,
         file_no: usize,
         contract_no: Option<usize>,
-        casting: bool,
+        resolve_context: ResolveTypeContext,
         id: &pt::Expression,
         diagnostics: &mut Diagnostics,
     ) -> Result<Type, ()> {
@@ -946,10 +955,20 @@ impl Namespace {
                     value_name,
                     ..
                 } => {
-                    let key_ty =
-                        self.resolve_type(file_no, contract_no, false, key, diagnostics)?;
-                    let value_ty =
-                        self.resolve_type(file_no, contract_no, false, value, diagnostics)?;
+                    let key_ty = self.resolve_type(
+                        file_no,
+                        contract_no,
+                        ResolveTypeContext::None,
+                        key,
+                        diagnostics,
+                    )?;
+                    let value_ty = self.resolve_type(
+                        file_no,
+                        contract_no,
+                        ResolveTypeContext::None,
+                        value,
+                        diagnostics,
+                    )?;
 
                     match key_ty {
                         Type::Mapping(..) => {
@@ -1162,7 +1181,7 @@ impl Namespace {
                     }
                 }
                 pt::Type::Payable => {
-                    if !casting {
+                    if resolve_context != ResolveTypeContext::Casting {
                         diagnostics.push(Diagnostic::decl_error(
                             id.loc(),
                             "'payable' cannot be used for type declarations, only casting. use 'address payable'"
@@ -1211,11 +1230,25 @@ impl Namespace {
                 Box::new(Type::Struct(*str_ty)),
                 resolve_dimensions(&dimensions, diagnostics)?,
             )),
-            Some(Symbol::Contract(_, n)) if dimensions.is_empty() => Ok(Type::Contract(*n)),
-            Some(Symbol::Contract(_, n)) => Ok(Type::Array(
-                Box::new(Type::Contract(*n)),
-                resolve_dimensions(&dimensions, diagnostics)?,
-            )),
+            Some(Symbol::Contract(_, n)) => {
+                if self.target == Target::Solana
+                    && resolve_context != ResolveTypeContext::FunctionType
+                {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        "contracts are not allowed as types on Solana".to_string(),
+                    ));
+                    return Err(());
+                }
+                if dimensions.is_empty() {
+                    Ok(Type::Contract(*n))
+                } else {
+                    Ok(Type::Array(
+                        Box::new(Type::Contract(*n)),
+                        resolve_dimensions(&dimensions, diagnostics)?,
+                    ))
+                }
+            }
             Some(Symbol::Event(_)) => {
                 diagnostics.push(Diagnostic::decl_error(
                     id.loc,
@@ -1303,6 +1336,7 @@ impl Namespace {
                         ));
                         return Err(());
                     };
+                    namespace.clear();
                     Some(*n)
                 }
                 Some(Symbol::Function(_)) => {
@@ -1356,6 +1390,10 @@ impl Namespace {
                 }
                 Some(Symbol::Import(..)) => unreachable!(),
             };
+        }
+
+        if !namespace.is_empty() {
+            return Ok(None);
         }
 
         let mut s = self

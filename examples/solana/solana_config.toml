@@ -1,18 +1,33 @@
 [package]
 version = "0.1.0"
-input_files = ["flipper.sol"]   # Files to be compiled. You can define multiple files as : input_files = ["file1", "file2", ..]
-contracts = ["flipper"] # Contracts to include from the compiled files
-import_path = []   
-import_map = {}   # Maps to import. Define as  import_map = {map = "path/to/map1", map2 = "path/to/map2"}
+
+# Source files to be compiled.
+input_files = ["flipper.sol"]
+
+# Contracts to be compiled.
+# If no contracts are specified, solang will compile all non-virtual contracts.
+contracts = ["flipper"]
+
+# Specify required import paths.
+import_path = []
+
+# Define any importmaps. 
+# import_map = { "@openzeppelin" = "/home/user/libraries/openzeppelin-contracts/" }
+import_map = {}
 
 
 [target]
-name = "solana" # Valid targets are "solana" and "polkadot"
+name = "solana"
 
 [debug-features]
-prints = true   # Log debug prints to the environment.
-log-runtime-errors = true   # Log runtime errors to the environment.
-generate-debug-info = false  # Add debug info to the generated llvm IR.
+# Log debug prints to the environment.
+prints = true
+
+# Log runtime errors to the environment.
+log-runtime-errors = true
+
+# Add debug info to the generated llvm IR.
+generate-debug-info = false
 
 [optimizations]
 dead-storage = true
@@ -20,11 +35,21 @@ constant-folding = true
 strength-reduce = true
 vector-to-slice = true
 common-subexpression-elimination = true
-llvm-IR-optimization-level = "default"  # Set llvm optimizer level. Valid options are "none", "less", "default", "aggressive"
+
+# Valid LLVM optimization levels are: none, less, default, aggressive
+llvm-IR-optimization-level = "aggressive"
 
 [compiler-output]
-verbose = false    # show debug messages
-#emit = "llvm-ir"   # Emit compiler state at early stage. Valid options are: "ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm".
-#output_directory = "path/to/dir"   
-#output_meta = "path/to/dir"  # output directory for metadata
-std_json_output = false        # mimic solidity json output on stdout
+verbose = false
+
+# Emit compiler state at early stages. Valid options are: ast-dot, cfg, llvm-ir, llvm-bc, object, asm
+# emit = "llvm-ir" 
+
+# Output directory for binary artifacts.
+# output_directory = "path/to/dir"   
+
+# Output directory for the metadata.
+# output_meta = "path/to/dir" 
+
+# Output everything in a JSON format on STDOUT instead of writing output files.
+std_json_output = false

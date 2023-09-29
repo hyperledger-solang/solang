@@ -186,6 +186,9 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
             {
                 let function_no = if let Some(signature) = signature {
                     state.ns.contracts[contract_no].virtual_functions[signature]
+                        .last()
+                        .copied()
+                        .unwrap()
                 } else {
                     *function_no
                 };
@@ -367,7 +370,7 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             left.recurse(state, write_expression);
             return false;
         }
-        Expression::StorageArrayLength { loc, .. } | Expression::StorageLoad { loc, .. } => {
+        Expression::StorageArrayLength { loc, .. } => {
             state.data_account |= DataAccountUsage::READ;
             state.read(loc);
             return false;
@@ -375,12 +378,9 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         Expression::Subscript { loc, array_ty, .. } if array_ty.is_contract_storage() => {
             state.data_account |= DataAccountUsage::READ;
             state.read(loc);
-            return false;
         }
-        Expression::Variable { ty, .. } => {
-            if ty.is_contract_storage() {
-                state.data_account |= DataAccountUsage::READ;
-            }
+        Expression::Variable { ty, .. } if ty.is_contract_storage() => {
+            state.data_account |= DataAccountUsage::READ;
         }
         Expression::StorageVariable { loc, .. } => {
             state.data_account |= DataAccountUsage::READ;
@@ -415,7 +415,8 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
                 | Builtin::GasLimit
                 | Builtin::MinimumBalance
                 | Builtin::Balance
-                | Builtin::Accounts,
+                | Builtin::Accounts
+                | Builtin::ContractCode,
             ..
         } => state.read(loc),
 

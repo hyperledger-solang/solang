@@ -10,6 +10,7 @@ use super::{
     diagnostics::Diagnostics,
     ContractDefinition, SOLANA_SPARSE_ARRAY_SIZE,
 };
+use crate::sema::namespace::ResolveTypeContext;
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use indexmap::IndexMap;
@@ -19,9 +20,11 @@ use num_traits::{One, Zero};
 use petgraph::algo::{all_simple_paths, tarjan_scc};
 use petgraph::stable_graph::IndexType;
 use petgraph::Directed;
+use phf::{phf_set, Set};
 use solang_parser::diagnostics::Note;
 use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
 use std::collections::HashSet;
+use std::ops::MulAssign;
 use std::{fmt::Write, ops::Mul};
 
 type Graph = petgraph::Graph<(), usize, Directed, usize>;
@@ -214,7 +217,13 @@ fn type_decl(
 ) {
     let mut diagnostics = Diagnostics::default();
 
-    let mut ty = match ns.resolve_type(file_no, contract_no, false, &def.ty, &mut diagnostics) {
+    let mut ty = match ns.resolve_type(
+        file_no,
+        contract_no,
+        ResolveTypeContext::None,
+        &def.ty,
+        &mut diagnostics,
+    ) {
         Ok(ty) => ty,
         Err(_) => {
             ns.diagnostics.extend(diagnostics);
@@ -281,7 +290,8 @@ fn check_infinite_struct_size(graph: &Graph, nodes: Vec<usize>, ns: &mut Namespa
         let mut infinite_edge = false;
         for edge in graph.edges_connecting(a.into(), b.into()) {
             match &ns.structs[a].fields[*edge.weight()].ty {
-                Type::Array(_, dims) if dims.first() != Some(&ArrayLength::Dynamic) => {}
+                Type::Array(_, dims) if dims.contains(&ArrayLength::Dynamic) => continue,
+                Type::Array(_, _) => {}
                 Type::Struct(StructType::UserDefined(_)) => {}
                 _ => continue,
             }
@@ -360,6 +370,7 @@ fn find_struct_recursion(ns: &mut Namespace) {
             check_recursive_struct_field(n.index(), &graph, ns);
         }
     }
+
     for n in 0..ns.structs.len() {
         let mut notes = vec![];
         for field in ns.structs[n].fields.iter().filter(|f| f.infinite_size) {
@@ -700,7 +711,13 @@ pub fn struct_decl(
     for field in &def.fields {
         let mut diagnostics = Diagnostics::default();
 
-        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics) {
+        let ty = match ns.resolve_type(
+            file_no,
+            contract_no,
+            ResolveTypeContext::None,
+            &field.ty,
+            &mut diagnostics,
+        ) {
             Ok(s) => s,
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);
@@ -795,8 +812,13 @@ fn event_decl(
     for field in &def.fields {
         let mut diagnostics = Diagnostics::default();
 
-        let mut ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics)
-        {
+        let mut ty = match ns.resolve_type(
+            file_no,
+            contract_no,
+            ResolveTypeContext::None,
+            &field.ty,
+            &mut diagnostics,
+        ) {
             Ok(s) => s,
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);
@@ -913,8 +935,13 @@ fn error_decl(
     for field in &def.fields {
         let mut diagnostics = Diagnostics::default();
 
-        let mut ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics)
-        {
+        let mut ty = match ns.resolve_type(
+            file_no,
+            contract_no,
+            ResolveTypeContext::None,
+            &field.ty,
+            &mut diagnostics,
+        ) {
             Ok(s) => s,
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);
@@ -1272,7 +1299,7 @@ impl Type {
             Type::Unreachable => "unreachable".into(),
             // A slice of bytes1 is like bytes
             Type::Slice(ty) if **ty == Type::Bytes(1) => "bytes".into(),
-            Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
+            Type::Slice(ty) => format!("{}[]", ty.to_string(ns)),
             Type::Unresolved => "unresolved".into(),
             Type::BufferPointer => "buffer_pointer".into(),
             Type::FunctionSelector => "function_selector".into(),
@@ -1409,6 +1436,7 @@ impl Type {
             }
             Type::Array(ty, dim) if dim.len() == 1 => *ty.clone(),
             Type::DynamicBytes => Type::Bytes(1),
+            Type::Slice(ty) => *ty.clone(),
             _ => panic!("not an array"),
         }
     }
@@ -1556,7 +1584,11 @@ impl Type {
     /// which is not accounted for.
     pub fn solana_storage_size(&self, ns: &Namespace) -> BigInt {
         match self {
-            Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => 4.into(),
+            Type::Array(_, dims) if dims.contains(&ArrayLength::Dynamic) => {
+                let size = dynamic_array_size(dims);
+                // A pointer is four bytes on Solana
+                size * 4
+            }
             Type::Array(ty, dims) => ty.solana_storage_size(ns).mul(
                 dims.iter()
                     .map(|d| match d {
@@ -1640,6 +1672,18 @@ impl Type {
         }
     }
 
+    /// For a slice of slices, return the contained type and depth
+    /// slices
+    pub fn slice_depth(&self) -> (usize, &Type) {
+        if let Type::Slice(ty) = self {
+            let (depth, ty) = ty.slice_depth();
+
+            (depth + 1, ty)
+        } else {
+            (0, self)
+        }
+    }
+
     pub fn is_signed_int(&self, ns: &Namespace) -> bool {
         match self {
             Type::Int(_) => true,
@@ -1684,8 +1728,10 @@ impl Type {
                 Type::Value => BigInt::from(ns.value_length),
                 Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
                 Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => {
-                    BigInt::from(4)
+                Type::Array(_, dims) if dims.contains(&ArrayLength::Dynamic) => {
+                    let size = dynamic_array_size(dims);
+                    // A pointer is four bytes on Solana
+                    size * 4
                 }
                 Type::Array(ty, dims) => {
                     let pointer_size = BigInt::from(4);
@@ -1733,7 +1779,9 @@ impl Type {
                     .filter(|f| !f.infinite_size)
                     .map(|f| f.ty.storage_slots(ns))
                     .sum(),
-                Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => 1.into(),
+                Type::Array(_, dims) if dims.contains(&ArrayLength::Dynamic) => {
+                    dynamic_array_size(dims)
+                }
                 Type::Array(ty, dims) => {
                     let one = 1.into();
                     ty.storage_slots(ns)
@@ -1764,9 +1812,7 @@ impl Type {
                 Type::Value => BigInt::from(ns.value_length),
                 Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
                 Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => {
-                    BigInt::from(4)
-                }
+                Type::Array(_, dims) if dims.contains(&ArrayLength::Dynamic) => BigInt::from(4),
                 Type::Array(ty, _) => {
                     if self.is_sparse_solana(ns) {
                         BigInt::from(4)
@@ -2151,10 +2197,28 @@ impl Type {
 
 /// These names cannot be used on Windows, even with an extension.
 /// shamelessly stolen from cargo
+static WINDOWS_RESERVED: Set<&'static str> = phf_set! {
+     "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8",
+         "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+};
 fn is_windows_reserved(name: &str) -> bool {
-    [
-        "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8",
-        "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
-    ]
-    .contains(&name.to_ascii_lowercase().as_str())
+    WINDOWS_RESERVED.contains(name.to_ascii_lowercase().as_str())
+}
+
+/// This function calculates the size of a dynamic array.
+/// The reasoning is the following:
+/// An array `uint [2][][3][1]` is a `void * foo[3][1]`-like in C, so its size
+/// in storage is 3*1*ptr_size. Each pointer points to a `uint[2]` so whatever comes before the
+/// ultimate empty square bracket does not matter.
+fn dynamic_array_size(dims: &[ArrayLength]) -> BigInt {
+    let mut result = BigInt::one();
+    for dim in dims.iter().rev() {
+        match dim {
+            ArrayLength::Fixed(num) => result.mul_assign(num),
+            ArrayLength::Dynamic => break,
+            ArrayLength::AnyFixed => unreachable!("unknown dimension"),
+        }
+    }
+
+    result
 }

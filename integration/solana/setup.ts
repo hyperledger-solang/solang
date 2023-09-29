@@ -9,7 +9,7 @@ const endpoint: string = process.env.RPC_URL || "http://127.0.0.1:8899";
 export async function loadContractAndCallConstructor(name: string, args: any[] = [], space: number = 8192):
     Promise<{ program: Program, payer: Keypair, provider: AnchorProvider, storage: Keypair, program_key: PublicKey }> {
 
-    const {program, payer, provider, program_key} = await loadContract(name);
+    const { program, payer, provider, program_key } = await loadContract(name);
 
     const storage = Keypair.generate();
     await create_account(storage, program_key, space);
@@ -22,7 +22,7 @@ export async function loadContractAndCallConstructor(name: string, args: any[] =
 }
 
 export async function loadContract(name: string):
-    Promise<{program: Program, payer: Keypair, provider: AnchorProvider, program_key: PublicKey}> {
+    Promise<{ program: Program, payer: Keypair, provider: AnchorProvider, program_key: PublicKey }> {
     const idl = JSON.parse(fs.readFileSync(`${name}.json`, 'utf8'));
 
     const payer = loadKey('payer.key');
@@ -32,7 +32,7 @@ export async function loadContract(name: string):
     const provider = AnchorProvider.local(endpoint);
     const program_key = loadKey(`${name}.key`);
     const program = new Program(idl, program_key.publicKey, provider)
-    return {program, payer, provider, program_key: program_key.publicKey};
+    return { program, payer, provider, program_key: program_key.publicKey };
 }
 
 export async function create_account(account: Keypair, programId: PublicKey, space: number) {
@@ -50,7 +50,7 @@ export async function create_account(account: Keypair, programId: PublicKey, spa
             programId,
         }));
 
-    await provider.sendAndConfirm(transaction, [account]);
+    await provider.sendAndConfirm(transaction, [account], { commitment: 'confirmed' });
 }
 
 export function newConnectionAndPayer(): [Connection, Keypair] {

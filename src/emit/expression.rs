@@ -6,14 +6,16 @@ use crate::codegen::{Builtin, Expression};
 use crate::emit::binary::Binary;
 use crate::emit::math::{build_binary_op_with_overflow_check, multiply, power};
 use crate::emit::strings::{format_string, string_location};
-use crate::emit::{BinaryOp, TargetRuntime, Variable};
-use crate::sema::ast::{Namespace, RetrieveType, StructType, Type};
+use crate::emit::{loop_builder::LoopBuilder, BinaryOp, TargetRuntime, Variable};
+use crate::emit_context;
+use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type};
 use crate::Target;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, StringRadix};
-use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue};
+use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::{AddressSpace, IntPredicate};
 use num_bigint::Sign;
+use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
 /// The expression function recursively emits code for expressions. The BasicEnumValue it
@@ -1843,7 +1845,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         }
 
         Expression::RationalNumberLiteral { .. }
-        | Expression::List { .. }
         | Expression::Undefined { .. }
         | Expression::Poison
         | Expression::BytesCast { .. } => {
@@ -2015,7 +2016,7 @@ fn runtime_cast<'a>(
                 "int_to_ptr",
             )
             .into(),
-        (Type::DynamicBytes, Type::Slice(_)) => {
+        (Type::DynamicBytes | Type::String, Type::Slice(_)) => {
             let slice_ty = bin.llvm_type(to, ns);
             let slice = bin.build_alloca(function, slice_ty, "slice");
 
@@ -2117,6 +2118,240 @@ fn runtime_cast<'a>(
             bin.builder.build_store(len_ptr, len);
 
             bin.builder.build_load(slice_ty, slice, "slice")
+        }
+        _ => unreachable!(),
+    }
+}
+
+/// Emit a codegen expression as a slice; the result is a pointer to the data and a length. This is
+/// needed for Solana syscalls that take slices, and will be useful for when we start supporting
+/// slices in Solidity (e.g. foo[2:3])
+pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
+    target: &T,
+    bin: &Binary<'a>,
+    e: &Expression,
+    to: &Type,
+    vartab: &HashMap<usize, Variable<'a>>,
+    function: FunctionValue<'a>,
+    ns: &Namespace,
+) -> (PointerValue<'a>, IntValue<'a>) {
+    emit_context!(bin);
+
+    let Type::Slice(to_elem_ty) = to else {
+        unreachable!()
+    };
+
+    let llvm_to = bin.llvm_type(to, ns);
+
+    match e {
+        Expression::ArrayLiteral {
+            dimensions, values, ..
+        } => {
+            let length = dimensions[0];
+
+            let llvm_length = i32_const!(length.into());
+
+            let output = bin.build_array_alloca(function, llvm_to, llvm_length, "seeds");
+
+            for i in 0..length {
+                let (ptr, len) = expression_to_slice(
+                    target,
+                    bin,
+                    &values[i as usize],
+                    to_elem_ty,
+                    vartab,
+                    function,
+                    ns,
+                );
+
+                // SAFETY: llvm_to is an array of slices, so i is slice no and 0 is the data ptr
+                // of the slice struct. Since indexes are correct for type it is safe.
+                let output_ptr = unsafe {
+                    bin.builder.build_gep(
+                        llvm_to,
+                        output,
+                        &[i32_const!(i.into()), i32_zero!()],
+                        "output_ptr",
+                    )
+                };
+
+                bin.builder.build_store(output_ptr, ptr);
+
+                // SAFETY: llvm_to is an array of slices, so i is slice no and 1 is the len ptr
+                // of the slice struct. Since indexes are correct for type it is safe.
+                let output_len = unsafe {
+                    bin.builder.build_gep(
+                        llvm_to,
+                        output,
+                        &[i32_const!(i.into()), i32_const!(1)],
+                        "output_len",
+                    )
+                };
+
+                bin.builder.build_store(output_len, len);
+            }
+
+            (output, llvm_length)
+        }
+        Expression::AllocDynamicBytes {
+            initializer: Some(initializer),
+            ..
+        } => {
+            let ptr = bin.emit_global_string("slice_constant", initializer, true);
+            let len = i64_const!(initializer.len() as u64);
+
+            (ptr, len)
+        }
+        _ => {
+            let from = e.ty();
+
+            let val = expression(target, bin, e, vartab, function, ns);
+
+            basic_value_to_slice(bin, val, &from, to, function, ns)
+        }
+    }
+}
+
+/// Convert basic enum value to a slice. This function calls itself recursively
+/// for arrays (become slices of slices).
+fn basic_value_to_slice<'a>(
+    bin: &Binary<'a>,
+    val: BasicValueEnum<'a>,
+    from: &Type,
+    to: &Type,
+    function: FunctionValue<'a>,
+    ns: &Namespace,
+) -> (PointerValue<'a>, IntValue<'a>) {
+    emit_context!(bin);
+
+    match from {
+        Type::Slice(_) | Type::DynamicBytes | Type::String => {
+            let data = bin.vector_bytes(val);
+            let len = bin.vector_len(val);
+
+            (data, len)
+        }
+        Type::Address(_) => {
+            let address = call!("__malloc", &[i32_const!(ns.address_length as u64).into()])
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_pointer_value();
+
+            bin.builder.build_store(address, val);
+
+            let len = i64_const!(ns.address_length as u64);
+
+            (address, len)
+        }
+        Type::Bytes(bytes_length) => {
+            let llvm_ty = bin.llvm_type(from, ns);
+            let src = bin.build_alloca(function, llvm_ty, "src");
+
+            bin.builder.build_store(src, val.into_int_value());
+
+            let bytes_length: u64 = (*bytes_length).into();
+
+            let dest = call!("__malloc", &[i32_const!(bytes_length).into()])
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_pointer_value();
+
+            bin.builder.build_call(
+                bin.module.get_function("__leNtobeN").unwrap(),
+                &[src.into(), dest.into(), i32_const!(bytes_length).into()],
+                "",
+            );
+
+            let len = i64_const!(bytes_length);
+
+            (dest, len)
+        }
+        Type::Array(_, dims) => {
+            let to_elem = to.array_elem();
+
+            let to = bin.llvm_type(to, ns);
+
+            let length = match dims.last().unwrap() {
+                ArrayLength::Dynamic => bin.vector_len(val),
+                ArrayLength::Fixed(len) => i32_const!(len.to_u64().unwrap()),
+                _ => unreachable!(),
+            };
+
+            // FIXME: In Program Runtime v1, we can't do dynamic alloca. Remove the malloc once we move to
+            // program runtime v2
+            let size = bin.builder.build_int_mul(
+                bin.builder.build_int_truncate(
+                    bin.llvm_type(&Type::Slice(Type::Bytes(1).into()), ns)
+                        .size_of()
+                        .unwrap(),
+                    bin.context.i32_type(),
+                    "slice_size",
+                ),
+                length,
+                "size",
+            );
+
+            let output = call!("__malloc", &[size.into()])
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_pointer_value();
+
+            // loop over seeds
+            let mut builder = LoopBuilder::new(bin, function);
+
+            let index = builder.over(bin, i32_zero!(), length);
+
+            // get value from array
+            let input_elem = bin.array_subscript(from, val.into_pointer_value(), index, ns);
+
+            let from_elem = from.array_elem();
+
+            // If the element is a fixed-length array, do not load it as it's stored in place and not
+            // as a pointer.
+            let load = if let Type::Array(_, dims) = &from_elem {
+                matches!(dims.last(), Some(ArrayLength::Dynamic))
+            } else {
+                true
+            };
+
+            let input_elem = if load {
+                bin.builder
+                    .build_load(bin.llvm_field_ty(&from_elem, ns), input_elem, "elem")
+            } else {
+                input_elem.into()
+            };
+
+            let (data, len) =
+                basic_value_to_slice(bin, input_elem, &from_elem, &to_elem, function, ns);
+
+            // SAFETY: to is an array of slices, so index is slice no and 0 is the data ptr
+            // of the slice struct. Since indexes are correct from type it is safe.
+            let output_data = unsafe {
+                bin.builder
+                    .build_gep(to, output, &[index, i32_zero!()], "output_data")
+            };
+
+            bin.builder.build_store(output_data, data);
+
+            // SAFETY: to is an array of slices, so index is slice no and 1 is the len ptr
+            // of the slice struct. Since indexes are correct from type it is safe.
+            let output_len = unsafe {
+                bin.builder
+                    .build_gep(to, output, &[index, i32_const!(1)], "output_len")
+            };
+
+            bin.builder.build_store(output_len, len);
+
+            builder.finish(bin);
+
+            let length = bin
+                .builder
+                .build_int_z_extend(length, bin.context.i64_type(), "length");
+
+            (output, length)
         }
         _ => unreachable!(),
     }

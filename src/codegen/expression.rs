@@ -490,7 +490,9 @@ pub fn expression(
             ..
         } => {
             let function_no = if let Some(signature) = signature {
-                &ns.contracts[contract_no].virtual_functions[signature]
+                ns.contracts[contract_no].virtual_functions[signature]
+                    .last()
+                    .unwrap()
             } else {
                 function_no
             };
@@ -1077,16 +1079,6 @@ pub fn expression(
             ty: ty.clone(),
             var_no: *var_no,
         },
-        ast::Expression::List {
-            loc,
-            list: elements,
-        } => Expression::List {
-            loc: *loc,
-            exprs: elements
-                .iter()
-                .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
-                .collect::<Vec<Expression>>(),
-        },
         ast::Expression::GetRef { loc, ty, expr: exp } => Expression::GetRef {
             loc: *loc,
             ty: ty.clone(),
@@ -1151,6 +1143,8 @@ pub fn expression(
                 ty,
             }
         }
+
+        ast::Expression::List { .. } => unreachable!("List shall not appear in the CFG"),
     }
 }
 
@@ -2186,6 +2180,66 @@ fn expr_builtin(
                 expr: Box::new(codegen_expr),
             }
         }
+        ast::Builtin::ECRecover => {
+            // TODO:
+            // EVM: call precompile 1 (code below is untested)
+            // let args = args
+            //     .iter()
+            //     .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
+            //     .collect::<Vec<Expression>>();
+            //
+            // let payload = abi_encode(loc, args, ns, vartab, cfg, false).0;
+            //
+            // let instr = Instr::ExternalCall {
+            //     loc: *loc,
+            //     contract_function_no: None,
+            //     address: Some(Expression::NumberLiteral {
+            //         loc: *loc,
+            //         ty: Type::Address(false),
+            //         value: BigInt::one(),
+            //     }),
+            //     accounts: None,
+            //     seeds: None,
+            //     payload,
+            //     value: Expression::NumberLiteral {
+            //         loc: *loc,
+            //         ty: ns.value_type(),
+            //         value: 0.into(),
+            //     },
+            //     success: None,
+            //     gas: Expression::NumberLiteral {
+            //         loc: *loc,
+            //         ty: ns.value_type(),
+            //         value: 0.into(),
+            //     },
+            //     callty: CallTy::Regular,
+            //     flags: None,
+            // };
+            //
+            // cfg.add(vartab, instr);
+            //
+            // let mut res = abi_decode(
+            //     loc,
+            //     &Expression::ReturnData { loc: *loc },
+            //     &[Type::Address(false)],
+            //     ns,
+            //     vartab,
+            //     cfg,
+            //     None,
+            // );
+            //
+            // res.remove(0)
+
+            // Polkadot: call ecdsa_recover(): https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.ecdsa_recover
+            // Solana: see how neon implements this
+            cfg.add(vartab, Instr::Unimplemented { reachable: true });
+
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Bool,
+                value: 0.into(),
+            }
+        }
         _ => {
             let arguments: Vec<Expression> = args
                 .iter()
@@ -2644,6 +2698,9 @@ pub fn emit_function_call(
 
                 let function_no = if let Some(signature) = signature {
                     ns.contracts[caller_contract_no].virtual_functions[signature]
+                        .last()
+                        .copied()
+                        .unwrap()
                 } else {
                     *function_no
                 };
