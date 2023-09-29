@@ -80,10 +80,10 @@ jobs:
         pwd
       env:
         RUSTFLAGS: -C instrument-coverage -C llvm-args=--instrprof-atomic-counter-update-all --cfg=coverage --cfg=trybuild_no_target
-        LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
+        LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
         CARGO_INCREMENTAL: 0
         CARGO_LLVM_COV: 1
-        CARGO_LLVM_COV_TARGET_DIR: /home/runner/work/solang/solang/target
+        CARGO_LLVM_COV_TARGET_DIR: ${{ github.workspace }}/target
     - name: Upload binary
       uses: actions/upload-artifact@v3.1.0
       with:
@@ -251,7 +251,7 @@ jobs:
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
     env:
-     LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
+     LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -308,7 +308,7 @@ jobs:
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
     env:
-      LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
+      LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -351,7 +351,7 @@ jobs:
     runs-on: solang-ubuntu-latest
     needs: linux-x86-64
     env:
-      LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
+      LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -383,9 +383,6 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/polkadot
-    - name: cleanup
-      if: always()
-      run: docker kill ${{steps.substrate.outputs.id}}
     - name: Compress test coverage files
       run: tar -czvf polkadot-tests.tar.gz *.profraw
       working-directory: ./target
@@ -394,6 +391,9 @@ jobs:
       with:
         name: polkadot-tests.tar.gz
         path: ./target/polkadot-tests.tar.gz
+    - name: cleanup
+      if: always()
+      run: docker kill ${{steps.substrate.outputs.id}}
 
 
   polkadot-subxt:
@@ -401,7 +401,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: linux-x86-64
     env:
-      LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
+      LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
@@ -435,7 +435,7 @@ jobs:
     - name: Upload test coverage files
       uses: actions/upload-artifact@v3.1.0
       with:
-        name: polkadto-subxt-tests.tar.gz
+        name: polkado-subxt-tests.tar.gz
         path: ./target/polkadot-subxt-tests.tar.gz
 
   vscode:
@@ -443,7 +443,7 @@ jobs:
     runs-on: solang-ubuntu-latest
     needs: linux-x86-64
     env:
-      LLVM_PROFILE_FILE: /home/runner/work/solang/solang/target/solang-%p-%10m.profraw
+      LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout
       uses: actions/checkout@v3
