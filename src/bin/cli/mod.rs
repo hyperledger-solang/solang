@@ -699,8 +699,15 @@ fn explicit_args(matches: &ArgMatches) -> Vec<&Id> {
 }
 
 /// A helper function to check if the target name provided by the user matches the target name in solang.toml
+///
 /// Returns false if the target names do not match
 /// Returns true if the target names match or if solang.toml does not exist in the current directory
+///
+/// ## Errors:
+///
+/// 1- Returns an error if the solang.toml file does not exist in the current directory.
+/// 2- Returns an error if the solang.toml file exists but it is not valid TOML.
+/// 3- Returns an error if the solang.toml file exists but it does not contain a target name.
 fn check_target_match(
     target_name: &str,
     config_file_content: Option<String>,
@@ -767,141 +774,19 @@ fn check_target_match(
 fn test_check_target_match() {
     // Test that the function returns true if the target names match
     let target_name = "solana";
-    let config_file_content = Some(
-        r#"
-            [package]
-            version = "0.1.0"
-            
-            # Source files to be compiled.
-            input_files = ["flipper.sol"]
-            
-            # Contracts to be compiled.
-            # If no contracts are specified, solang will compile all non-virtual contracts.
-            contracts = ["flipper"]
-            
-            # Specify required import paths.
-            import_path = []
-            
-            # Define any importmaps. 
-            # import_map = { "@openzeppelin" = "/home/user/libraries/openzeppelin-contracts/" }
-            import_map = {}
-            
-            
-            [target]
-            name = "solana"
-            
-            [debug-features]
-            # Log debug prints to the environment.
-            prints = true
-            
-            # Log runtime errors to the environment.
-            log-runtime-errors = true
-            
-            # Add debug info to the generated llvm IR.
-            generate-debug-info = false
-            
-            [optimizations]
-            dead-storage = true
-            constant-folding = true
-            strength-reduce = true
-            vector-to-slice = true
-            common-subexpression-elimination = true
-            
-            # Valid LLVM optimization levels are: none, less, default, aggressive
-            llvm-IR-optimization-level = "aggressive"
-            
-            [compiler-output]
-            verbose = false
-            
-            # Emit compiler state at early stages. Valid options are: ast-dot, cfg, llvm-ir, llvm-bc, object, asm
-            # emit = "llvm-ir" 
-            
-            # Output directory for binary artifacts.
-            # output_directory = "path/to/dir"   
-            
-            # Output directory for the metadata.
-            # output_meta = "path/to/dir" 
-            
-            # Output everything in a JSON format on STDOUT instead of writing output files.
-            std_json_output = false
-            "#
-        .to_string(),
-    );
-    let result = check_target_match(target_name, config_file_content);
+    // Load the content of the solang.toml file from the Solana examples directory
+    let config_file_content =
+        include_str!("../../../examples/solana/solana_config.toml").to_string();
+    let result = check_target_match(target_name, Some(config_file_content));
     assert!(result.is_ok(), "Error: {:?}", result);
     assert!(result.unwrap());
 
     // Test that the function returns false if the target names do not match
     let target_name = "solana";
-    let config_file_content = Some(
-        r#"
-            [package]
-            authors = ["Your Name <your@email.com>"]
-            version = "0.1.0"
-            
-            # Source files to be compiled.
-            input_files = ["flipper.sol"]
-            
-            # Contracts to be compiled.
-            # If no contracts are specified, solang will compile all non-virtual contracts.
-            contracts = ["flipper"]
-            
-            # Specify required import paths. 
-            import_path = []   
-            
-            # Define any importmaps. 
-            # import_map = { "@openzeppelin" = "/home/user/libraries/openzeppelin-contracts/" }
-            import_map = {}
-            
-            
-            [target]
-            name = "polkadot"
-            address_length = 32
-            value_length = 16
-            
-            
-            [debug-features]
-            # Log debug prints to the environment.
-            prints = true
-            
-            # Log runtime errors to the environment.
-            log-runtime-errors = true
-            
-            # Add debug info to the generated llvm IR.
-            generate-debug-info = false
-            
-            [optimizations]
-            dead-storage = true
-            constant-folding = true
-            strength-reduce = true
-            vector-to-slice = true
-            common-subexpression-elimination = true
-            
-            
-            # Valid wasm-opt passes are: Zero, One, Two, Three, Four, S, (focusing on code size) or Z (super-focusing on code size)
-            wasm-opt = "Z"
-            
-            # Valid LLVM optimization levels are: none, less, default, aggressive
-            llvm-IR-optimization-level = "aggressive"
-            
-            [compiler-output]
-            verbose = false
-            
-            # Emit compiler state at early stages. Valid options are: ast-dot, cfg, llvm-ir, llvm-bc, object, asm
-            # emit = "llvm-ir"
-            
-            # Output directory for binary artifacts.
-            # output_directory = "path/to/dir"
-            
-            # Output directory for the metadata.
-            # output_meta = "path/to/dir"
-            
-            # Output everything in a JSON format on STDOUT instead of writing output files.
-            std_json_output = false
-            "#
-        .to_string(),
-    );
-    let result = check_target_match(target_name, config_file_content);
+    // Load the content of the solang.toml file from the Polkadot examples directory
+    let config_file_content =
+        include_str!("../../../examples/polkadot/polkadot_config.toml").to_string();
+    let result = check_target_match(target_name, Some(config_file_content));
     assert!(result.is_ok(), "Error: {:?}", result);
     assert!(!result.unwrap());
 }
