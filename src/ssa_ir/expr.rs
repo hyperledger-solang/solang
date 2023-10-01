@@ -1,17 +1,85 @@
+use num_bigint::BigInt;
 use solang_parser::pt::Loc;
-use crate::ssa_ir::cfg::{BinaryOp, Operand, UnaryOp};
 use crate::sema::ast::{FormatArg, StringLocation, Type};
+
+/// Three-address code type, which is a subset of the Solidity AST
+// FIXME Be careful about the data types: pointers, primitives, and references.
+
+/// Three-address code identifier
+/// Variable and Literal
+#[derive(Clone, Debug)]
+pub enum Operand {
+    Id { id: usize },
+    BoolLiteral { value: bool },
+    NumberLiteral { value: BigInt },
+    AddressLiteral { value: String },
+}
+
+/// binary operators
+// LLVM doesn't diff signed and unsigned
+pub enum BinaryOperator {
+    Add {
+        overflow: bool
+    },
+    Sub {
+        overflow: bool
+    },
+    Mul {
+        overflow: bool
+    },
+    Pow {
+        overflow: bool
+    },
+
+    Div,
+    UDiv,
+
+    Mod,
+    UMod,
+
+    Eq,
+    Neq,
+
+    Lt,
+    ULt,
+
+    Lte,
+    ULte,
+
+    Gt,
+    UGt,
+
+    Gte,
+    UGte,
+
+    BitAnd,
+    BitOr,
+    BitXor,
+
+    Shl,
+    Shr,
+    UShr,
+}
+
+/// unary operators
+pub enum UnaryOperator {
+    Not,
+    Neg {
+        overflow: bool
+    },
+    BitNot,
+}
 
 pub enum Expr {
     BinaryExpr {
         loc: Loc,
-        op: BinaryOp,
+        op: BinaryOperator,
         left: Box<Operand>,
         right: Box<Operand>,
     },
     UnaryExpr {
         loc: Loc,
-        op: UnaryOp,
+        op: UnaryOperator,
         operand: Box<Operand>,
     },
 

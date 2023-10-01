@@ -1,8 +1,7 @@
 use solang_parser::pt::Loc;
 use crate::codegen::cfg::ReturnCode;
 use crate::sema::ast::Type;
-use crate::ssa_ir::cfg::Operand;
-use crate::ssa_ir::expr::Expr;
+use crate::ssa_ir::expr::{Expr, Operand};
 
 /// Statements using three-address code format
 pub enum Insn {
