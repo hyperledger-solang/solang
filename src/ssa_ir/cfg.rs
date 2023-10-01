@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use indexmap::IndexMap;
 use num_bigint::BigInt;
-use solang_parser::pt::{FunctionTy, Identifier, Loc};
-use crate::codegen::cfg::{ArrayLengthVars, ASTFunction, ReturnCode};
+use solang_parser::pt::FunctionTy;
+use crate::codegen::cfg::{ArrayLengthVars, ASTFunction};
 use crate::sema::ast::{Parameter, Type};
-use crate::ssa_ir::expr::Expr;
+use crate::ssa_ir::insn::Insn;
 
 pub struct Var {
     id: usize,
