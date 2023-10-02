@@ -51,7 +51,10 @@
 			}
 		},
 		"capabilities": {
-			"hoverProvider": "true"
+			"hoverProvider": "true",
+			"formatting": {
+				"dynamicRegistration": true
+			}
 		},
 		"languages": [
 			{

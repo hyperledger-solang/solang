@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use forge_fmt::{format, parse, FormatterConfig};
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use rust_lapper::{Interval, Lapper};
@@ -34,12 +35,12 @@ use tower_lsp::{
         DiagnosticRelatedInformation, DiagnosticSeverity, DidChangeConfigurationParams,
         DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidChangeWorkspaceFoldersParams,
         DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-        ExecuteCommandOptions, ExecuteCommandParams, GotoDefinitionParams, GotoDefinitionResponse,
-        Hover, HoverContents, HoverParams, HoverProviderCapability,
-        ImplementationProviderCapability, InitializeParams, InitializeResult, InitializedParams,
-        Location, MarkedString, MessageType, OneOf, Position, Range, ReferenceParams, RenameParams,
-        ServerCapabilities, SignatureHelpOptions, TextDocumentContentChangeEvent,
-        TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit,
+        DocumentFormattingParams, ExecuteCommandOptions, ExecuteCommandParams,
+        GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverContents, HoverParams,
+        HoverProviderCapability, ImplementationProviderCapability, InitializeParams,
+        InitializeResult, InitializedParams, Location, MarkedString, MessageType, OneOf, Position,
+        Range, ReferenceParams, RenameParams, ServerCapabilities, SignatureHelpOptions,
+        TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit,
         TypeDefinitionProviderCapability, Url, WorkspaceEdit, WorkspaceFoldersServerCapabilities,
         WorkspaceServerCapabilities,
     },
@@ -1862,6 +1863,7 @@ impl LanguageServer for SolangServer {
                 declaration_provider: Some(DeclarationCapability::Simple(true)),
                 references_provider: Some(OneOf::Left(true)),
                 rename_provider: Some(OneOf::Left(true)),
+                document_formatting_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -2310,6 +2312,77 @@ impl LanguageServer for SolangServer {
             .collect::<HashMap<_, _>>();
 
         Ok(Some(WorkspaceEdit::new(ws)))
+    }
+
+    /// Called when "Format Document" is called by the user on the client side.
+    ///
+    /// Expected to return the formatted version of source code present in the file on which this method was triggered.
+    ///
+    /// ### Arguments
+    /// * `DocumentFormattingParams`
+    ///     * provides the name of the file whose code is to be formatted.
+    ///     * provides options that help configure how the file is formatted.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when
+    ///     * an invalid file path is received.
+    ///     * reading the file fails.
+    ///     * parsing the file fails.
+    ///     * formatting the file fails.
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        // get parse tree for the input file
+        let uri = params.text_document.uri;
+        let source_path = uri.to_file_path().map_err(|_| Error {
+            code: ErrorCode::InvalidRequest,
+            message: format!("Received invalid URI: {uri}").into(),
+            data: None,
+        })?;
+        let source = std::fs::read_to_string(source_path).map_err(|err| Error {
+            code: ErrorCode::InternalError,
+            message: format!("Failed to read file: {uri}").into(),
+            data: Some(Value::String(format!("{:?}", err))),
+        })?;
+        let source_parsed = parse(&source).map_err(|err| {
+            let err = err
+                .into_iter()
+                .map(|e| Value::String(e.message))
+                .collect::<Vec<_>>();
+            Error {
+                code: ErrorCode::InternalError,
+                message: format!("Failed to parse file: {uri}").into(),
+                data: Some(Value::Array(err)),
+            }
+        })?;
+
+        // get the formatted text
+        let config = FormatterConfig {
+            line_length: 80,
+            tab_width: params.options.tab_size as _,
+            ..Default::default()
+        };
+        let mut source_formatted = String::new();
+        format(&mut source_formatted, source_parsed, config).map_err(|err| Error {
+            code: ErrorCode::InternalError,
+            message: format!("Failed to format file: {uri}").into(),
+            data: Some(Value::String(format!("{:?}", err))),
+        })?;
+
+        // create a `TextEdit` instance that replaces the contents of the file with the formatted text
+        let text_edit = TextEdit {
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0,
+                },
+                end: Position {
+                    line: u32::max_value(),
+                    character: u32::max_value(),
+                },
+            },
+            new_text: source_formatted,
+        };
+
+        Ok(Some(vec![text_edit]))
     }
 }
 
