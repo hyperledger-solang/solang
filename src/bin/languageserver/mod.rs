@@ -30,13 +30,13 @@ use tower_lsp::{
             GotoDeclarationParams, GotoDeclarationResponse, GotoImplementationParams,
             GotoImplementationResponse, GotoTypeDefinitionParams, GotoTypeDefinitionResponse,
         },
-        CompletionItem, CompletionOptions, CompletionParams, CompletionResponse,
-        DeclarationCapability, Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity,
-        DidChangeConfigurationParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
-        DidChangeWorkspaceFoldersParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-        DidSaveTextDocumentParams, ExecuteCommandOptions, ExecuteCommandParams,
-        GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverContents, HoverParams,
-        HoverProviderCapability, ImplementationProviderCapability, InitializeParams,
+        CompletionContext, CompletionItem, CompletionOptions, CompletionParams, CompletionResponse,
+        CompletionTriggerKind, DeclarationCapability, Diagnostic, DiagnosticRelatedInformation,
+        DiagnosticSeverity, DidChangeConfigurationParams, DidChangeTextDocumentParams,
+        DidChangeWatchedFilesParams, DidChangeWorkspaceFoldersParams, DidCloseTextDocumentParams,
+        DidOpenTextDocumentParams, DidSaveTextDocumentParams, ExecuteCommandOptions,
+        ExecuteCommandParams, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverContents,
+        HoverParams, HoverProviderCapability, ImplementationProviderCapability, InitializeParams,
         InitializeResult, InitializedParams, Location, MarkedString, MessageType, OneOf, Position,
         Range, ReferenceParams, RenameParams, ServerCapabilities, SignatureHelpOptions,
         TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit,
@@ -1891,8 +1891,8 @@ impl LanguageServer for SolangServer {
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
-                    // trigger_characters: Some(vec![".".to_string()]),
-                    trigger_characters: None,
+                    trigger_characters: Some(vec![".".to_string()]),
+                    // trigger_characters: None,
                     all_commit_characters: None,
                     work_done_progress_options: Default::default(),
                     completion_item: None,
@@ -2088,16 +2088,60 @@ impl LanguageServer for SolangServer {
             )
             .expect("write failed");
 
-        let res = cache
+        let mut res = cache
             .scopes
             .find(offset, offset + 1)
-            .flat_map(|scope| {
-                scope.val.iter().map(|val| CompletionItem {
-                    label: val.clone(),
-                    ..Default::default()
-                })
-            })
+            .flat_map(|scope| scope.val.iter().map(|val| val.clone()))
             .collect::<Vec<_>>();
+
+        if let Some(CompletionContext {
+            trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
+            trigger_character: Some(character),
+        }) = params.context
+        {
+            if character == "." {
+                data_file
+                    .write(format!("Inside trigger character \".\"\n").as_bytes())
+                    .expect("write failed");
+                if let Some(text_buf) = files.text_buffers.get(&path) {
+                    // text_buf.chars().nth(offset)
+                    data_file
+                        .write(format!("Inside text_buf: {:?}\n\n", text_buf.chars().nth(offset)).as_bytes())
+                        .expect("write failed");
+
+                    let b = text_buf.as_bytes();
+                    let mut curr: isize = offset as isize - 2;
+                    while curr >= 0 && b[curr as usize].is_ascii_alphanumeric() {
+                        curr -= 1;
+                    }
+                    curr = isize::max(curr, 0);
+                    if !b[curr as usize].is_ascii_alphanumeric() {
+                        curr += 1;
+                    }
+                    let name = std::str::from_utf8(&b[curr as usize..offset-1]).unwrap();
+
+                    data_file
+                        .write(format!("Inside text_buf, sending: \"{name}\"\n").as_bytes())
+                        .expect("write failed");
+
+                    res = vec![name.to_string()];
+                }
+            } else {
+                return Err(Error {
+                    code: ErrorCode::InvalidRequest,
+                    message: format!("Received invalid trigger character: {character}").into(),
+                    data: None,
+                });
+            }
+        }
+
+        let res = res
+            .into_iter()
+            .map(|val| CompletionItem {
+                label: val.clone(),
+                ..Default::default()
+            })
+            .collect();
 
         Ok(Some(CompletionResponse::Array(res)))
     }
