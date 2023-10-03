@@ -100,23 +100,23 @@ impl From<DefinitionType> for DefinitionIndex {
     }
 }
 
-type Scope = Vec<String>;
-
 /// Stores locations of definitions of functions, contracts, structs etc.
 type Definitions = HashMap<DefinitionIndex, Range>;
 /// Stores strings shown on hover
 type HoverEntry = Interval<usize, String>;
 /// Stores locations of function calls, uses of structs, contracts etc.
 type ReferenceEntry = Interval<usize, DefinitionIndex>;
+// can't use reference entry as that only covers names and not the body
+// this is not the case at the moment, but that is expected to be corrected in the future.
+type ScopeEntry = Interval<usize, Vec<(String, Option<DefinitionIndex>)>>;
 /// Stores the list of methods implemented by a contract
 type Implementations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
 /// Stores types of code objects
 type Types = HashMap<DefinitionIndex, DefinitionIndex>;
 /// Stores all the functions that a given function overrides
 type Declarations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
-// can't use reference entry as that only covers names and not the body
-// this is not the case at the moment, but that is expected to be corrected in the future.
-type ScopeEntry = Interval<usize, Scope>;
+
+type Scope = HashMap<DefinitionIndex, HashMap<String, Option<DefinitionIndex>>>;
 
 /// Stores information used by language server for every opened file
 struct Files {
@@ -129,7 +129,7 @@ struct FileCache {
     file: ast::File,
     hovers: Lapper<usize, String>,
     references: Lapper<usize, DefinitionIndex>,
-    scopes: Lapper<usize, Scope>,
+    scopes: Lapper<usize, Vec<(String, Option<DefinitionIndex>)>>,
 }
 
 /// Stores information used by the language server to service requests (eg: `Go to Definitions`) received from the client.
@@ -149,6 +149,7 @@ struct GlobalCache {
     types: Types,
     declarations: Declarations,
     implementations: Implementations,
+    scope_contents: Scope,
 }
 
 impl GlobalCache {
@@ -157,6 +158,8 @@ impl GlobalCache {
         self.types.extend(other.types);
         self.declarations.extend(other.declarations);
         self.implementations.extend(other.implementations);
+
+        self.scope_contents.extend(other.scope_contents);
     }
 }
 
@@ -225,6 +228,8 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
             types: HashMap::new(),
             declarations: HashMap::new(),
             implementations: HashMap::new(),
+
+            scope_contents: HashMap::new(),
         }),
     });
 
@@ -370,6 +375,8 @@ struct Builder<'a> {
     declarations: Declarations,
     implementations: Implementations,
 
+    scope_contents: Scope,
+
     ns: &'a ast::Namespace,
 }
 
@@ -384,6 +391,8 @@ impl<'a> Builder<'a> {
             types: HashMap::new(),
             declarations: HashMap::new(),
             implementations: HashMap::new(),
+
+            scope_contents: HashMap::new(),
 
             ns,
         }
@@ -1400,12 +1409,20 @@ impl<'a> Builder<'a> {
                     val: render(&enum_decl.tags[..]),
                 },
             ));
-            self.definitions.insert(
-                DefinitionIndex {
-                    def_path: file.path.clone(),
-                    def_type: DefinitionType::Enum(ei),
-                },
-                loc_to_range(&enum_decl.loc, file),
+            let di = DefinitionIndex {
+                def_path: file.path.clone(),
+                def_type: DefinitionType::Enum(ei),
+            };
+            self.definitions
+                .insert(di.clone(), loc_to_range(&enum_decl.loc, file));
+
+            self.scope_contents.insert(
+                di,
+                enum_decl
+                    .values
+                    .iter()
+                    .map(|(name, _)| (name.clone(), None))
+                    .collect(),
             );
         }
 
@@ -1425,12 +1442,26 @@ impl<'a> Builder<'a> {
                         val: render(&struct_decl.tags[..]),
                     },
                 ));
-                self.definitions.insert(
-                    DefinitionIndex {
-                        def_path: file.path.clone(),
-                        def_type: DefinitionType::Struct(si),
-                    },
-                    loc_to_range(&struct_decl.loc, file),
+                let di = DefinitionIndex {
+                    def_path: file.path.clone(),
+                    def_type: DefinitionType::Struct(si),
+                };
+                self.definitions
+                    .insert(di.clone(), loc_to_range(&struct_decl.loc, file));
+
+                self.scope_contents.insert(
+                    di,
+                    struct_decl
+                        .fields
+                        .iter()
+                        .filter_map(|field| {
+                            let di = get_type_definition(&field.ty).map(|dt| DefinitionIndex {
+                                def_path: file.path.clone(),
+                                def_type: dt,
+                            });
+                            field.id.as_ref().map(|id| (id.name.clone(), di))
+                        })
+                        .collect(),
                 );
             }
         }
@@ -1571,7 +1602,12 @@ impl<'a> Builder<'a> {
                         .symtable
                         .vars
                         .values()
-                        .map(|val| val.id.name.clone())
+                        .map(|val| {
+                            (
+                                val.id.name.clone(),
+                                get_type_definition(&val.ty).map(|dt| dt.into()),
+                            )
+                        })
                         .collect(),
                 },
             ));
@@ -1636,17 +1672,34 @@ impl<'a> Builder<'a> {
             let functions = contract
                 .functions
                 .iter()
-                .filter_map(|&fno| self.ns.functions.get(fno).map(|f| f.name.clone()));
-            let variables = contract.variables.iter().map(|var| var.name.clone());
-            self.scopes.push((
-                file_no,
-                ScopeEntry {
-                    start: contract.loc.start(),
-                    stop: contract.loc.exclusive_end(),
-                    // val: cdi.clone(),
-                    val: functions.chain(variables).collect(),
-                },
-            ));
+                .filter_map(|&fno| self.ns.functions.get(fno).map(|f| (f.name.clone(), None)));
+            let variables = contract
+                .variables
+                .iter()
+                .map(|var| (var.name.clone(), get_type_definition(&var.ty)));
+
+            self.scope_contents.insert(
+                cdi.clone(),
+                functions
+                    .chain(variables)
+                    .map(|(name, dt)| {
+                        let di = dt.map(|dt| DefinitionIndex {
+                            def_path: file.path.clone(),
+                            def_type: dt,
+                        });
+                        (name, di)
+                    })
+                    .collect(),
+            );
+
+            // self.scopes.push((
+            //     file_no,
+            //     ScopeEntry {
+            //         start: contract.loc.start(),
+            //         stop: contract.loc.exclusive_end(),
+            //         val: functions.chain(variables).collect(),
+            //     },
+            // ));
 
             let impls = contract
                 .functions
@@ -1815,12 +1868,15 @@ impl<'a> Builder<'a> {
                     self.scopes
                         .iter()
                         .filter(|s| s.0 == i)
-                        // .map(|(_, i)| {
-                        //     let mut i = i.clone();
-                        //     i.val.def_path = defs_to_files[&i.val.def_type].clone();
-                        //     i
-                        // })
-                        .map(|(_, s)| s.clone())
+                        .map(|(_, s)| {
+                            let mut s = s.clone();
+                            for val in &mut s.val {
+                                if let Some(val) = &mut val.1 {
+                                    val.def_path = defs_to_files[&val.def_type].clone();
+                                }
+                            }
+                            s
+                        })
                         .collect(),
                 ),
             })
@@ -1831,6 +1887,7 @@ impl<'a> Builder<'a> {
             types: self.types,
             declarations: self.declarations,
             implementations: self.implementations,
+            scope_contents: self.scope_contents,
         };
 
         (file_caches, global_cache)
@@ -2058,6 +2115,7 @@ impl LanguageServer for SolangServer {
             .expect("write failed");
 
         let files = self.files.lock().await;
+        let gc = self.global_cache.lock().await;
 
         let Some(cache) = files.caches.get(&path) else {
             return Ok(None);
@@ -2088,11 +2146,11 @@ impl LanguageServer for SolangServer {
             )
             .expect("write failed");
 
-        let mut res = cache
+        let res = cache
             .scopes
             .find(offset, offset + 1)
             .flat_map(|scope| scope.val.iter().map(|val| val.clone()))
-            .collect::<Vec<_>>();
+            .collect::<HashMap<_, _>>();
 
         if let Some(CompletionContext {
             trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
@@ -2106,25 +2164,56 @@ impl LanguageServer for SolangServer {
                 if let Some(text_buf) = files.text_buffers.get(&path) {
                     // text_buf.chars().nth(offset)
                     data_file
-                        .write(format!("Inside text_buf: {:?}\n\n", text_buf.chars().nth(offset)).as_bytes())
+                        .write(
+                            format!("Inside text_buf: {:?}\n\n", text_buf.chars().nth(offset))
+                                .as_bytes(),
+                        )
                         .expect("write failed");
 
                     let b = text_buf.as_bytes();
                     let mut curr: isize = offset as isize - 2;
-                    while curr >= 0 && b[curr as usize].is_ascii_alphanumeric() {
+                    while curr >= 0
+                        && (b[curr as usize].is_ascii_alphanumeric()
+                            || b[curr as usize] == '.' as u8)
+                    {
                         curr -= 1;
                     }
                     curr = isize::max(curr, 0);
                     if !b[curr as usize].is_ascii_alphanumeric() {
                         curr += 1;
                     }
-                    let name = std::str::from_utf8(&b[curr as usize..offset-1]).unwrap();
+                    let name = std::str::from_utf8(&b[curr as usize..offset - 1]).unwrap();
 
                     data_file
                         .write(format!("Inside text_buf, sending: \"{name}\"\n").as_bytes())
                         .expect("write failed");
 
-                    res = vec![name.to_string()];
+                    let mut name_iter = name.split(".");
+                    let mut properties = name_iter.next().and_then(|n| {
+                        res.get(n)
+                            .map(|a| a.as_ref())
+                            .flatten()
+                            .and_then(|n| gc.scope_contents.get(n))
+                    });
+
+                    while let Some(prop) = name_iter.next() {
+                        properties = properties
+                            .and_then(|p| p.get(prop))
+                            .map(|a| a.as_ref())
+                            .flatten()
+                            .and_then(|n| gc.scope_contents.get(n));
+                    }
+                    let comps = properties.map(|properties| {
+                        properties
+                            .keys()
+                            .map(|name| CompletionItem {
+                                label: name.clone(),
+                                ..Default::default()
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .map(CompletionResponse::Array);
+                    return Ok(comps);
                 }
             } else {
                 return Err(Error {
@@ -2138,7 +2227,7 @@ impl LanguageServer for SolangServer {
         let res = res
             .into_iter()
             .map(|val| CompletionItem {
-                label: val.clone(),
+                label: val.0.clone(),
                 ..Default::default()
             })
             .collect();
