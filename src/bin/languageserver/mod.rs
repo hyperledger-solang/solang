@@ -30,16 +30,16 @@ use tower_lsp::{
             GotoDeclarationParams, GotoDeclarationResponse, GotoImplementationParams,
             GotoImplementationResponse, GotoTypeDefinitionParams, GotoTypeDefinitionResponse,
         },
-        CompletionOptions, CompletionParams, CompletionResponse, DeclarationCapability, Diagnostic,
-        DiagnosticRelatedInformation, DiagnosticSeverity, DidChangeConfigurationParams,
-        DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidChangeWorkspaceFoldersParams,
-        DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-        ExecuteCommandOptions, ExecuteCommandParams, GotoDefinitionParams, GotoDefinitionResponse,
-        Hover, HoverContents, HoverParams, HoverProviderCapability,
-        ImplementationProviderCapability, InitializeParams, InitializeResult, InitializedParams,
-        Location, MarkedString, MessageType, OneOf, Position, Range, ReferenceParams, RenameParams,
-        ServerCapabilities, SignatureHelpOptions, TextDocumentContentChangeEvent,
-        TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit,
+        CompletionItem, CompletionOptions, CompletionParams, CompletionResponse,
+        DeclarationCapability, Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity,
+        DidChangeConfigurationParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
+        DidChangeWorkspaceFoldersParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
+        DidSaveTextDocumentParams, ExecuteCommandOptions, ExecuteCommandParams,
+        GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverContents, HoverParams,
+        HoverProviderCapability, ImplementationProviderCapability, InitializeParams,
+        InitializeResult, InitializedParams, Location, MarkedString, MessageType, OneOf, Position,
+        Range, ReferenceParams, RenameParams, ServerCapabilities, SignatureHelpOptions,
+        TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit,
         TypeDefinitionProviderCapability, Url, WorkspaceEdit, WorkspaceFoldersServerCapabilities,
         WorkspaceServerCapabilities,
     },
@@ -100,6 +100,8 @@ impl From<DefinitionType> for DefinitionIndex {
     }
 }
 
+type Scope = Vec<String>;
+
 /// Stores locations of definitions of functions, contracts, structs etc.
 type Definitions = HashMap<DefinitionIndex, Range>;
 /// Stores strings shown on hover
@@ -112,6 +114,9 @@ type Implementations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
 type Types = HashMap<DefinitionIndex, DefinitionIndex>;
 /// Stores all the functions that a given function overrides
 type Declarations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
+// can't use reference entry as that only covers names and not the body
+// this is not the case at the moment, but that is expected to be corrected in the future.
+type ScopeEntry = Interval<usize, Scope>;
 
 /// Stores information used by language server for every opened file
 struct Files {
@@ -124,6 +129,7 @@ struct FileCache {
     file: ast::File,
     hovers: Lapper<usize, String>,
     references: Lapper<usize, DefinitionIndex>,
+    scopes: Lapper<usize, Scope>,
 }
 
 /// Stores information used by the language server to service requests (eg: `Go to Definitions`) received from the client.
@@ -300,6 +306,8 @@ impl SolangServer {
                 })
             }));
 
+            std::fs::write("/tmp/ns", format!("{:#?}", ns)).unwrap();
+
             let res = self.client.publish_diagnostics(uri, diags, None);
 
             let (file_caches, global_cache) = Builder::new(&ns).build();
@@ -354,6 +362,8 @@ struct Builder<'a> {
     hovers: Vec<(usize, HoverEntry)>,
     // `usize` is the file number the reference belongs to
     references: Vec<(usize, ReferenceEntry)>,
+    // `usize` is the file number the reference belongs to
+    scopes: Vec<(usize, ScopeEntry)>,
 
     definitions: Definitions,
     types: Types,
@@ -368,6 +378,7 @@ impl<'a> Builder<'a> {
         Self {
             hovers: Vec::new(),
             references: Vec::new(),
+            scopes: Vec::new(),
 
             definitions: HashMap::new(),
             types: HashMap::new(),
@@ -1477,6 +1488,7 @@ impl<'a> Builder<'a> {
                         }
                     }
                 }
+
                 if let Some(loc) = param.ty_loc {
                     if let Some(dt) = get_type_definition(&param.ty) {
                         self.references.push((
@@ -1544,6 +1556,25 @@ impl<'a> Builder<'a> {
                 },
                 loc_to_range(&func.loc, file),
             );
+
+            self.scopes.push((
+                file_no,
+                ScopeEntry {
+                    start: func.loc.start(),
+                    stop: func
+                        .body
+                        .last()
+                        .map(|stmt| stmt.loc())
+                        .unwrap_or(func.loc)
+                        .exclusive_end(),
+                    val: func
+                        .symtable
+                        .vars
+                        .values()
+                        .map(|val| val.id.name.clone())
+                        .collect(),
+                },
+            ));
         }
 
         for (i, constant) in self.ns.constants.iter().enumerate() {
@@ -1601,6 +1632,21 @@ impl<'a> Builder<'a> {
 
             self.definitions
                 .insert(cdi.clone(), loc_to_range(&contract.loc, file));
+
+            let functions = contract
+                .functions
+                .iter()
+                .filter_map(|&fno| self.ns.functions.get(fno).map(|f| f.name.clone()));
+            let variables = contract.variables.iter().map(|var| var.name.clone());
+            self.scopes.push((
+                file_no,
+                ScopeEntry {
+                    start: contract.loc.start(),
+                    stop: contract.loc.exclusive_end(),
+                    // val: cdi.clone(),
+                    val: functions.chain(variables).collect(),
+                },
+            ));
 
             let impls = contract
                 .functions
@@ -1757,12 +1803,24 @@ impl<'a> Builder<'a> {
                 references: Lapper::new(
                     self.references
                         .iter()
-                        .filter(|h| h.0 == i)
+                        .filter(|r| r.0 == i)
                         .map(|(_, i)| {
                             let mut i = i.clone();
                             i.val.def_path = defs_to_files[&i.val.def_type].clone();
                             i
                         })
+                        .collect(),
+                ),
+                scopes: Lapper::new(
+                    self.scopes
+                        .iter()
+                        .filter(|s| s.0 == i)
+                        // .map(|(_, i)| {
+                        //     let mut i = i.clone();
+                        //     i.val.def_path = defs_to_files[&i.val.def_type].clone();
+                        //     i
+                        // })
+                        .map(|(_, s)| s.clone())
                         .collect(),
                 ),
             })
@@ -1833,7 +1891,8 @@ impl LanguageServer for SolangServer {
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
-                    trigger_characters: Some(vec![".".to_string()]),
+                    // trigger_characters: Some(vec![".".to_string()]),
+                    trigger_characters: None,
                     all_commit_characters: None,
                     work_done_progress_options: Default::default(),
                     completion_item: None,
@@ -1975,8 +2034,72 @@ impl LanguageServer for SolangServer {
         self.client.publish_diagnostics(uri, vec![], None).await;
     }
 
-    async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
-        Ok(None)
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        use std::fs::OpenOptions;
+        use std::io::Write;
+        let mut data_file = OpenOptions::new()
+            .append(true)
+            .open("/tmp/completion")
+            .expect("cannot open file");
+
+        data_file
+            .write(format!("{}\n", "-".repeat(50)).as_bytes())
+            .expect("write failed");
+
+        let uri = params.text_document_position.text_document.uri;
+        let path = uri.to_file_path().map_err(|_| Error {
+            code: ErrorCode::InvalidRequest,
+            message: format!("Received invalid URI: {uri}").into(),
+            data: None,
+        })?;
+
+        data_file
+            .write(format!("URI: {uri}\n").as_bytes())
+            .expect("write failed");
+
+        let files = self.files.lock().await;
+
+        let Some(cache) = files.caches.get(&path) else {
+            return Ok(None);
+        };
+
+        let f = &cache.file;
+        let offset = f.get_offset(
+            params.text_document_position.position.line as _,
+            params.text_document_position.position.character as _,
+        );
+        data_file
+            .write(format!("Offset: {offset}\n").as_bytes())
+            .expect("write failed");
+
+        // enclosing_scopes.sort_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)));
+
+        data_file
+            .write(format!("All scopes in the file: {:#?}\n", cache.scopes).as_bytes())
+            .expect("write failed");
+
+        data_file
+            .write(
+                format!(
+                    "Enclosing Scopes: {:#?}\n",
+                    cache.scopes.find(offset, offset + 1).collect::<Vec<_>>()
+                )
+                .as_bytes(),
+            )
+            .expect("write failed");
+
+        let res = cache
+            .scopes
+            .find(offset, offset + 1)
+            .flat_map(|scope| {
+                scope.val.iter().map(|val| CompletionItem {
+                    label: val.clone(),
+                    ..Default::default()
+                })
+            })
+            .collect::<Vec<_>>();
+
+        Ok(Some(CompletionResponse::Array(res)))
     }
 
     async fn hover(&self, hverparam: HoverParams) -> Result<Option<Hover>> {
