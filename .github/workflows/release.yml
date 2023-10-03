@@ -84,8 +84,7 @@ jobs:
 
   mac-arm:
     name: Mac Arm
-    runs-on: [self-hosted, macOS, ARM64, MacStadium]
-    if: ${{ github.repository_owner == 'hyperledger' }}
+    runs-on: macos-13-xlarge
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
