@@ -1232,7 +1232,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
         mut contract_args: ContractArgs<'b>,
-        _ns: &ast::Namespace,
+        ns: &ast::Namespace,
         _loc: Loc,
     ) {
         contract_args.program_id = Some(address);
@@ -1242,7 +1242,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         assert!(contract_args.accounts.is_some());
         // The AccountMeta array is always present for Solana contracts
-        self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args);
+        self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args, ns);
     }
 
     fn builtin_function(
@@ -1344,12 +1344,19 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     ) {
         let address = address.unwrap();
 
+        if contract_args.accounts.is_none() {
+            contract_args.accounts = Some((
+                binary
+                    .context
+                    .i64_type()
+                    .ptr_type(AddressSpace::default())
+                    .const_zero(),
+                binary.context.i32_type().const_zero(),
+            ))
+        };
+
         contract_args.program_id = Some(address);
-        if contract_args.accounts.is_some() {
-            self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args);
-        } else {
-            self.build_external_call(binary, payload, payload_len, contract_args, ns);
-        }
+        self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args, ns);
     }
 
     /// Get return buffer for external call

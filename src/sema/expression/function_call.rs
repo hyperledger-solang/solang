@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast::{
-    ArrayLength, Builtin, CallArgs, CallTy, Expression, Function, Mutability, Namespace,
-    RetrieveType, StructType, Symbol, Type,
+    ArrayLength, Builtin, CallArgs, CallTy, Expression, ExternalCallAccounts, Function, Mutability,
+    Namespace, RetrieveType, StructType, Symbol, Type,
 };
 use crate::sema::contracts::is_base;
 use crate::sema::diagnostics::Diagnostics;
@@ -1912,6 +1912,13 @@ pub(super) fn parse_call_args(
                     return Err(());
                 }
 
+                if let pt::Expression::ArrayLiteral(_, vec) = &arg.expr {
+                    if vec.is_empty() {
+                        res.accounts = ExternalCallAccounts::NoAccount;
+                        continue;
+                    }
+                }
+
                 let expr = expression(
                     &arg.expr,
                     context,
@@ -1949,7 +1956,7 @@ pub(super) fn parse_call_args(
                     ));
                 }
 
-                res.accounts = Some(Box::new(expr));
+                res.accounts = ExternalCallAccounts::Present(Box::new(expr));
             }
             "seeds" => {
                 if ns.target != Target::Solana {
@@ -2036,8 +2043,7 @@ pub(super) fn parse_call_args(
     }
 
     if ns.target == Target::Solana {
-        if !external_call
-            && res.accounts.is_none()
+        if res.accounts.is_absent()
             && !matches!(
                 ns.functions[context.function_no.unwrap()].visibility,
                 Visibility::External(_)

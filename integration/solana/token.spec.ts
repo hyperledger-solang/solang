@@ -29,8 +29,10 @@ describe('Create spl-token and use from solidity', function () {
             .rpc();
 
         let total_supply = await program.methods.totalSupply()
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([{ pubkey: mint, isSigner: false, isWritable: false }])
+            .accounts({
+                dataAccount: storage.publicKey,
+                mint: mint
+            })
             .view();
         expect(total_supply.toNumber()).toBe(0);
 
@@ -41,35 +43,36 @@ describe('Create spl-token and use from solidity', function () {
             payer.publicKey
         )
 
-        let balance = await program.methods.getBalance(tokenAccount.address)
-            .remainingAccounts([{ pubkey: tokenAccount.address, isSigner: false, isWritable: false }])
+        let balance = await program.methods.getBalance()
+            .accounts({account: tokenAccount.address})
             .view();
 
         expect(balance.toNumber()).toBe(0);
 
         // Now let's mint some tokens
         await program.methods.mintTo(
-            tokenAccount.address,
-            mintAuthority.publicKey,
             new BN(100000))
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([
-                { pubkey: mint, isSigner: false, isWritable: true },
-                { pubkey: tokenAccount.address, isSigner: false, isWritable: true },
-                { pubkey: mintAuthority.publicKey, isSigner: true, isWritable: false },
-            ])
+            .accounts({
+                dataAccount: storage.publicKey,
+                mint: mint,
+                account: tokenAccount.address,
+                authority: mintAuthority.publicKey,
+            })
             .signers([mintAuthority])
             .rpc();
 
         // let's check the balances
         total_supply = await program.methods.totalSupply()
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([{ pubkey: mint, isSigner: false, isWritable: false }])
+            .accounts({
+                dataAccount: storage.publicKey,
+                mint: mint,
+            })
             .view();
 
         expect(total_supply.toNumber()).toBe(100000);
-        balance = await program.methods.getBalance(tokenAccount.address)
-            .remainingAccounts([{ pubkey: tokenAccount.address, isSigner: false, isWritable: false }])
+
+        balance = await program.methods.getBalance()
+            .accounts({account: tokenAccount.address})
             .view();
 
         expect(balance.toNumber()).toBe(100000);
@@ -85,64 +88,63 @@ describe('Create spl-token and use from solidity', function () {
         )
 
         await program.methods.transfer(
-            tokenAccount.address,
-            otherTokenAccount.address,
-            payer.publicKey,
             new BN(70000))
-            .remainingAccounts([
-                { pubkey: otherTokenAccount.address, isSigner: false, isWritable: true },
-                { pubkey: tokenAccount.address, isSigner: false, isWritable: true },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: false },
-            ])
+            .accounts(
+                {
+                    from: tokenAccount.address,
+                    to: otherTokenAccount.address,
+                    owner: payer.publicKey
+                }
+            )
             .signers([payer])
             .rpc();
 
         total_supply = await program.methods.totalSupply()
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([{ pubkey: mint, isSigner: false, isWritable: false }])
+            .accounts({
+                dataAccount: storage.publicKey,
+                mint: mint,
+            })
             .view();
 
         expect(total_supply.toNumber()).toBe(100000);
-        balance = await program.methods.getBalance(tokenAccount.address)
-            .remainingAccounts([{ pubkey: tokenAccount.address, isSigner: false, isWritable: false }])
+        balance = await program.methods.getBalance()
+            .accounts({account: tokenAccount.address})
             .view();
 
         expect(balance.toNumber()).toBe(30000);
 
-        balance = await program.methods.getBalance(otherTokenAccount.address)
-            .remainingAccounts([{ pubkey: otherTokenAccount.address, isSigner: false, isWritable: false }])
+        balance = await program.methods.getBalance()
+            .accounts({account: otherTokenAccount.address})
             .view();
 
         expect(balance.toNumber()).toBe(70000);
 
         // burn
         await program.methods.burn(
-            otherTokenAccount.address,
-            theOutsider.publicKey,
             new BN(20000))
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([
-                { pubkey: otherTokenAccount.address, isSigner: false, isWritable: true },
-                { pubkey: mint, isSigner: false, isWritable: true },
-                { pubkey: theOutsider.publicKey, isSigner: true, isWritable: false },
-            ])
+            .accounts({
+                mint: mint,
+                account: otherTokenAccount.address,
+                owner: theOutsider.publicKey,
+            })
             .signers([theOutsider])
             .rpc();
 
         total_supply = await program.methods.totalSupply()
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([{ pubkey: mint, isSigner: false, isWritable: false }])
+            .accounts({
+                dataAccount: storage.publicKey,
+                mint: mint,
+            })
             .view();
 
         expect(total_supply.toNumber()).toBe(80000);
-        balance = await program.methods.getBalance(tokenAccount.address)
-            .remainingAccounts([{ pubkey: tokenAccount.address, isSigner: false, isWritable: false }])
+        balance = await program.methods.getBalance()
+            .accounts({account: tokenAccount.address})
             .view();
 
         expect(balance.toNumber()).toBe(30000);
-
-        balance = await program.methods.getBalance(otherTokenAccount.address)
-            .remainingAccounts([{ pubkey: otherTokenAccount.address, isSigner: false, isWritable: false }])
+        balance = await program.methods.getBalance()
+            .accounts({account: otherTokenAccount.address})
             .view();
 
         expect(balance.toNumber()).toBe(50000);

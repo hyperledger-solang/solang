@@ -9,7 +9,8 @@ use crate::codegen::solana_accounts::account_management::{
     account_meta_literal, retrieve_key_from_account_info,
 };
 use crate::sema::ast::{
-    self, ArrayLength, CallTy, Function, FunctionAttributes, Namespace, StructType,
+    self, ArrayLength, CallTy, ExternalCallAccounts, Function, FunctionAttributes, Namespace,
+    StructType,
 };
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::eval::eval_const_number;
@@ -589,7 +590,7 @@ pub(super) fn solana_deploy(
                     ty: Type::Address(false),
                     value: BigInt::from(0),
                 }), // SystemProgram 11111111111111111111111111111111
-                accounts: Some(Expression::Variable {
+                accounts: ExternalCallAccounts::Present(Expression::Variable {
                     loc: Loc::Codegen,
                     ty: metas_ty,
                     var_no: metas,

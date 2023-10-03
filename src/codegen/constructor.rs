@@ -74,8 +74,7 @@ pub(super) fn call_constructor(
         .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
     let accounts = call_args
         .accounts
-        .as_ref()
-        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
+        .map(|expr| expression(expr, cfg, contract_no, func, ns, vartab, opt));
 
     let mut constructor_args = constructor_args
         .iter()

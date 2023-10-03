@@ -10,4 +10,5 @@ contract d {
 }
 
 // ---- Expect: diagnostics ----
+// error: 8:3-8: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external
 // warning: 7:2-33: function can be declared 'pure'

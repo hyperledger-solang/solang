@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_new, build_solidity, AccountMeta, AccountState, BorshToken, Pubkey};
+use crate::{account_new, build_solidity, AccountState, BorshToken};
 use num_bigint::BigInt;
 
 #[test]
@@ -9,20 +9,16 @@ fn lamports() {
         r#"
         import 'solana';
         contract c {
-            function test(address needle) public payable returns (uint64) {
-                for (uint32 i = 0; i < tx.accounts.length; i++) {
-                    AccountInfo ai = tx.accounts[i];
 
-                    assert(ai.is_writable);
-                    assert(!ai.is_signer);
-                    assert(ai.executable);
+            @mutableAccount(needle)
+            function test() external payable returns (uint64) {
+                AccountInfo ai = tx.accounts.needle;
 
-                    if (ai.key == needle) {
-                        return ai.lamports;
-                    }
-                }
+                assert(ai.is_writable);
+                assert(!ai.is_signer);
+                assert(ai.executable);
 
-                revert("account not found");
+                return ai.lamports;
             }
         }"#,
     );
@@ -44,12 +40,7 @@ fn lamports() {
 
     let returns = vm
         .function("test")
-        .arguments(&[BorshToken::Address(acc)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(acc),
-            is_writable: true,
-            is_signer: false,
-        }])
+        .accounts(vec![("needle", acc)])
         .call()
         .unwrap();
 
@@ -168,10 +159,14 @@ fn modify_lamports() {
 import 'solana';
 
 contract starter {
-    function createNewAccount(uint64 lamport1, uint64 lamport2, uint64 lamport3) public {
-        AccountInfo acc1 = tx.accounts[0];
-        AccountInfo acc2 = tx.accounts[1];
-        AccountInfo acc3 = tx.accounts[2];
+
+    @mutableAccount(acc1)
+    @mutableAccount(acc2)
+    @mutableAccount(acc3)
+    function createNewAccount(uint64 lamport1, uint64 lamport2, uint64 lamport3) external {
+        AccountInfo acc1 = tx.accounts.acc1;
+        AccountInfo acc2 = tx.accounts.acc2;
+        AccountInfo acc3 = tx.accounts.acc3;
 
         acc1.lamports -= lamport1;
         acc2.lamports = lamport2;
@@ -214,24 +209,6 @@ contract starter {
         },
     );
 
-    let metas = vec![
-        AccountMeta {
-            pubkey: Pubkey(acc1),
-            is_writable: true,
-            is_signer: false,
-        },
-        AccountMeta {
-            pubkey: Pubkey(acc2),
-            is_writable: true,
-            is_signer: false,
-        },
-        AccountMeta {
-            pubkey: Pubkey(acc3),
-            is_writable: true,
-            is_signer: false,
-        },
-    ];
-
     let _ = vm
         .function("createNewAccount")
         .arguments(&[
@@ -248,7 +225,7 @@ contract starter {
                 value: BigInt::from(9u8),
             },
         ])
-        .remaining_accounts(&metas)
+        .accounts(vec![("acc1", acc1), ("acc2", acc2), ("acc3", acc3)])
         .call();
 
     assert_eq!(vm.account_data.get(&acc1).unwrap().lamports, 5);
@@ -263,8 +240,10 @@ fn account_data() {
 import 'solana';
 
 contract C {
+
+    @mutableAccount(acc)
 	function test() external {
-		AccountInfo ai = tx.accounts[0];
+		AccountInfo ai = tx.accounts.acc;
 		ai.data[0] = 0xca;
 		ai.data[1] = 0xff;
 		ai.data[2] = 0xee;
@@ -290,11 +269,7 @@ contract C {
     );
 
     vm.function("test")
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(other_account),
-            is_writable: true,
-            is_signer: false,
-        }])
+        .accounts(vec![("acc", other_account)])
         .call();
 
     assert_eq!(vm.account_data[&other_account].data[0], 0xca);

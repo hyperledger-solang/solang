@@ -4,29 +4,19 @@ contract AuthorityExample {
     address authority;
     uint64 counter;
 
-    modifier needs_authority() {
-        for (uint64 i = 0; i < tx.accounts.length; i++) {
-            AccountInfo ai = tx.accounts[i];
-
-            if (ai.key == authority && ai.is_signer) {
-                _;
-                return;
-            }
-        }
-
-        print("not signed by authority");
-        revert();
-    }
-
     constructor(address initial_authority) {
         authority = initial_authority;
     }
 
-    function set_new_authority(address new_authority) needs_authority public {
+    @signer(authorityAccount)
+    function set_new_authority(address new_authority) external {
+        assert(tx.accounts.authorityAccount.key == authority && tx.accounts.authorityAccount.is_signer);
         authority = new_authority;
     }
 
-    function inc() needs_authority public {
+    @signer(authorityAccount)
+    function inc() external {
+        assert(tx.accounts.authorityAccount.key == authority && tx.accounts.authorityAccount.is_signer);
         counter += 1;
     }
 

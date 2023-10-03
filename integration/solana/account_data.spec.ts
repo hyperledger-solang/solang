@@ -48,13 +48,8 @@ describe('Deserialize account data', function () {
             owner.publicKey
         );
 
-        let res = await program.methods.tokenAccount(token_account.address)
-            .accounts({dataAccount: storage.publicKey})
-            .remainingAccounts(
-                [
-                    {pubkey: token_account.address, isSigner: false, isWritable: false}
-                ]
-            )
+        let res = await program.methods.tokenAccount()
+            .accounts({addr: token_account.address})
             .view();
 
         expect(res.mintAccount).toEqual(token_account.mint);
@@ -86,13 +81,8 @@ describe('Deserialize account data', function () {
         );
         token_account = await getAccount(connection, token_account.address);
 
-        res = await program.methods.tokenAccount(token_account.address)
-            .accounts({dataAccount: storage.publicKey})
-            .remainingAccounts(
-                [
-                    {pubkey: token_account.address, isSigner: false, isWritable: false}
-                ]
-            )
+        res = await program.methods.tokenAccount()
+            .accounts({addr: token_account.address})
             .view();
 
         // The delegate account should be present now
@@ -112,13 +102,8 @@ describe('Deserialize account data', function () {
         );
         token_account = await getAccount(connection, token_account.address);
 
-        res = await program.methods.tokenAccount(token_account.address)
-            .accounts({dataAccount: storage.publicKey})
-            .remainingAccounts(
-                [
-                    {pubkey: token_account.address, isSigner: false, isWritable: false}
-                ]
-            )
+        res = await program.methods.tokenAccount()
+            .accounts({addr: token_account.address})
             .view();
 
         // The close authority should be present
@@ -134,13 +119,8 @@ describe('Deserialize account data', function () {
             owner.publicKey
         );
 
-        res = await program.methods.tokenAccount(token_account.address)
-            .accounts({dataAccount: storage.publicKey})
-            .remainingAccounts(
-                [
-                    {pubkey: token_account.address, isSigner: false, isWritable: false}
-                ]
-            )
+        res = await program.methods.tokenAccount()
+            .accounts({addr: token_account.address})
             .view();
 
         // Is native must be present
@@ -182,13 +162,8 @@ describe('Deserialize account data', function () {
 
         let mint_data = await getMint(connection, mint);
 
-        let res = await program.methods.mintAccount(mint)
-            .accounts({dataAccount: storage.publicKey})
-            .remainingAccounts(
-                [
-                    {pubkey: mint, isWritable: false, isSigner: false}
-                ]
-            )
+        let res = await program.methods.mintAccount()
+            .accounts({addr: mint})
             .view();
 
         // Authorities are present
@@ -222,13 +197,8 @@ describe('Deserialize account data', function () {
 
         mint_data = await getMint(connection, mint);
 
-        res = await program.methods.mintAccount(mint)
-            .accounts({dataAccount: storage.publicKey})
-            .remainingAccounts(
-                [
-                    {pubkey: mint, isWritable: false, isSigner: false}
-                ]
-            )
+        res = await program.methods.mintAccount()
+            .accounts({addr: mint})
             .view();
 
         // Authorities are not present

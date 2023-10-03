@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast::{
-    Builtin, CallArgs, Diagnostic, EventDecl, Expression, Namespace, RetrieveType,
+    Builtin, CallArgs, Diagnostic, EventDecl, Expression, ExternalCallAccounts, Namespace,
+    RetrieveType,
 };
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::{ast, symtable};
@@ -272,7 +273,7 @@ fn check_call_args(ns: &mut Namespace, call_args: &CallArgs, symtable: &mut Symt
     if let Some(value) = &call_args.value {
         used_variable(ns, value.as_ref(), symtable);
     }
-    if let Some(accounts) = &call_args.accounts {
+    if let ExternalCallAccounts::Present(accounts) = &call_args.accounts {
         used_variable(ns, accounts.as_ref(), symtable);
     }
     if let Some(seeds) = &call_args.seeds {

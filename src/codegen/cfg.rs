@@ -11,8 +11,8 @@ use super::{
 use crate::codegen::subexpression_elimination::common_sub_expression_elimination;
 use crate::codegen::{undefined_variable, Expression, LLVMName};
 use crate::sema::ast::{
-    CallTy, Contract, FunctionAttributes, Namespace, Parameter, RetrieveType, Statement,
-    StringLocation, StructType, Type,
+    CallTy, Contract, ExternalCallAccounts, FunctionAttributes, Namespace, Parameter, RetrieveType,
+    Statement, StringLocation, StructType, Type,
 };
 use crate::sema::{contracts::collect_base_args, diagnostics::Diagnostics, Recurse};
 use crate::{sema::ast, Target};
@@ -126,7 +126,7 @@ pub enum Instr {
         salt: Option<Expression>,
         address: Option<Expression>,
         seeds: Option<Expression>,
-        accounts: Option<Expression>,
+        accounts: ExternalCallAccounts<Expression>,
         loc: Loc,
     },
     /// Call external functions. If the call fails, set the success failure
@@ -135,7 +135,7 @@ pub enum Instr {
         loc: Loc,
         success: Option<usize>,
         address: Option<Expression>,
-        accounts: Option<Expression>,
+        accounts: ExternalCallAccounts<Expression>,
         seeds: Option<Expression>,
         payload: Expression,
         value: Expression,
@@ -299,7 +299,7 @@ impl Instr {
                     expr.recurse(cx, f);
                 }
 
-                if let Some(expr) = accounts {
+                if let ExternalCallAccounts::Present(expr) = accounts {
                     expr.recurse(cx, f);
                 }
             }
@@ -1202,7 +1202,7 @@ impl ControlFlowGraph {
                     self.expr_to_string(contract, ns, payload),
                     self.expr_to_string(contract, ns, value),
                     self.expr_to_string(contract, ns, gas),
-                    if let Some(accounts) = accounts {
+                    if let ExternalCallAccounts::Present(accounts) = accounts {
                         self.expr_to_string(contract, ns, accounts)
                     } else {
                         String::new()
@@ -1285,7 +1285,7 @@ impl ControlFlowGraph {
                 },
                 ns.contracts[*contract_no].name,
                 self.expr_to_string(contract, ns, encoded_args),
-                if let Some(accounts) = accounts {
+                if let ExternalCallAccounts::Present(accounts) = accounts {
                     self.expr_to_string(contract, ns, accounts)
                 } else {
                     String::new()

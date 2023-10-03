@@ -1723,19 +1723,19 @@ interface other_interface {
 
 contract Test {
     function call_1() public {
-        anchor.initialize(true);
+        anchor.initialize{accounts: []}(true);
     }
 
     function call_2() public {
-        associated.initialize(false);
+        associated.initialize{accounts: []}(false);
     }
 
     function call_3() public {
-        clock_interface.initialize(true);
+        clock_interface.initialize{accounts: []}(true);
     }
 
     function call_4() public {
-        other_interface.initialize(false);
+        other_interface.initialize{accounts: []}(false);
     }
 }
     "#;
@@ -2027,8 +2027,9 @@ contract Foo {
 }
 
 contract Other {
-    function call_foo(address id) external {
-        Foo.new{program_id: id}();
+    @account(foo_pid)
+    function call_foo() external {
+        Foo.new{program_id: tx.accounts.foo_pid.key}();
     }
 }
     "#;
@@ -2041,9 +2042,64 @@ contract Other {
     assert_eq!(
         idl.instructions[1].accounts,
         vec![
+            idl_account("foo_pid", false, false),
             idl_account("Foo_dataAccount", true, false),
-            idl_account("Foo_programId", false, false),
             idl_account("systemProgram", false, false)
+        ]
+    );
+}
+
+#[test]
+fn function_annotations() {
+    let src = r#"
+contract Test1 {
+    @account(foo)
+    @mutableAccount(bar)
+    @signer(signerFoo)
+    @mutableSigner(signerBar)
+    function doThis() external returns (uint64) {
+        assert(tx.accounts.signerFoo.is_signer);
+        assert(tx.accounts.signerBar.is_signer);
+
+        return tx.accounts.foo.lamports;
+    }
+}
+
+contract Test2 {
+    @account(t1Id)
+    function callThat() external returns (uint64) {
+        uint64 res = Test1.doThis{program_id: tx.accounts.t1Id.key}();
+        return res;
+    }
+}
+    "#;
+
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
+    let idl_1 = generate_anchor_idl(0, &ns, "0.1.0");
+    let idl_2 = generate_anchor_idl(1, &ns, "0.1.0");
+
+    assert_eq!(idl_1.instructions[1].name, "doThis");
+    assert_eq!(
+        idl_1.instructions[1].accounts,
+        vec![
+            idl_account("foo", false, false),
+            idl_account("bar", true, false),
+            idl_account("signerFoo", false, true),
+            idl_account("signerBar", true, true),
+        ]
+    );
+
+    assert_eq!(idl_2.instructions[1].name, "callThat");
+    assert_eq!(
+        idl_2.instructions[1].accounts,
+        vec![
+            idl_account("t1Id", false, false),
+            idl_account("systemProgram", false, false),
+            idl_account("foo", false, false),
+            idl_account("bar", true, false),
+            idl_account("signerFoo", false, true),
+            idl_account("signerBar", true, true),
         ]
     );
 }

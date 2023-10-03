@@ -1474,7 +1474,7 @@ impl Dot {
         if let Some(salt) = &call_args.salt {
             self.add_expression(salt, func, ns, node, String::from("salt"));
         }
-        if let Some(accounts) = &call_args.accounts {
+        if let ExternalCallAccounts::Present(accounts) = &call_args.accounts {
             self.add_expression(accounts, func, ns, node, String::from("accounts"));
         }
         if let Some(seeds) = &call_args.seeds {

@@ -1,14 +1,17 @@
 import 'solana';
 
 contract creator {
-    function create_with_metas(address data_account_to_initialize, address payer) public {
+
+    @mutableSigner(data_account_to_initialize)
+    @mutableSigner(payer)
+    function create_with_metas() external {
         AccountMeta[3] metas = [
             AccountMeta({
-                pubkey: data_account_to_initialize,
+                pubkey: tx.accounts.data_account_to_initialize.key,
                 is_signer: true, 
                 is_writable: true}),
             AccountMeta({
-                pubkey: payer,
+                pubkey: tx.accounts.payer.key,
                 is_signer: true,
                 is_writable: true}),
             AccountMeta({
@@ -17,16 +20,16 @@ contract creator {
                 is_signer: false})
         ];
 
-        Child.new{accounts: metas}(payer);        
+        Child.new{accounts: metas}();        
   
-        Child.use_metas();
+        Child.use_metas{accounts: []}();
     }
 }
 
 @program_id("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT")
 contract Child {
     @payer(payer)
-    constructor(address payer) {
+    constructor() {
         print("In child constructor");
     }
 
