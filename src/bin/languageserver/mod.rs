@@ -130,6 +130,7 @@ struct FileCache {
     hovers: Lapper<usize, String>,
     references: Lapper<usize, DefinitionIndex>,
     scopes: Lapper<usize, Vec<(String, Option<DefinitionIndex>)>>,
+    top_code_objects: HashMap<String, Option<DefinitionIndex>>,
 }
 
 /// Stores information used by the language server to service requests (eg: `Go to Definitions`) received from the client.
@@ -369,6 +370,8 @@ struct Builder<'a> {
     references: Vec<(usize, ReferenceEntry)>,
     // `usize` is the file number the reference belongs to
     scopes: Vec<(usize, ScopeEntry)>,
+    // `usize` is the file number the reference belongs to
+    top_code_objects: Vec<(usize, (String, Option<DefinitionIndex>))>,
 
     definitions: Definitions,
     types: Types,
@@ -386,6 +389,7 @@ impl<'a> Builder<'a> {
             hovers: Vec::new(),
             references: Vec::new(),
             scopes: Vec::new(),
+            top_code_objects: Vec::new(),
 
             definitions: HashMap::new(),
             types: HashMap::new(),
@@ -1324,6 +1328,16 @@ impl<'a> Builder<'a> {
         if let Some(dt) = get_type_definition(&variable.ty) {
             self.types.insert(di, dt.into());
         }
+
+        if contract_no.is_none() {
+            self.top_code_objects.push((
+                file_no,
+                (
+                    variable.name.clone(),
+                    get_type_definition(&variable.ty).map(|dt| dt.into()),
+                ),
+            ))
+        }
     }
 
     // Constructs struct fields and stores it in the lookup table.
@@ -1417,13 +1431,18 @@ impl<'a> Builder<'a> {
                 .insert(di.clone(), loc_to_range(&enum_decl.loc, file));
 
             self.scope_contents.insert(
-                di,
+                di.clone(),
                 enum_decl
                     .values
                     .iter()
                     .map(|(name, _)| (name.clone(), None))
                     .collect(),
             );
+
+            if enum_decl.contract.is_none() {
+                self.top_code_objects
+                    .push((file_no, (enum_decl.name.clone(), Some(di))));
+            }
         }
 
         for (si, struct_decl) in self.ns.structs.iter().enumerate() {
@@ -1450,7 +1469,7 @@ impl<'a> Builder<'a> {
                     .insert(di.clone(), loc_to_range(&struct_decl.loc, file));
 
                 self.scope_contents.insert(
-                    di,
+                    di.clone(),
                     struct_decl
                         .fields
                         .iter()
@@ -1463,6 +1482,11 @@ impl<'a> Builder<'a> {
                         })
                         .collect(),
                 );
+
+                if struct_decl.contract.is_none() {
+                    self.top_code_objects
+                        .push((file_no, (struct_decl.name.clone(), Some(di))));
+                }
             }
         }
 
@@ -1611,6 +1635,11 @@ impl<'a> Builder<'a> {
                         .collect(),
                 },
             ));
+
+            if func.contract_no.is_none() {
+                self.top_code_objects
+                    .push((file_no, (func.name.clone(), None)))
+            }
         }
 
         for (i, constant) in self.ns.constants.iter().enumerate() {
@@ -1736,6 +1765,10 @@ impl<'a> Builder<'a> {
                 },
             ));
 
+            // TODO, contract within another contract
+            self.top_code_objects
+                .push((file_no, (contract.name.clone(), Some(cdi.clone()))));
+
             let impls = contract
                 .functions
                 .iter()
@@ -1814,13 +1847,17 @@ impl<'a> Builder<'a> {
                 },
             ));
 
-            self.definitions.insert(
-                DefinitionIndex {
-                    def_path: file.path.clone(),
-                    def_type: DefinitionType::Event(ei),
-                },
-                loc_to_range(&event.loc, file),
-            );
+            let di = DefinitionIndex {
+                def_path: file.path.clone(),
+                def_type: DefinitionType::Event(ei),
+            };
+            self.definitions
+                .insert(di.clone(), loc_to_range(&event.loc, file));
+
+            if event.contract.is_none() {
+                self.top_code_objects
+                    .push((file_no, (event.name.clone(), Some(di))));
+            }
         }
 
         for lookup in &mut self.hovers {
@@ -1914,6 +1951,19 @@ impl<'a> Builder<'a> {
                         })
                         .collect(),
                 ),
+                top_code_objects: self
+                    .top_code_objects
+                    .iter_mut()
+                    .filter(|co| co.0 == i)
+                    .map(|co| {
+                        if let Some(DefinitionIndex { def_path, def_type }) = &mut co.1 .1 {
+                            if def_path.to_str().unwrap() == "" {
+                                *def_path = defs_to_files[def_type].clone();
+                            }
+                        }
+                        co.1.clone()
+                    })
+                    .collect(),
             })
             .collect();
 
@@ -2180,12 +2230,13 @@ impl LanguageServer for SolangServer {
             )
             .expect("write failed");
 
-        let res = cache
+        let mut res = cache
             .scopes
             .find(offset, offset + 1)
             // .flat_map(|scope| scope.val.iter().map(|val| val.clone()))
             .flat_map(|scope| scope.val.iter().cloned())
             .collect::<HashMap<_, _>>();
+        res.extend(cache.top_code_objects.clone());
 
         if let Some(CompletionContext {
             trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
@@ -2244,7 +2295,7 @@ impl LanguageServer for SolangServer {
                                     label: name.clone(),
                                     ..Default::default()
                                 })
-                                .collect::<Vec<_>>()
+                                .collect_vec()
                         })
                         .map(CompletionResponse::Array);
                     return Ok(comps);
