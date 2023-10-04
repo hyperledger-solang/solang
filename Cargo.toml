@@ -8,7 +8,7 @@ license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "solana", "polkadot", "substrate" ]
-rust-version = "1.70.0"
+rust-version = "1.72.0"
 edition = "2021"
 exclude = [ "/.*", "/docs",  "/examples", "/solana-library", "/tests", "/integration", "/vscode", "/testdata" ]
 
@@ -66,6 +66,7 @@ contract-build = { version = "3.0.1", optional = true }
 primitive-types = { version = "0.12", features = ["codec"] }
 normalize-path = "0.2.1"
 bitflags = "2.3.3"
+forge-fmt = "0.2.0"
 
 [dev-dependencies]
 num-derive = "0.4"

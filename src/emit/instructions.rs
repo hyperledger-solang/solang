@@ -20,6 +20,8 @@ use num_traits::ToPrimitive;
 use solang_parser::pt::CodeLocation;
 use std::collections::{HashMap, VecDeque};
 
+use super::expression::expression_to_slice;
+
 pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
     target: &mut T,
     ins: &Instr,
@@ -867,69 +869,17 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 (ptr, len)
             };
 
-            let seeds = if let Some(seeds) = seeds {
-                let len = seeds.ty().array_length().unwrap().to_u64().unwrap();
-                let seeds_ty = bin.llvm_type(
-                    &Type::Slice(Box::new(Type::Slice(Box::new(Type::Bytes(1))))),
-                    ns,
-                );
+            // sol_invoke_signed_c() takes of a slice of a slice of slice of bytes
+            // 1. A single seed value is a slice of bytes.
+            // 2. A signer for single address can have multiple seeds
+            // 3. A single call to sol_invoke_signed_c can sign for multiple addresses
+            let seeds_ty =
+                Type::Slice(Type::Slice(Type::Slice(Type::Bytes(1).into()).into()).into());
 
-                let output_seeds = bin.build_array_alloca(
-                    function,
-                    seeds_ty,
-                    bin.context.i64_type().const_int(len, false),
-                    "seeds",
-                );
+            let seeds = seeds.as_ref().map(|seeds| {
+                expression_to_slice(target, bin, seeds, &seeds_ty, &w.vars, function, ns)
+            });
 
-                if let Expression::ArrayLiteral { values, .. } = seeds {
-                    for i in 0..len {
-                        let val =
-                            expression(target, bin, &values[i as usize], &w.vars, function, ns);
-
-                        let seed_count = values[i as usize]
-                            .ty()
-                            .deref_any()
-                            .array_length()
-                            .unwrap()
-                            .to_u64()
-                            .unwrap();
-
-                        let dest = unsafe {
-                            bin.builder.build_gep(
-                                seeds_ty,
-                                output_seeds,
-                                &[
-                                    bin.context.i32_type().const_int(i, false),
-                                    bin.context.i32_type().const_zero(),
-                                ],
-                                "dest",
-                            )
-                        };
-
-                        bin.builder.build_store(dest, val);
-
-                        let dest = unsafe {
-                            bin.builder.build_gep(
-                                seeds_ty,
-                                output_seeds,
-                                &[
-                                    bin.context.i32_type().const_int(i, false),
-                                    bin.context.i32_type().const_int(1, false),
-                                ],
-                                "dest",
-                            )
-                        };
-
-                        let val = bin.context.i64_type().const_int(seed_count, false);
-
-                        bin.builder.build_store(dest, val);
-                    }
-                }
-
-                Some((output_seeds, bin.context.i64_type().const_int(len, false)))
-            } else {
-                None
-            };
             let flags = flags
                 .as_ref()
                 .map(|e| expression(target, bin, e, &w.vars, function, ns).into_int_value());

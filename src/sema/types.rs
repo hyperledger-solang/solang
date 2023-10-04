@@ -1299,7 +1299,7 @@ impl Type {
             Type::Unreachable => "unreachable".into(),
             // A slice of bytes1 is like bytes
             Type::Slice(ty) if **ty == Type::Bytes(1) => "bytes".into(),
-            Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
+            Type::Slice(ty) => format!("{}[]", ty.to_string(ns)),
             Type::Unresolved => "unresolved".into(),
             Type::BufferPointer => "buffer_pointer".into(),
             Type::FunctionSelector => "function_selector".into(),
@@ -1436,6 +1436,7 @@ impl Type {
             }
             Type::Array(ty, dim) if dim.len() == 1 => *ty.clone(),
             Type::DynamicBytes => Type::Bytes(1),
+            Type::Slice(ty) => *ty.clone(),
             _ => panic!("not an array"),
         }
     }
@@ -1668,6 +1669,18 @@ impl Type {
             Type::FunctionSelector => (ns.target.selector_length() * 8).into(),
             Type::UserType(ty) => ns.user_types[*ty].ty.bits(ns),
             _ => panic!("type not allowed"),
+        }
+    }
+
+    /// For a slice of slices, return the contained type and depth
+    /// slices
+    pub fn slice_depth(&self) -> (usize, &Type) {
+        if let Type::Slice(ty) = self {
+            let (depth, ty) = ty.slice_depth();
+
+            (depth + 1, ty)
+        } else {
+            (0, self)
         }
     }
 

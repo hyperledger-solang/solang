@@ -1,38 +1,46 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use forge_fmt::{format, parse, FormatterConfig};
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use rust_lapper::{Interval, Lapper};
 use serde_json::Value;
-use solang::sema::ast::{RetrieveType, StructType, Type};
 use solang::{
-    codegen::codegen,
-    codegen::{self, Expression},
+    codegen::{self, codegen, Expression},
     file_resolver::FileResolver,
     parse_and_resolve,
-    sema::{ast, builtin::get_prototype, symtable, tags::render},
+    sema::{
+        ast::{self, RetrieveType, StructType, Type},
+        builtin::get_prototype,
+        symtable,
+        tags::render,
+    },
     Target,
 };
 use solang_parser::pt;
-use std::{collections::HashMap, ffi::OsString, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    ffi::OsString,
+    path::PathBuf,
+};
 use tokio::sync::Mutex;
 use tower_lsp::{
     jsonrpc::{Error, ErrorCode, Result},
     lsp_types::{
         request::{
-            GotoImplementationParams, GotoImplementationResponse, GotoTypeDefinitionParams,
-            GotoTypeDefinitionResponse,
+            GotoDeclarationParams, GotoDeclarationResponse, GotoImplementationParams,
+            GotoImplementationResponse, GotoTypeDefinitionParams, GotoTypeDefinitionResponse,
         },
-        CompletionOptions, CompletionParams, CompletionResponse, Diagnostic,
+        CompletionOptions, CompletionParams, CompletionResponse, DeclarationCapability, Diagnostic,
         DiagnosticRelatedInformation, DiagnosticSeverity, DidChangeConfigurationParams,
         DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidChangeWorkspaceFoldersParams,
         DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-        ExecuteCommandOptions, ExecuteCommandParams, GotoDefinitionParams, GotoDefinitionResponse,
-        Hover, HoverContents, HoverParams, HoverProviderCapability,
-        ImplementationProviderCapability, InitializeParams, InitializeResult, InitializedParams,
-        Location, MarkedString, MessageType, OneOf, Position, Range, ReferenceParams, RenameParams,
-        ServerCapabilities, SignatureHelpOptions, TextDocumentContentChangeEvent,
-        TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit,
+        DocumentFormattingParams, ExecuteCommandOptions, ExecuteCommandParams,
+        GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverContents, HoverParams,
+        HoverProviderCapability, ImplementationProviderCapability, InitializeParams,
+        InitializeResult, InitializedParams, Location, MarkedString, MessageType, OneOf, Position,
+        Range, ReferenceParams, RenameParams, ServerCapabilities, SignatureHelpOptions,
+        TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit,
         TypeDefinitionProviderCapability, Url, WorkspaceEdit, WorkspaceFoldersServerCapabilities,
         WorkspaceServerCapabilities,
     },
@@ -103,6 +111,8 @@ type ReferenceEntry = Interval<usize, DefinitionIndex>;
 type Implementations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
 /// Stores types of code objects
 type Types = HashMap<DefinitionIndex, DefinitionIndex>;
+/// Stores all the functions that a given function overrides
+type Declarations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
 
 /// Stores information used by language server for every opened file
 struct Files {
@@ -127,11 +137,22 @@ struct FileCache {
 /// Each field stores *some information* about a code object. The code object is uniquely identified by its `DefinitionIndex`.
 /// * `definitions` maps `DefinitionIndex` of a code object to its source code location where it is defined.
 /// * `types` maps the `DefinitionIndex` of a code object to that of its type.
+/// * `declarations` maps the `DefinitionIndex` of a `Contract` method to a list of methods that it overrides. The overridden methods belong to the parent `Contract`s
 /// * `implementations` maps the `DefinitionIndex` of a `Contract` to the `DefinitionIndex`s of methods defined as part of the `Contract`.
 struct GlobalCache {
     definitions: Definitions,
     types: Types,
+    declarations: Declarations,
     implementations: Implementations,
+}
+
+impl GlobalCache {
+    fn extend(&mut self, other: Self) {
+        self.definitions.extend(other.definitions);
+        self.types.extend(other.types);
+        self.declarations.extend(other.declarations);
+        self.implementations.extend(other.implementations);
+    }
 }
 
 // The language server currently stores some of the data grouped by the file to which the data belongs (Files struct).
@@ -197,6 +218,7 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
         global_cache: Mutex::new(GlobalCache {
             definitions: HashMap::new(),
             types: HashMap::new(),
+            declarations: HashMap::new(),
             implementations: HashMap::new(),
         }),
     });
@@ -281,19 +303,17 @@ impl SolangServer {
 
             let res = self.client.publish_diagnostics(uri, diags, None);
 
-            let (caches, definitions, types, implementations) = Builder::build(&ns);
+            let (file_caches, global_cache) = Builder::new(&ns).build();
 
             let mut files = self.files.lock().await;
-            for (f, c) in ns.files.iter().zip(caches.into_iter()) {
+            for (f, c) in ns.files.iter().zip(file_caches.into_iter()) {
                 if f.cache_no.is_some() {
                     files.caches.insert(f.path.clone(), c);
                 }
             }
 
             let mut gc = self.global_cache.lock().await;
-            gc.definitions.extend(definitions);
-            gc.types.extend(types);
-            gc.implementations.extend(implementations);
+            gc.extend(global_cache);
 
             res.await;
         }
@@ -337,13 +357,28 @@ struct Builder<'a> {
     references: Vec<(usize, ReferenceEntry)>,
 
     definitions: Definitions,
-    implementations: Implementations,
     types: Types,
+    declarations: Declarations,
+    implementations: Implementations,
 
     ns: &'a ast::Namespace,
 }
 
 impl<'a> Builder<'a> {
+    fn new(ns: &'a ast::Namespace) -> Self {
+        Self {
+            hovers: Vec::new(),
+            references: Vec::new(),
+
+            definitions: HashMap::new(),
+            types: HashMap::new(),
+            declarations: HashMap::new(),
+            implementations: HashMap::new(),
+
+            ns,
+        }
+    }
+
     // Constructs lookup table for the given statement by traversing the
     // statements and traversing inside the contents of the statements.
     fn statement(&mut self, stmt: &ast::Statement, symtab: &symtable::Symtable) {
@@ -1318,23 +1353,12 @@ impl<'a> Builder<'a> {
 
     /// Traverses namespace to extract information used later by the language server
     /// This includes hover messages, locations where code objects are declared and used
-    fn build(ns: &ast::Namespace) -> (Vec<FileCache>, Definitions, Types, Implementations) {
-        let mut builder = Builder {
-            hovers: Vec::new(),
-            references: Vec::new(),
-
-            definitions: HashMap::new(),
-            implementations: HashMap::new(),
-            types: HashMap::new(),
-
-            ns,
-        };
-
-        for (ei, enum_decl) in builder.ns.enums.iter().enumerate() {
+    fn build(mut self) -> (Vec<FileCache>, GlobalCache) {
+        for (ei, enum_decl) in self.ns.enums.iter().enumerate() {
             for (discriminant, (nam, loc)) in enum_decl.values.iter().enumerate() {
                 let file_no = loc.file_no();
-                let file = &ns.files[file_no];
-                builder.hovers.push((
+                let file = &self.ns.files[file_no];
+                self.hovers.push((
                     file_no,
                     HoverEntry {
                         start: loc.start(),
@@ -1350,17 +1374,15 @@ impl<'a> Builder<'a> {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Variant(ei, discriminant),
                 };
-                builder
-                    .definitions
-                    .insert(di.clone(), loc_to_range(loc, file));
+                self.definitions.insert(di.clone(), loc_to_range(loc, file));
 
                 let dt = DefinitionType::Enum(ei);
-                builder.types.insert(di, dt.into());
+                self.types.insert(di, dt.into());
             }
 
             let file_no = enum_decl.loc.file_no();
-            let file = &ns.files[file_no];
-            builder.hovers.push((
+            let file = &self.ns.files[file_no];
+            self.hovers.push((
                 file_no,
                 HoverEntry {
                     start: enum_decl.loc.start(),
@@ -1368,7 +1390,7 @@ impl<'a> Builder<'a> {
                     val: render(&enum_decl.tags[..]),
                 },
             ));
-            builder.definitions.insert(
+            self.definitions.insert(
                 DefinitionIndex {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Enum(ei),
@@ -1377,15 +1399,15 @@ impl<'a> Builder<'a> {
             );
         }
 
-        for (si, struct_decl) in builder.ns.structs.iter().enumerate() {
+        for (si, struct_decl) in self.ns.structs.iter().enumerate() {
             if let pt::Loc::File(_, start, _) = &struct_decl.loc {
                 for (fi, field) in struct_decl.fields.iter().enumerate() {
-                    builder.field(si, fi, field);
+                    self.field(si, fi, field);
                 }
 
                 let file_no = struct_decl.loc.file_no();
-                let file = &ns.files[file_no];
-                builder.hovers.push((
+                let file = &self.ns.files[file_no];
+                self.hovers.push((
                     file_no,
                     HoverEntry {
                         start: *start,
@@ -1393,7 +1415,7 @@ impl<'a> Builder<'a> {
                         val: render(&struct_decl.tags[..]),
                     },
                 ));
-                builder.definitions.insert(
+                self.definitions.insert(
                     DefinitionIndex {
                         def_path: file.path.clone(),
                         def_type: DefinitionType::Struct(si),
@@ -1403,26 +1425,26 @@ impl<'a> Builder<'a> {
             }
         }
 
-        for (i, func) in builder.ns.functions.iter().enumerate() {
+        for (i, func) in self.ns.functions.iter().enumerate() {
             if func.is_accessor || func.loc == pt::Loc::Builtin {
                 // accessor functions are synthetic; ignore them, all the locations are fake
                 continue;
             }
 
             if let Some(bump) = &func.annotations.bump {
-                builder.expression(&bump.1, &func.symtable);
+                self.expression(&bump.1, &func.symtable);
             }
 
             for seed in &func.annotations.seeds {
-                builder.expression(&seed.1, &func.symtable);
+                self.expression(&seed.1, &func.symtable);
             }
 
             if let Some(space) = &func.annotations.space {
-                builder.expression(&space.1, &func.symtable);
+                self.expression(&space.1, &func.symtable);
             }
 
             if let Some((loc, name)) = &func.annotations.payer {
-                builder.hovers.push((
+                self.hovers.push((
                     loc.file_no(),
                     HoverEntry {
                         start: loc.start(),
@@ -1433,33 +1455,32 @@ impl<'a> Builder<'a> {
             }
 
             for (i, param) in func.params.iter().enumerate() {
-                builder.hovers.push((
+                self.hovers.push((
                     param.loc.file_no(),
                     HoverEntry {
                         start: param.loc.start(),
                         stop: param.loc.exclusive_end(),
-                        val: builder.expanded_ty(&param.ty),
+                        val: self.expanded_ty(&param.ty),
                     },
                 ));
                 if let Some(Some(var_no)) = func.symtable.arguments.get(i) {
                     if let Some(id) = &param.id {
                         let file_no = id.loc.file_no();
-                        let file = &builder.ns.files[file_no];
+                        let file = &self.ns.files[file_no];
                         let di = DefinitionIndex {
                             def_path: file.path.clone(),
                             def_type: DefinitionType::Variable(*var_no),
                         };
-                        builder
-                            .definitions
+                        self.definitions
                             .insert(di.clone(), loc_to_range(&id.loc, file));
                         if let Some(dt) = get_type_definition(&param.ty) {
-                            builder.types.insert(di, dt.into());
+                            self.types.insert(di, dt.into());
                         }
                     }
                 }
                 if let Some(loc) = param.ty_loc {
                     if let Some(dt) = get_type_definition(&param.ty) {
-                        builder.references.push((
+                        self.references.push((
                             loc.file_no(),
                             ReferenceEntry {
                                 start: loc.start(),
@@ -1472,35 +1493,34 @@ impl<'a> Builder<'a> {
             }
 
             for (i, ret) in func.returns.iter().enumerate() {
-                builder.hovers.push((
+                self.hovers.push((
                     ret.loc.file_no(),
                     HoverEntry {
                         start: ret.loc.start(),
                         stop: ret.loc.exclusive_end(),
-                        val: builder.expanded_ty(&ret.ty),
+                        val: self.expanded_ty(&ret.ty),
                     },
                 ));
 
                 if let Some(id) = &ret.id {
                     if let Some(var_no) = func.symtable.returns.get(i) {
                         let file_no = id.loc.file_no();
-                        let file = &ns.files[file_no];
+                        let file = &self.ns.files[file_no];
                         let di = DefinitionIndex {
                             def_path: file.path.clone(),
                             def_type: DefinitionType::Variable(*var_no),
                         };
-                        builder
-                            .definitions
+                        self.definitions
                             .insert(di.clone(), loc_to_range(&id.loc, file));
                         if let Some(dt) = get_type_definition(&ret.ty) {
-                            builder.types.insert(di, dt.into());
+                            self.types.insert(di, dt.into());
                         }
                     }
                 }
 
                 if let Some(loc) = ret.ty_loc {
                     if let Some(dt) = get_type_definition(&ret.ty) {
-                        builder.references.push((
+                        self.references.push((
                             loc.file_no(),
                             ReferenceEntry {
                                 start: loc.start(),
@@ -1513,12 +1533,12 @@ impl<'a> Builder<'a> {
             }
 
             for stmt in &func.body {
-                builder.statement(stmt, &func.symtable);
+                self.statement(stmt, &func.symtable);
             }
 
             let file_no = func.loc.file_no();
-            let file = &ns.files[file_no];
-            builder.definitions.insert(
+            let file = &self.ns.files[file_no];
+            self.definitions.insert(
                 DefinitionIndex {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Function(i),
@@ -1527,26 +1547,26 @@ impl<'a> Builder<'a> {
             );
         }
 
-        for (i, constant) in builder.ns.constants.iter().enumerate() {
+        for (i, constant) in self.ns.constants.iter().enumerate() {
             let samptb = symtable::Symtable::new();
-            builder.contract_variable(constant, &samptb, None, i);
+            self.contract_variable(constant, &samptb, None, i);
         }
 
-        for (ci, contract) in builder.ns.contracts.iter().enumerate() {
+        for (ci, contract) in self.ns.contracts.iter().enumerate() {
             for base in &contract.bases {
                 let file_no = base.loc.file_no();
-                builder.hovers.push((
+                self.hovers.push((
                     file_no,
                     HoverEntry {
                         start: base.loc.start(),
                         stop: base.loc.exclusive_end(),
                         val: make_code_block(format!(
                             "contract {}",
-                            builder.ns.contracts[base.contract_no].name
+                            self.ns.contracts[base.contract_no].name
                         )),
                     },
                 ));
-                builder.references.push((
+                self.references.push((
                     file_no,
                     ReferenceEntry {
                         start: base.loc.start(),
@@ -1561,12 +1581,12 @@ impl<'a> Builder<'a> {
 
             for (i, variable) in contract.variables.iter().enumerate() {
                 let symtable = symtable::Symtable::new();
-                builder.contract_variable(variable, &symtable, Some(ci), i);
+                self.contract_variable(variable, &symtable, Some(ci), i);
             }
 
             let file_no = contract.loc.file_no();
-            let file = &ns.files[file_no];
-            builder.hovers.push((
+            let file = &self.ns.files[file_no];
+            self.hovers.push((
                 file_no,
                 HoverEntry {
                     start: contract.loc.start(),
@@ -1579,8 +1599,8 @@ impl<'a> Builder<'a> {
                 def_path: file.path.clone(),
                 def_type: DefinitionType::Contract(ci),
             };
-            builder
-                .definitions
+
+            self.definitions
                 .insert(cdi.clone(), loc_to_range(&contract.loc, file));
 
             let impls = contract
@@ -1591,17 +1611,68 @@ impl<'a> Builder<'a> {
                     def_type: DefinitionType::Function(*f),
                 })
                 .collect();
-            builder.implementations.insert(cdi, impls);
+
+            self.implementations.insert(cdi, impls);
+
+            let decls = contract
+                .virtual_functions
+                .iter()
+                .filter_map(|(_, indices)| {
+                    // due to the way the `indices` vector is populated during namespace creation,
+                    // the last element in the vector contains the overriding function that belongs to the current contract.
+                    let func = DefinitionIndex {
+                        def_path: file.path.clone(),
+                        // `unwrap` is alright here as the `indices` vector is guaranteed to have at least 1 element
+                        // the vector is always initialised with one initial element
+                        // and the elements in the vector are never removed during namespace construction
+                        def_type: DefinitionType::Function(indices.last().copied().unwrap()),
+                    };
+
+                    // get all the functions overridden by the current function
+                    let all_decls: HashSet<usize> = HashSet::from_iter(indices.iter().copied());
+
+                    // choose the overridden functions that belong to the parent contracts
+                    // due to multiple inheritance, a contract can have multiple parents
+                    let parent_decls = contract
+                        .bases
+                        .iter()
+                        .map(|b| {
+                            let p = &self.ns.contracts[b.contract_no];
+                            HashSet::from_iter(p.functions.iter().copied())
+                                .intersection(&all_decls)
+                                .copied()
+                                .collect::<HashSet<usize>>()
+                        })
+                        .reduce(|acc, e| acc.union(&e).copied().collect());
+
+                    // get the `DefinitionIndex`s of the overridden funcions
+                    parent_decls.map(|parent_decls| {
+                        let decls = parent_decls
+                            .iter()
+                            .map(|&i| {
+                                let loc = self.ns.functions[i].loc;
+                                DefinitionIndex {
+                                    def_path: self.ns.files[loc.file_no()].path.clone(),
+                                    def_type: DefinitionType::Function(i),
+                                }
+                            })
+                            .collect::<Vec<_>>();
+
+                        (func, decls)
+                    })
+                });
+
+            self.declarations.extend(decls);
         }
 
-        for (ei, event) in builder.ns.events.iter().enumerate() {
+        for (ei, event) in self.ns.events.iter().enumerate() {
             for (fi, field) in event.fields.iter().enumerate() {
-                builder.field(ei, fi, field);
+                self.field(ei, fi, field);
             }
 
             let file_no = event.loc.file_no();
-            let file = &ns.files[file_no];
-            builder.hovers.push((
+            let file = &self.ns.files[file_no];
+            self.hovers.push((
                 file_no,
                 HoverEntry {
                     start: event.loc.start(),
@@ -1610,7 +1681,7 @@ impl<'a> Builder<'a> {
                 },
             ));
 
-            builder.definitions.insert(
+            self.definitions.insert(
                 DefinitionIndex {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Event(ei),
@@ -1619,37 +1690,42 @@ impl<'a> Builder<'a> {
             );
         }
 
-        for lookup in &mut builder.hovers {
-            if let Some(msg) = builder.ns.hover_overrides.get(&pt::Loc::File(
-                lookup.0,
-                lookup.1.start,
-                lookup.1.stop,
-            )) {
+        for lookup in &mut self.hovers {
+            if let Some(msg) =
+                self.ns
+                    .hover_overrides
+                    .get(&pt::Loc::File(lookup.0, lookup.1.start, lookup.1.stop))
+            {
                 lookup.1.val = msg.clone();
             }
         }
 
-        let defs_to_files = builder
+        // `defs_to_files` and `defs_to_file_nos` are used to insert the correct filepath where a code object is defined.
+        // previously, a dummy path was filled.
+        // In a single namespace, there can't be two (or more) code objects with a given `DefinitionType`.
+        // So, there exists a one-to-one mapping between `DefinitionIndex` and `DefinitionType` when we are dealing with just one namespace.
+        let defs_to_files = self
             .definitions
             .keys()
             .map(|key| (key.def_type.clone(), key.def_path.clone()))
             .collect::<HashMap<DefinitionType, PathBuf>>();
 
-        let defs_to_file_nos = ns
+        let defs_to_file_nos = self
+            .ns
             .files
             .iter()
             .enumerate()
             .map(|(i, f)| (f.path.clone(), i))
             .collect::<HashMap<PathBuf, usize>>();
 
-        for val in builder.types.values_mut() {
+        for val in self.types.values_mut() {
             val.def_path = defs_to_files[&val.def_type].clone();
         }
 
-        for (di, range) in &builder.definitions {
+        for (di, range) in &self.definitions {
             let file_no = defs_to_file_nos[&di.def_path];
-            let file = &ns.files[file_no];
-            builder.references.push((
+            let file = &self.ns.files[file_no];
+            self.references.push((
                 file_no,
                 ReferenceEntry {
                     start: file
@@ -1663,23 +1739,24 @@ impl<'a> Builder<'a> {
             ));
         }
 
-        let caches = ns
+        let file_caches = self
+            .ns
             .files
             .iter()
             .enumerate()
             .map(|(i, f)| FileCache {
                 file: f.clone(),
+                // get `hovers` that belong to the current file
                 hovers: Lapper::new(
-                    builder
-                        .hovers
+                    self.hovers
                         .iter()
                         .filter(|h| h.0 == i)
                         .map(|(_, i)| i.clone())
                         .collect(),
                 ),
+                // get `references` that belong to the current file
                 references: Lapper::new(
-                    builder
-                        .references
+                    self.references
                         .iter()
                         .filter(|h| h.0 == i)
                         .map(|(_, i)| {
@@ -1692,12 +1769,14 @@ impl<'a> Builder<'a> {
             })
             .collect();
 
-        (
-            caches,
-            builder.definitions,
-            builder.types,
-            builder.implementations,
-        )
+        let global_cache = GlobalCache {
+            definitions: self.definitions,
+            types: self.types,
+            declarations: self.declarations,
+            implementations: self.implementations,
+        };
+
+        (file_caches, global_cache)
     }
 
     /// Render the type with struct/enum fields expanded
@@ -1781,8 +1860,10 @@ impl LanguageServer for SolangServer {
                 definition_provider: Some(OneOf::Left(true)),
                 type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
                 implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
+                declaration_provider: Some(DeclarationCapability::Simple(true)),
                 references_provider: Some(OneOf::Left(true)),
                 rename_provider: Some(OneOf::Left(true)),
+                document_formatting_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -2079,6 +2160,50 @@ impl LanguageServer for SolangServer {
         Ok(impls)
     }
 
+    /// Called when "Go to Declaration" is called by the user on the client side.
+    ///
+    /// Expected to return a list (possibly empty) of methods that the given method overrides.
+    /// Only the methods belonging to the immediate parent contracts (due to multiple inheritance, there can be more than one parent) are to be returned.
+    ///
+    /// ### Arguments
+    /// * `GotoDeclarationParams` provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)` when the location passed in the arguments doesn't belong to a contract method defined in user code.
+    async fn goto_declaration(
+        &self,
+        params: GotoDeclarationParams,
+    ) -> Result<Option<GotoDeclarationResponse>> {
+        // fetch the `DefinitionIndex` of the code object in question
+        let Some(reference) = self.get_reference_from_params(params).await? else {
+            return Ok(None);
+        };
+
+        let gc = self.global_cache.lock().await;
+
+        // get a list of `DefinitionIndex`s of overridden functions from parent contracts
+        let decls = gc.declarations.get(&reference);
+
+        // get a list of locations in source code where the overridden functions are present
+        let locations = decls
+            .map(|decls| {
+                decls
+                    .iter()
+                    .filter_map(|di| {
+                        let path = &di.def_path;
+                        gc.definitions.get(di).map(|range| {
+                            let uri = Url::from_file_path(path).unwrap();
+                            Location { uri, range: *range }
+                        })
+                    })
+                    .collect()
+            })
+            .map(GotoImplementationResponse::Array);
+
+        Ok(locations)
+    }
+
     /// Called when "Go to References" is called by the user on the client side.
     ///
     /// Expected to return a list of locations in the source code where the given code-object is used.
@@ -2167,7 +2292,7 @@ impl LanguageServer for SolangServer {
         let new_text = params.new_name;
 
         // create `TextEdit` instances that represent the changes to be made for every occurrence of the old symbol
-        // these `TextEdit` objects are then grouped into separate list per source file to which they bolong
+        // these `TextEdit` objects are then grouped into separate list per source file to which they belong
         let caches = &self.files.lock().await.caches;
         let ws = caches
             .iter()
@@ -2187,6 +2312,77 @@ impl LanguageServer for SolangServer {
             .collect::<HashMap<_, _>>();
 
         Ok(Some(WorkspaceEdit::new(ws)))
+    }
+
+    /// Called when "Format Document" is called by the user on the client side.
+    ///
+    /// Expected to return the formatted version of source code present in the file on which this method was triggered.
+    ///
+    /// ### Arguments
+    /// * `DocumentFormattingParams`
+    ///     * provides the name of the file whose code is to be formatted.
+    ///     * provides options that help configure how the file is formatted.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when
+    ///     * an invalid file path is received.
+    ///     * reading the file fails.
+    ///     * parsing the file fails.
+    ///     * formatting the file fails.
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        // get parse tree for the input file
+        let uri = params.text_document.uri;
+        let source_path = uri.to_file_path().map_err(|_| Error {
+            code: ErrorCode::InvalidRequest,
+            message: format!("Received invalid URI: {uri}").into(),
+            data: None,
+        })?;
+        let source = std::fs::read_to_string(source_path).map_err(|err| Error {
+            code: ErrorCode::InternalError,
+            message: format!("Failed to read file: {uri}").into(),
+            data: Some(Value::String(format!("{:?}", err))),
+        })?;
+        let source_parsed = parse(&source).map_err(|err| {
+            let err = err
+                .into_iter()
+                .map(|e| Value::String(e.message))
+                .collect::<Vec<_>>();
+            Error {
+                code: ErrorCode::InternalError,
+                message: format!("Failed to parse file: {uri}").into(),
+                data: Some(Value::Array(err)),
+            }
+        })?;
+
+        // get the formatted text
+        let config = FormatterConfig {
+            line_length: 80,
+            tab_width: params.options.tab_size as _,
+            ..Default::default()
+        };
+        let mut source_formatted = String::new();
+        format(&mut source_formatted, source_parsed, config).map_err(|err| Error {
+            code: ErrorCode::InternalError,
+            message: format!("Failed to format file: {uri}").into(),
+            data: Some(Value::String(format!("{:?}", err))),
+        })?;
+
+        // create a `TextEdit` instance that replaces the contents of the file with the formatted text
+        let text_edit = TextEdit {
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0,
+                },
+                end: Position {
+                    line: u32::max_value(),
+                    character: u32::max_value(),
+                },
+            },
+            new_text: source_formatted,
+        };
+
+        Ok(Some(vec![text_edit]))
     }
 }
 
