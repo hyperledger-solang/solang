@@ -1678,28 +1678,63 @@ impl<'a> Builder<'a> {
                 .iter()
                 .map(|var| (var.name.clone(), get_type_definition(&var.ty)));
 
-            self.scope_contents.insert(
-                cdi.clone(),
-                functions
-                    .chain(variables)
-                    .map(|(name, dt)| {
-                        let di = dt.map(|dt| DefinitionIndex {
-                            def_path: file.path.clone(),
-                            def_type: dt,
-                        });
-                        (name, di)
-                    })
-                    .collect(),
-            );
+            let structs =
+                self.ns
+                    .structs
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, s)| match &s.contract {
+                        Some(c) if c == &contract.name => {
+                            Some((s.name.clone(), Some(DefinitionType::Struct(i))))
+                        }
+                        _ => None,
+                    });
 
-            // self.scopes.push((
-            //     file_no,
-            //     ScopeEntry {
-            //         start: contract.loc.start(),
-            //         stop: contract.loc.exclusive_end(),
-            //         val: functions.chain(variables).collect(),
-            //     },
-            // ));
+            let enums = self
+                .ns
+                .enums
+                .iter()
+                .enumerate()
+                .filter_map(|(i, e)| match &e.contract {
+                    Some(c) if c == &contract.name => {
+                        Some((e.name.clone(), Some(DefinitionType::Enum(i))))
+                    }
+                    _ => None,
+                });
+
+            let events = self
+                .ns
+                .events
+                .iter()
+                .enumerate()
+                .filter_map(|(i, e)| match &e.contract {
+                    Some(c) if *c == ci => Some((e.name.clone(), Some(DefinitionType::Event(i)))),
+                    _ => None,
+                });
+
+            let contract_contents = functions
+                .chain(variables)
+                .chain(structs)
+                .chain(enums)
+                .chain(events)
+                .map(|(name, dt)| {
+                    let di = dt.map(|dt| DefinitionIndex {
+                        def_path: file.path.clone(),
+                        def_type: dt,
+                    });
+                    (name, di)
+                });
+            self.scope_contents
+                .insert(cdi.clone(), contract_contents.clone().collect());
+
+            self.scopes.push((
+                file_no,
+                ScopeEntry {
+                    start: contract.loc.start(),
+                    stop: contract.loc.exclusive_end(),
+                    val: contract_contents.collect(),
+                },
+            ));
 
             let impls = contract
                 .functions
@@ -1949,7 +1984,6 @@ impl LanguageServer for SolangServer {
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
                     trigger_characters: Some(vec![".".to_string()]),
-                    // trigger_characters: None,
                     all_commit_characters: None,
                     work_done_progress_options: Default::default(),
                     completion_item: None,
@@ -2100,7 +2134,7 @@ impl LanguageServer for SolangServer {
             .expect("cannot open file");
 
         data_file
-            .write(format!("{}\n", "-".repeat(50)).as_bytes())
+            .write_all(format!("{}\n", "-".repeat(50)).as_bytes())
             .expect("write failed");
 
         let uri = params.text_document_position.text_document.uri;
@@ -2111,7 +2145,7 @@ impl LanguageServer for SolangServer {
         })?;
 
         data_file
-            .write(format!("URI: {uri}\n").as_bytes())
+            .write_all(format!("URI: {uri}\n").as_bytes())
             .expect("write failed");
 
         let files = self.files.lock().await;
@@ -2127,17 +2161,17 @@ impl LanguageServer for SolangServer {
             params.text_document_position.position.character as _,
         );
         data_file
-            .write(format!("Offset: {offset}\n").as_bytes())
+            .write_all(format!("Offset: {offset}\n").as_bytes())
             .expect("write failed");
 
         // enclosing_scopes.sort_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)));
 
         data_file
-            .write(format!("All scopes in the file: {:#?}\n", cache.scopes).as_bytes())
+            .write_all(format!("All scopes in the file: {:#?}\n", cache.scopes).as_bytes())
             .expect("write failed");
 
         data_file
-            .write(
+            .write_all(
                 format!(
                     "Enclosing Scopes: {:#?}\n",
                     cache.scopes.find(offset, offset + 1).collect::<Vec<_>>()
@@ -2149,7 +2183,8 @@ impl LanguageServer for SolangServer {
         let res = cache
             .scopes
             .find(offset, offset + 1)
-            .flat_map(|scope| scope.val.iter().map(|val| val.clone()))
+            // .flat_map(|scope| scope.val.iter().map(|val| val.clone()))
+            .flat_map(|scope| scope.val.iter().cloned())
             .collect::<HashMap<_, _>>();
 
         if let Some(CompletionContext {
@@ -2159,12 +2194,12 @@ impl LanguageServer for SolangServer {
         {
             if character == "." {
                 data_file
-                    .write(format!("Inside trigger character \".\"\n").as_bytes())
+                    .write_all("Inside trigger character \".\"\n".to_string().as_bytes())
                     .expect("write failed");
                 if let Some(text_buf) = files.text_buffers.get(&path) {
                     // text_buf.chars().nth(offset)
                     data_file
-                        .write(
+                        .write_all(
                             format!("Inside text_buf: {:?}\n\n", text_buf.chars().nth(offset))
                                 .as_bytes(),
                         )
@@ -2173,8 +2208,7 @@ impl LanguageServer for SolangServer {
                     let b = text_buf.as_bytes();
                     let mut curr: isize = offset as isize - 2;
                     while curr >= 0
-                        && (b[curr as usize].is_ascii_alphanumeric()
-                            || b[curr as usize] == '.' as u8)
+                        && (b[curr as usize].is_ascii_alphanumeric() || b[curr as usize] == b'.')
                     {
                         curr -= 1;
                     }
@@ -2185,34 +2219,34 @@ impl LanguageServer for SolangServer {
                     let name = std::str::from_utf8(&b[curr as usize..offset - 1]).unwrap();
 
                     data_file
-                        .write(format!("Inside text_buf, sending: \"{name}\"\n").as_bytes())
+                        .write_all(format!("Inside text_buf, sending: \"{name}\"\n").as_bytes())
                         .expect("write failed");
 
-                    let mut name_iter = name.split(".");
+                    let mut name_iter = name.split('.');
                     let mut properties = name_iter.next().and_then(|n| {
                         res.get(n)
-                            .map(|a| a.as_ref())
-                            .flatten()
+                            .and_then(|a| a.as_ref())
                             .and_then(|n| gc.scope_contents.get(n))
                     });
 
-                    while let Some(prop) = name_iter.next() {
+                    // while let Some(prop) = name_iter.next() {
+                    for prop in name_iter {
                         properties = properties
                             .and_then(|p| p.get(prop))
-                            .map(|a| a.as_ref())
-                            .flatten()
+                            .and_then(|a| a.as_ref())
                             .and_then(|n| gc.scope_contents.get(n));
                     }
-                    let comps = properties.map(|properties| {
-                        properties
-                            .keys()
-                            .map(|name| CompletionItem {
-                                label: name.clone(),
-                                ..Default::default()
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .map(CompletionResponse::Array);
+                    let comps = properties
+                        .map(|properties| {
+                            properties
+                                .keys()
+                                .map(|name| CompletionItem {
+                                    label: name.clone(),
+                                    ..Default::default()
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .map(CompletionResponse::Array);
                     return Ok(comps);
                 }
             } else {
