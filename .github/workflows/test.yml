@@ -90,7 +90,10 @@ jobs:
       if: always()
       run: cargo llvm-cov --all-features --workspace --no-report
     - name: Compress test coverage files
-      run: tar -czvf rust-tests.tar.gz *.profraw ./llvm-cov-target/*.profraw
+      run: |
+        rm -r bpf wasm tmp cxxbridge CACHEDIR.TAG
+        rm -r debug/build debug/deps debug/examples debug/incremental
+        tar -czvf rust-tests.tar.gz *
       working-directory: ./target
     - name: Upload test coverage files
       uses: actions/upload-artifact@v3.1.0
@@ -513,10 +516,10 @@ jobs:
           components: llvm-tools
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Build solang
-        run: |
-          cargo llvm-cov clean --workspace
-          cargo build
+#      - name: Build solang
+#        run: |
+#          cargo llvm-cov clean --workspace
+#          cargo build
       - name: Download Rust coverage files
         uses: actions/download-artifact@master
         with:
