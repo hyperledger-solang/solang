@@ -700,14 +700,12 @@ fn explicit_args(matches: &ArgMatches) -> Vec<&Id> {
 
 /// A helper function to check if the target name provided by the user matches the target name in solang.toml
 ///
-/// Returns false if the target names do not match
-/// Returns true if the target names match or if solang.toml does not exist in the current directory
+/// If no configuration file content is provided, then the function will read the content of the
+/// solang.toml file in the current directory.
 ///
-/// ## Errors:
+/// If the target names match, then the function will return true. else, it will return false.
 ///
-/// 1- Returns an error if the solang.toml file does not exist in the current directory.
-/// 2- Returns an error if the solang.toml file exists but it is not valid TOML.
-/// 3- Returns an error if the solang.toml file exists but it does not contain a target name.
+/// Returns an error if the solang.toml file does not exist, or if the file cannot be read or parsed.
 fn check_target_match(
     target_name: &str,
     config_file_content: Option<String>,

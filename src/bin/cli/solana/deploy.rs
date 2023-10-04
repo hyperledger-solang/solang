@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::cli::check_target_match;
+use anyhow::Result;
 use std::{process::exit, str::FromStr, time::Duration};
 
 use solana_cli::{
@@ -39,10 +40,12 @@ impl SolanaDeploy {
     /// configuring settings, and executing the deployment command. It also handles
     /// loading the necessary configuration and signers, defining output formats,
     /// and processing the deployment command using the provided configuration.
-    pub fn handle(&self) {
+    pub fn handle(&self) -> Result<()> {
         // Make sure the command is run in the correct directory
         // Fails if the command is run in a Solang Polkadot project directory
-        if !check_target_match("solana", None).unwrap() {
+        let target_match = check_target_match("solang", None)
+            .map_err(|e| anyhow::anyhow!("Failed to check current directory: {}", e))?;
+        if !target_match {
             exit(1);
         }
 
@@ -52,7 +55,9 @@ impl SolanaDeploy {
         let file_name = self.program_location.as_str();
 
         // Get the path to the configuration file (default location)
-        let config_file = CONFIG_FILE.as_ref().unwrap();
+        let config_file = CONFIG_FILE
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Failed to get configuration file path"))?;
 
         // Load configuration settings from a file or use defaults if the file is not found
         let config = Config::load(config_file).unwrap_or_default();
@@ -72,11 +77,23 @@ impl SolanaDeploy {
                 skip_fee_check: false,
             }),
             // Load signer keypair from the file specified in the configuration
-            signers: vec![read_keypair_file(&config.keypair_path).unwrap().into()],
+            signers: vec![read_keypair_file(&config.keypair_path)
+                .map_err(|e| {
+                    anyhow::anyhow!(
+                        "Failed to read keypair file '{}': {}",
+                        config.keypair_path,
+                        e
+                    )
+                })?
+                .into()],
         };
 
         // Parse the commitment level from the configuration file
-        let commitment = CommitmentConfig::from_str(&config.commitment).ok().unwrap();
+        let commitment = CommitmentConfig::from_str(&config.commitment)
+            .ok()
+            .ok_or_else(|| {
+                anyhow::anyhow!("Failed to parse commitment level from configuration file")
+            })?;
 
         // Determine the output format (JSON or Display)
         let output_format = match output_json {
@@ -90,6 +107,16 @@ impl SolanaDeploy {
             }
         };
 
+        let rpc_timeout = Duration::from_secs(
+            DEFAULT_RPC_TIMEOUT_SECONDS
+                .parse::<u64>()
+                .map_err(|e| anyhow::anyhow!("Failed to parse RPC timeout: {}", e))?,
+        );
+        let confirm_transaction_initial_timeout =
+            Duration::from_secs(DEFAULT_CONFIRM_TX_TIMEOUT_SECONDS.parse::<u64>().map_err(
+                |e| anyhow::anyhow!("Failed to parse confirm transaction timeout: {}", e),
+            )?);
+
         // Create a new configuration with modified settings
         let config = CliConfig {
             command,
@@ -98,7 +125,7 @@ impl SolanaDeploy {
             signers: signers.iter().map(|s| s.as_ref()).collect(),
             keypair_path: config.keypair_path,
             rpc_client: None,
-            rpc_timeout: Duration::from_secs(DEFAULT_RPC_TIMEOUT_SECONDS.parse::<u64>().unwrap()),
+            rpc_timeout,
             verbose,
             output_format,
             commitment,
@@ -106,15 +133,16 @@ impl SolanaDeploy {
                 preflight_commitment: Some(commitment.commitment),
                 ..RpcSendTransactionConfig::default()
             },
-            confirm_transaction_initial_timeout: Duration::from_secs(
-                DEFAULT_CONFIRM_TX_TIMEOUT_SECONDS.parse::<u64>().unwrap(),
-            ),
+            confirm_transaction_initial_timeout,
             address_labels: config.address_labels,
             use_quic: true,
         };
 
         // Process the deployment command with the updated configuration
-        let result = process_command(&config).unwrap();
+        let result = process_command(&config)
+            .map_err(|e| anyhow::anyhow!("Failed to process deployment command: {}", e))?;
         println!("{result}");
+
+        Ok(())
     }
 }

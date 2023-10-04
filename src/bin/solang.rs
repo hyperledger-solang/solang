@@ -63,7 +63,13 @@ fn main() {
         Commands::Idl(idl_args) => idl::idl(&idl_args),
         Commands::New(new_arg) => new_command(new_arg),
         Commands::Solana { action } => match action {
-            SolanaAction::Deploy(deploy_args) => deploy_args.handle(),
+            SolanaAction::Deploy(deploy_args) => match deploy_args.handle() {
+                Ok(_) => {}
+                Err(err) => {
+                    eprintln!("{}", err);
+                    exit(1);
+                }
+            },
         },
     }
 }
