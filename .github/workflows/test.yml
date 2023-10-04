@@ -81,14 +81,14 @@ jobs:
       run: |
         cargo llvm-cov clean --workspace
         cargo build
+    - name: Run tests
+      if: always()
+      run: cargo llvm-cov --all-features --workspace --no-report
     - name: Upload binary
       uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-linux-x86-64
         path: ./target/debug/solang
-    - name: Run tests
-      if: always()
-      run: cargo llvm-cov --all-features --workspace --no-report
     - name: Compress test coverage files
       run: |
         rm -r bpf wasm tmp cxxbridge CACHEDIR.TAG
