@@ -298,10 +298,7 @@ fn string_abi_decode() {
     let mut rng = rand::thread_rng();
 
     for len in 0x4000 - 10..0x4000 + 10 {
-        let mut s = Vec::new();
-
-        s.resize(len, 0);
-
+        let mut s = vec![0; len];
         rng.fill(&mut s[..]);
 
         let mut runtime = build_solidity(

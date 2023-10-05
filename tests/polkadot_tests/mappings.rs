@@ -179,8 +179,7 @@ fn test_string() {
 
     for _ in 0..100 {
         let len = rng.gen::<usize>() % 256;
-        let mut index = Vec::new();
-        index.resize(len, 0u8);
+        let mut index = vec![0u8; len];
         rng.fill(&mut index[..]);
         let val = rng.gen::<i64>();
 
@@ -247,8 +246,7 @@ fn test_user() {
 
     for _ in 0..100 {
         let len = rng.gen::<usize>() % 256;
-        let mut index = Vec::new();
-        index.resize(len, 0u8);
+        let mut index = vec![0u8; len];
         rng.fill(&mut index[..]);
         let mut val = [0u8; 32];
         rng.fill(&mut val[..]);
@@ -323,8 +321,7 @@ fn test_string_map() {
 
     for _ in 0..10 {
         let len = rng.gen::<usize>() % 256;
-        let mut val = Vec::new();
-        val.resize(len, 0u8);
+        let mut val = vec![0u8; len];
         rng.fill(&mut val[..]);
         let mut address = [0u8; 32];
         rng.fill(&mut address[..]);

@@ -599,7 +599,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 ns.contracts[contract_no]
                     .virtual_functions
                     .entry(signature)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(function_no); // there is always at least 1 element in the vector
             }
 

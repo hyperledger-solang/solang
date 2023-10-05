@@ -1627,11 +1627,9 @@ fn initialization_with_literal() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let mut addr1: Vec<u8> = Vec::new();
-    addr1.resize(32, 0);
+    let mut addr1: Vec<u8> = vec![0; 32];
     addr1[0] = 1;
-    let mut addr2: Vec<u8> = Vec::new();
-    addr2.resize(32, 0);
+    let mut addr2: Vec<u8> = vec![0; 32];
     addr2[0] = 2;
     let _ = vm
         .function("split")

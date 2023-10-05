@@ -603,8 +603,7 @@ impl AbiEncoding for ScaleEncoding {
                 } => {
                     let bytes = value.to_bytes_be().1;
                     if bytes.len() < 4 {
-                        let mut buf = Vec::new();
-                        buf.resize(4 - bytes.len(), 0);
+                        let buf = vec![0; 4 - bytes.len()];
                         result.extend_from_slice(&buf);
                     }
                     result.extend_from_slice(&bytes[..]);
