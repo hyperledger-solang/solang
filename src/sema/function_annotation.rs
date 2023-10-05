@@ -260,10 +260,12 @@ pub(super) fn function_body_annotations(
             "account" | "signer" | "mutableAccount" | "mutableSigner"
                 if ns.target == Target::Solana =>
             {
-                if !matches!(
-                    ns.functions[function_no].visibility,
-                    Visibility::External(..)
-                ) {
+                if !ns.functions[function_no].is_constructor()
+                    && !matches!(
+                        ns.functions[function_no].visibility,
+                        Visibility::External(..)
+                    )
+                {
                     diagnostics.push(Diagnostic::error(
                         note.loc,
                         "account declarations are only valid in functions declared as external"
@@ -277,7 +279,7 @@ pub(super) fn function_body_annotations(
                     function_no,
                     note.id.name.as_str(),
                     &mut diagnostics,
-                    &mut annotations,
+                    &mut ConstructorAnnotations::default(),
                     ns,
                 );
             }
