@@ -61,7 +61,9 @@ pub fn mutability(file_no: usize, ns: &mut Namespace) {
 /// While we recurse through the AST, maintain some state
 struct StateCheck<'a> {
     diagnostics: Vec<Diagnostic>,
-    expr_errors: HashMap<Access, Diagnostic>,
+    // We only want to diagnose on the innermost expression of any statement.
+    // This field is used as a per statement cache
+    per_statement_diagnostics: HashMap<Access, Diagnostic>,
     declared_access: Access,
     required_access: Access,
     func: &'a Function,
@@ -72,26 +74,28 @@ struct StateCheck<'a> {
 
 impl<'a> StateCheck<'a> {
     fn value(&mut self, loc: &pt::Loc) {
-        self.diagnose(loc, Access::Value);
+        self.check_level(loc, Access::Value);
         self.required_access.increase_to(Access::Value);
     }
 
     fn write(&mut self, loc: &pt::Loc) {
-        self.diagnose(loc, Access::Write);
+        self.check_level(loc, Access::Write);
         self.required_access.increase_to(Access::Write);
     }
 
     fn read(&mut self, loc: &pt::Loc) {
-        self.diagnose(loc, Access::Read);
+        self.check_level(loc, Access::Read);
         self.required_access.increase_to(Access::Read);
     }
 
-    fn diagnose(&mut self, loc: &pt::Loc, access_level: Access) {
-        if self.declared_access >= access_level {
+    /// Compare the declared access level to the desired access level.
+    /// If there is an access violation, it'll be reported to the diagnostics.
+    fn check_level(&mut self, loc: &pt::Loc, desired: Access) {
+        if self.declared_access >= desired {
             return;
         }
 
-        let (message, note) = match access_level {
+        let (message, note) = match desired {
             Access::Read => ("reads from state", "read to state"),
             Access::Write => ("writes to state", "write to state"),
             Access::Value => (
@@ -118,12 +122,7 @@ impl<'a> StateCheck<'a> {
                 Diagnostic::error(*loc, message)
             });
 
-        self.expr_errors.insert(access_level, diagnostic);
-    }
-
-    fn conclude(mut self) -> Vec<Diagnostic> {
-        self.diagnostics.extend(self.expr_errors.into_values());
-        self.diagnostics
+        self.per_statement_diagnostics.insert(desired, diagnostic);
     }
 }
 
@@ -134,7 +133,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
 
     let mut state = StateCheck {
         diagnostics: Vec::new(),
-        expr_errors: HashMap::new(),
+        per_statement_diagnostics: HashMap::new(),
         declared_access: match func.mutability {
             Mutability::Pure(_) => Access::None,
             Mutability::View(_) => Access::Read,
@@ -252,7 +251,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
         );
     }
 
-    state.conclude()
+    state.diagnostics.to_vec()
 }
 
 fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateCheck) {
@@ -335,6 +334,10 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
                 recurse_yul_statements(&inline_assembly.body, state);
             }
         }
+
+        state
+            .diagnostics
+            .extend(state.per_statement_diagnostics.drain().map(|(_, v)| v));
     }
 }
 

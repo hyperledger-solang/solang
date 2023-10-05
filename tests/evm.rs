@@ -198,6 +198,9 @@ fn ethereum_solidity_tests() {
             // FIXME: others listed explicitly cause panics and need fixing
             if !file_name.ends_with("max_depth_reached_4.sol")
                 && !file_name.ends_with("invalid_utf8_sequence.sol")
+                // Bug in solc: https://github.com/ethereum/solidity/issues/11573
+                && !file_name
+                    .ends_with("internal_library_function_attached_to_string_accepting_storage.sol")
                 && file_name.ends_with(".sol")
             {
                 Some(entry)
@@ -249,7 +252,7 @@ fn ethereum_solidity_tests() {
         })
         .sum();
 
-    assert_eq!(errors, 1004);
+    assert_eq!(errors, 1003);
 }
 
 fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {
