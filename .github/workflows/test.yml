@@ -59,8 +59,9 @@ jobs:
       with:
         submodules: recursive
     - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@master
       with:
+        toolchain: 1.72.0
         components: |
           llvm-tools
           clippy
@@ -293,14 +294,11 @@ jobs:
     - name: Test Anchor
       run: anchor test --skip-local-validator
       working-directory: ./integration/anchor
-    - name: Compress test coverage files
-      run: tar -czvf anchor-tests.tar.gz *.profraw
-      working-directory: ./target
     - name: Upload test coverage files
       uses: actions/upload-artifact@v3.1.0
       with:
-       name: anchor-tests.tar.gz
-       path: ./target/anchor-tests.tar.gz
+       name: anchor-tests
+       path: ./target/*.profraw
 
   solana:
     name: Solana Integration test
@@ -337,14 +335,11 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/solana
-    - name: Compress test coverage files
-      run: tar -czvf solana-tests.tar.gz *.profraw
-      working-directory: ./target
     - name: Upload test coverage files
       uses: actions/upload-artifact@v3.1.0
       with:
-        name: solana-tests.tar.gz
-        path: ./target/solana-tests.tar.gz
+        name: solana-tests
+        path: ./target/*.profraw
 
   polkadot:
     name: Polkadot Integration test
@@ -383,18 +378,14 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/polkadot
-    - name: Compress test coverage files
-      run: tar -czvf polkadot-tests.tar.gz *.profraw
-      working-directory: ./target
     - name: Upload test coverage files
       uses: actions/upload-artifact@v3.1.0
       with:
-        name: polkadot-tests.tar.gz
-        path: ./target/polkadot-tests.tar.gz
+        name: polkadot-tests
+        path: ./target/*.profraw
     - name: cleanup
       if: always()
       run: docker kill ${{steps.substrate.outputs.id}}
-
 
   polkadot-subxt:
     name: Polkadot Integration test with subxt
@@ -429,14 +420,11 @@ jobs:
     - name: cleanup
       if: always()
       run: docker kill ${{steps.substrate.outputs.id}}
-    - name: Compress test coverage files
-      run: tar -czvf polkadot-subxt-tests.tar.gz *.profraw
-      working-directory: ./target
     - name: Upload test coverage files
       uses: actions/upload-artifact@v3.1.0
       with:
-        name: polkadot-subxt-tests.tar.gz
-        path: ./target/polkadot-subxt-tests.tar.gz
+        name: polkadot-subxt-tests
+        path: ./target/*.profraw
 
   vscode:
     name: Visual Code Extension
@@ -469,14 +457,11 @@ jobs:
       working-directory: ./vscode
     - run: vsce package
       working-directory: ./vscode
-    - name: Compress test coverage files
-      run: tar -czvf vscode-tests.tar.gz *.profraw
-      working-directory: ./target
     - name: Upload test coverage files
       uses: actions/upload-artifact@v3.1.0
       with:
-        name: vscode-tests.tar.gz
-        path: ./target/vscode-tests.tar.gz
+        name: vscode-tests
+        path: ./target/*.profraw
 
   std-lib-tests:
     name: Stdlib
@@ -516,10 +501,6 @@ jobs:
           components: llvm-tools
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
-#      - name: Build solang
-#        run: |
-#          cargo llvm-cov clean --workspace
-#          cargo build
       - name: Download Rust coverage files
         uses: actions/download-artifact@master
         with:
@@ -528,36 +509,30 @@ jobs:
       - name: Download Solana coverage files
         uses: actions/download-artifact@master
         with:
-          name: solana-tests.tar.gz
+          name: solana-tests
           path: ./target
       - name: Download Polkadot coverage files
         uses: actions/download-artifact@master
         with:
-          name: polkadot-tests.tar.gz
+          name: polkadot-tests
           path: ./target
       - name: Download Polkadot subxt coverage files
         uses: actions/download-artifact@master
         with:
-          name: polkadot-subxt-tests.tar.gz
+          name: polkadot-subxt-tests
           path: ./target
       - name: Download Anchor coverage files
         uses: actions/download-artifact@master
         with:
-          name: anchor-tests.tar.gz
+          name: anchor-tests
           path: ./target
       - name: Download VSCode coverage files
         uses: actions/download-artifact@master
         with:
-          name: vscode-tests.tar.gz
+          name: vscode-tests
           path: ./target
       - name: Unpack test coverage files
-        run: |
-          tar -xf rust-tests.tar.gz
-          tar -xf solana-tests.tar.gz
-          tar -xf polkadot-tests.tar.gz
-          tar -xf polkadot-subxt-tests.tar.gz
-          tar -xf anchor-tests.tar.gz
-          tar -xf vscode-tests.tar.gz
+        run: tar -xf rust-tests.tar.gz
         working-directory: ./target
       - name: Generate code report
         run: cargo llvm-cov report --lcov --output-path lcov.info
