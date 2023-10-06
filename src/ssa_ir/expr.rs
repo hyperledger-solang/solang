@@ -1,6 +1,9 @@
+use std::fmt;
+use std::fmt::Formatter;
 use num_bigint::BigInt;
 use solang_parser::pt::Loc;
-use crate::sema::ast::{FormatArg, StringLocation, Type};
+use crate::sema::ast::{FormatArg, StringLocation};
+use crate::ssa_ir::ssa_type::Type;
 
 /// Three-address code type, which is a subset of the Solidity AST
 // FIXME Be careful about the data types: pointers, primitives, and references.
@@ -9,26 +12,26 @@ use crate::sema::ast::{FormatArg, StringLocation, Type};
 /// Variable and Literal
 #[derive(Clone, Debug)]
 pub enum Operand {
-    Id { id: usize },
+    Id { id: usize, name: String },
     BoolLiteral { value: bool },
     NumberLiteral { value: BigInt },
-    AddressLiteral { value: String },
 }
 
 /// binary operators
 // LLVM doesn't diff signed and unsigned
+#[derive(Debug)]
 pub enum BinaryOperator {
     Add {
-        overflow: bool
+        overflowing: bool
     },
     Sub {
-        overflow: bool
+        overflowing: bool
     },
     Mul {
-        overflow: bool
+        overflowing: bool
     },
     Pow {
-        overflow: bool
+        overflowing: bool
     },
 
     Div,
@@ -61,15 +64,17 @@ pub enum BinaryOperator {
     UShr,
 }
 
+#[derive(Debug)]
 /// unary operators
 pub enum UnaryOperator {
     Not,
     Neg {
-        overflow: bool
+        overflowing: bool
     },
     BitNot,
 }
 
+#[derive(Debug)]
 pub enum Expr {
     BinaryExpr {
         loc: Loc,
@@ -80,7 +85,7 @@ pub enum Expr {
     UnaryExpr {
         loc: Loc,
         op: UnaryOperator,
-        operand: Box<Operand>,
+        right: Box<Operand>,
     },
 
     Id {
@@ -117,7 +122,7 @@ pub enum Expr {
     Cast {
         loc: Loc,
         ty: Type,
-        expr: Box<Operand>,
+        op: Box<Operand>,
     },
     BytesCast {
         loc: Loc,
@@ -231,4 +236,103 @@ pub enum Expr {
     ReturnData {
         loc: Loc,
     },
+}
+
+impl fmt::Display for Operand {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Operand::Id { id, name } => write!(f, "{}", name),
+            Operand::BoolLiteral { value } => write!(f, "{}", value),
+            Operand::NumberLiteral { value } => write!(f, "{}", value),
+        }
+    }
+}
+
+impl fmt::Display for BinaryOperator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            BinaryOperator::Add {
+                overflowing
+            } => write!(f, "{}", if *overflowing { "(ov)+" } else { "+" }),
+            BinaryOperator::Sub {
+                overflowing
+            } => write!(f, "{}", if *overflowing { "(ov)-" } else { "-" }),
+            BinaryOperator::Mul {
+                overflowing
+            } => write!(f, "{}", if *overflowing { "(ov)*" } else { "*" }),
+            BinaryOperator::Pow {
+                overflowing
+            } => write!(f, "{}", if *overflowing { "(ov)**" } else { "**" }),
+            BinaryOperator::Div => write!(f, "/"),
+            // example: uint8 a = b (usi)/ c
+            BinaryOperator::UDiv => write!(f, "(usi)/"),
+            BinaryOperator::Mod => write!(f, "%"),
+            BinaryOperator::UMod => write!(f, "(usi)%"),
+            BinaryOperator::Eq => write!(f, "=="),
+            BinaryOperator::Neq => write!(f, "!="),
+            BinaryOperator::Lt => write!(f, "<"),
+            BinaryOperator::ULt => write!(f, "(usi)<"),
+            BinaryOperator::Lte => write!(f, "<="),
+            BinaryOperator::ULte => write!(f, "(usi)<="),
+            BinaryOperator::Gt => write!(f, ">"),
+            BinaryOperator::UGt => write!(f, "(usi)>"),
+            BinaryOperator::Gte => write!(f, ">="),
+            BinaryOperator::UGte => write!(f, "(usi)>="),
+            BinaryOperator::BitAnd => write!(f, "&"),
+            BinaryOperator::BitOr => write!(f, "|"),
+            BinaryOperator::BitXor => write!(f, "^"),
+            BinaryOperator::Shl => write!(f, "<<"),
+            BinaryOperator::Shr => write!(f, ">>"),
+            BinaryOperator::UShr => write!(f, "(usi)>>"),
+        }
+    }
+}
+
+impl fmt::Display for UnaryOperator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            UnaryOperator::Not => write!(f, "!"),
+            UnaryOperator::Neg {
+                overflowing
+            } => write!(f, "{}", if *overflowing { "(ov)-" } else { "-" }),
+            UnaryOperator::BitNot => write!(f, "~"),
+        }
+    }
+}
+
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Expr::BinaryExpr {
+                loc, op, left, right
+            } => write!(f, "{} {} {}", left, op, right),
+            Expr::UnaryExpr {
+                loc, op, right
+            } => write!(f, "{}{}", op, right),
+            Expr::Id { .. } => todo!("Implement this function"),
+            Expr::ArrayLiteral { .. } => todo!("Implement this function"),
+            Expr::ConstArrayLiteral { .. } => todo!("Implement this function"),
+            Expr::BytesLiteral { .. } => todo!("Implement this function"),
+            Expr::StructLiteral { .. } => todo!("Implement this function"),
+            Expr::Cast { .. } => todo!("Implement this function"),
+            Expr::BytesCast { .. } => todo!("Implement this function"),
+            Expr::SignExt { .. } => todo!("Implement this function"),
+            Expr::ZeroExt { .. } => todo!("Implement this function"),
+            Expr::Trunc { .. } => todo!("Implement this function"),
+            Expr::AllocDynamicBytes { .. } => todo!("Implement this function"),
+            Expr::GetRef { .. } => todo!("Implement this function"),
+            Expr::Load { .. } => todo!("Implement this function"),
+            Expr::StructMember { .. } => todo!("Implement this function"),
+            Expr::Subscript { .. } => todo!("Implement this function"),
+            Expr::AdvancePointer { .. } => todo!("Implement this function"),
+            Expr::FunctionArg { .. } => todo!("Implement this function"),
+            Expr::FormatString { .. } => todo!("Implement this function"),
+            Expr::InternalFunctionCfg { .. } => todo!("Implement this function"),
+            Expr::Keccak256 { .. } => todo!("Implement this function"),
+            Expr::StringCompare { .. } => todo!("Implement this function"),
+            Expr::StringConcat { .. } => todo!("Implement this function"),
+            Expr::StorageArrayLength { .. } => todo!("Implement this function"),
+            Expr::ReturnData { .. } => todo!("Implement this function"),
+        }
+    }
 }
