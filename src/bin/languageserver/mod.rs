@@ -1702,10 +1702,6 @@ impl<'a> Builder<'a> {
                 .functions
                 .iter()
                 .filter_map(|&fno| self.ns.functions.get(fno).map(|f| (f.name.clone(), None)));
-            let variables = contract
-                .variables
-                .iter()
-                .map(|var| (var.name.clone(), get_type_definition(&var.ty)));
 
             let structs =
                 self.ns
@@ -1741,8 +1737,14 @@ impl<'a> Builder<'a> {
                     _ => None,
                 });
 
+            let variables = contract.variables.iter().map(|var| {
+                (
+                    var.name.clone(),
+                    get_type_definition(&var.ty).map(|dt| dt.into()),
+                )
+            });
+
             let contract_contents = functions
-                .chain(variables)
                 .chain(structs)
                 .chain(enums)
                 .chain(events)
@@ -1752,7 +1754,9 @@ impl<'a> Builder<'a> {
                         def_type: dt,
                     });
                     (name, di)
-                });
+                })
+                .chain(variables);
+
             self.scope_contents
                 .insert(cdi.clone(), contract_contents.clone().collect());
 
@@ -1956,7 +1960,7 @@ impl<'a> Builder<'a> {
                     .iter_mut()
                     .filter(|co| co.0 == i)
                     .map(|co| {
-                        if let Some(DefinitionIndex { def_path, def_type }) = &mut co.1 .1 {
+                        if let Some(DefinitionIndex { def_path, def_type }) = &mut co.1.1 {
                             if def_path.to_str().unwrap() == "" {
                                 *def_path = defs_to_files[def_type].clone();
                             }
@@ -1966,6 +1970,16 @@ impl<'a> Builder<'a> {
                     .collect(),
             })
             .collect();
+
+        for sc in &mut self.scope_contents {
+            for di in sc.1.values_mut() {
+                if let Some(DefinitionIndex { def_path, def_type }) = di  {
+                    if def_path.to_str().unwrap() == "" {
+                        *def_path = defs_to_files[def_type].clone();
+                    }
+                }
+            }
+        }
 
         let global_cache = GlobalCache {
             definitions: self.definitions,
