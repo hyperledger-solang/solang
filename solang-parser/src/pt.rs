@@ -222,6 +222,19 @@ impl Loc {
             _ => not_a_file(),
         }
     }
+
+    /// Performs the union of two locations
+    pub fn union(&mut self, other: &Self) {
+        match (self, other) {
+            (Self::File(r_file, r_start, r_end), Self::File(l_file, l_start, l_end)) => {
+                assert_eq!(r_file, l_file, "cannot perform union in different files");
+                *r_start = std::cmp::min(*r_start, *l_start);
+                *r_end = std::cmp::max(*r_end, *l_end);
+            }
+
+            _ => unimplemented!("cannot perform union in non File Loc"),
+        }
+    }
 }
 
 /// An identifier.

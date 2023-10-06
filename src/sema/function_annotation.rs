@@ -48,6 +48,28 @@ pub fn function_prototype_annotations(
     for annotation in annotations {
         match annotation.id.name.as_str() {
             "selector" => function_selector(func, annotation, &mut diagnostics, ns),
+            "account" | "signer" | "mutableAccount" | "mutableSigner"
+                if ns.target == Target::Solana =>
+            {
+                if !func.is_constructor() && !matches!(func.visibility, Visibility::External(..)) {
+                    diagnostics.push(Diagnostic::error(
+                        annotation.loc,
+                        "account declarations are only valid in functions declared as external"
+                            .to_string(),
+                    ));
+                    continue;
+                }
+
+                account_declaration(
+                    &annotation.loc,
+                    annotation.value.as_ref().unwrap(),
+                    func,
+                    annotation.id.name.as_str(),
+                    &mut ns.diagnostics,
+                    &mut ConstructorAnnotations::default(),
+                );
+            }
+
             _ if !func.has_body => {
                 // function_body_annotations() is called iff there is a body
                 diagnostics.push(Diagnostic::error(
@@ -250,39 +272,15 @@ pub(super) fn function_body_annotations(
                 account_declaration(
                     &note.loc,
                     note.value.as_ref().unwrap(),
-                    function_no,
+                    &ns.functions[function_no],
                     note.id.name.as_str(),
                     &mut diagnostics,
                     &mut annotations,
-                    ns,
                 );
             }
             "account" | "signer" | "mutableAccount" | "mutableSigner"
-                if ns.target == Target::Solana =>
-            {
-                if !ns.functions[function_no].is_constructor()
-                    && !matches!(
-                        ns.functions[function_no].visibility,
-                        Visibility::External(..)
-                    )
-                {
-                    diagnostics.push(Diagnostic::error(
-                        note.loc,
-                        "account declarations are only valid in functions declared as external"
-                            .to_string(),
-                    ));
-                    continue;
-                }
-                account_declaration(
-                    &note.loc,
-                    note.value.as_ref().unwrap(),
-                    function_no,
-                    note.id.name.as_str(),
-                    &mut diagnostics,
-                    &mut ConstructorAnnotations::default(),
-                    ns,
-                );
-            }
+            // We already deal with these cases in `function_prototype_annotation`
+                if ns.target == Target::Solana => (),
 
             _ => diagnostics.push(Diagnostic::error(
                 note.loc,
@@ -503,11 +501,10 @@ fn duplicate_annotation(
 fn account_declaration(
     loc: &pt::Loc,
     expr: &pt::Expression,
-    function_no: usize,
+    func: &Function,
     annotation_name: &str,
     diagnostics: &mut Diagnostics,
     resolved_annotations: &mut ConstructorAnnotations,
-    ns: &Namespace,
 ) {
     if let pt::Expression::Variable(id) = expr {
         if BuiltinAccounts::from_str(&id.name).is_ok() {
@@ -524,11 +521,7 @@ fn account_declaration(
             return;
         }
 
-        match ns.functions[function_no]
-            .solana_accounts
-            .borrow_mut()
-            .entry(id.name.clone())
-        {
+        match func.solana_accounts.borrow_mut().entry(id.name.clone()) {
             Entry::Occupied(other_account) => {
                 diagnostics.push(Diagnostic::error_with_note(
                     id.loc,
@@ -544,7 +537,7 @@ fn account_declaration(
                         annotation_name,
                         *loc,
                         prev.0,
-                        ns.functions[function_no].ty.as_str(),
+                        func.ty.as_str(),
                     );
                 } else {
                     vacancy.insert(SolanaAccount {
