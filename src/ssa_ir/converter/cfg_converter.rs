@@ -5,7 +5,7 @@ use crate::ssa_ir::vartable::Vartable;
 
 impl Converter {
     pub fn from_control_flow_graph(cfg: &ControlFlowGraph) -> Result<Cfg, &'static str> {
-        let mut vartable = Vartable::from(&cfg.vars);
+        let mut vartable = Vartable::try_from(&cfg.vars)?;
 
         let blocks = cfg.blocks.iter()
             .map(|block| Converter::from_basic_block(block, &mut vartable))

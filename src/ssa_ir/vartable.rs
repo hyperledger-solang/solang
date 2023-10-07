@@ -57,8 +57,10 @@ impl Vartable {
     }
 }
 
-impl From<&Vars> for Vartable {
-    fn from(value: &Vars) -> Self {
+impl TryFrom<&Vars> for Vartable {
+    type Error = &'static str;
+
+    fn try_from(value: &Vars) -> Result<Self, Self::Error> {
         let mut vars = IndexMap::new();
         let mut max_id = 0;
         for (id, var) in value {
@@ -72,9 +74,9 @@ impl From<&Vars> for Vartable {
             }
         }
 
-        Vartable {
+        Ok(Vartable {
             vars,
             next_id: max_id + 1
-        }
+        })
     }
 }

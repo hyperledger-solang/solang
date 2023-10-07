@@ -64,10 +64,10 @@ impl TryFrom<&ast::Type> for Type {
             ast::Type::DynamicBytes => Ok(Type::Ptr(Box::new(Type::Bytes(1)))),
             /// String is a Ptr of Bytes
             ast::Type::String => Ok(Type::Ptr(Box::new(Type::Bytes(1)))),
-            ast::Type::Array(ty, len) => {
-                let ty = Type::try_from(ty)?;
-                Ok(Type::Array(Box::new(ty), len.clone()))
-            }
+            // ast::Type::Array(ty, len) => {
+            //     let ty = Self::try_from(ty)?;
+            //     Ok(Type::Array(Box::new(ty), len.clone()))
+            // }
             // ast::Type::Enum(width) => Ok(Type::Uint(width)),
             // ast::Type::Struct(_) => {}
             // ast::Type::Mapping(_) => {}

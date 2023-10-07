@@ -81,7 +81,7 @@ struct AccountState {
 /// parameters are passed in during CPI.
 type CallParametersCheck = fn(vm: &VirtualMachine, instr: &Instruction, pda: &[Pubkey]);
 
-struct VirtualMachine {
+pub struct VirtualMachine {
     account_data: HashMap<Account, AccountState>,
     programs: Vec<Program>,
     stack: Vec<Program>,
@@ -136,7 +136,7 @@ struct Assign {
     owner: Account,
 }
 
-fn build_solidity(src: &str) -> VirtualMachine {
+pub fn build_solidity(src: &str) -> VirtualMachine {
     VirtualMachineBuilder::new(src).build()
 }
 

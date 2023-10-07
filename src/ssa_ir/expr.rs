@@ -294,7 +294,7 @@ impl fmt::Display for UnaryOperator {
             UnaryOperator::Not => write!(f, "!"),
             UnaryOperator::Neg {
                 overflowing
-            } => write!(f, "{}", if *overflowing { "(ov)-" } else { "-" }),
+            } => write!(f, "{}", if *overflowing { "(of)-" } else { "-" }),
             UnaryOperator::BitNot => write!(f, "~"),
         }
     }
@@ -309,7 +309,7 @@ impl fmt::Display for Expr {
             Expr::UnaryExpr {
                 loc, op, right
             } => write!(f, "{}{}", op, right),
-            Expr::Id { .. } => todo!("Implement this function"),
+            Expr::Id { var_no, .. } => write!(f, "%{}", var_no),
             Expr::ArrayLiteral { .. } => todo!("Implement this function"),
             Expr::ConstArrayLiteral { .. } => todo!("Implement this function"),
             Expr::BytesLiteral { .. } => todo!("Implement this function"),
