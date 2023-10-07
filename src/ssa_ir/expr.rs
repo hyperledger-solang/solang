@@ -253,37 +253,37 @@ impl fmt::Display for BinaryOperator {
         match self {
             BinaryOperator::Add {
                 overflowing
-            } => write!(f, "{}", if *overflowing { "(ov)+" } else { "+" }),
+            } => write!(f, "{}", if *overflowing { "(of)+" } else { "+" }),
             BinaryOperator::Sub {
                 overflowing
-            } => write!(f, "{}", if *overflowing { "(ov)-" } else { "-" }),
+            } => write!(f, "{}", if *overflowing { "(of)-" } else { "-" }),
             BinaryOperator::Mul {
                 overflowing
-            } => write!(f, "{}", if *overflowing { "(ov)*" } else { "*" }),
+            } => write!(f, "{}", if *overflowing { "(of)*" } else { "*" }),
             BinaryOperator::Pow {
                 overflowing
-            } => write!(f, "{}", if *overflowing { "(ov)**" } else { "**" }),
+            } => write!(f, "{}", if *overflowing { "(of)**" } else { "**" }),
             BinaryOperator::Div => write!(f, "/"),
-            // example: uint8 a = b (usi)/ c
-            BinaryOperator::UDiv => write!(f, "(usi)/"),
+            // example: uint8 a = b (u)/ c
+            BinaryOperator::UDiv => write!(f, "(u)/"),
             BinaryOperator::Mod => write!(f, "%"),
-            BinaryOperator::UMod => write!(f, "(usi)%"),
+            BinaryOperator::UMod => write!(f, "(u)%"),
             BinaryOperator::Eq => write!(f, "=="),
             BinaryOperator::Neq => write!(f, "!="),
             BinaryOperator::Lt => write!(f, "<"),
-            BinaryOperator::ULt => write!(f, "(usi)<"),
+            BinaryOperator::ULt => write!(f, "(u)<"),
             BinaryOperator::Lte => write!(f, "<="),
-            BinaryOperator::ULte => write!(f, "(usi)<="),
+            BinaryOperator::ULte => write!(f, "(u)<="),
             BinaryOperator::Gt => write!(f, ">"),
-            BinaryOperator::UGt => write!(f, "(usi)>"),
+            BinaryOperator::UGt => write!(f, "(u)>"),
             BinaryOperator::Gte => write!(f, ">="),
-            BinaryOperator::UGte => write!(f, "(usi)>="),
+            BinaryOperator::UGte => write!(f, "(u)>="),
             BinaryOperator::BitAnd => write!(f, "&"),
             BinaryOperator::BitOr => write!(f, "|"),
             BinaryOperator::BitXor => write!(f, "^"),
             BinaryOperator::Shl => write!(f, "<<"),
             BinaryOperator::Shr => write!(f, ">>"),
-            BinaryOperator::UShr => write!(f, "(usi)>>"),
+            BinaryOperator::UShr => write!(f, "(u)>>"),
         }
     }
 }
