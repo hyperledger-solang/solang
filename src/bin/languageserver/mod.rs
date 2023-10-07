@@ -2276,12 +2276,11 @@ impl LanguageServer for SolangServer {
                 // Extracts all the characters connected to the "." character.
                 // This includes all the alphanumeric characters that come before the triggering "."
                 // and the interspersed "." characters between the alphanumeric characters.
-                // TODO: do not convert `String` to bytes
                 let code_object = {
-                    let b = text_buf.as_bytes();
+                    let b = text_buf.chars().collect_vec();
                     let mut curr: isize = offset as isize - 2;
                     while curr >= 0
-                        && (b[curr as usize].is_ascii_alphanumeric() || b[curr as usize] == b'.')
+                        && (b[curr as usize].is_ascii_alphanumeric() || b[curr as usize] == '.')
                     {
                         curr -= 1;
                     }
@@ -2289,7 +2288,7 @@ impl LanguageServer for SolangServer {
                     if !b[curr as usize].is_ascii_alphanumeric() {
                         curr += 1;
                     }
-                    let name = std::str::from_utf8(&b[curr as usize..offset - 1]).unwrap();
+                    let name = b[curr as usize..offset - 1].iter().collect::<String>();
 
                     data_file
                         .write_all(format!("Inside text_buf, sending: \"{name}\"\n").as_bytes())
