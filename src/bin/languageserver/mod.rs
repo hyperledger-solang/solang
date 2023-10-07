@@ -106,8 +106,7 @@ type Definitions = HashMap<DefinitionIndex, Range>;
 type HoverEntry = Interval<usize, String>;
 /// Stores locations of function calls, uses of structs, contracts etc.
 type ReferenceEntry = Interval<usize, DefinitionIndex>;
-// can't use reference entry as that only covers names and not the body
-// this is not the case at the moment, but that is expected to be corrected in the future.
+/// Stores the code objects defined within a scope and their types.
 type ScopeEntry = Interval<usize, Vec<(String, Option<DefinitionIndex>)>>;
 /// Stores the list of methods implemented by a contract
 type Implementations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
@@ -115,8 +114,8 @@ type Implementations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
 type Types = HashMap<DefinitionIndex, DefinitionIndex>;
 /// Stores all the functions that a given function overrides
 type Declarations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
-
-type Scope = HashMap<DefinitionIndex, HashMap<String, Option<DefinitionIndex>>>;
+/// Stores all the fields, variants, methods etc. defined for a code object
+type Properties = HashMap<DefinitionIndex, HashMap<String, Option<DefinitionIndex>>>;
 
 /// Stores information used by language server for every opened file
 struct Files {
@@ -130,7 +129,7 @@ struct FileCache {
     hovers: Lapper<usize, String>,
     references: Lapper<usize, DefinitionIndex>,
     scopes: Lapper<usize, Vec<(String, Option<DefinitionIndex>)>>,
-    top_code_objects: HashMap<String, Option<DefinitionIndex>>,
+    top_level_code_objects: HashMap<String, Option<DefinitionIndex>>,
 }
 
 /// Stores information used by the language server to service requests (eg: `Go to Definitions`) received from the client.
@@ -145,12 +144,13 @@ struct FileCache {
 /// * `types` maps the `DefinitionIndex` of a code object to that of its type.
 /// * `declarations` maps the `DefinitionIndex` of a `Contract` method to a list of methods that it overrides. The overridden methods belong to the parent `Contract`s
 /// * `implementations` maps the `DefinitionIndex` of a `Contract` to the `DefinitionIndex`s of methods defined as part of the `Contract`.
+/// * `properties` maps the `DefinitionIndex` of a code objects to the name and type of fields, variants or methods defined in the code object.
 struct GlobalCache {
     definitions: Definitions,
     types: Types,
     declarations: Declarations,
     implementations: Implementations,
-    scope_contents: Scope,
+    properties: Properties,
 }
 
 impl GlobalCache {
@@ -159,8 +159,7 @@ impl GlobalCache {
         self.types.extend(other.types);
         self.declarations.extend(other.declarations);
         self.implementations.extend(other.implementations);
-
-        self.scope_contents.extend(other.scope_contents);
+        self.properties.extend(other.properties);
     }
 }
 
@@ -229,8 +228,7 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
             types: HashMap::new(),
             declarations: HashMap::new(),
             implementations: HashMap::new(),
-
-            scope_contents: HashMap::new(),
+            properties: HashMap::new(),
         }),
     });
 
@@ -364,21 +362,17 @@ impl SolangServer {
 }
 
 struct Builder<'a> {
-    // `usize` is the file number the hover entry belongs to
+    // `usize` is the file number that the entry belongs to
     hovers: Vec<(usize, HoverEntry)>,
-    // `usize` is the file number the reference belongs to
     references: Vec<(usize, ReferenceEntry)>,
-    // `usize` is the file number the reference belongs to
     scopes: Vec<(usize, ScopeEntry)>,
-    // `usize` is the file number the reference belongs to
     top_code_objects: Vec<(usize, (String, Option<DefinitionIndex>))>,
 
     definitions: Definitions,
     types: Types,
     declarations: Declarations,
     implementations: Implementations,
-
-    scope_contents: Scope,
+    properties: Properties,
 
     ns: &'a ast::Namespace,
 }
@@ -395,8 +389,7 @@ impl<'a> Builder<'a> {
             types: HashMap::new(),
             declarations: HashMap::new(),
             implementations: HashMap::new(),
-
-            scope_contents: HashMap::new(),
+            properties: HashMap::new(),
 
             ns,
         }
@@ -1430,7 +1423,7 @@ impl<'a> Builder<'a> {
             self.definitions
                 .insert(di.clone(), loc_to_range(&enum_decl.loc, file));
 
-            self.scope_contents.insert(
+            self.properties.insert(
                 di.clone(),
                 enum_decl
                     .values
@@ -1468,7 +1461,7 @@ impl<'a> Builder<'a> {
                 self.definitions
                     .insert(di.clone(), loc_to_range(&struct_decl.loc, file));
 
-                self.scope_contents.insert(
+                self.properties.insert(
                     di.clone(),
                     struct_decl
                         .fields
@@ -1698,6 +1691,69 @@ impl<'a> Builder<'a> {
             self.definitions
                 .insert(cdi.clone(), loc_to_range(&contract.loc, file));
 
+            let impls = contract
+                .functions
+                .iter()
+                .map(|f| DefinitionIndex {
+                    def_path: file.path.clone(), // all the implementations for a contract are present in the same file in solidity
+                    def_type: DefinitionType::Function(*f),
+                })
+                .collect();
+
+            self.implementations.insert(cdi.clone(), impls);
+
+            let decls = contract
+                .virtual_functions
+                .iter()
+                .filter_map(|(_, indices)| {
+                    // due to the way the `indices` vector is populated during namespace creation,
+                    // the last element in the vector contains the overriding function that belongs to the current contract.
+                    let func = DefinitionIndex {
+                        def_path: file.path.clone(),
+                        // `unwrap` is alright here as the `indices` vector is guaranteed to have at least 1 element
+                        // the vector is always initialised with one initial element
+                        // and the elements in the vector are never removed during namespace construction
+                        def_type: DefinitionType::Function(indices.last().copied().unwrap()),
+                    };
+
+                    // get all the functions overridden by the current function
+                    let all_decls: HashSet<usize> = HashSet::from_iter(indices.iter().copied());
+
+                    // choose the overridden functions that belong to the parent contracts
+                    // due to multiple inheritance, a contract can have multiple parents
+                    let parent_decls = contract
+                        .bases
+                        .iter()
+                        .map(|b| {
+                            let p = &self.ns.contracts[b.contract_no];
+                            HashSet::from_iter(p.functions.iter().copied())
+                                .intersection(&all_decls)
+                                .copied()
+                                .collect::<HashSet<usize>>()
+                        })
+                        .reduce(|acc, e| acc.union(&e).copied().collect());
+
+                    // get the `DefinitionIndex`s of the overridden funcions
+                    parent_decls.map(|parent_decls| {
+                        let decls = parent_decls
+                            .iter()
+                            .map(|&i| {
+                                let loc = self.ns.functions[i].loc;
+                                DefinitionIndex {
+                                    def_path: self.ns.files[loc.file_no()].path.clone(),
+                                    def_type: DefinitionType::Function(i),
+                                }
+                            })
+                            .collect::<Vec<_>>();
+
+                        (func, decls)
+                    })
+                });
+
+            self.declarations.extend(decls);
+
+            //////////// Code objects defined within the contract ////////////
+
             let functions = contract
                 .functions
                 .iter()
@@ -1757,7 +1813,7 @@ impl<'a> Builder<'a> {
                 })
                 .chain(variables);
 
-            self.scope_contents
+            self.properties
                 .insert(cdi.clone(), contract_contents.clone().collect());
 
             self.scopes.push((
@@ -1769,70 +1825,10 @@ impl<'a> Builder<'a> {
                 },
             ));
 
-            // TODO, contract within another contract
+            // Contracts can't be defined within other contracts.
+            // So all the contracts are top level objects in a file.
             self.top_code_objects
-                .push((file_no, (contract.name.clone(), Some(cdi.clone()))));
-
-            let impls = contract
-                .functions
-                .iter()
-                .map(|f| DefinitionIndex {
-                    def_path: file.path.clone(), // all the implementations for a contract are present in the same file in solidity
-                    def_type: DefinitionType::Function(*f),
-                })
-                .collect();
-
-            self.implementations.insert(cdi, impls);
-
-            let decls = contract
-                .virtual_functions
-                .iter()
-                .filter_map(|(_, indices)| {
-                    // due to the way the `indices` vector is populated during namespace creation,
-                    // the last element in the vector contains the overriding function that belongs to the current contract.
-                    let func = DefinitionIndex {
-                        def_path: file.path.clone(),
-                        // `unwrap` is alright here as the `indices` vector is guaranteed to have at least 1 element
-                        // the vector is always initialised with one initial element
-                        // and the elements in the vector are never removed during namespace construction
-                        def_type: DefinitionType::Function(indices.last().copied().unwrap()),
-                    };
-
-                    // get all the functions overridden by the current function
-                    let all_decls: HashSet<usize> = HashSet::from_iter(indices.iter().copied());
-
-                    // choose the overridden functions that belong to the parent contracts
-                    // due to multiple inheritance, a contract can have multiple parents
-                    let parent_decls = contract
-                        .bases
-                        .iter()
-                        .map(|b| {
-                            let p = &self.ns.contracts[b.contract_no];
-                            HashSet::from_iter(p.functions.iter().copied())
-                                .intersection(&all_decls)
-                                .copied()
-                                .collect::<HashSet<usize>>()
-                        })
-                        .reduce(|acc, e| acc.union(&e).copied().collect());
-
-                    // get the `DefinitionIndex`s of the overridden funcions
-                    parent_decls.map(|parent_decls| {
-                        let decls = parent_decls
-                            .iter()
-                            .map(|&i| {
-                                let loc = self.ns.functions[i].loc;
-                                DefinitionIndex {
-                                    def_path: self.ns.files[loc.file_no()].path.clone(),
-                                    def_type: DefinitionType::Function(i),
-                                }
-                            })
-                            .collect::<Vec<_>>();
-
-                        (func, decls)
-                    })
-                });
-
-            self.declarations.extend(decls);
+                .push((file_no, (contract.name.clone(), Some(cdi))));
         }
 
         for (ei, event) in self.ns.events.iter().enumerate() {
@@ -1955,7 +1951,7 @@ impl<'a> Builder<'a> {
                         })
                         .collect(),
                 ),
-                top_code_objects: self
+                top_level_code_objects: self
                     .top_code_objects
                     .iter_mut()
                     .filter(|co| co.0 == i)
@@ -1971,7 +1967,7 @@ impl<'a> Builder<'a> {
             })
             .collect();
 
-        for sc in &mut self.scope_contents {
+        for sc in &mut self.properties {
             for di in sc.1.values_mut().flatten() {
                 if di.def_path.to_str().unwrap() == "" {
                     di.def_path = defs_to_files[&di.def_type].clone();
@@ -1984,7 +1980,7 @@ impl<'a> Builder<'a> {
             types: self.types,
             declarations: self.declarations,
             implementations: self.implementations,
-            scope_contents: self.scope_contents,
+            properties: self.properties,
         };
 
         (file_caches, global_cache)
@@ -2251,7 +2247,7 @@ impl LanguageServer for SolangServer {
             // get all the enclosing scopes
             .flat_map(|scope| scope.val.iter().cloned())
             // get the top level code objects in the file
-            .chain(cache.top_code_objects.clone())
+            .chain(cache.top_level_code_objects.clone())
             // TODO: get the builtin functions
             .collect::<HashMap<_, _>>();
 
@@ -2318,12 +2314,12 @@ impl LanguageServer for SolangServer {
                     code_objects_in_scope
                         .get(n)
                         .and_then(|a| a.as_ref())
-                        .and_then(|n| gc.scope_contents.get(n))
+                        .and_then(|n| gc.properties.get(n))
                 });
                 let properties = code_object_parts.fold(properties, |acc, prop| {
                     acc.and_then(|p| p.get(prop))
                         .and_then(|a| a.as_ref())
-                        .and_then(|n| gc.scope_contents.get(n))
+                        .and_then(|n| gc.properties.get(n))
                 });
 
                 // Return a list of suggestions using the `properties` extracted previously by converting them into the expected format.
