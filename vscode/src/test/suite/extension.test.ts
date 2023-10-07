@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 
 import * as vscode from 'vscode';
-import { getDocUri, activate } from './helper';
+import { getDocUri, activate, doc } from './helper';
 
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
@@ -109,6 +109,13 @@ suite('Extension Test Suite', function () {
   const renamedoc1 = getDocUri('rename.sol');
   test('Testing for Rename', async () => {
     await testrename(renamedoc1);
+  });
+
+  // Tests for formatting
+  this.timeout(20000);
+  const formatdoc1 = getDocUri('format.sol');
+  test('Testing for Formatting', async () => {
+    await testformat(formatdoc1);
   });
 });
 
@@ -462,6 +469,45 @@ async function testrename(docUri: vscode.Uri) {
   assert.strictEqual(loc03.range.end.line, 9);
   assert.strictEqual(loc03.range.end.character, 13);
   assert.strictEqual(loc03.newText, newname0);
+}
+
+async function testformat(docUri: vscode.Uri) {
+  await activate(docUri);
+
+  const options = {
+    tabSize: 4,
+    insertSpaces: false,
+  };
+  const textedits = (await vscode.commands.executeCommand(
+    'vscode.executeFormatDocumentProvider',
+    docUri,
+    options,
+  )) as vscode.TextEdit[];
+  // make sure that the input file is not already formatted
+  assert(textedits.length > 0);
+
+  // undo the changes done during the test
+  const undochanges = async () => {
+    for (let i = 0; i < textedits.length; i++) {
+      await vscode.commands.executeCommand('undo');
+    }
+  };
+
+  try {
+    const workedits = new vscode.WorkspaceEdit();
+    workedits.set(docUri, textedits); 
+    const done = await vscode.workspace.applyEdit(workedits); 
+    assert(done);
+  
+    const actualtext = doc.getText();
+    const expectedtext = "contract deck {\n    enum suit {\n        club,\n        diamonds,\n        hearts,\n        spades\n    }\n    enum value {\n        two,\n        three,\n        four,\n        five,\n        six,\n        seven,\n        eight,\n        nine,\n        ten,\n        jack,\n        queen,\n        king,\n        ace\n    }\n\n    struct card {\n        value v;\n        suit s;\n    }\n\n    function score(card c) public returns (uint32 score) {\n        if (c.s == suit.hearts) {\n            if (c.v == value.ace) {\n                score = 14;\n            }\n            if (c.v == value.king) {\n                score = 13;\n            }\n            if (c.v == value.queen) {\n                score = 12;\n            }\n            if (c.v == value.jack) {\n                score = 11;\n            }\n        }\n        // all others score 0\n    }\n}\n";
+    assert.strictEqual(actualtext, expectedtext);
+  } catch (error) {
+    await undochanges();
+    throw error;
+  }
+
+  await undochanges();
 }
 
 async function testhover(docUri: vscode.Uri) {
