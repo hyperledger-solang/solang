@@ -1960,7 +1960,7 @@ impl<'a> Builder<'a> {
                     .iter_mut()
                     .filter(|co| co.0 == i)
                     .map(|co| {
-                        if let Some(DefinitionIndex { def_path, def_type }) = &mut co.1.1 {
+                        if let Some(DefinitionIndex { def_path, def_type }) = &mut co.1 .1 {
                             if def_path.to_str().unwrap() == "" {
                                 *def_path = defs_to_files[def_type].clone();
                             }
@@ -1972,11 +1972,9 @@ impl<'a> Builder<'a> {
             .collect();
 
         for sc in &mut self.scope_contents {
-            for di in sc.1.values_mut() {
-                if let Some(DefinitionIndex { def_path, def_type }) = di  {
-                    if def_path.to_str().unwrap() == "" {
-                        *def_path = defs_to_files[def_type].clone();
-                    }
+            for di in sc.1.values_mut().flatten() {
+                if di.def_path.to_str().unwrap() == "" {
+                    di.def_path = defs_to_files[&di.def_type].clone();
                 }
             }
         }
@@ -2189,6 +2187,13 @@ impl LanguageServer for SolangServer {
         self.client.publish_diagnostics(uri, vec![], None).await;
     }
 
+    /// Called when the client raises a `textDocument/completion` request.
+    /// There are two kinds of requests that are handled differently:
+    /// * Triggered by user pressing `.`
+    ///     - In this case, we return a list of fields, variants or methods defined on the code object
+    ///       associated with the `.` which triggered the request.
+    /// * All other cases where the request is raised by user typing characters other than `.`
+    ///     - Here, we return a list of variables, structs, enums, contracts, functions etc. accessible from the current scope.
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
         use std::fs::OpenOptions;
         use std::io::Write;
@@ -2196,7 +2201,6 @@ impl LanguageServer for SolangServer {
             .append(true)
             .open("/tmp/completion")
             .expect("cannot open file");
-
         data_file
             .write_all(format!("{}\n", "-".repeat(50)).as_bytes())
             .expect("write failed");
@@ -2213,22 +2217,18 @@ impl LanguageServer for SolangServer {
             .expect("write failed");
 
         let files = self.files.lock().await;
-        let gc = self.global_cache.lock().await;
 
         let Some(cache) = files.caches.get(&path) else {
             return Ok(None);
         };
 
-        let f = &cache.file;
-        let offset = f.get_offset(
+        let offset = cache.file.get_offset(
             params.text_document_position.position.line as _,
             params.text_document_position.position.character as _,
         );
         data_file
             .write_all(format!("Offset: {offset}\n").as_bytes())
             .expect("write failed");
-
-        // enclosing_scopes.sort_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)));
 
         data_file
             .write_all(format!("All scopes in the file: {:#?}\n", cache.scopes).as_bytes())
@@ -2244,32 +2244,44 @@ impl LanguageServer for SolangServer {
             )
             .expect("write failed");
 
-        let mut res = cache
+        // Get all the code objects available from the lexical scope from which the request was raised.
+        let code_objects_in_scope = cache
             .scopes
             .find(offset, offset + 1)
-            // .flat_map(|scope| scope.val.iter().map(|val| val.clone()))
+            // get all the enclosing scopes
             .flat_map(|scope| scope.val.iter().cloned())
+            // get the top level code objects in the file
+            .chain(cache.top_code_objects.clone())
+            // TODO: get the builtin functions
             .collect::<HashMap<_, _>>();
-        res.extend(cache.top_code_objects.clone());
 
-        if let Some(CompletionContext {
-            trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
-            trigger_character: Some(character),
-        }) = params.context
-        {
-            if character == "." {
+        let gc = self.global_cache.lock().await;
+
+        let suggestions = match params.context {
+            Some(CompletionContext {
+                trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
+                trigger_character: Some(trigger_character),
+            }) if trigger_character == "." => {
                 data_file
                     .write_all("Inside trigger character \".\"\n".to_string().as_bytes())
                     .expect("write failed");
-                if let Some(text_buf) = files.text_buffers.get(&path) {
-                    // text_buf.chars().nth(offset)
-                    data_file
-                        .write_all(
-                            format!("Inside text_buf: {:?}\n\n", text_buf.chars().nth(offset))
-                                .as_bytes(),
-                        )
-                        .expect("write failed");
+                let Some(text_buf) = files.text_buffers.get(&path) else {
+                    return Ok(None);
+                };
 
+                data_file
+                    .write_all(
+                        format!("Inside text_buf: {:?}\n\n", text_buf.chars().nth(offset))
+                            .as_bytes(),
+                    )
+                    .expect("write failed");
+
+                // Extract code object from source code for which `Completion` request was triggered.
+                // Extracts all the characters connected to the "." character.
+                // This includes all the alphanumeric characters that come before the triggering "."
+                // and the interspersed "." characters between the alphanumeric characters.
+                // TODO: do not convert `String` to bytes
+                let code_object = {
                     let b = text_buf.as_bytes();
                     let mut curr: isize = offset as isize - 2;
                     while curr >= 0
@@ -2287,51 +2299,61 @@ impl LanguageServer for SolangServer {
                         .write_all(format!("Inside text_buf, sending: \"{name}\"\n").as_bytes())
                         .expect("write failed");
 
-                    let mut name_iter = name.split('.');
-                    let mut properties = name_iter.next().and_then(|n| {
-                        res.get(n)
-                            .and_then(|a| a.as_ref())
-                            .and_then(|n| gc.scope_contents.get(n))
-                    });
+                    name
+                };
 
-                    // while let Some(prop) = name_iter.next() {
-                    for prop in name_iter {
-                        properties = properties
-                            .and_then(|p| p.get(prop))
-                            .and_then(|a| a.as_ref())
-                            .and_then(|n| gc.scope_contents.get(n));
-                    }
-                    let comps = properties
-                        .map(|properties| {
-                            properties
-                                .keys()
-                                .map(|name| CompletionItem {
-                                    label: name.clone(),
-                                    ..Default::default()
-                                })
-                                .collect_vec()
-                        })
-                        .map(CompletionResponse::Array);
-                    return Ok(comps);
-                }
-            } else {
-                return Err(Error {
-                    code: ErrorCode::InvalidRequest,
-                    message: format!("Received invalid trigger character: {character}").into(),
-                    data: None,
+                // Get an iterator that iterates over all parts of the code object.
+                // The parts are basically a field, a variant or a method defined on the previous part.
+                let mut code_object_parts = code_object.split('.');
+
+                // for prop in name_iter {
+                //     properties = properties
+                //         .and_then(|p| p.get(prop))
+                //         .and_then(|a| a.as_ref())
+                //         .and_then(|n| gc.scope_contents.get(n));
+                // }
+
+                // `properties` gives the list of fields, variants and methods defined for the code object in question.
+                let properties = code_object_parts.next().and_then(|n| {
+                    code_objects_in_scope
+                        .get(n)
+                        .and_then(|a| a.as_ref())
+                        .and_then(|n| gc.scope_contents.get(n))
                 });
+                let properties = code_object_parts.fold(properties, |acc, prop| {
+                    acc.and_then(|p| p.get(prop))
+                        .and_then(|a| a.as_ref())
+                        .and_then(|n| gc.scope_contents.get(n))
+                });
+
+                // Return a list of suggestions using the `properties` extracted previously by converting them into the expected format.
+                properties.map(|properties| {
+                    properties
+                        .keys()
+                        .map(|name| CompletionItem {
+                            label: name.clone(),
+                            ..Default::default()
+                        })
+                        .collect_vec()
+                })
             }
-        }
+            Some(CompletionContext {
+                trigger_kind: CompletionTriggerKind::INVOKED,
+                ..
+            }) => {
+                let suggestions = code_objects_in_scope
+                    .into_iter()
+                    .map(|val| CompletionItem {
+                        label: val.0.clone(),
+                        ..Default::default()
+                    })
+                    .collect_vec();
+                Some(suggestions)
+            }
+            _ => None,
+        };
 
-        let res = res
-            .into_iter()
-            .map(|val| CompletionItem {
-                label: val.0.clone(),
-                ..Default::default()
-            })
-            .collect();
-
-        Ok(Some(CompletionResponse::Array(res)))
+        Ok(suggestions.map(CompletionResponse::Array))
     }
 
     async fn hover(&self, hverparam: HoverParams) -> Result<Option<Hover>> {
