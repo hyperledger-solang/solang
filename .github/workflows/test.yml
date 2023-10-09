@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
+
 jobs:
   repolinter:
     name: Repolinter
@@ -49,7 +52,6 @@ jobs:
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     env:
       RUSTFLAGS: -C instrument-coverage -C llvm-args=--instrprof-atomic-counter-update-all --cfg=coverage --cfg=trybuild_no_target
-      LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
       CARGO_INCREMENTAL: 0
       CARGO_LLVM_COV: 1
       CARGO_LLVM_COV_TARGET_DIR: ${{ github.workspace }}/target
@@ -79,6 +81,7 @@ jobs:
     - name: Run cargo fmt
       run: cargo fmt --all -- --check
     - name: Configure llvm-cov and build
+      if: always()
       run: |
         cargo llvm-cov clean --workspace
         cargo build
@@ -251,8 +254,6 @@ jobs:
     runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
-    env:
-     LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -305,8 +306,6 @@ jobs:
     runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
-    env:
-      LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -345,8 +344,6 @@ jobs:
     name: Polkadot Integration test
     runs-on: solang-ubuntu-latest
     needs: linux-x86-64
-    env:
-      LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -391,8 +388,6 @@ jobs:
     name: Polkadot Integration test with subxt
     runs-on: ubuntu-22.04
     needs: linux-x86-64
-    env:
-      LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
@@ -430,8 +425,6 @@ jobs:
     name: Visual Code Extension
     runs-on: solang-ubuntu-latest
     needs: linux-x86-64
-    env:
-      LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -486,7 +479,6 @@ jobs:
     needs: [linux-x86-64, solana, anchor, polkadot, polkadot-subxt, vscode]
     env:
       RUSTFLAGS: -C instrument-coverage -C llvm-args=--instrprof-atomic-counter-update-all --cfg=coverage --cfg=trybuild_no_target
-      LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
       CARGO_INCREMENTAL: 0
       CARGO_LLVM_COV: 1
       CARGO_LLVM_COV_TARGET_DIR: ${{ github.workspace }}/target
@@ -496,8 +488,9 @@ jobs:
         with:
           submodules: recursive
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: 1.72.0
           components: llvm-tools
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
