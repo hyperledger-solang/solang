@@ -67,7 +67,7 @@ pub(crate) fn resolve_for_loop(
         ns,
     );
 
-    symtable.leave_scope();
+    symtable.leave_scope(ns, yul_for.loc);
     function_table.leave_scope(ns);
 
     Ok((

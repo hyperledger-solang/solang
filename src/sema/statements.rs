@@ -417,9 +417,9 @@ fn statement(
             Ok(true)
         }
         pt::Statement::Block {
+            loc,
             statements,
             unchecked,
-            ..
         } => {
             symtable.new_scope();
             let mut reachable = true;
@@ -438,7 +438,20 @@ fn statement(
                 reachable = statement(stmt, res, &mut context, symtable, loops, ns, diagnostics)?;
             }
 
-            symtable.leave_scope();
+            // symtable.leave_scope().map(|curr_scope| {
+            //     let curr_scope = curr_scope
+            //         .0
+            //         .values()
+            //         .filter_map(|pos| {
+            //             symtable
+            //                 .vars
+            //                 .get(pos)
+            //                 .map(|var| (var.id.name.clone(), var.ty.clone()))
+            //         })
+            //         .collect();
+            //     ns.scopes.insert(*loc, curr_scope);
+            // });
+            symtable.leave_scope(ns, *loc);
 
             Ok(reachable)
         }
@@ -491,7 +504,7 @@ fn statement(
                 ns,
                 diagnostics,
             )?;
-            symtable.leave_scope();
+            symtable.leave_scope(ns, *loc);
             loops.leave_scope();
 
             res.push(Statement::While(*loc, true, cond, body_stmts));
@@ -523,7 +536,7 @@ fn statement(
                 ns,
                 diagnostics,
             )?;
-            symtable.leave_scope();
+            symtable.leave_scope(ns, *loc);
             loops.leave_scope();
 
             res.push(Statement::DoWhile(*loc, true, body_stmts, cond));
@@ -554,7 +567,7 @@ fn statement(
                 ns,
                 diagnostics,
             )?;
-            symtable.leave_scope();
+            symtable.leave_scope(ns, *loc);
 
             let mut else_stmts = Vec::new();
             if let Some(stmts) = else_ {
@@ -569,7 +582,7 @@ fn statement(
                     diagnostics,
                 )?;
 
-                symtable.leave_scope();
+                symtable.leave_scope(ns, *loc);
             } else {
                 reachable = true;
             }
@@ -634,7 +647,7 @@ fn statement(
                 )?);
             }
 
-            symtable.leave_scope();
+            symtable.leave_scope(ns, *loc);
 
             res.push(Statement::For {
                 loc: *loc,
@@ -713,7 +726,7 @@ fn statement(
                 }
             }
 
-            symtable.leave_scope();
+            symtable.leave_scope(ns, *loc);
 
             res.push(Statement::For {
                 loc: *loc,
@@ -2445,7 +2458,7 @@ fn try_catch(
         diagnostics,
     )?;
 
-    symtable.leave_scope();
+    symtable.leave_scope(ns, *loc);
 
     let mut clauses_unique = HashSet::new();
     let mut errors_resolved = Vec::new();
@@ -2470,7 +2483,7 @@ fn try_catch(
         }
 
         match clause_stmt {
-            CatchClause::Simple(_, param, stmt) => {
+            CatchClause::Simple(catch_loc, param, stmt) => {
                 symtable.new_scope();
 
                 let mut catch_param = None;
@@ -2536,7 +2549,7 @@ fn try_catch(
 
                 finally_reachable |= reachable;
 
-                symtable.leave_scope();
+                symtable.leave_scope(ns, *catch_loc);
 
                 catch_all = Some(super::ast::CatchClause {
                     param: catch_param,
@@ -2546,7 +2559,7 @@ fn try_catch(
 
                 Ok(())
             }
-            CatchClause::Named(_, id, param, stmt) => {
+            CatchClause::Named(catch_loc, id, param, stmt) => {
                 if id.name != "Error" && id.name != "Panic" {
                     let message = format!(
                         "only catch 'Error' and 'Panic' are supported, not '{}'",
@@ -2626,7 +2639,7 @@ fn try_catch(
 
                 finally_reachable |= reachable;
 
-                symtable.leave_scope();
+                symtable.leave_scope(ns, *catch_loc);
 
                 errors_resolved.push((error_pos, error_param, error_stmt_resolved));
 

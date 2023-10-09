@@ -705,6 +705,8 @@ pub struct Namespace {
     pub var_constants: HashMap<pt::Loc, codegen::Expression>,
     /// Overrides for hover in the language server
     pub hover_overrides: HashMap<pt::Loc, String>,
+
+    pub scopes: HashMap<pt::Loc, Vec<(String, Type)>>,
 }
 
 #[derive(Debug)]

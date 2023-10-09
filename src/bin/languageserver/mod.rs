@@ -368,7 +368,7 @@ struct Builder<'a> {
     hovers: Vec<(usize, HoverEntry)>,
     references: Vec<(usize, ReferenceEntry)>,
     scopes: Vec<(usize, ScopeEntry)>,
-    top_code_objects: Vec<(usize, (String, Option<DefinitionIndex>))>,
+    top_level_code_objects: Vec<(usize, (String, Option<DefinitionIndex>))>,
 
     definitions: Definitions,
     types: Types,
@@ -385,7 +385,7 @@ impl<'a> Builder<'a> {
             hovers: Vec::new(),
             references: Vec::new(),
             scopes: Vec::new(),
-            top_code_objects: Vec::new(),
+            top_level_code_objects: Vec::new(),
 
             definitions: HashMap::new(),
             types: HashMap::new(),
@@ -1325,7 +1325,7 @@ impl<'a> Builder<'a> {
         }
 
         if contract_no.is_none() {
-            self.top_code_objects.push((
+            self.top_level_code_objects.push((
                 file_no,
                 (
                     variable.name.clone(),
@@ -1435,7 +1435,7 @@ impl<'a> Builder<'a> {
             );
 
             if enum_decl.contract.is_none() {
-                self.top_code_objects
+                self.top_level_code_objects
                     .push((file_no, (enum_decl.name.clone(), Some(di))));
             }
         }
@@ -1479,7 +1479,7 @@ impl<'a> Builder<'a> {
                 );
 
                 if struct_decl.contract.is_none() {
-                    self.top_code_objects
+                    self.top_level_code_objects
                         .push((file_no, (struct_decl.name.clone(), Some(di))));
                 }
             }
@@ -1617,25 +1617,60 @@ impl<'a> Builder<'a> {
                         .map(|stmt| stmt.loc())
                         .unwrap_or(func.loc)
                         .exclusive_end(),
+                    // val: func
+                    //     .symtable
+                    //     .vars
+                    //     .values()
+                    //     .map(|val| {
+                    //         (
+                    //             val.id.name.clone(),
+                    //             get_type_definition(&val.ty).map(|dt| dt.into()),
+                    //         )
+                    //     })
+                    //     .collect(),
                     val: func
                         .symtable
-                        .vars
-                        .values()
-                        .map(|val| {
-                            (
-                                val.id.name.clone(),
-                                get_type_definition(&val.ty).map(|dt| dt.into()),
-                            )
+                        .names
+                        .first()
+                        .map(|curr_scope| {
+                            curr_scope
+                                .0
+                                .values()
+                                .filter_map(|pos| {
+                                    func.symtable.vars.get(pos).map(|var| {
+                                        (
+                                            var.id.name.clone(),
+                                            get_type_definition(&var.ty).map(|dt| dt.into()),
+                                        )
+                                    })
+                                })
+                                .collect_vec()
                         })
-                        .collect(),
+                        .unwrap(),
                 },
             ));
 
             if func.contract_no.is_none() {
-                self.top_code_objects
+                self.top_level_code_objects
                     .push((file_no, (func.name.clone(), None)))
             }
         }
+
+        self.scopes.extend(self.ns.scopes.iter().map(|(loc, vars)| {
+            let file_no = loc.file_no();
+            let scope_entry = ScopeEntry {
+                start: loc.start(),
+                stop: loc.exclusive_end(),
+                val: vars
+                    .iter()
+                    .map(|(name, ty)| {
+                        let ty = get_type_definition(ty).map(|dt| dt.into());
+                        (name.clone(), ty)
+                    })
+                    .collect_vec(),
+            };
+            (file_no, scope_entry)
+        }));
 
         for (i, constant) in self.ns.constants.iter().enumerate() {
             let samptb = symtable::Symtable::new();
@@ -1829,7 +1864,7 @@ impl<'a> Builder<'a> {
 
             // Contracts can't be defined within other contracts.
             // So all the contracts are top level objects in a file.
-            self.top_code_objects
+            self.top_level_code_objects
                 .push((file_no, (contract.name.clone(), Some(cdi))));
         }
 
@@ -1857,7 +1892,7 @@ impl<'a> Builder<'a> {
                 .insert(di.clone(), loc_to_range(&event.loc, file));
 
             if event.contract.is_none() {
-                self.top_code_objects
+                self.top_level_code_objects
                     .push((file_no, (event.name.clone(), Some(di))));
             }
         }
@@ -1954,7 +1989,7 @@ impl<'a> Builder<'a> {
                         .collect(),
                 ),
                 top_level_code_objects: self
-                    .top_code_objects
+                    .top_level_code_objects
                     .iter_mut()
                     .filter(|co| co.0 == i)
                     .map(|co| {

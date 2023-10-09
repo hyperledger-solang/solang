@@ -46,7 +46,7 @@ pub fn resolve_inline_assembly(
         ns,
     );
 
-    symtable.leave_scope();
+    symtable.leave_scope(ns, *loc);
     functions_table.leave_scope(ns);
     let end = start + functions_table.resolved_functions.len();
     ns.yul_functions

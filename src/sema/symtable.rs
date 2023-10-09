@@ -78,12 +78,12 @@ pub enum VariableUsage {
 }
 
 #[derive(Debug, Clone)]
-struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
+pub struct VarScope(pub HashMap<String, usize>, Option<HashSet<usize>>);
 
 #[derive(Default, Debug, Clone)]
 pub struct Symtable {
     pub vars: IndexMap<usize, Variable>,
-    names: Vec<VarScope>,
+    pub names: Vec<VarScope>,
     pub arguments: Vec<Option<usize>>,
     pub returns: Vec<usize>,
 }
@@ -187,8 +187,19 @@ impl Symtable {
         self.names.push(VarScope(HashMap::new(), None));
     }
 
-    pub fn leave_scope(&mut self) {
-        self.names.pop();
+    pub fn leave_scope(&mut self, ns: &mut Namespace, loc: pt::Loc) {
+        if let Some(curr_scope) = self.names.pop() {
+            let curr_scope = curr_scope
+                .0
+                .values()
+                .filter_map(|pos| {
+                    self.vars
+                        .get(pos)
+                        .map(|var| (var.id.name.clone(), var.ty.clone()))
+                })
+                .collect();
+            ns.scopes.insert(loc, curr_scope);
+        }
     }
 
     pub fn get_name(&self, pos: usize) -> &str {
@@ -245,3 +256,21 @@ impl LoopScopes {
         }
     }
 }
+
+// impl Namespace {
+//     pub fn add_scope(&mut self, loc: pt::Loc, scope: Option<VarScope>) {
+//         symtable.leave_scope().map(|curr_scope| {
+//             let curr_scope = curr_scope
+//                 .0
+//                 .values()
+//                 .filter_map(|pos| {
+//                     symtable
+//                         .vars
+//                         .get(pos)
+//                         .map(|var| (var.id.name.clone(), var.ty.clone()))
+//                 })
+//                 .collect();
+//             self.scopes.insert(loc, curr_scope);
+//         });
+//     }
+// }

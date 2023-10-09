@@ -39,7 +39,7 @@ pub fn resolve_yul_block(
     );
 
     next_reachable &= reachable;
-    symtable.leave_scope();
+    symtable.leave_scope(ns, *loc);
     function_table.leave_scope(ns);
 
     (
