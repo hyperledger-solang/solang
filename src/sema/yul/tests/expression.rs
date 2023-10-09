@@ -486,7 +486,7 @@ fn function_call() {
     let context = ExprContext::default();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
-    function_table.new_scope();
+    function_table.enter_scope();
     let mut ns = Namespace::new(Target::EVM);
     let loc = Loc::File(0, 2, 3);
 
@@ -639,7 +639,7 @@ fn check_arguments() {
     let context = ExprContext::default();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
-    function_table.new_scope();
+    function_table.enter_scope();
     let mut ns = Namespace::new(Target::EVM);
     let loc = Loc::File(0, 2, 3);
 

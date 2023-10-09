@@ -457,7 +457,7 @@ fn process_for_block(
     );
 
     cfg.set_basic_block(body_block);
-    loops.new_scope(end_block, next_block);
+    loops.enter_scope(end_block, next_block);
     vartab.new_dirty_tracker();
 
     for stmt in &execution_block.statements {
