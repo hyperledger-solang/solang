@@ -97,7 +97,7 @@ impl<'a> StateCheck<'a> {
                 "accesses value sent, which is only allowed for payable functions",
                 "access of value sent",
             ),
-            Access::None => unreachable!("declared access can't be lower than None; qed"),
+            Access::None => unreachable!("declared access can't be lower than None"),
         };
 
         let diagnostic = self
