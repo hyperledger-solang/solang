@@ -1,9 +1,10 @@
+use std::fmt;
+
 use crate::sema::ast;
 use crate::sema::ast::{ArrayLength, StructType};
 
 #[derive(Debug, Clone)]
 pub enum Type {
-
     Bool,
     Int(u16),
     /// Enum can be represented by Uint here.
@@ -12,7 +13,6 @@ pub enum Type {
     Bytes(u8),
 
     // String is the same as DynamicBytes
-
     /// Array can be represented as Ptr(Box<Array>)
     /// Struct can be represented as Ptr(Box<Struct>)
     /// Slice can be represented as Ptr(Box<Slice(Box<Type>)>)
@@ -21,7 +21,11 @@ pub enum Type {
     /// String is a Ptr of Bytes
     Ptr(Box<Type>),
     /// pointer to another address space
-    StorageRef(Box<Type>),
+    StoragePtr(Box<Type>),
+    FunctionPtr {
+        params: Vec<Type>,
+        returns: Vec<Type>,
+    },
 
     // contract == address
     // address is an array of byte
@@ -29,19 +33,10 @@ pub enum Type {
     Struct(StructType),
     // a slice is a ptr to struct that contains the ptr to data and the length
     Slice(Box<Type>),
-
-    FunctionPtr {
-        params: Vec<Type>,
-        returns: Vec<Type>,
-    },
-
     // a UserType will be lower into a primitive type it is representing
 
     // Solana a value 64bits, TODO: Polkadot value length is 16bits or 16bytes?
     // Value is a integer, but width is platform dependent.
-
-
-
 
     // FunctionSelector is an integer, 4bytes on Polkadot and 8bytes on Solana
 }
@@ -85,6 +80,55 @@ impl TryFrom<&ast::Type> for Type {
             // ast::Type::BufferPointer => {}
             // ast::Type::FunctionSelector => {}
             _ => todo!("{:?}", ty),
+        }
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Type::Bool => write!(f, "bool"),
+            Type::Int(width) => write!(f, "int{}", width),
+            Type::Uint(width) => write!(f, "uint{}", width),
+            Type::Bytes(width) => write!(f, "bytes{}", width),
+            Type::Ptr(ty) => write!(f, "ptr<{}>", ty),
+            Type::StoragePtr(ty) => write!(f, "storage_ptr<{}>", ty),
+            Type::Array(ty, len) => {
+                // example, for fixed length: ty: uint8, len: [2, 3] -> uint8[2][3]
+                // for dynamic length: ty: uint8, len: dyn -> uint8[]
+                // for any fixed length: ty: uint8, len: [any, any] -> uint8[?][?]
+                write!(f, "{}", ty)?;
+                len.iter().for_each(|len| match len {
+                    ArrayLength::Fixed(len) => write!(f, "[{}]", len).unwrap(),
+                    ArrayLength::Dynamic => write!(f, "[]").unwrap(),
+                    ArrayLength::AnyFixed => write!(f, "[?]").unwrap(),
+                });
+                Ok(())
+            }
+            Type::Slice(ty) => write!(f, "slice<{}>", ty),
+            Type::Struct(ty) => write!(f, "{:?}", ty),
+            Type::FunctionPtr { params, returns } => {
+                write!(f, "fn(")?;
+                for (i, param) in params.iter().enumerate() {
+                    if i != 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", param)?;
+                }
+                write!(f, ")")?;
+                if !returns.is_empty() {
+                    write!(f, " -> (")?;
+                    for (i, ret) in returns.iter().enumerate() {
+                        if i != 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}", ret)?;
+                    }
+                    write!(f, ")")?;
+                }
+                Ok(())
+            }
+            _ => todo!("{:?}", self),
         }
     }
 }

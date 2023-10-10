@@ -32,8 +32,7 @@ impl Vartable {
     pub(crate) fn get_operand(&self, id: &usize) -> Result<Operand, &'static str> {
         self.vars.get(id)
             .map(|var| Operand::Id {
-                id: var.id,
-                name: var.name.clone(),
+                id: var.id
             })
             .ok_or("Variable not found")
     }
@@ -51,8 +50,7 @@ impl Vartable {
         self.vars.insert(self.next_id, var);
 
         Operand::Id {
-            id: self.next_id,
-            name,
+            id: self.next_id
         }
     }
 }

@@ -1,7 +1,7 @@
 pub mod cfg;
+pub mod converter;
 pub mod expr;
 pub mod insn;
-pub mod converter;
-mod vartable;
+pub mod ssa_type;
 mod typechecker;
-mod ssa_type;
+mod vartable;
