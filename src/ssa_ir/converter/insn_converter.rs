@@ -45,10 +45,10 @@ impl Converter {
             Instr::Store { dest, data } => {
                 // type checking the dest.ty() and data.ty()
 
-                let mut dest_op = vartable.new_temp(Type::try_from(&dest.ty())?);
+                let dest_op = vartable.new_temp(Type::try_from(&dest.ty())?);
                 let mut dest_insns = Converter::from_expression(&dest_op, dest, vartable)?;
 
-                let mut data_op = vartable.new_temp(Type::try_from(&data.ty())?);
+                let data_op = vartable.new_temp(Type::try_from(&data.ty())?);
                 let mut data_insns = Converter::from_expression(&data_op, data, vartable)?;
 
                 let mut insns = Vec::new();
@@ -66,14 +66,14 @@ impl Converter {
                 array,
                 value,
             } => {
-                let mut value_op = vartable.new_temp(Type::try_from(&value.ty())?);
+                let value_op = vartable.new_temp(Type::try_from(&value.ty())?);
                 let mut value_insns = Converter::from_expression(&value_op, value, vartable)?;
 
                 let mut insns = Vec::new();
                 insns.append(&mut value_insns);
                 insns.push(Insn::PushMemory {
                     res: res.clone(),
-                    ty: ty.clone(),
+                    ty: Type::try_from(ty)?,
                     array: array.clone(),
                     value: value_op,
                 });

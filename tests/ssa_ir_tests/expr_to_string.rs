@@ -1,57 +1,10 @@
+use crate::num_literal;
+use crate::ssa_ir_tests::helpers::{binop_expr, bool_literal, identifier, num_literal, unop_expr};
 use num_bigint::BigInt;
 use solang::sema::ast::{self, FormatArg, StringLocation, StructType};
-use solang::ssa_ir::expr::{BinaryOperator, Expr, Operand, UnaryOperator};
+use solang::ssa_ir::expr::{BinaryOperator, Expr, UnaryOperator};
 use solang::ssa_ir::ssa_type::Type;
 use solang_parser::pt::Loc;
-
-fn binop_expr(left: Operand, op: BinaryOperator, right: Operand) -> Expr {
-    Expr::BinaryExpr {
-        loc: Loc::Codegen,
-        operator: op,
-        left: Box::new(left),
-        right: Box::new(right),
-    }
-}
-
-fn unop_expr(op: UnaryOperator, right: Operand) -> Expr {
-    Expr::UnaryExpr {
-        loc: Loc::Codegen,
-        operator: op,
-        right: Box::new(right),
-    }
-}
-
-fn num_literal(value: i32, signed: bool, width: u16) -> Operand {
-    Operand::NumberLiteral {
-        value: BigInt::from(value),
-        ty: if signed {
-            Type::Int(width)
-        } else {
-            Type::Uint(width)
-        },
-    }
-}
-
-macro_rules! num_literal {
-    ($value: expr, $width: expr) => {
-        num_literal($value, false, $width)
-    };
-    ($value: expr) => {
-        num_literal($value, false, 8)
-    };
-    // error
-    () => {
-        panic!("invalid number literal")
-    };
-}
-
-fn bool_literal(value: bool) -> Operand {
-    Operand::BoolLiteral { value }
-}
-
-fn identifier(id: usize) -> Operand {
-    Operand::Id { id }
-}
 
 #[test]
 fn test_stringfy_binary_expr() {

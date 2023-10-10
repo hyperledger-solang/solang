@@ -1,7 +1,11 @@
 use std::fmt;
 
-use crate::sema::ast;
+use solang_parser::pt::Identifier;
+
+use crate::pt::Loc;
+use crate::sema::ast::{self, ParameterAnnotation};
 use crate::sema::ast::{ArrayLength, StructType};
+use crate::ssa_ir::expr::Operand;
 
 #[derive(Debug, Clone)]
 pub enum Type {
@@ -39,6 +43,65 @@ pub enum Type {
     // Value is a integer, but width is platform dependent.
 
     // FunctionSelector is an integer, 4bytes on Polkadot and 8bytes on Solana
+}
+
+#[derive(Clone, Debug)]
+pub enum InternalCallTy {
+    Static {
+        cfg_no: usize,
+        cfg_name: &'static str,
+    },
+    Dynamic(Operand),
+    Builtin {
+        ast_func_no: usize,
+        ast_func_name: &'static str,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub struct PhiInput {
+    pub operand: Operand,
+    pub block_no: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct Parameter {
+    pub loc: Loc,
+    /// The name can empty (e.g. in an event field or unnamed parameter/return)
+    pub id: Option<Identifier>,
+    pub ty: Type,
+    /// Yul function parameters may not have a type identifier
+    pub ty_loc: Option<Loc>,
+    /// Event fields may indexed, which means they are sent to the log
+    pub indexed: bool,
+    /// Some builtin structs have readonly fields
+    pub readonly: bool,
+    /// A recursive struct may contain itself which make the struct infinite size in memory.
+    pub infinite_size: bool,
+    /// Is this struct field recursive. Recursive does not mean infinite size in all cases:
+    /// `struct S { S[] s }` is recursive but not of infinite size.
+    pub recursive: bool,
+
+    pub annotation: Option<ParameterAnnotation>,
+}
+
+impl TryFrom<&ast::Parameter> for Parameter {
+    type Error = &'static str;
+
+    fn try_from(param: &ast::Parameter) -> Result<Self, Self::Error> {
+        let ty = Type::try_from(&param.ty)?;
+        Ok(Self {
+            loc: param.loc,
+            id: param.id.clone(),
+            ty,
+            ty_loc: param.ty_loc,
+            indexed: param.indexed,
+            readonly: param.readonly,
+            infinite_size: param.infinite_size,
+            recursive: param.recursive,
+            annotation: param.annotation.clone(),
+        })
+    }
 }
 
 impl TryFrom<&ast::Type> for Type {
