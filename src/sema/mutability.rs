@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-
 use super::{
     ast::{
         Builtin, CallTy, DestructureField, Diagnostic, Expression, Function, Mutability, Namespace,
@@ -60,9 +58,6 @@ pub fn mutability(file_no: usize, ns: &mut Namespace) {
 /// While we recurse through the AST, maintain some state
 struct StateCheck<'a> {
     diagnostics: Vec<Diagnostic>,
-    // We only want to diagnose on the innermost expression of any statement.
-    // This field is used as a per statement cache
-    per_statement_diagnostics: HashMap<Access, Diagnostic>,
     declared_access: Access,
     required_access: Access,
     func: &'a Function,
@@ -121,7 +116,7 @@ impl<'a> StateCheck<'a> {
                 Diagnostic::error(*loc, message)
             });
 
-        self.per_statement_diagnostics.insert(desired, diagnostic);
+        self.diagnostics.push(diagnostic);
     }
 }
 
@@ -132,7 +127,6 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
 
     let mut state = StateCheck {
         diagnostics: Vec::new(),
-        per_statement_diagnostics: HashMap::new(),
         declared_access: match func.mutability {
             Mutability::Pure(_) => Access::None,
             Mutability::View(_) => Access::Read,
@@ -333,18 +327,19 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
                 recurse_yul_statements(&inline_assembly.body, state);
             }
         }
-
-        state
-            .diagnostics
-            .extend(state.per_statement_diagnostics.drain().map(|(_, v)| v));
     }
 }
 
 fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     match expr {
-        Expression::StorageLoad { loc, .. } => {
-            state.data_account |= DataAccountUsage::READ;
-            state.read(loc);
+        // Accessing a struct member does not necessarily mean a storage load;
+        // for example when we just calculating the storage offset.
+        // Thus we only require `view` mutability if there is a storage load too.
+        Expression::StorageLoad { loc, expr, .. } => {
+            if let Expression::StructMember { .. } = **expr {
+                state.data_account |= DataAccountUsage::READ;
+                state.read(loc)
+            }
         }
         Expression::PreIncrement { expr, .. }
         | Expression::PreDecrement { expr, .. }
