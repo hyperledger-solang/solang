@@ -11,3 +11,4 @@ tests/create_me/
 .DS_Store
 .idea
 /*.pdf
+*.profraw
