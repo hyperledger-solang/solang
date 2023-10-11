@@ -657,10 +657,10 @@ impl ControlFlowGraph {
                 dimensions, values, ..
             } => format!(
                 "constant {} [ {} ]",
-                dimensions
-                    .iter()
-                    .map(|d| format!("[{d}]"))
-                    .collect::<String>(),
+                dimensions.iter().fold(String::new(), |mut output, d| {
+                    write!(output, "[{d}]").unwrap();
+                    output
+                }),
                 values
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
@@ -671,10 +671,10 @@ impl ControlFlowGraph {
                 dimensions, values, ..
             } => format!(
                 "{} [ {} ]",
-                dimensions
-                    .iter()
-                    .map(|d| format!("[{d}]"))
-                    .collect::<String>(),
+                dimensions.iter().fold(String::new(), |mut output, d| {
+                    write!(output, "[{d}]").unwrap();
+                    output
+                }),
                 values
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))

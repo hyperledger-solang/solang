@@ -1059,8 +1059,7 @@ impl Type {
                 value: false,
             }),
             Type::Bytes(n) => {
-                let mut l = Vec::new();
-                l.resize(*n as usize, 0);
+                let l = vec![0; *n as usize];
                 Some(Expression::BytesLiteral {
                     loc: Codegen,
                     ty: self.clone(),

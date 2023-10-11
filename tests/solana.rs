@@ -337,8 +337,7 @@ fn serialize_parameters(
 
         let padding = v.len() % 8;
         if padding != 0 {
-            let mut p = Vec::new();
-            p.resize(8 - padding, 0);
+            let p = vec![0; 8 - padding];
             v.extend_from_slice(&p);
         }
         // rent epoch

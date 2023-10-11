@@ -729,8 +729,7 @@ contract Testing {
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.item_1.len(), 1);
-    let mut res1_c: Vec<u8> = Vec::new();
-    res1_c.resize(32, 0);
+    let mut res1_c: Vec<u8> = vec![0; 32];
 
     assert_eq!(
         decoded.item_1[0][0][0],
