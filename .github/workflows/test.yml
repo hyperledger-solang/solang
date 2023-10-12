@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
+
 jobs:
   repolinter:
     name: Repolinter
@@ -47,13 +50,26 @@ jobs:
     name: Linux x86-64
     runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci-5
+    env:
+      RUSTFLAGS: -C instrument-coverage -C llvm-args=--instrprof-atomic-counter-update-all --cfg=coverage --cfg=trybuild_no_target
+      CARGO_INCREMENTAL: 0
+      CARGO_LLVM_COV: 1
+      CARGO_LLVM_COV_TARGET_DIR: ${{ github.workspace }}/target
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
       with:
         submodules: recursive
-    - name: Rust stable
-      run: rustup default 1.72.0
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: 1.72.0
+        components: |
+          llvm-tools
+          clippy
+          rustfmt
+    - name: cargo install cargo-llvm-cov
+      uses: taiki-e/install-action@cargo-llvm-cov
     - name: Run cargo clippy
       run: cargo clippy --workspace --tests --bins -- -D warnings
     - name: Run cargo clippy without wasm_opt feature
@@ -64,16 +80,30 @@ jobs:
       run: cargo doc --workspace --bins
     - name: Run cargo fmt
       run: cargo fmt --all -- --check
-    - name: Build
+    - name: Configure llvm-cov and build
       if: always()
-      run: cargo build --verbose
+      run: |
+        cargo llvm-cov clean --workspace
+        cargo build
     - name: Run tests
       if: always()
-      run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v3.1.0
+      run: cargo llvm-cov --all-features --workspace --no-report
+    - name: Upload binary
+      uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-linux-x86-64
         path: ./target/debug/solang
+    - name: Compress test coverage files
+      run: |
+        rm -r bpf wasm tmp cxxbridge CACHEDIR.TAG
+        rm -r debug/build debug/deps debug/examples debug/incremental
+        tar -czvf rust-tests.tar.gz *
+      working-directory: ./target
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: rust-tests.tar.gz
+        path: ./target/rust-tests.tar.gz
 
   linux-arm:
     name: Linux Arm
@@ -265,6 +295,11 @@ jobs:
     - name: Test Anchor
       run: anchor test --skip-local-validator
       working-directory: ./integration/anchor
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+       name: anchor-tests
+       path: ./target/*.profraw
 
   solana:
     name: Solana Integration test
@@ -299,6 +334,11 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/solana
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: solana-tests
+        path: ./target/*.profraw
 
   polkadot:
     name: Polkadot Integration test
@@ -335,6 +375,11 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/polkadot
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: polkadot-tests
+        path: ./target/*.profraw
     - name: cleanup
       if: always()
       run: docker kill ${{steps.substrate.outputs.id}}
@@ -370,6 +415,11 @@ jobs:
     - name: cleanup
       if: always()
       run: docker kill ${{steps.substrate.outputs.id}}
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: polkadot-subxt-tests
+        path: ./target/*.profraw
 
   vscode:
     name: Visual Code Extension
@@ -400,6 +450,11 @@ jobs:
       working-directory: ./vscode
     - run: vsce package
       working-directory: ./vscode
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: vscode-tests
+        path: ./target/*.profraw
 
   std-lib-tests:
     name: Stdlib
@@ -416,3 +471,67 @@ jobs:
           make test
           ./test
         working-directory: ./stdlib
+
+  coverage:
+    runs-on: ubuntu-latest
+    name: Coverage report
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
+    needs: [linux-x86-64, solana, anchor, polkadot, polkadot-subxt, vscode]
+    env:
+      RUSTFLAGS: -C instrument-coverage -C llvm-args=--instrprof-atomic-counter-update-all --cfg=coverage --cfg=trybuild_no_target
+      CARGO_INCREMENTAL: 0
+      CARGO_LLVM_COV: 1
+      CARGO_LLVM_COV_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.72.0
+          components: llvm-tools
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Download Rust coverage files
+        uses: actions/download-artifact@master
+        with:
+         name: rust-tests.tar.gz
+         path: ./target
+      - name: Download Solana coverage files
+        uses: actions/download-artifact@master
+        with:
+          name: solana-tests
+          path: ./target
+      - name: Download Polkadot coverage files
+        uses: actions/download-artifact@master
+        with:
+          name: polkadot-tests
+          path: ./target
+      - name: Download Polkadot subxt coverage files
+        uses: actions/download-artifact@master
+        with:
+          name: polkadot-subxt-tests
+          path: ./target
+      - name: Download Anchor coverage files
+        uses: actions/download-artifact@master
+        with:
+          name: anchor-tests
+          path: ./target
+      - name: Download VSCode coverage files
+        uses: actions/download-artifact@master
+        with:
+          name: vscode-tests
+          path: ./target
+      - name: Unpack test coverage files
+        run: tar -xf rust-tests.tar.gz
+        working-directory: ./target
+      - name: Generate code report
+        run: cargo llvm-cov report --lcov --output-path lcov.info
+      - name: Upload coverage report to codecov.io
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          fail_ci_if_error: true
