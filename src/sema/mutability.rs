@@ -5,6 +5,7 @@ use super::{
         Builtin, CallTy, DestructureField, Diagnostic, Expression, Function, Mutability, Namespace,
         RetrieveType, Statement, Type,
     },
+    diagnostics::Diagnostics,
     yul::ast::{YulExpression, YulStatement},
     Recurse,
 };
@@ -49,16 +50,16 @@ pub fn mutability(file_no: usize, ns: &mut Namespace) {
                 continue;
             }
 
-            let mut diagnostics = check_mutability(func, ns);
+            let diagnostics = check_mutability(func, ns);
 
-            ns.diagnostics.append(&mut diagnostics);
+            ns.diagnostics.extend(diagnostics);
         }
     }
 }
 
 /// While we recurse through the AST, maintain some state
 struct StateCheck<'a> {
-    diagnostics: Vec<Diagnostic>,
+    diagnostic: Diagnostics,
     declared_access: Access,
     required_access: Access,
     func: &'a Function,
@@ -117,17 +118,17 @@ impl<'a> StateCheck<'a> {
                 Diagnostic::error(*loc, message)
             });
 
-        self.diagnostics.push(diagnostic);
+        self.diagnostic.push(diagnostic);
     }
 }
 
-fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
+fn check_mutability(func: &Function, ns: &Namespace) -> Diagnostics {
     if func.is_virtual {
-        return Vec::new();
+        return Default::default();
     }
 
     let mut state = StateCheck {
-        diagnostics: Vec::new(),
+        diagnostic: Default::default(),
         declared_access: match func.mutability {
             Mutability::Pure(_) => Access::None,
             Mutability::View(_) => Access::Read,
@@ -182,18 +183,20 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
 
     recurse_statements(&func.body, ns, &mut state);
 
+    state.diagnostic.remove_overlapping();
+
     if pt::FunctionTy::Function == func.ty && !func.is_accessor {
         if state.required_access == Access::None {
             match func.mutability {
                 Mutability::Payable(_) | Mutability::Pure(_) => (),
                 Mutability::Nonpayable(_) => {
-                    state.diagnostics.push(Diagnostic::warning(
+                    state.diagnostic.push(Diagnostic::warning(
                         func.loc,
                         "function can be declared 'pure'".to_string(),
                     ));
                 }
                 _ => {
-                    state.diagnostics.push(Diagnostic::warning(
+                    state.diagnostic.push(Diagnostic::warning(
                         func.loc,
                         format!(
                             "function declared '{}' can be declared 'pure'",
@@ -206,7 +209,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
 
         // don't suggest marking payable as view (declared_access == Value)
         if state.required_access == Access::Read && state.declared_access == Access::Write {
-            state.diagnostics.push(Diagnostic::warning(
+            state.diagnostic.push(Diagnostic::warning(
                 func.loc,
                 "function can be declared 'view'".to_string(),
             ));
@@ -245,7 +248,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
         );
     }
 
-    state.diagnostics.to_vec()
+    state.diagnostic
 }
 
 fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateCheck) {
@@ -333,33 +336,21 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
 
 fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     match expr {
-        // Accessing a struct member does not necessarily mean a storage load;
-        // for example when we just calculating the storage offset.
-        // Thus we only require `view` mutability if there is a storage load too.
-        Expression::StorageLoad { loc, expr, .. } => {
-            if let Expression::StructMember { .. } = **expr {
-                state.data_account |= DataAccountUsage::READ;
-                state.read(loc)
-            }
+        Expression::StorageLoad { loc, .. } => {
+            state.data_account |= DataAccountUsage::READ;
+            state.read(loc)
         }
         Expression::PreIncrement { expr, .. }
         | Expression::PreDecrement { expr, .. }
         | Expression::PostIncrement { expr, .. }
         | Expression::PostDecrement { expr, .. } => {
             expr.recurse(state, write_expression);
-            return false;
         }
         Expression::Assign { left, right, .. } => {
             right.recurse(state, read_expression);
             left.recurse(state, write_expression);
-            return false;
         }
         Expression::StorageArrayLength { loc, .. } => {
-            state.data_account |= DataAccountUsage::READ;
-            state.read(loc);
-            return false;
-        }
-        Expression::Subscript { loc, array_ty, .. } if array_ty.is_contract_storage() => {
             state.data_account |= DataAccountUsage::READ;
             state.read(loc);
         }

@@ -5,7 +5,9 @@ use crate::file_resolver::FileResolver;
 use crate::standard_json::{LocJson, OutputJson};
 use codespan_reporting::{diagnostic, files, term};
 use itertools::Itertools;
+use rust_lapper::{Interval, Lapper};
 use solang_parser::pt::Loc;
+use std::mem::swap;
 use std::{
     collections::HashMap,
     slice::Iter,
@@ -140,6 +142,57 @@ impl Diagnostics {
     pub fn sort_and_dedup(&mut self) {
         self.contents.sort();
         self.contents.dedup();
+    }
+
+    /// Find overlapping errors and retain the diagnostic with the smallest range
+    pub fn remove_overlapping(&mut self) {
+        if self.contents.is_empty() {
+            return;
+        }
+
+        type Iv = Interval<usize, usize>;
+
+        // in data val is the diagnostic index
+        let data: Vec<Iv> = self
+            .contents
+            .iter()
+            .enumerate()
+            .map(|(index, diag)| Iv {
+                start: diag.loc.start(),
+                stop: diag.loc.end(),
+                val: index,
+            })
+            .collect();
+
+        let laps = Lapper::new(data);
+
+        let mut remove_list = Vec::new();
+
+        for depth in laps.depth() {
+            // in depth val is the number of entries for the depth
+            if depth.val > 1 {
+                // we have multiple diagnostic for range
+                let mut for_range: Vec<_> = laps.find(depth.start, depth.stop).collect();
+
+                assert_eq!(for_range.len(), depth.val);
+
+                for_range.sort_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)));
+
+                for_range.remove(0);
+
+                for_range.iter().for_each(|v| remove_list.push(v.val));
+            }
+        }
+
+        let mut contents = Vec::new();
+
+        swap(&mut self.contents, &mut contents);
+
+        for (index, diag) in contents.into_iter().enumerate() {
+            if !remove_list.contains(&index) {
+                self.contents.push(diag);
+            }
+        }
     }
 }
 
