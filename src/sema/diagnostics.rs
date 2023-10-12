@@ -7,6 +7,7 @@ use codespan_reporting::{diagnostic, files, term};
 use itertools::Itertools;
 use rust_lapper::{Interval, Lapper};
 use solang_parser::pt::Loc;
+use std::cmp::Ordering;
 use std::mem::swap;
 use std::{
     collections::HashMap,
@@ -176,14 +177,24 @@ impl Diagnostics {
 
                 assert_eq!(for_range.len(), depth.val);
 
-                for_range.sort_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)));
+                for_range.sort_by(|a, b| {
+                    // prefer errors over warnings
+                    let cmp = self.contents[a.val].level.cmp(&self.contents[b.val].level);
 
-                for_range.remove(0);
+                    if cmp != Ordering::Equal {
+                        cmp
+                    } else {
+                        // else prefer shorter range over longer
+                        (a.stop - a.start).cmp(&(b.stop - b.start))
+                    }
+                });
 
-                for_range.iter().for_each(|v| remove_list.push(v.val));
+                // we may up with dups in remove_list, but that's not really a problem
+                for_range[1..].iter().for_each(|v| remove_list.push(v.val));
             }
         }
 
+        // remove all diagnostics in remove_list
         let mut contents = Vec::new();
 
         swap(&mut self.contents, &mut contents);

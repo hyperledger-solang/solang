@@ -98,7 +98,7 @@ impl<'a> StateCheck<'a> {
                 "accesses value sent, which is only allowed for payable functions",
                 "access of value sent",
             ),
-            Access::None => unreachable!("declared access can't be lower than None"),
+            Access::None => unreachable!("desired access can't be None"),
         };
 
         let diagnostic = self
@@ -353,9 +353,6 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         Expression::StorageArrayLength { loc, .. } => {
             state.data_account |= DataAccountUsage::READ;
             state.read(loc);
-        }
-        Expression::Variable { ty, .. } if ty.is_contract_storage() => {
-            state.data_account |= DataAccountUsage::READ;
         }
         Expression::StorageVariable { loc, .. } => {
             state.data_account |= DataAccountUsage::READ;
