@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use indexmap::IndexMap;
 use crate::codegen::vartable::Vars;
 use crate::ssa_ir::expr::Operand;

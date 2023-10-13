@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use crate::sema::ast::{FormatArg, StringLocation};
 use crate::ssa_ir::ssa_type::Type;
 use num_bigint::BigInt;

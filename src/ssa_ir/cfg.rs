@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use crate::codegen::cfg::ASTFunction;
 use crate::pt::FunctionTy;
 use crate::ssa_ir::insn::Insn;
@@ -33,7 +34,7 @@ impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "block {}:\n", self.name)?;
         for insn in &self.instructions {
-            write!(f, "    {}\n", insn)?;
+            writeln!(f, "    {}", insn)?;
         }
         Ok(())
     }
@@ -52,7 +53,7 @@ impl fmt::Display for Cfg {
 
         write!(
             f,
-            "{} {} function#{} {} ",
+            "{} {} {} {} ",
             access_ctl, self.ty, function_no, self.name
         )?;
 
@@ -75,6 +76,7 @@ impl fmt::Display for Cfg {
             }
             write!(f, ")")?;
         }
+        write!(f, ":\n")?;
 
         for block in &self.blocks {
             write!(f, "{}", block)?;

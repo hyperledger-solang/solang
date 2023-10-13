@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use std::fmt;
 
 use solang_parser::pt::Identifier;
