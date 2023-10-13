@@ -23,29 +23,24 @@ contract SimpleCollectible {
         metadataAuthority = _metadataAuthority;
     }
 
-    /// Create a new NFT and associate it to an URI
-    ///
-    /// @param tokenURI a URI that leads to the NFT resource
-    /// @param mintAuthority an account that signs each new mint
-    /// @param ownerTokenAccount the owner associated token account
-    function createCollectible(string memory tokenURI, address mintAuthority, address ownerTokenAccount) public {
-        SplToken.TokenAccountData token_data = SplToken.get_token_account_data(ownerTokenAccount);
+    /// Create a new NFT
+    @mutableAccount(mintAccount) // The account of the mint. Its address must be the same as that of the 'mintAccount' contract variable.
+    @mutableAccount(ownerTokenAccount) // The owner's associated token account
+    @signer(mintAuthority) // The account that signs each new mint
+    function createCollectible() external {
+        SplToken.TokenAccountData token_data = SplToken.get_token_account_data(tx.accounts.ownerTokenAccount);
 
-        // The mint will only work if the associated token account points to the mint account in this contract
-        // This assert is not necessary. The transaction will fail if this does not hold true.
-        assert(mintAccount == token_data.mintAccount);
-        SplToken.MintAccountData mint_data = SplToken.get_mint_account_data(token_data.mintAccount);
+        SplToken.MintAccountData mint_data = SplToken.get_mint_account_data(tx.accounts.mintAccount);
         // Ensure the supply is zero. Otherwise, this is not an NFT.
         assert(mint_data.supply == 0);
 
         // An NFT on Solana is a SPL-Token with only one minted token.
         // The token account saves the owner of the tokens minted with the mint account, the respective mint account and the number
         // of tokens the owner account owns
-        SplToken.mint_to(token_data.mintAccount, ownerTokenAccount, mintAuthority, 1);
-        updateNftUri(tokenURI);
+        SplToken.mint_to(tx.accounts.mintAccount.key, tx.accounts.ownerTokenAccount.key, tx.accounts.mintAuthority.key, 1);
 
         // Set the mint authority to null. This prevents that any other new tokens be minted, ensuring we have an NFT.
-        SplToken.remove_mint_authority(mintAccount, mintAuthority);
+        SplToken.remove_mint_authority(tx.accounts.mintAccount.key, tx.accounts.mintAuthority.key);
 
         // Log on blockchain records information about the created token
         emit NFTMinted(token_data.owner, token_data.mintAccount);
@@ -54,18 +49,21 @@ contract SimpleCollectible {
     /// Transfer ownership of this NFT from one account to another
     /// This function only wraps the innate SPL transfer, which can be used outside this contract.
     /// However, the difference here is the event 'NFTSold' exclusive to this function
-    ///
-    /// @param oldTokenAccount the token account for the current owner
-    /// @param newTokenAccount the token account for the new owner
-    function transferOwnership(address oldTokenAccount, address newTokenAccount) public {
+    @mutableAccount(oldTokenAccount) // The token account for the current owner
+    @mutableAccount(newTokenAccount) // The token account for the new owner
+    @signer(oldOwner)
+    function transferOwnership() external {
         // The current owner does not need to be the caller of this functions, but they need to sign the transaction
         // with their private key.
-        SplToken.TokenAccountData old_data = SplToken.get_token_account_data(oldTokenAccount);
-        SplToken.TokenAccountData new_data = SplToken.get_token_account_data(newTokenAccount);
+        SplToken.TokenAccountData old_data = SplToken.get_token_account_data(tx.accounts.oldTokenAccount);
+        SplToken.TokenAccountData new_data = SplToken.get_token_account_data(tx.accounts.newTokenAccount);
 
         // To transfer the ownership of a token, we need the current owner and the new owner. The payer account is the account used to derive
         // the correspondent token account in TypeScript.
-        SplToken.transfer(oldTokenAccount, newTokenAccount, old_data.owner, 1);
+        SplToken.transfer(
+            tx.accounts.oldTokenAccount.key, 
+            tx.accounts.newTokenAccount.key, 
+            tx.accounts.oldOwner.key, 1);
         emit NFTSold(old_data.owner, new_data.owner);
     }
 
@@ -77,9 +75,9 @@ contract SimpleCollectible {
     /// Check if an NFT is owned by @param owner
     ///
     /// @param owner the account whose ownership we want to verify
-    /// @param tokenAccount the owner's associated token account
-    function isOwner(address owner, address tokenAccount) public view returns (bool) {
-        SplToken.TokenAccountData data = SplToken.get_token_account_data(tokenAccount);
+    @account(tokenAccount) // The owner's associated token account
+    function isOwner(address owner) external view returns (bool) {
+        SplToken.TokenAccountData data = SplToken.get_token_account_data(tx.accounts.tokenAccount);
 
         return owner == data.owner && mintAccount == data.mintAccount && data.balance == 1;
     }
@@ -88,20 +86,10 @@ contract SimpleCollectible {
     /// The metadata authority must sign the transaction so that the update can succeed.
     ///
     /// @param newUri a new URI for the NFT
-    function updateNftUri(string newUri) public {
-        requireMetadataSigner();
+    @signer(metadataSigner) // The metadata authority that can authorize changes in the NFT data.
+    function updateNftUri(string newUri) external {
+        require(tx.accounts.metadataSigner.is_signer, "the metadata authority must sign the transaction");
+        assert(tx.accounts.metadataSigner.key == metadataAuthority);
         uri = newUri;
-    }
-
-    /// Requires the signature of the metadata authority.
-    function requireMetadataSigner() private {
-        for(uint32 i=0; i < tx.accounts.length; i++) {
-            if (tx.accounts[i].key == metadataAuthority) {
-                require(tx.accounts[i].is_signer, "the metadata authority must sign the transaction");
-                return;
-            }
-        }
-
-        revert("The metadata authority is missing");
     }
 }

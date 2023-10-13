@@ -126,6 +126,13 @@ macro_rules! emit_context {
                 )
             };
         }
+
+        #[allow(unused_macros)]
+        macro_rules! i8_basic_type_enum {
+            () => {
+                $binary.context.i8_type().as_basic_type_enum()
+            };
+        }
     };
 }
 
@@ -866,12 +873,25 @@ impl<'a> Binary<'a> {
 
     /// Return the llvm type for the resolved type.
     pub(crate) fn llvm_type(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
+        emit_context!(self);
         if ty.is_builtin_struct() == Some(StructType::AccountInfo) {
             return self
-                .module
-                .get_struct_type("struct.SolAccountInfo")
-                .unwrap()
-                .into();
+                .context
+                .struct_type(
+                    &[
+                        byte_ptr!().as_basic_type_enum(),             // SolPubkey *
+                        byte_ptr!().as_basic_type_enum(),             // uint64_t *
+                        self.context.i64_type().as_basic_type_enum(), // uint64_t
+                        byte_ptr!().as_basic_type_enum(),             // uint8_t *
+                        byte_ptr!().as_basic_type_enum(),             // SolPubkey *
+                        self.context.i64_type().as_basic_type_enum(), // uint64_t
+                        i8_basic_type_enum!(),                        // bool
+                        i8_basic_type_enum!(),                        // bool
+                        i8_basic_type_enum!(),                        // bool
+                    ],
+                    false,
+                )
+                .as_basic_type_enum();
         } else {
             match ty {
                 Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),

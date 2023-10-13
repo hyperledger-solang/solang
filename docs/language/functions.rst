@@ -325,6 +325,16 @@ calling.
         (bool success, bytes rawresult) = foo.call{value: 102, gas: 1000}(rawcalldata);
     }
 
+External calls with the ``call()`` method on Solana must have the ``accounts`` call argument, regardless of the
+callee function visibility, because the compiler has no information about the caller function to generate the
+``AccountMeta`` array automatically.
+
+.. code-block:: solidity
+
+    function test(address foo, bytes rawcalldata) public {
+        (bool success, bytes rawresult) = foo.call{accounts: []}(rawcalldata);
+    }
+
 .. _fallback_receive:
 
 Calling an external function using ``delegatecall``

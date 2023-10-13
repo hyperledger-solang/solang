@@ -1003,8 +1003,10 @@ contract caller {
         return b + 3;
     }
 
-    function do_call(address pid) view public returns (int64, int32) {
-        return (this.doThis{program_id: pid}(5), this.doThat{program_id: pid}(3));
+    @account(pid)
+    function do_call() view external returns (int64, int32) {
+        return (this.doThis{program_id: tx.accounts.pid.key, accounts: []}(5),
+         this.doThat{program_id: tx.accounts.pid.key, accounts: []}(3));
     }
 }"#,
     );
@@ -1017,11 +1019,7 @@ contract caller {
     let caller_program_id = vm.stack[0].id;
     let returns = vm
         .function("do_call")
-        .arguments(&[BorshToken::Address(caller_program_id)])
-        .accounts(vec![
-            ("systemProgram", [0; 32]),
-            ("caller_programId", caller_program_id),
-        ])
+        .accounts(vec![("systemProgram", [0; 32]), ("pid", caller_program_id)])
         .call()
         .unwrap()
         .unwrap_tuple();

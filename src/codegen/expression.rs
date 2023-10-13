@@ -16,6 +16,7 @@ use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
+use crate::sema::ast::ExternalCallAccounts;
 use crate::sema::{
     ast,
     ast::{
@@ -1586,7 +1587,7 @@ fn payable_send(
                 loc: *loc,
                 success: Some(success),
                 address: Some(address),
-                accounts: None,
+                accounts: ExternalCallAccounts::AbsentArgument,
                 seeds: None,
                 payload: Expression::AllocDynamicBytes {
                     loc: *loc,
@@ -1655,7 +1656,7 @@ fn payable_transfer(
             Instr::ExternalCall {
                 loc: *loc,
                 success: None,
-                accounts: None,
+                accounts: ExternalCallAccounts::AbsentArgument,
                 seeds: None,
                 address: Some(address),
                 payload: Expression::AllocDynamicBytes {
@@ -2844,7 +2845,6 @@ pub fn emit_function_call(
             };
             let accounts = call_args
                 .accounts
-                .as_ref()
                 .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
             let seeds = call_args
                 .seeds
@@ -2932,7 +2932,6 @@ pub fn emit_function_call(
                 };
                 let accounts = call_args
                     .accounts
-                    .as_ref()
                     .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
                 let seeds = call_args
                     .seeds
@@ -3065,7 +3064,7 @@ pub fn emit_function_call(
                     Instr::ExternalCall {
                         loc: *loc,
                         success,
-                        accounts: None,
+                        accounts: ExternalCallAccounts::AbsentArgument,
                         seeds: None,
                         address: Some(address),
                         payload,

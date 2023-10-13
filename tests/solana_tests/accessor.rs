@@ -262,10 +262,13 @@ fn struct_accessor() {
                 m[1023413412] = S({f1: 414243, f2: true, f3: E("niff")});
             }
 
-            function f(address pid) public view {
+            @account(pid)
+            function f() external view {
                 AccountMeta[1] meta = [
                     AccountMeta({pubkey: tx.accounts.dataAccount.key, is_writable: false, is_signer: false})
                 ];
+
+                address pid = tx.accounts.pid.key;
                 (int64 a1, bool b, E memory c) = this.a{accounts: meta, program_id: pid}();
                 require(a1 == -63 && !b && c.b4 == "nuff", "a");
                 (a1, b, c) = this.s{accounts: meta, program_id: pid}(99);
@@ -285,11 +288,10 @@ fn struct_accessor() {
 
     let program_id = vm.stack[0].id;
     vm.function("f")
-        .arguments(&[BorshToken::Address(program_id)])
         .accounts(vec![
             ("dataAccount", data_account),
             ("systemProgram", [0; 32]),
-            ("C_programId", program_id),
+            ("pid", program_id),
         ])
         .call();
 }

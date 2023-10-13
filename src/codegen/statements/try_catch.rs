@@ -12,7 +12,8 @@ use crate::codegen::{
     Expression,
 };
 use crate::sema::ast::{
-    self, CallTy, Function, Namespace, RetrieveType, TryCatch, Type, Type::Uint,
+    self, CallTy, ExternalCallAccounts, Function, Namespace, RetrieveType, TryCatch, Type,
+    Type::Uint,
 };
 use num_bigint::{BigInt, Sign};
 use num_traits::Zero;
@@ -260,7 +261,7 @@ fn exec_try(
                         loc: *loc,
                         success: Some(success),
                         address: Some(address),
-                        accounts: None,
+                        accounts: ExternalCallAccounts::AbsentArgument,
                         seeds: None,
                         payload,
                         value,

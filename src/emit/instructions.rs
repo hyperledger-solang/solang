@@ -9,7 +9,7 @@ use crate::emit::binary::Binary;
 use crate::emit::cfg::{create_block, BasicBlock, Work};
 use crate::emit::expression::expression;
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
-use crate::sema::ast::{Contract, Namespace, RetrieveType, Type};
+use crate::sema::ast::{Contract, ExternalCallAccounts, Namespace, RetrieveType, Type};
 use crate::Target;
 use inkwell::types::BasicType;
 use inkwell::values::{
@@ -700,36 +700,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     expression(target, bin, address, &w.vars, function, ns).into_array_value();
 
                 bin.builder.build_store(address_stack, address);
-            } else if let Some((account_metas, _)) = llvm_accounts {
-                // On Solana, we must return the address of a contract after instantiating it with
-                // 'new'. When the 'address' parameter is not provided to the call argument,
-                // we fetch the address from the AccountMeta array provided in the 'accounts'
-                // call argument. We assume the data account will always be the first element in
-                // the array.
-                let vector_ty = bin.llvm_type(&accounts.as_ref().unwrap().ty(), ns);
-                let elem_ptr = unsafe {
-                    bin.builder.build_gep(
-                        vector_ty,
-                        account_metas,
-                        &[
-                            bin.context.i32_type().const_zero(),
-                            bin.context.i32_type().const_zero(),
-                            bin.context.i32_type().const_zero(),
-                        ],
-                        "contract_account",
-                    )
-                };
-                let loaded_ptr = bin.builder.build_load(
-                    bin.address_type(ns).ptr_type(AddressSpace::default()),
-                    elem_ptr,
-                    "",
-                );
-                let loaded_address = bin.builder.build_load(
-                    bin.address_type(ns),
-                    loaded_ptr.into_pointer_value(),
-                    "",
-                );
-                bin.builder.build_store(address_stack, loaded_address);
             }
 
             let seeds = if let Some(seeds) = seeds {
@@ -1092,13 +1062,13 @@ fn add_or_retrieve_block<'a>(
 /// we process its codegen representation here and return the pointer to it and its size.
 fn process_account_metas<'a, T: TargetRuntime<'a> + ?Sized>(
     target: &T,
-    accounts: &Option<Expression>,
+    accounts: &ExternalCallAccounts<Expression>,
     bin: &Binary<'a>,
     vartab: &HashMap<usize, Variable<'a>>,
     function: FunctionValue<'a>,
     ns: &Namespace,
 ) -> Option<(PointerValue<'a>, IntValue<'a>)> {
-    if let Some(accounts) = accounts {
+    if let ExternalCallAccounts::Present(accounts) = accounts {
         let ty = accounts.ty();
         let expr = expression(target, bin, accounts, vartab, function, ns);
 

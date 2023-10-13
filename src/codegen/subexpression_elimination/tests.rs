@@ -7,7 +7,7 @@ use crate::codegen::subexpression_elimination::anticipated_expressions::Anticipa
 use crate::codegen::subexpression_elimination::common_subexpression_tracker::CommonSubExpressionTracker;
 use crate::codegen::subexpression_elimination::{AvailableExpression, AvailableExpressionSet};
 use crate::codegen::Expression;
-use crate::sema::ast::{StringLocation, Type};
+use crate::sema::ast::{ExternalCallAccounts, StringLocation, Type};
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use solang_parser::pt::Loc;
@@ -433,7 +433,7 @@ fn string() {
         address: None,
         seeds: None,
         loc: Loc::Codegen,
-        accounts: None,
+        accounts: ExternalCallAccounts::AbsentArgument,
     };
 
     let mut ave = AvailableExpression::default();

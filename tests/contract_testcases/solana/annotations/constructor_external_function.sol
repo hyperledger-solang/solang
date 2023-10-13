@@ -28,3 +28,4 @@ contract Bar {
 // ---- Expect: diagnostics ----
 // error: 11:17-30: 'address' not a valid call parameter
 // error: 16:9-18: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external
+// error: 24:9-24: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external

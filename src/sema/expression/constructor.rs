@@ -647,7 +647,7 @@ pub(super) fn solana_constructor_check(
         ));
     }
 
-    if !context.in_a_loop() || call_args.accounts.is_some() {
+    if !context.in_a_loop() || !call_args.accounts.is_absent() {
         return;
     }
 

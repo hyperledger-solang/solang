@@ -10,7 +10,7 @@ contract foo {
 
 contract bar {
     function test(address f) public {
-        (address f1, bytes32 f2) = foo.bar1{program_id: f}(102, false);
-        bool f3 = foo.bar2{program_id: f}({x: 255, y: true});
+        (address f1, bytes32 f2) = foo.bar1{program_id: f, accounts: []}(102, false);
+        bool f3 = foo.bar2{program_id: f, accounts: []}({x: 255, y: true});
     }
 }

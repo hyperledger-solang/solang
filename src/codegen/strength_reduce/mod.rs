@@ -7,7 +7,7 @@ mod value;
 
 use super::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::Expression;
-use crate::sema::ast::{Namespace, Type};
+use crate::sema::ast::{ExternalCallAccounts, Namespace, Type};
 use bitvec::prelude::*;
 use expression_values::expression_values;
 use num_bigint::{BigInt, Sign};
@@ -174,7 +174,7 @@ fn block_reduce(
                 if let Some(salt) = salt {
                     *salt = expression_reduce(salt, &vars, ns);
                 }
-                if let Some(accounts) = accounts {
+                if let ExternalCallAccounts::Present(accounts) = accounts {
                     *accounts = expression_reduce(accounts, &vars, ns);
                 }
                 *gas = expression_reduce(gas, &vars, ns);

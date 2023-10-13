@@ -507,6 +507,16 @@ a function on particular contract instance.
             :code: solidity
 
 
+On Solana, external calls from variables of type external functions require the ``accounts`` call argument. The
+compiler cannot determine the accounts such a function needs, so it does not automatically generate the
+``AccountsMeta`` array.
+
+.. code-block:: solidity
+
+    function test(function(int32, string) external myFunc) public {
+        myFunc{accounts: []}(24, "accounts");
+    }
+
 Storage References
 __________________
 

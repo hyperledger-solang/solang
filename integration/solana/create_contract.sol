@@ -22,11 +22,13 @@ contract creator {
         Seed2.new(seed, space);
     }
 
-    function create_child_with_metas(address child, address payer) public {
+    @mutableSigner(child)
+    @mutableSigner(payer)
+    function create_child_with_metas() external {
         print("Going to create child with metas");
         AccountMeta[3] metas = [
-            AccountMeta({pubkey: child, is_signer: true, is_writable: true}),
-            AccountMeta({pubkey: payer, is_signer: true, is_writable: true}),
+            AccountMeta({pubkey: tx.accounts.child.key, is_signer: true, is_writable: true}),
+            AccountMeta({pubkey: tx.accounts.payer.key, is_signer: true, is_writable: true}),
             AccountMeta({pubkey: address"11111111111111111111111111111111", is_writable: false, is_signer: false})
         ];
 
@@ -36,19 +38,14 @@ contract creator {
 
     function create_without_annotation() external {
         MyCreature.new();
-        MyCreature.say_my_name();
+        MyCreature.say_my_name{accounts: []}();
     }
 
-    function call_with_signer(address signer) view public {
-        for(uint32 i=0; i < tx.accounts.length; i++) {
-            if (tx.accounts[i].key == signer) {
-                require(tx.accounts[i].is_signer, "the signer must sign the transaction");
-                print("Signer found");
-                return;
-            }
-        }
-
-        revert("The signer account is missing");    }
+    @signer(my_signer)
+    function call_with_signer() view external {
+        require(tx.accounts.my_signer.is_signer, "the signer must sign the transaction");
+        print("Signer found");
+    }
 }
 
 @program_id("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT")
@@ -86,16 +83,15 @@ contract Seed1 {
         print("Hello from Seed1");
     }
 
-    function sign(address creator_program_id) view public {
+    @account(creator_program_id)
+    function sign() view external {
         AccountMeta[1] metas = [
             AccountMeta({pubkey: tx.accounts.dataAccount.key, is_signer: true, is_writable: false})
         ];
 
-        creator.call_with_signer{
-            seeds: [ [ saved_seed, saved_bump ] ],
-            program_id: creator_program_id,
-            accounts: metas
-        }(tx.accounts.dataAccount.key);
+        creator.call_with_signer{seeds: [ [ saved_seed, saved_bump ] ],
+        accounts: metas, 
+        program_id: tx.accounts.creator_program_id.key}();
     }
 }
 
@@ -119,10 +115,11 @@ contract Seed2 {
         }
     }
 
-    function sign(address creator_program_id) view public {
+    @account(creator_program_id)
+    function sign() view external {
         bytes[2][1] seeds = [ [ "sunflower", my_seed ] ];
 
-        sign2(seeds, tx.accounts.dataAccount.key, creator_program_id);
+        sign2(seeds, tx.accounts.dataAccount.key, tx.accounts.creator_program_id.key);
     }
 
     function sign2(bytes[2][1] seeds, address child, address creator_program_id) view internal {
@@ -130,7 +127,7 @@ contract Seed2 {
             AccountMeta({pubkey: child, is_signer: true, is_writable: false})
         ];
 
-        creator.call_with_signer{seeds: seeds, accounts: metas, program_id: creator_program_id}(child);
+        creator.call_with_signer{seeds: seeds, accounts: metas, program_id: creator_program_id}();
     }
 }
 

@@ -4,6 +4,7 @@ use super::symtable::Symtable;
 use crate::abi::anchor::discriminator;
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::diagnostics::Diagnostics;
+use crate::sema::ast::ExternalCallAccounts::{AbsentArgument, NoAccount};
 use crate::sema::yul::ast::{InlineAssembly, YulFunction};
 use crate::sema::Recurse;
 use crate::{codegen, Target};
@@ -1216,10 +1217,67 @@ pub struct CallArgs {
     pub gas: Option<Box<Expression>>,
     pub salt: Option<Box<Expression>>,
     pub value: Option<Box<Expression>>,
-    pub accounts: Option<Box<Expression>>,
+    pub accounts: ExternalCallAccounts<Box<Expression>>,
     pub seeds: Option<Box<Expression>>,
     pub flags: Option<Box<Expression>>,
     pub program_id: Option<Box<Expression>>,
+}
+
+/// This enum manages the accounts in an external call on Solana. There can be three options:
+/// 1. The developer explicitly specifies there are not accounts for the call (`NoAccount`).
+/// 2. The accounts call argument is absent, in which case we attempt to generate the AccountMetas
+/// vector automatically (`AbsentArgumet`).
+/// 3. There are accounts specified in the accounts call argument (Present).
+#[derive(PartialEq, Eq, Clone, Debug, Default)]
+pub enum ExternalCallAccounts<T> {
+    NoAccount,
+    #[default]
+    AbsentArgument,
+    Present(T),
+}
+
+impl<T> ExternalCallAccounts<T> {
+    /// Is the accounts call argument missing?
+    pub fn is_absent(&self) -> bool {
+        matches!(self, ExternalCallAccounts::AbsentArgument)
+    }
+
+    /// Returns if the accounts call argument was present in the call
+    pub fn argument_provided(&self) -> bool {
+        matches!(
+            self,
+            ExternalCallAccounts::Present(_) | ExternalCallAccounts::NoAccount
+        )
+    }
+
+    /// Applies a function on the nested objects
+    pub fn map<P, F>(&self, func: F) -> ExternalCallAccounts<P>
+    where
+        F: FnOnce(&T) -> P,
+    {
+        match self {
+            NoAccount => NoAccount,
+            AbsentArgument => AbsentArgument,
+            ExternalCallAccounts::Present(value) => ExternalCallAccounts::Present(func(value)),
+        }
+    }
+
+    /// Transform the nested object into a reference
+    pub const fn as_ref(&self) -> ExternalCallAccounts<&T> {
+        match self {
+            ExternalCallAccounts::Present(value) => ExternalCallAccounts::Present(value),
+            NoAccount => NoAccount,
+            AbsentArgument => AbsentArgument,
+        }
+    }
+
+    /// Return a reference to the nested object
+    pub fn unwrap(&self) -> &T {
+        match self {
+            ExternalCallAccounts::Present(value) => value,
+            _ => panic!("unwrap called at variant without a nested object"),
+        }
+    }
 }
 
 impl Recurse for CallArgs {
@@ -1234,7 +1292,7 @@ impl Recurse for CallArgs {
         if let Some(value) = &self.value {
             value.recurse(cx, f);
         }
-        if let Some(accounts) = &self.accounts {
+        if let ExternalCallAccounts::Present(accounts) = &self.accounts {
             accounts.recurse(cx, f);
         }
         if let Some(flags) = &self.flags {
