@@ -80,8 +80,7 @@ pub enum Expr {
 
     Id {
         loc: Loc,
-        ty: Type,
-        var_no: usize,
+        id: usize,
     },
 
     /*************************** Constants ***************************/
@@ -112,66 +111,62 @@ pub enum Expr {
     /*************************** Casts ***************************/
     Cast {
         loc: Loc,
-        ty: Type,
         operand: Box<Operand>,
+        to_ty: Type,
     },
     BytesCast {
         loc: Loc,
-        ty: Type,
-        from: Type,
         operand: Box<Operand>,
+        to_ty: Type,
     },
     // Used for signed integers: int8 -> int16
     // https://en.wikipedia.org/wiki/Sign_extension
     SignExt {
         loc: Loc,
-        ty: Type,
         operand: Box<Operand>,
+        to_ty: Type,
     },
     // extending the length, only for unsigned int
     ZeroExt {
         loc: Loc,
-        ty: Type,
         operand: Box<Operand>,
+        to_ty: Type,
     },
     // truncating integer into a shorter one
     Trunc {
         loc: Loc,
-        ty: Type,
         operand: Box<Operand>,
+        to_ty: Type,
     },
 
-    /*************************** Memory Alloc/Access ***************************/
+    /*************************** Memory Alloc ***************************/
     AllocDynamicBytes {
         loc: Loc,
         ty: Type,
         size: Box<Operand>,
         initializer: Option<Vec<u8>>,
     },
+
+    /*************************** Memory Access ***************************/
     // address-of
     GetRef {
         loc: Loc,
-        ty: Type,
         operand: Box<Operand>,
     },
     // value-of-address
     Load {
         loc: Loc,
-        ty: Type,
         operand: Box<Operand>,
     },
     // Used for accessing struct member
     StructMember {
         loc: Loc,
-        ty: Type,
         operand: Box<Operand>,
         member: usize,
     },
     // Array subscripting: <array>[<index>]
     Subscript {
         loc: Loc,
-        elem_ty: Type,
-        array_ty: Type,
         arr: Box<Operand>,
         index: Box<Operand>,
     },
@@ -183,7 +178,6 @@ pub enum Expr {
     // get the nth param in the current function call stack
     FunctionArg {
         loc: Loc,
-        ty: Type,
         arg_no: usize,
     },
 
@@ -193,14 +187,11 @@ pub enum Expr {
         args: Vec<(FormatArg, Operand)>,
     },
     InternalFunctionCfg {
-        ty: Type,
         cfg_no: usize,
-        cfg_name: &'static str,
     },
     // hash function
     Keccak256 {
         loc: Loc,
-        ty: Type,
         args: Vec<Operand>,
     },
     StringCompare {
@@ -220,7 +211,6 @@ pub enum Expr {
     StorageArrayLength {
         loc: Loc,
         array: Box<Operand>,
-        elem_ty: Type,
     },
     // External call: represents a hard coded mem location
     ReturnData {
@@ -304,11 +294,24 @@ impl fmt::Display for Expr {
                 right,
                 ..
             } => write!(f, "{}{}", op, right),
-            Expr::Id { var_no, .. } => write!(f, "%{}", var_no),
-            Expr::ArrayLiteral { ty, values, .. } | Expr::ConstArrayLiteral { ty, values, .. } => {
+            Expr::Id { id, .. } => write!(f, "%{}", id),
+            Expr::ArrayLiteral { ty, values, .. } => {
                 // for array ty: uint8, dimensions: [2][2], values [1, 2, %3], we want to print
                 // uint8[2][2] [1, 2, %3]
                 write!(f, "{}", ty)?;
+                write!(f, " [")?;
+                values.iter().enumerate().for_each(|(i, val)| {
+                    if i != 0 {
+                        write!(f, ", ").unwrap();
+                    }
+                    write!(f, "{}", val).unwrap();
+                });
+                write!(f, "]")
+            }
+            Expr::ConstArrayLiteral { ty, values, .. } => {
+                // for array ty: uint8, dimensions: [2][2], values [1, 2, %3], we want to print
+                // const uint8[2][2] [1, 2, %3]
+                write!(f, "const {}", ty)?;
                 write!(f, " [")?;
                 values.iter().enumerate().for_each(|(i, val)| {
                     if i != 0 {
@@ -343,17 +346,12 @@ impl fmt::Display for Expr {
                 write!(f, " }}")
             }
             Expr::Cast {
-                ty, operand: op, ..
+                operand: op, to_ty, ..
             } => {
                 // example: cast %1 to uint8 can be written as: (%1 as uint8)
-                write!(f, "({} as {})", op, ty)
+                write!(f, "(cast {} as {})", op, to_ty)
             }
-            Expr::BytesCast {
-                ty,
-                from,
-                operand: expr,
-                ..
-            } => {
+            Expr::BytesCast { operand, to_ty, .. } => {
                 // example: casting from a dynamic bytes to a fixed bytes:
                 //          %1 of ptr<bytes2> to bytes4
                 //          can be written as: (bytes* %1 as bytes4)
@@ -361,25 +359,25 @@ impl fmt::Display for Expr {
                 // example: casting from a fixed bytes to a dynamic bytes:
                 //          %1 of bytes4 to ptr<bytes8>
                 //          can be written as: (bytes4 %1 as bytes8*)
-                write!(f, "({} {} as {})", from, expr, ty)
+                write!(f, "(cast {} as {})", operand, to_ty)
             }
-            Expr::SignExt { ty, operand, .. } => {
+            Expr::SignExt { to_ty, operand, .. } => {
                 // example: sign extending a int8 to int16:
                 //          %1 of int8 to int16
                 //          can be written as: (sext %1 to int16)
-                write!(f, "(sext {} to {})", operand, ty)
+                write!(f, "(sext {} to {})", operand, to_ty)
             }
-            Expr::ZeroExt { ty, operand, .. } => {
+            Expr::ZeroExt { to_ty, operand, .. } => {
                 // example: zero extending a uint8 to uint16:
                 //          %1 of uint8 to uint16
                 //          can be written as: (zext %1 to uint16)
-                write!(f, "(zext {} to {})", operand, ty)
+                write!(f, "(zext {} to {})", operand, to_ty)
             }
-            Expr::Trunc { ty, operand, .. } => {
+            Expr::Trunc { operand, to_ty, .. } => {
                 // example: truncating a uint16 to uint8:
                 //          %1 of uint16 to uint8
                 //          can be written as: (trunc %1 to uint8)
-                write!(f, "(trunc {} to {})", operand, ty)
+                write!(f, "(trunc {} to {})", operand, to_ty)
             }
             Expr::AllocDynamicBytes {
                 ty: Type::Ptr(ty),
@@ -423,19 +421,11 @@ impl fmt::Display for Expr {
             }
             // example: uint8 %1->1
             Expr::StructMember {
-                ty,
-                operand,
-                member,
-                ..
-            } => write!(f, "{} {}->{}", ty, operand, member),
-            Expr::Subscript {
-                array_ty,
-                arr,
-                index,
-                ..
-            } => {
+                operand, member, ..
+            } => write!(f, "{}->{}", operand, member),
+            Expr::Subscript { arr, index, .. } => {
                 // example: ptr<uint8[2]> %1[uint8(0)]
-                write!(f, "{} {}[{}]", array_ty, arr, index)
+                write!(f, "{}[{}]", arr, index)
             }
             Expr::AdvancePointer {
                 pointer,
@@ -445,10 +435,10 @@ impl fmt::Display for Expr {
                 // example: ptr_add(%1, %2)
                 write!(f, "ptr_add({}, {})", pointer, bytes_offset)
             }
-            Expr::FunctionArg { ty, arg_no, .. } => {
+            Expr::FunctionArg { arg_no, .. } => {
                 // example: the 2nd arg of type uint8
                 //          (uint8 arg#2)
-                write!(f, "({} arg#{})", ty, arg_no)
+                write!(f, "arg#{}", arg_no)
             }
             Expr::FormatString { args, .. } => {
                 write!(f, "fmt_str(")?;
@@ -472,7 +462,7 @@ impl fmt::Display for Expr {
                 });
                 write!(f, ")")
             }
-            Expr::InternalFunctionCfg { cfg_name, .. } => write!(f, "function {}", cfg_name),
+            Expr::InternalFunctionCfg { cfg_no, .. } => write!(f, "function#{}", cfg_no),
             Expr::Keccak256 { args, .. } => {
                 // example: keccak256(%1, %2)
                 write!(f, "keccak256(")?;
@@ -512,9 +502,9 @@ impl fmt::Display for Expr {
                 };
                 write!(f, "strcat({}, {})", left_str, right_str)
             }
-            Expr::StorageArrayLength { array, elem_ty, .. } => {
+            Expr::StorageArrayLength { array, .. } => {
                 // example: storage_arr_len(uint8[] %1)
-                write!(f, "storage_arr_len({}[] {})", elem_ty, array)
+                write!(f, "storage_arr_len({})", array)
             }
             Expr::ReturnData { .. } => write!(f, "(extern_call_ret_data)"),
             _ => panic!("unsupported expr: {:?}", self),

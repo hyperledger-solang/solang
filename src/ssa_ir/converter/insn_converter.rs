@@ -34,9 +34,9 @@ impl Converter {
                     loc: loc.clone(),
                     res: res.clone(),
                     expr: Expr::Cast {
-                        ty: dest_ty.clone(),
                         loc: Loc::Codegen,
                         operand: Box::new(expr_operand),
+                        to_ty: dest_ty.clone(),
                     },
                 });
 
@@ -73,7 +73,6 @@ impl Converter {
                 insns.append(&mut value_insns);
                 insns.push(Insn::PushMemory {
                     res: res.clone(),
-                    ty: Type::try_from(ty)?,
                     array: array.clone(),
                     value: value_op,
                 });

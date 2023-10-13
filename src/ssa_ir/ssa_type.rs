@@ -47,15 +47,9 @@ pub enum Type {
 
 #[derive(Clone, Debug)]
 pub enum InternalCallTy {
-    Static {
-        cfg_no: usize,
-        cfg_name: &'static str,
-    },
+    Static { cfg_no: usize },
     Dynamic(Operand),
-    Builtin {
-        ast_func_no: usize,
-        ast_func_name: &'static str,
-    },
+    Builtin { ast_func_no: usize },
 }
 
 #[derive(Clone, Debug)]
@@ -193,5 +187,17 @@ impl fmt::Display for Type {
             }
             _ => todo!("{:?}", self),
         }
+    }
+}
+
+impl PhiInput {
+    pub fn new(operand: Operand, block_no: usize) -> Self {
+        Self { operand, block_no }
+    }
+}
+
+impl fmt::Display for PhiInput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[{}, block#{}]", self.operand, self.block_no)
     }
 }

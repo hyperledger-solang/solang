@@ -235,8 +235,7 @@ fn test_stringfy_id_expr() {
     assert_eq!(
         Expr::Id {
             loc: Loc::Codegen,
-            ty: Type::Bool,
-            var_no: 1,
+            id: 1,
         }
         .to_string(),
         "%1"
@@ -340,6 +339,33 @@ fn test_stringfy_array_literal_expr() {
         .to_string(),
         "int8[2][2][2] [int8(1), int8(2), int8(3), int8(4), int8(5), int8(6), int8(7), int8(8)]"
     );
+
+    assert_eq!(
+        Expr::ConstArrayLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Array(
+                Box::new(Type::Int(8)),
+                vec![
+                    ast::ArrayLength::Fixed(BigInt::from(2)),
+                    ast::ArrayLength::Fixed(BigInt::from(2)),
+                    ast::ArrayLength::Fixed(BigInt::from(2))
+                ]
+            ),
+            dimensions: vec![2, 2, 2],
+            values: vec![
+                num_literal(1, true, 8),
+                num_literal(2, true, 8),
+                num_literal(3, true, 8),
+                num_literal(4, true, 8),
+                num_literal(5, true, 8),
+                num_literal(6, true, 8),
+                num_literal(7, true, 8),
+                num_literal(8, true, 8)
+            ],
+        }
+        .to_string(),
+        "const int8[2][2][2] [int8(1), int8(2), int8(3), int8(4), int8(5), int8(6), int8(7), int8(8)]"
+    );
 }
 
 #[test]
@@ -396,11 +422,11 @@ fn test_stringfy_cast_expr() {
     assert_eq!(
         Expr::Cast {
             loc: Loc::Codegen,
-            ty: Type::Uint(16),
             operand: Box::new(identifier(1)),
+            to_ty: Type::Uint(16),
         }
         .to_string(),
-        "(%1 as uint16)"
+        "(cast %1 as uint16)"
     );
 }
 
@@ -409,12 +435,11 @@ fn test_stringfy_bytes_cast_expr() {
     assert_eq!(
         Expr::BytesCast {
             loc: Loc::Codegen,
-            ty: Type::Bytes(4),
-            from: Type::Bytes(2),
             operand: Box::new(identifier(1)),
+            to_ty: Type::Bytes(4),
         }
         .to_string(),
-        "(bytes2 %1 as bytes4)"
+        "(cast %1 as bytes4)"
     );
 }
 
@@ -426,8 +451,8 @@ fn test_stringfy_sext_expr() {
     assert_eq!(
         Expr::SignExt {
             loc: Loc::Codegen,
-            ty: Type::Int(16),
             operand: Box::new(identifier(1)),
+            to_ty: Type::Int(16),
         }
         .to_string(),
         "(sext %1 to int16)"
@@ -442,8 +467,8 @@ fn test_stringfy_zext_expr() {
     assert_eq!(
         Expr::ZeroExt {
             loc: Loc::Codegen,
-            ty: Type::Uint(16),
             operand: Box::new(identifier(1)),
+            to_ty: Type::Uint(16),
         }
         .to_string(),
         "(zext %1 to uint16)"
@@ -458,8 +483,8 @@ fn test_stringfy_trunc_expr() {
     assert_eq!(
         Expr::Trunc {
             loc: Loc::Codegen,
-            ty: Type::Uint(8),
             operand: Box::new(identifier(1)),
+            to_ty: Type::Uint(8),
         }
         .to_string(),
         "(trunc %1 to uint8)"
@@ -504,7 +529,6 @@ fn test_stringfy_get_ref_expr() {
     assert_eq!(
         Expr::GetRef {
             loc: Loc::Codegen,
-            ty: Type::Int(8),
             operand: Box::new(identifier(1)),
         }
         .to_string(),
@@ -519,7 +543,6 @@ fn test_stringfy_load_expr() {
     assert_eq!(
         Expr::Load {
             loc: Loc::Codegen,
-            ty: Type::Int(8),
             operand: Box::new(identifier(1)),
         }
         .to_string(),
@@ -534,12 +557,11 @@ fn test_stringfy_struct_member_expr() {
     assert_eq!(
         Expr::StructMember {
             loc: Loc::Codegen,
-            ty: Type::Int(8),
             member: 3,
             operand: Box::new(identifier(1)),
         }
         .to_string(),
-        "int8 %1->3"
+        "%1->3"
     );
 }
 
@@ -550,48 +572,33 @@ fn test_stringfy_subscript_expr() {
     assert_eq!(
         Expr::Subscript {
             loc: Loc::Codegen,
-            elem_ty: Type::Uint(8),
-            array_ty: Type::Ptr(Box::new(Type::Array(
-                Box::new(Type::Uint(8)),
-                vec![ast::ArrayLength::Fixed(BigInt::from(2))]
-            ))),
             arr: Box::new(identifier(1)),
             index: Box::new(num_literal!(0)),
         }
         .to_string(),
-        "ptr<uint8[2]> %1[uint8(0)]"
+        "%1[uint8(0)]"
     );
 
     // example: ptr<uint8[]> %1[uint8(0)]
     assert_eq!(
         Expr::Subscript {
             loc: Loc::Codegen,
-            elem_ty: Type::Uint(8),
-            array_ty: Type::Ptr(Box::new(Type::Array(
-                Box::new(Type::Uint(8)),
-                vec![ast::ArrayLength::Dynamic]
-            ))),
             arr: Box::new(identifier(1)),
             index: Box::new(num_literal!(0)),
         }
         .to_string(),
-        "ptr<uint8[]> %1[uint8(0)]"
+        "%1[uint8(0)]"
     );
 
     // example: ptr<uint8[?]> %1[uint8(0)]
     assert_eq!(
         Expr::Subscript {
             loc: Loc::Codegen,
-            elem_ty: Type::Uint(8),
-            array_ty: Type::Ptr(Box::new(Type::Array(
-                Box::new(Type::Uint(8)),
-                vec![ast::ArrayLength::AnyFixed]
-            ))),
             arr: Box::new(identifier(1)),
             index: Box::new(num_literal!(0)),
         }
         .to_string(),
-        "ptr<uint8[?]> %1[uint8(0)]"
+        "%1[uint8(0)]"
     );
 }
 
@@ -627,11 +634,10 @@ fn test_stringfy_function_arg_expr() {
     assert_eq!(
         Expr::FunctionArg {
             loc: Loc::Codegen,
-            ty: Type::Uint(8),
             arg_no: 2,
         }
         .to_string(),
-        "(uint8 arg#2)"
+        "arg#2"
     );
 }
 
@@ -699,40 +705,19 @@ fn test_stringfy_format_string_expr() {
 // InternalFunctionCfg
 #[test]
 fn test_stringfy_internal_function_cfg_expr() {
-    fn ignore_ty() -> Type {
-        Type::FunctionPtr {
-            params: vec![],
-            returns: vec![],
-        }
-    }
-
-    fn ignore_cfg_no() -> usize {
-        0
-    }
-
     assert_eq!(
-        Expr::InternalFunctionCfg {
-            ty: ignore_ty(),
-            cfg_no: ignore_cfg_no(),
-            cfg_name: "func_123",
-        }
-        .to_string(),
-        "function func_123"
+        Expr::InternalFunctionCfg { cfg_no: 123 }.to_string(),
+        "function#123"
     );
 }
 
 // Keccak256
 #[test]
 fn test_stringfy_keccak256_expr() {
-    fn ignore_ty() -> Type {
-        Type::Bytes(32)
-    }
-
     // example: keccak256(%1, %2)
     assert_eq!(
         Expr::Keccak256 {
             loc: Loc::Codegen,
-            ty: ignore_ty(),
             args: vec![identifier(1), identifier(2)],
         }
         .to_string(),
@@ -820,10 +805,9 @@ fn test_stringfy_storage_array_length() {
         Expr::StorageArrayLength {
             loc: Loc::Codegen,
             array: Box::new(identifier(1)),
-            elem_ty: Type::Uint(8),
         }
         .to_string(),
-        "storage_arr_len(uint8[] %1)"
+        "storage_arr_len(%1)"
     );
 }
 

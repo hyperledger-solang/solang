@@ -2,7 +2,6 @@ use crate::codegen;
 use crate::sema::ast::CallTy;
 use crate::ssa_ir::expr::{Expr, Operand};
 use crate::ssa_ir::ssa_type::InternalCallTy;
-use crate::ssa_ir::ssa_type::Type;
 use solang_parser::pt::Loc;
 use std::fmt;
 use std::fmt::Formatter;
@@ -37,13 +36,11 @@ pub enum Insn {
     },
     PushMemory {
         res: usize,
-        ty: Type,
         array: usize,
         value: Operand,
     },
     PopMemory {
         res: usize,
-        ty: Type,
         array: usize,
         loc: Loc,
     },
@@ -65,15 +62,12 @@ pub enum Insn {
     /*************************** Storage Access ***************************/
     LoadStorage {
         res: usize,
-        ty: Type,
         storage: Operand,
     },
     ClearStorage {
-        ty: Type,
         storage: Operand,
     },
     SetStorage {
-        ty: Type,
         value: Operand,
         storage: Operand,
     },
@@ -84,13 +78,11 @@ pub enum Insn {
     },
     PushStorage {
         res: usize,
-        ty: Type,
         value: Option<Operand>,
         storage: Operand,
     },
     PopStorage {
         res: Option<usize>,
-        ty: Type,
         storage: Operand,
     },
 
@@ -98,7 +90,6 @@ pub enum Insn {
     // Call internal function, either static dispatch or dynamic dispatch
     Call {
         res: Vec<usize>,
-        return_tys: Vec<Type>,
         call: InternalCallTy,
         args: Vec<Operand>,
     },
@@ -107,8 +98,8 @@ pub enum Insn {
         operand: Operand,
     },
     MemCopy {
-        source: Operand,
-        destination: Operand,
+        src: Operand,
+        dest: Operand,
         bytes: Operand,
     },
 
@@ -191,7 +182,6 @@ pub enum Insn {
 
     /*************************** Phi Function ***************************/
     Phi {
-        ty: Type,
         res: usize,
         vars: Vec<PhiInput>,
     },
@@ -212,21 +202,14 @@ impl fmt::Display for Insn {
                 write!(f, "store {} to {};", data, dest)
             }
             Insn::PushMemory {
-                res,
-                ty,
-                array,
-                value,
-                ..
+                res, array, value, ..
             } => {
-                write!(
-                    f,
-                    "%{}, %{} = push_mem ty:{} value:{};",
-                    res, array, ty, value
-                )
+                // %101 = push_mem ptr<int32[10]> %3 uint32(1);
+                write!(f, "%{} = push_mem %{} {};", res, array, value)
             }
-            Insn::PopMemory { res, ty, array, .. } => {
-                // "%{}, %{} = pop array ty:{}",
-                write!(f, "%{}, %{} = pop_mem ty:{};", res, array, ty)
+            Insn::PopMemory { res, array, .. } => {
+                // %101 = pop_mem ptr<int32[10]> %3;
+                write!(f, "%{} = pop_mem %{};", res, array)
             }
             Insn::Constructor {
                 success,
@@ -247,8 +230,13 @@ impl fmt::Display for Insn {
                     None => format!("%{}, _", res),
                 };
                 let rhs_constructor = match constructor_no {
-                    Some(constructor_no) => format!("constructor(no: {})", constructor_no),
-                    None => format!("constructor(no: _)"),
+                    Some(constructor_no) => {
+                        format!(
+                            "constructor(no: {}, contract_no:{})",
+                            constructor_no, contract_no
+                        )
+                    }
+                    None => format!("constructor(no: _, contract_no:{})", contract_no),
                 };
                 let rhs_salt = match salt {
                     Some(salt) => format!("salt:{}", salt),
@@ -267,14 +255,14 @@ impl fmt::Display for Insn {
                     Some(seeds) => format!("seeds:{}", seeds),
                     None => format!(""),
                 };
-                let rhs_encoded_args = format!("encoded-buffer: {}", encoded_args);
+                let rhs_encoded_args = format!("encoded-buffer:{}", encoded_args);
                 let rhs_accounts = match accounts {
                     Some(accounts) => format!("accounts:{}", accounts),
                     None => format!(""),
                 };
                 write!(
                     f,
-                    "{} = {} {} {} {} {} {} {} {} {};",
+                    "{} = {} {} {} {} {} {} {} {};",
                     lhs,
                     rhs_constructor,
                     rhs_salt,
@@ -284,25 +272,16 @@ impl fmt::Display for Insn {
                     rhs_seeds,
                     rhs_encoded_args,
                     rhs_accounts,
-                    contract_no
                 )
             }
-            Insn::LoadStorage {
-                res, ty, storage, ..
-            } => {
-                write!(f, "%{} = load_storage slot({}) ty:{};", res, storage, ty)
+            Insn::LoadStorage { res, storage, .. } => {
+                write!(f, "%{} = load_storage {};", res, storage)
             }
-            Insn::ClearStorage { ty, storage, .. } => {
-                write!(f, "clear_storage slot({}) ty:{};", storage, ty)
+            Insn::ClearStorage { storage, .. } => {
+                write!(f, "clear_storage {};", storage)
             }
-            Insn::SetStorage {
-                ty, value, storage, ..
-            } => {
-                write!(
-                    f,
-                    "set_storage slot({}) ty:{} value:{};",
-                    storage, ty, value
-                )
+            Insn::SetStorage { value, storage, .. } => {
+                write!(f, "set_storage {} {};", storage, value)
             }
             Insn::SetStorageBytes {
                 value,
@@ -310,16 +289,15 @@ impl fmt::Display for Insn {
                 offset,
                 ..
             } => {
-                // "set storage slot({}) offset:{} = {}",
+                // set_storage_bytes {} offset:{} value:{}
                 write!(
                     f,
-                    "set_storage_bytes slot({}) offset:{} value:{};",
+                    "set_storage_bytes {} offset:{} value:{};",
                     storage, offset, value
                 )
             }
             Insn::PushStorage {
                 res,
-                ty,
                 value,
                 storage,
                 ..
@@ -329,43 +307,31 @@ impl fmt::Display for Insn {
                     Some(value) => format!("{}", value),
                     None => format!("empty"),
                 };
-                write!(
-                    f,
-                    "%{} = push_storage ty:{} slot:{} value:{};",
-                    res, ty, storage, rhs
-                )
+                write!(f, "%{} = push_storage {} {};", res, storage, rhs)
             }
-            Insn::PopStorage {
-                res, ty, storage, ..
-            } =>
+            Insn::PopStorage { res, storage, .. } =>
             // "%{} = pop storage ty:{} slot({})"
             {
                 match res {
-                    Some(res) => write!(f, "%{} = pop_storage ty:{} slot({});", res, ty, storage),
-                    None => write!(f, "pop_storage ty:{} slot({});", ty, storage),
+                    Some(res) => write!(f, "%{} = pop_storage {};", res, storage),
+                    None => write!(f, "pop_storage {};", storage),
                 }
             }
-            Insn::Call {
-                res,
-                return_tys,
-                call,
-                args,
-            } => {
-                // lhs: uint8 %0, uint32 %1, ...
+            Insn::Call { res, call, args } => {
+                // lhs: %0, %1, ...
                 let lhs = res
                     .iter()
-                    .zip(return_tys.iter())
-                    .map(|(res, ty)| format!("{} %{}", ty, res))
+                    .map(|id| format!("%{}", id))
                     .collect::<Vec<String>>()
                     .join(", ");
 
                 // rhs: call [builtin | static | dynamic] [call] args: %0, %1, ...
                 let rhs_call = match call {
-                    InternalCallTy::Builtin { ast_func_name, .. } => {
-                        format!("builtin {}", ast_func_name)
+                    InternalCallTy::Builtin { ast_func_no, .. } => {
+                        format!("builtin#{}", ast_func_no)
                     }
-                    InternalCallTy::Static { cfg_name, .. } => format!("static {}", cfg_name),
-                    InternalCallTy::Dynamic(cfg) => format!("dynamic {}", cfg),
+                    InternalCallTy::Static { cfg_no, .. } => format!("function#{}", cfg_no),
+                    InternalCallTy::Dynamic(op) => format!("{}", op),
                 };
 
                 let rhs_args = args
@@ -374,24 +340,17 @@ impl fmt::Display for Insn {
                     .collect::<Vec<String>>()
                     .join(", ");
 
-                write!(f, "{} = call {} args: {};", lhs, rhs_call, rhs_args)
+                write!(f, "{} = call {}({});", lhs, rhs_call, rhs_args)
             }
             Insn::Print { operand, .. } => {
                 // "print {}"
-                write!(f, "print {}", operand)
+                write!(f, "print {};", operand)
             }
             Insn::MemCopy {
-                source,
-                destination,
-                bytes,
-                ..
+                src, dest, bytes, ..
             } => {
-                // "memcpy src: {}, dest: {}, bytes_len: {}"
-                write!(
-                    f,
-                    "memcpy src: {}, dest: {}, bytes_len: {};",
-                    source, destination, bytes
-                )
+                // memcopy %4 from %3 for uint8(11);
+                write!(f, "memcopy {} to {} for {} bytes;", src, dest, bytes)
             }
             Insn::ExternalCall {
                 success,
@@ -407,45 +366,44 @@ impl fmt::Display for Insn {
                 ..
             } => {
                 let lhs = match success {
-                    Some(success) => success.to_string(),
-                    None => String::from("_"),
+                    Some(success) => format!("%{} = ", success),
+                    None => String::from(""),
                 };
                 let rhs_address = match address {
-                    Some(address) => address.to_string(),
-                    None => String::from(""),
+                    Some(address) => format!(" address:{}", address),
+                    None => String::from(" _"),
                 };
                 let rhs_accounts = match accounts {
-                    Some(accounts) => accounts.to_string(),
-                    None => String::from(""),
+                    Some(accounts) => format!(" accounts:{}", accounts),
+                    None => String::from(" _"),
                 };
                 let rhs_seeds = match seeds {
-                    Some(seeds) => seeds.to_string(),
-                    None => String::from(""),
+                    Some(seeds) => format!(" seeds:{}", seeds),
+                    None => String::from(" _"),
                 };
-                let (rhs_contract_no, rhs_function_no) = match contract_function_no {
+                let rhs_contract_function_no = match contract_function_no {
                     Some((contract_no, function_no)) => {
-                        (contract_no.to_string(), function_no.to_string())
+                        format!(" contract_no:{}, function_no:{}", contract_no, function_no)
                     }
-                    None => (String::from(""), String::from("")),
+                    None => String::from(" _"),
                 };
                 let rhs_flags = match flags {
-                    Some(flags) => flags.to_string(),
-                    None => String::from(""),
+                    Some(flags) => format!(" flags:{}", flags),
+                    None => String::from(" _"),
                 };
                 // "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{} contract|function:{} flags:{}",
                 write!(
                     f,
-                    "%{} = call_ext [{}] address:{} payload:{} value:{} gas:{} accounts:{} seeds:{} contract_no:{}, function_no:{} flags:{};",
+                    "{}call_ext [{}]{}{}{}{}{}{}{}{};",
                     lhs,
                     callty,
                     rhs_address,
-                    payload,
-                    value,
-                    gas,
+                    format!(" payload:{}", payload),
+                    format!(" value:{}", value),
+                    format!(" gas:{}", gas),
                     rhs_accounts,
                     rhs_seeds,
-                    rhs_contract_no,
-                    rhs_function_no,
+                    rhs_contract_function_no,
                     rhs_flags
                 )
             }
@@ -455,16 +413,12 @@ impl fmt::Display for Insn {
                 value,
                 ..
             } => {
-                // "{} = value transfer address:{} value:{}",
+                // "%{} = value_transfer {} to {}}",
                 let lhs = match success {
                     Some(success) => success.to_string(),
                     None => String::from("_"),
                 };
-                write!(
-                    f,
-                    "{} = value_transfer address:{} value:{};",
-                    lhs, address, value
-                )
+                write!(f, "%{} = transfer {} to {};", lhs, value, address)
             }
             Insn::SelfDestruct { recipient, .. } => {
                 // "selfdestruct {}",
@@ -476,35 +430,34 @@ impl fmt::Display for Insn {
                 event_no,
                 ..
             } => {
-                // "emit event {} topics {} data {} ",
+                // "emit event#{} to topics[{}], data: {};",
                 let rhs_topics = topics
                     .iter()
-                    .map(|topic| topic.to_string())
+                    .map(|topic| format!("{}", topic))
                     .collect::<Vec<String>>()
                     .join(", ");
                 write!(
                     f,
-                    "emit event {} topics [{}] data {};",
+                    "emit event#{} to topics[{}], data: {};",
                     event_no, rhs_topics, data
                 )
             }
             Insn::WriteBuffer {
                 buf, offset, value, ..
             } => {
-                // "writebuffer buffer:{} offset:{} value:{}",
+                // "write_buf {} offset:{} value:{}",
                 write!(f, "write_buf {} offset:{} value:{};", buf, offset, value)
             }
-            Insn::Branch { block, .. } => write!(f, "br block #{};", block),
+            Insn::Branch { block, .. } => write!(f, "br block#{};", block),
             Insn::BranchCond {
                 cond,
                 true_block,
                 false_block,
                 ..
             } => {
-                // cbr {}, block {}, block {}"
                 write!(
                     f,
-                    "cbr {}, block #{}, block #{};",
+                    "cbr {} block#{} else block#{};",
                     cond, true_block, false_block
                 )
             }
@@ -514,20 +467,15 @@ impl fmt::Display for Insn {
                 default,
                 ..
             } => {
-                /*
-                switch (cond):
-                    case 1: goto block 1;
-                    case 2: goto block 2;
-                    default: goto block 3;
-                 */
+                // switch %1 cases: [%4 => block#11, %5 => block#12, %6 => block#13] default: block#14;
                 let rhs_cases = cases
                     .iter()
-                    .map(|(cond, block)| format!("case {}: goto block #{};", cond, block))
+                    .map(|(cond, block)| format!("{} => block#{}", cond, block))
                     .collect::<Vec<String>>()
-                    .join("\n");
+                    .join(", ");
                 write!(
                     f,
-                    "switch ({}):\n\t\t{}\n\t\tdefault: goto block #{};",
+                    "switch {} cases: [{}] default: block#{};",
                     cond, rhs_cases, default
                 )
             }
@@ -541,20 +489,28 @@ impl fmt::Display for Insn {
             }
             Insn::AssertFailure { encoded_args, .. } => match encoded_args {
                 Some(encoded_args) => {
-                    write!(f, "assert_failure buffer: {};", encoded_args)
+                    write!(f, "assert_failure {};", encoded_args)
                 }
                 None => write!(f, "assert_failure;"),
             },
             Insn::Unimplemented { reachable, .. } => {
-                write!(f, "unimplemented: reachable: {};", reachable)
+                write!(
+                    f,
+                    "unimplemented: {};",
+                    if *reachable {
+                        "reachable"
+                    } else {
+                        "unreachable"
+                    }
+                )
             }
-            Insn::Phi { res, ty, vars, .. } => {
+            Insn::Phi { res, vars, .. } => {
                 let rhs_vars = vars
                     .iter()
-                    .map(|input| format!("[ {}, block #{} ]", input.operand, input.block_no))
+                    .map(|input| format!("{}", input))
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(f, "%{} = phi {} {};", res, ty, rhs_vars)
+                write!(f, "%{} = phi {};", res, rhs_vars)
             }
         }
     }
