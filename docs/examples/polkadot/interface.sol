@@ -1,39 +1,42 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+interface operator {
+    function op1(int32 a, int32 b) external returns (int32);
 
-// Interface for an operator that performs an operation on two int32 values.
-interface Operator {
-    function performOperation(int32 a, int32 b) external returns (int32);
+    function op2(int32 a, int32 b) external returns (int32);
 }
 
-contract Ferqu {
-    Operator public operator;
+contract ferqu {
+    operator op;
 
-    // Constructor that takes a boolean parameter 'doAdd'.
-    constructor(bool doAdd) {
-        if (doAdd) {
-            operator = new Adder();
+    constructor(bool do_adds) {
+        // Note: on Solana, new Contract() requires an address
+        if (do_adds) {
+            op = new m1();
         } else {
-            operator = new Subtractor();
+            op = new m2();
         }
     }
 
-    // Function to calculate the result of the operation performed by the chosen operator.
-    function calculate(int32 a, int32 b) public returns (int32) {
-        return operator.performOperation(a, b);
+    function x(int32 b) public returns (int32) {
+        return op.op1(102, b);
     }
 }
 
-// Contract for addition, implementing the 'Operator' interface.
-contract Adder is Operator {
-    function performOperation(int32 a, int32 b) public pure override returns (int32) {
+contract m1 is operator {
+    function op1(int32 a, int32 b) public override returns (int32) {
         return a + b;
     }
+
+    function op2(int32 a, int32 b) public override returns (int32) {
+        return a - b;
+    }
 }
 
-// Contract for subtraction, implementing the 'Operator' interface.
-contract Subtractor is Operator {
-    function performOperation(int32 a, int32 b) public pure override returns (int32) {
-        return a - b;
+contract m2 is operator {
+    function op1(int32 a, int32 b) public override returns (int32) {
+        return a * b;
+    }
+
+    function op2(int32 a, int32 b) public override returns (int32) {
+        return a / b;
     }
 }
