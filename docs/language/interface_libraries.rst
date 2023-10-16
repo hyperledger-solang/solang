@@ -31,6 +31,7 @@ When writing libraries there are restrictions compared to contracts:
 - A library cannot have constructors, fallback or receive function
 - A library cannot have base contracts
 - A library cannot be a base contract
+- A library cannot modify the state (should be ``view`` or ``pure``)
 - A library cannot have virtual or override functions
 - A library cannot have payable functions
 
