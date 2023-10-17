@@ -1883,6 +1883,6 @@ fn assign_chained() {
     runtime.function("foo", Vec::new());
     assert_eq!(runtime.output(), &expected_output[..]);
 
-    runtime.function("foo", Vec::new());
+    runtime.function("bar", Vec::new());
     assert_eq!(runtime.output(), &expected_output[..]);
 }
