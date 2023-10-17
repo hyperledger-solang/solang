@@ -2667,7 +2667,7 @@ pub fn assign_single(
 
             Expression::Variable {
                 loc: left.loc(),
-                ty: ty.clone(),
+                ty: ty.deref_storage().clone(), // LHS value propagation is always in memory
                 var_no: pos,
             }
         }

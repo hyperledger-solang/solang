@@ -2075,6 +2075,14 @@ impl Type {
         }
     }
 
+    /// If the type is StorageRef, get the underlying type
+    pub fn deref_storage(&self) -> &Self {
+        match self {
+            Type::StorageRef(_, r) => r,
+            _ => self,
+        }
+    }
+
     /// Give a valid name for the type which is
     pub fn to_llvm_string(&self, ns: &Namespace) -> String {
         match self {
