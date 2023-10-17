@@ -2001,7 +2001,7 @@ fn return_with_values(
                     diagnostics,
                     ResolveTo::Type(&return_ty),
                 )?;
-                let expr = expr.cast(loc, &return_ty, true, ns, diagnostics)?;
+                let expr = expr.cast(&expr_return.loc(), &return_ty, true, ns, diagnostics)?;
                 used_variable(ns, &expr, symtable);
                 exprs.push(expr);
             }

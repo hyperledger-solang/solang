@@ -183,8 +183,6 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Diagnostics {
 
     recurse_statements(&func.body, ns, &mut state);
 
-    state.diagnostic.remove_overlapping();
-
     if pt::FunctionTy::Function == func.ty && !func.is_accessor {
         if state.required_access == Access::None {
             match func.mutability {
@@ -349,6 +347,7 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         Expression::Assign { left, right, .. } => {
             right.recurse(state, read_expression);
             left.recurse(state, write_expression);
+            return false;
         }
         Expression::StorageArrayLength { loc, .. } => {
             state.data_account |= DataAccountUsage::READ;
