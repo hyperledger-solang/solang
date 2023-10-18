@@ -421,7 +421,7 @@ fn statement(
             unchecked,
             loc,
         } => {
-            symtable.new_scope();
+            symtable.enter_scope();
             let mut reachable = true;
 
             let mut context = context.clone();
@@ -495,9 +495,9 @@ fn statement(
             used_variable(ns, &expr, symtable);
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.new_scope();
+            symtable.enter_scope();
             let mut body_stmts = Vec::new();
-            loops.new_scope();
+            loops.enter_scope();
             statement(
                 body,
                 &mut body_stmts,
@@ -527,9 +527,9 @@ fn statement(
             used_variable(ns, &expr, symtable);
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.new_scope();
+            symtable.enter_scope();
             let mut body_stmts = Vec::new();
-            loops.new_scope();
+            loops.enter_scope();
             statement(
                 body,
                 &mut body_stmts,
@@ -559,7 +559,7 @@ fn statement(
 
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.new_scope();
+            symtable.enter_scope();
             let mut then_stmts = Vec::new();
             let mut reachable = statement(
                 then,
@@ -574,7 +574,7 @@ fn statement(
 
             let mut else_stmts = Vec::new();
             if let Some(stmts) = else_ {
-                symtable.new_scope();
+                symtable.enter_scope();
                 reachable |= statement(
                     stmts,
                     &mut else_stmts,
@@ -602,7 +602,7 @@ fn statement(
             Err(())
         }
         pt::Statement::For(loc, init_stmt, None, next_expr, body_stmt) => {
-            symtable.new_scope();
+            symtable.enter_scope();
 
             let mut init = Vec::new();
 
@@ -618,7 +618,7 @@ fn statement(
                 )?;
             }
 
-            loops.new_scope();
+            loops.enter_scope();
             context.enter_loop();
 
             let mut body = Vec::new();
@@ -664,7 +664,7 @@ fn statement(
             Ok(reachable)
         }
         pt::Statement::For(loc, init_stmt, Some(cond_expr), next_expr, body_stmt) => {
-            symtable.new_scope();
+            symtable.enter_scope();
 
             let mut init = Vec::new();
             let mut body = Vec::new();
@@ -695,7 +695,7 @@ fn statement(
             let cond = cond.cast(&cond_expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
             // continue goes to next, and if that does exist, cond
-            loops.new_scope();
+            loops.enter_scope();
 
             let mut body_reachable = match body_stmt {
                 Some(body_stmt) => statement(
@@ -2310,8 +2310,6 @@ fn try_catch(
         }
     };
 
-    symtable.new_scope();
-
     let mut args = match &fcall {
         Expression::ExternalFunctionCall {
             returns: func_returns,
@@ -2360,7 +2358,7 @@ fn try_catch(
         }
     };
 
-    symtable.new_scope();
+    symtable.enter_scope();
 
     let mut params = Vec::new();
     let mut broken = false;
@@ -2487,7 +2485,7 @@ fn try_catch(
 
         match clause_stmt {
             CatchClause::Simple(_, param, stmt) => {
-                symtable.new_scope();
+                symtable.enter_scope();
 
                 let mut catch_param = None;
                 let mut catch_param_pos = None;
@@ -2598,7 +2596,7 @@ fn try_catch(
                     ));
                 }
 
-                symtable.new_scope();
+                symtable.enter_scope();
 
                 let mut error_pos = None;
                 let mut error_stmt_resolved = Vec::new();
