@@ -2,7 +2,7 @@ import expect from 'expect';
 import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import {
     PublicKey, AccountMeta,
-    Keypair, Signer,
+    Keypair,
     Connection,
     LAMPORTS_PER_SOL,
     BpfLoader, Transaction,
@@ -69,6 +69,24 @@ describe('Call Anchor program from Solidity via IDL', () => {
             .remainingAccounts(remainingAccounts)
             .signers([data, payer])
             .rpc();
+
+        let seen = false;
+
+        const listenId = program.addEventListener("MyEvent", (ev) => {
+            expect(ev.data.toNumber()).toBe(102);
+            expect(ev.label).toBe("yadayada");
+            seen = true;
+        });
+
+        await program.methods.testEvent()
+            .accounts({
+                dataAccount: storage.publicKey,
+            })
+            .rpc();
+
+        program.removeEventListener(listenId);
+
+        expect(seen).toBe(true);
     });
 });
 

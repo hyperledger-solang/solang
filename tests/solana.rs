@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::borsh_encoding::{decode_at_offset, encode_arguments, BorshToken};
-use anchor_syn::idl::{Idl, IdlAccountItem};
+use anchor_syn::idl::types::{Idl, IdlAccountItem};
 use base58::{FromBase58, ToBase58};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use itertools::Itertools;

@@ -2,6 +2,7 @@
 
 use crate::{build_solidity, BorshToken};
 use borsh::BorshDeserialize;
+use borsh_derive::BorshDeserialize;
 use num_bigint::BigInt;
 
 #[test]
