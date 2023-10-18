@@ -30,10 +30,10 @@ serde = "1.0"
 serde_derive = { version = "1.0" }
 inkwell = { version = "0.2.0", features = ["target-webassembly", "no-libffi-linking", "llvm15-0"], optional = true }
 blake2-rfc = "0.2.18"
-handlebars = "4.3"
-contract-metadata = "3.0"
+handlebars = "4.4"
+contract-metadata = "3.2"
 semver = { version = "1.0", features = ["serde"] }
-tempfile = "3.4"
+tempfile = "3.8"
 libc = { version = "0.2", optional = true }
 tower-lsp = "0.20"
 tokio = { version = "1.27", features = ["rt", "io-std", "macros"] }
@@ -45,19 +45,19 @@ funty = "2.0"
 itertools = "0.11"
 num-rational = "0.4"
 indexmap = "2.0"
-once_cell = "1.17"
-solang-parser = { path = "solang-parser", version = "0.3.1" }
+once_cell = "1.18"
+solang-parser = { path = "solang-parser", version = "0.3.2" }
 codespan-reporting = "0.11"
 phf = { version = "0.11", features = ["macros"] }
 rust-lapper = "1.1"
 anchor-syn = { version = "0.29.0", features = ["idl-build"] }
 convert_case = "0.6"
-parse-display = "0.8.0"
-parity-scale-codec = "3.4"
-ink_env = "4.2.0"
-ink_metadata = "4.2.0"
-scale-info = "2.4"
-petgraph = "0.6.3"
+parse-display = "0.8"
+parity-scale-codec = "3.6"
+ink_env = "4.3.0"
+ink_metadata = "4.3.0"
+scale-info = "2.9"
+petgraph = "0.6"
 wasmparser = "0.110.0"
 wasm-encoder = "0.31"
 toml = "0.8"
@@ -72,19 +72,19 @@ forge-fmt = "0.2.0"
 num-derive = "0.4"
 wasmi = "0.31"
 # solana_rbpf makes api changes in patch versions
-solana_rbpf = "=0.6.0"
-byteorder = "1.4"
+solana_rbpf = "=0.6.1"
+byteorder = "1.5"
 assert_cmd = "2.0"
 bincode = "1.3"
 ed25519-dalek = { version = "2", features = ["rand_core"] }
 path-slash = "0.2"
-pretty_assertions = "1.3"
+pretty_assertions = "1.4"
 byte-slice-cast = "1.2"
 borsh = "1.1"
 borsh-derive = "1.1"
 rayon = "1"
-walkdir = "2.3.3"
-ink_primitives = "4.2.0"
+walkdir = "2.4"
+ink_primitives = "4.3.0"
 wasm_host_attr = { path = "tests/wasm_host_attr" }
 num-bigint = { version = "0.4", features = ["rand", "serde"]}
 
