@@ -419,13 +419,15 @@ fn statement(
         pt::Statement::Block {
             statements,
             unchecked,
-            ..
+            loc,
         } => {
             symtable.new_scope();
             let mut reachable = true;
 
             let mut context = context.clone();
             context.unchecked |= *unchecked;
+
+            let mut resolved_stmts = Vec::new();
 
             for stmt in statements {
                 if !reachable {
@@ -435,10 +437,24 @@ fn statement(
                     ));
                     return Err(());
                 }
-                reachable = statement(stmt, res, &mut context, symtable, loops, ns, diagnostics)?;
+                reachable = statement(
+                    stmt,
+                    &mut resolved_stmts,
+                    &mut context,
+                    symtable,
+                    loops,
+                    ns,
+                    diagnostics,
+                )?;
             }
 
             symtable.leave_scope();
+
+            res.push(Statement::Block {
+                loc: *loc,
+                unchecked: *unchecked,
+                statements: resolved_stmts,
+            });
 
             Ok(reachable)
         }
