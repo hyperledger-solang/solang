@@ -8,12 +8,14 @@ use super::{
     symtable::Symtable,
     using, variables, ContractDefinition,
 };
+use crate::sema::ast::SolanaAccount;
 use crate::sema::expression::constructor::match_constructor_to_args;
 use crate::{sema::ast::Namespace, sema::unused_variable::emit_warning_local_variable};
+use indexmap::{IndexMap, IndexSet};
 use num_bigint::BigInt;
 use num_traits::Zero;
 use once_cell::unsync::OnceCell;
-use solang_parser::diagnostics::Diagnostic;
+use solang_parser::diagnostics::{Diagnostic, Note};
 use solang_parser::pt::FunctionTy;
 use solang_parser::pt::{self, CodeLocation};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -599,7 +601,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 ns.contracts[contract_no]
                     .virtual_functions
                     .entry(signature)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(function_no); // there is always at least 1 element in the vector
             }
 
@@ -651,7 +653,6 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
             .skip(1)
             .map(|(_, function_no)| {
                 let func = &ns.functions[*function_no];
-
                 ast::Note {
                     loc: func.loc,
                     message: format!("previous definition of function '{}'", func.name),
@@ -833,6 +834,108 @@ fn base_function_compatible(
         // rust compile wants this, already handled in first arm
         (None, None) => (),
     }
+
+    let mut no_correspondence: Vec<(pt::Loc, &String)> = Vec::new();
+    let mut incorrect_flag: IndexSet<(pt::Loc, pt::Loc, &String)> = IndexSet::new();
+    let func_accounts = &*func.solana_accounts.borrow();
+    let base_accounts = &*base.solana_accounts.borrow();
+    let mut correct_ordering = true;
+
+    let (correct, func_acc_locations) = check_override_accounts_compatible(
+        base_accounts,
+        func_accounts,
+        &mut no_correspondence,
+        &mut incorrect_flag,
+        false,
+    );
+    correct_ordering &= correct;
+
+    let (correct, base_acc_locations) = check_override_accounts_compatible(
+        func_accounts,
+        base_accounts,
+        &mut no_correspondence,
+        &mut incorrect_flag,
+        true,
+    );
+    correct_ordering &= correct;
+
+    if !no_correspondence.is_empty() {
+        let notes = no_correspondence
+            .iter()
+            .map(|(loc, account_name)| Note {
+                loc: *loc,
+                message: format!("corresponding account '{}' is missing", account_name),
+            })
+            .collect::<Vec<Note>>();
+
+        diagnostics.push(Diagnostic::error_with_notes(
+            func.loc,
+            "functions must have the same declared accounts for correct overriding".to_string(),
+            notes,
+        ));
+    }
+
+    if !incorrect_flag.is_empty() {
+        for (loc_1, loc_2, account_name) in &incorrect_flag {
+            diagnostics.push(Diagnostic::error_with_note(
+                *loc_1,
+                format!(
+                    "account '{}' must be declared with the same annotation for overriding",
+                    account_name
+                ),
+                *loc_2,
+                "location of other declaration".to_string(),
+            ));
+        }
+    }
+
+    if !correct_ordering {
+        diagnostics.push(Diagnostic::error_with_note(
+            func_acc_locations.unwrap(),
+            "accounts must be declared in the same order for overriding".to_string(),
+            base_acc_locations.unwrap(),
+            "location of base function accounts".to_string(),
+        ));
+    }
+}
+
+/// Checks if the accounts from the virtual function and the overriding one are compatible.
+/// Returns true if the accounts have been declared in the same order in both functions and
+/// the location of all the account declarations.
+fn check_override_accounts_compatible<'a>(
+    func_accounts: &'a IndexMap<String, SolanaAccount>,
+    other_accounts: &'a IndexMap<String, SolanaAccount>,
+    no_correspondence: &mut Vec<(pt::Loc, &'a String)>,
+    incorrect_flag: &mut IndexSet<(pt::Loc, pt::Loc, &'a String)>,
+    reverse: bool,
+) -> (bool, Option<pt::Loc>) {
+    let mut correct_order = true;
+    let mut locations = if let Some((_, acc)) = other_accounts.get_index(0) {
+        Some(acc.loc)
+    } else {
+        None
+    };
+
+    for (account_no, (account_name, account_flags)) in other_accounts.iter().enumerate() {
+        locations.as_mut().unwrap().union(&account_flags.loc);
+        if let Some((other_no, _, other_account)) = func_accounts.get_full(account_name) {
+            if other_account.is_signer != account_flags.is_signer
+                || other_account.is_writer != account_flags.is_writer
+            {
+                if reverse {
+                    incorrect_flag.insert((other_account.loc, account_flags.loc, account_name));
+                } else {
+                    incorrect_flag.insert((account_flags.loc, other_account.loc, account_name));
+                }
+            } else if account_no != other_no {
+                correct_order = false;
+            }
+        } else {
+            no_correspondence.push((account_flags.loc, account_name));
+        }
+    }
+
+    (correct_order, locations)
 }
 
 /// Function body which should be resolved.

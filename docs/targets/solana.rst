@@ -47,10 +47,11 @@ Runtime
 - Function selectors are eight bytes wide and known as *discriminators*.
 - Solana provides different builtins, e.g. ``block.slot`` and ``tx.accounts``.
 - When calling an external function or invoking a contract's constructor, one
-  :ref:`needs to provide <solana_constructor>` the necessary accounts for the transaction.
+  :ref:`needs to provide <solana_cpi_accounts>` the necessary accounts for the transaction.
 - The keyword ``this`` returns the contract's program account, also know as program id.
 - Contracts :ref:`cannot be types <contracts_not_types>` on Solana and :ref:`calls to contracts <solana_contract_call>`
   follow a different syntax.
+- Accounts can be declared on functions using :ref:`annotations <account_management>`.
 
 
 Compute budget
@@ -399,13 +400,36 @@ an argument. This annotation defines a Solana account that is going to pay for t
 account. The syntax ``@payer(my_account)`` declares an account named ``my_account``, which will be
 required for every call to the constructor.
 
-In any Solana cross program invocation, including constructor calls, all the accounts a transaction needs must be
-informed. Whenever possible, the compiler will automatically generate the ``AccountMeta`` array that satisfies
-this requirement. Currently, that only works if the constructor call is done in an function declared external, as shown
-in the example below. In any other case, the ``AccountMeta`` array must be manually created, following an account ordering
-the IDL file specifies.
+Similarly, for external functions in a contract, one can declare the necessary accounts, using function annotations.
+``@account(myAcc)`` declares a read only account ``myAcc``, while ``@mutableAccount(otherAcc)`` declares a mutable
+account ``otherAcc``. For signer accounts, the annotations follow the syntax ``@signer(mySigner)`` and
+``@mutableSigner(myOtherSigner)``.
 
-The following example shows two correct ways of calling a constructor. Note that the IDL for the ``BeingBuilt`` contract
+
+Accessing accounts' data
+++++++++++++++++++++++++
+
+Accounts declared on a constructor using the ``@payer`` annotation are available for access inside it. Likewise,
+accounts declared on external functions with any of the aforementioned annotations are also available in the
+``tx.accounts`` vector for easy access. For an account declared as ``@account(funder)``, the access follows the
+syntax ``tx.accounts.funder``, which returns the :ref:`AccountInfo builtin struct <account_info>`.
+
+.. include:: ../examples/solana/account_access.sol
+  :code: solidity
+
+.. _solana_cpi_accounts:
+
+External calls with accounts
+++++++++++++++++++++++++++++
+
+In any Solana cross program invocation, including constructor calls, all the accounts a transaction needs must be
+informed. If the ``{accounts: ...}`` call argument is missing from an external call, the compiler will automatically
+generate the ``AccountMeta`` array that satisfies such a requirement. Currently, that only works if the call is done
+in an function declared external, as shown in the example below. In any other case, the ``AccountMeta`` array must
+be manually created, following the account ordering the IDL file specifies. If a certain call does not need any accounts,
+an empty vector must be passed ``{accounts: []}``.
+
+The following example shows two correct ways of calling a contract. Note that the IDL for the ``BeingBuilt`` contract
 has an instruction called ``new``, representing the contract's constructor, whose accounts are specified in the
 following order: ``dataAccount``, ``payer_account``, ``systemAccount``. That is the order one must follow when invoking
 such a constructor.
@@ -413,10 +437,3 @@ such a constructor.
 .. include:: ../examples/solana/payer_annotation.sol
   :code: solidity
 
-
-Accessing accounts' data
-________________________
-
-Accounts declared on a constructor using the ``@payer`` annotation are available for access inside it.
-For an account declared as ``@payer(funder)``, the access follows the syntax ``tx.accounts.funder``, which returns
-the :ref:`AccountInfo builtin struct <account_info>`.

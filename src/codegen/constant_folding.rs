@@ -245,9 +245,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, dry_run: bool, ns: &mut Name
                     let seeds = seeds
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
-                    let accounts = accounts
-                        .as_ref()
-                        .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
+                    let accounts = accounts.map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
                     if !dry_run {
                         cfg.blocks[block_no].instr[instr_no] = Instr::Constructor {
@@ -285,9 +283,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, dry_run: bool, ns: &mut Name
                     let address = address
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
-                    let accounts = accounts
-                        .as_ref()
-                        .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
+                    let accounts = accounts.map(|expr| expression(expr, Some(&vars), cfg, ns).0);
                     let seeds = seeds
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);

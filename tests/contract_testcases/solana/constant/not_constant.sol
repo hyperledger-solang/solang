@@ -4,7 +4,7 @@
         }
 
         contract foo {
-            function f() public returns (uint) {
+            function f() external returns (uint) {
                 uint a = C.STATIC();
                 return a;
             }

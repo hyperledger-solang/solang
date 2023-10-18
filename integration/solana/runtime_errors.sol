@@ -62,7 +62,7 @@ contract RuntimeErrors {
 
     // external call failed
     function call_ext() public {
-        Creature.say_my_name();
+        Creature.say_my_name{accounts: []}();
     }
 
     function i_will_revert() public {

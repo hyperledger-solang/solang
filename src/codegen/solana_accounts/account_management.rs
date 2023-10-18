@@ -3,7 +3,9 @@
 use crate::codegen::cfg::Instr;
 use crate::codegen::dispatch::solana::SOLANA_DISPATCH_CFG_NAME;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{ArrayLength, Contract, Function, Namespace, StructType, Type};
+use crate::sema::ast::{
+    ArrayLength, Contract, ExternalCallAccounts, Function, Namespace, StructType, Type,
+};
 use crate::sema::solana_accounts::BuiltinAccounts;
 use num_bigint::BigInt;
 use solang_parser::pt::Loc;
@@ -115,7 +117,7 @@ fn process_instruction(
             contract_function_no: Some((contract_no, func_no)),
             ..
         } => {
-            if accounts.is_some() {
+            if !accounts.is_absent() {
                 return;
             }
 
@@ -150,7 +152,7 @@ fn process_instruction(
                 dimensions: vec![account_metas.len() as u32],
                 values: account_metas,
             };
-            *accounts = Some(metas_vector);
+            *accounts = ExternalCallAccounts::Present(metas_vector);
         }
         Instr::Constructor {
             contract_no,
@@ -175,7 +177,7 @@ fn process_instruction(
                 dimensions: vec![1],
                 values: account_metas,
             };
-            *accounts = Some(metas_vector);
+            *accounts = ExternalCallAccounts::Present(metas_vector);
         }
         Instr::AccountAccess { loc, name, var_no } => {
             // This could have been an Expression::AccountAccess if we had a three-address form.
@@ -197,7 +199,6 @@ fn process_instruction(
                 expr,
             };
         }
-
         _ => (),
     }
 }

@@ -7,23 +7,48 @@ contract Token {
         mint = _mint;
     }
 
-    function total_supply() public view returns (uint64) {
-        return SplToken.total_supply(mint);
+    @account(mint)
+    function total_supply() external view returns (uint64) {
+        assert(tx.accounts.mint.key == mint);
+        return SplToken.total_supply(tx.accounts.mint);
     }
 
-    function get_balance(address account) public view returns (uint64) {
-        return SplToken.get_balance(account);
+    @account(account)
+    function get_balance() external view returns (uint64) {
+        return SplToken.get_balance(tx.accounts.account);
     }
 
-    function mint_to(address account, address authority, uint64 amount) public {
-        SplToken.mint_to(mint, account, authority, amount);
+    @mutableAccount(mint)
+    @mutableAccount(account)
+    @signer(authority)
+    function mint_to(uint64 amount) external {
+        assert(tx.accounts.mint.key == mint);
+        SplToken.mint_to(
+            tx.accounts.mint.key, 
+            tx.accounts.account.key, 
+            tx.accounts.authority.key, 
+            amount);
     }
 
-    function transfer(address from, address to, address owner, uint64 amount) public {
-        SplToken.transfer(from, to, owner, amount);
+    @mutableAccount(from)
+    @mutableAccount(to)
+    @signer(owner)
+    function transfer(uint64 amount) external {
+        SplToken.transfer(
+            tx.accounts.from.key, 
+            tx.accounts.to.key, 
+            tx.accounts.owner.key,
+            amount);
     }
 
-    function burn(address account, address owner, uint64 amount) public {
-        SplToken.burn(account, mint, owner, amount);
+    @mutableAccount(account)
+    @mutableAccount(mint)
+    @signer(owner)
+    function burn(uint64 amount) external {
+        SplToken.burn(
+            tx.accounts.account.key, 
+            tx.accounts.mint.key, 
+            tx.accounts.owner.key,
+            amount);
     }
 }

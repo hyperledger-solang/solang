@@ -1,5 +1,5 @@
 contract ft {
-    function test(address p) public {
+    function test(address p) external {
         // this.callback can be used as an external function type value
         paffling.set_callback{program_id: p}(this.callback);
     }
@@ -19,6 +19,6 @@ contract paffling {
     }
 
     function piffle() public {
-        callback(1, "paffled");
+        callback{accounts: []}(1, "paffled");
     }
 }

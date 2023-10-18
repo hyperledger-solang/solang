@@ -13,7 +13,7 @@ contract Contract {
         uint256 b;
     }
 
-    function test(address[] memory _tokens) public view {
+    function test(address[] memory _tokens) external view {
 	uint size = 3;
 
         // get shares and eth required for each share

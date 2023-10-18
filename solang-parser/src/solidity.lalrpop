@@ -442,7 +442,7 @@ NamedArgument: NamedArgument = {
         let name = Identifier { loc:  Loc::File(file_no, l, ar), name: "address".into() };
 
         NamedArgument{ loc: Loc::File(file_no, l, r), name, expr }
-    }
+    },
 }
 
 FunctionCall: Expression = {
@@ -488,7 +488,7 @@ NoFunctionTyPrecedence0: Expression = {
             Identifier { loc: Loc::File(file_no, al, b), name: "new".to_string() })
     },
     <l:@L> <ty:NoFunctionType> <r:@R> => Expression::Type(Loc::File(file_no, l, r), ty),
-    <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
+    <a:@L> "[" <v:Comma<Expression>> "]" <b:@R> => {
         Expression::ArrayLiteral(Loc::File(file_no, a, b), v)
     },
     <SolNoRevertIdentifier> => Expression::Variable(<>),

@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    account_new, build_solidity, build_solidity_with_cache, AccountMeta, AccountState, BorshToken,
-    Pubkey,
-};
+use crate::{account_new, build_solidity, build_solidity_with_cache, AccountState, BorshToken};
 use borsh::BorshSerialize;
 use num_bigint::BigInt;
 use solang::file_resolver::FileResolver;
@@ -13,12 +10,22 @@ fn use_authority() {
     let mut vm = build_solidity(include_str!("../../docs/examples/solana/use_authority.sol"));
 
     let authority = account_new();
+    let another_authority = account_new();
 
     vm.account_data.insert(
         authority,
         AccountState {
             data: vec![],
             owner: Some([0u8; 32]),
+            lamports: 0,
+        },
+    );
+
+    vm.account_data.insert(
+        another_authority,
+        AccountState {
+            data: vec![],
+            owner: Some([0; 32]),
             lamports: 0,
         },
     );
@@ -31,7 +38,10 @@ fn use_authority() {
 
     let res = vm
         .function("inc")
-        .accounts(vec![("dataAccount", data_account)])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("authorityAccount", another_authority),
+        ])
         .must_fail()
         .unwrap();
     assert_ne!(res, 0);
@@ -50,12 +60,10 @@ fn use_authority() {
     );
 
     vm.function("inc")
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(authority),
-            is_signer: true,
-            is_writable: false,
-        }])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("authorityAccount", authority),
+        ])
         .call();
 
     let res = vm
@@ -83,8 +91,9 @@ fn token_account() {
     import './spl_token.sol';
 
 contract Foo {
-    function token_account(address add) public returns (SplToken.TokenAccountData) {
-        return SplToken.get_token_account_data(add);
+    @account(add)
+    function token_account() external returns (SplToken.TokenAccountData) {
+        return SplToken.get_token_account_data(tx.accounts.add);
     }
 }
     "#;
@@ -140,12 +149,7 @@ contract Foo {
 
     let res = vm
         .function("token_account")
-        .arguments(&[BorshToken::Address(account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(account),
-            is_signer: false,
-            is_writable: false,
-        }])
+        .accounts(vec![("add", account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -188,12 +192,7 @@ contract Foo {
 
     let res = vm
         .function("token_account")
-        .arguments(&[BorshToken::Address(account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(account),
-            is_signer: false,
-            is_writable: false,
-        }])
+        .accounts(vec![("add", account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -239,8 +238,9 @@ fn mint_account() {
     import './spl_token.sol';
 
 contract Foo {
-    function mint_account(address add) public returns (SplToken.MintAccountData) {
-        return SplToken.get_mint_account_data(add);
+    @account(add)
+    function mint_account() external returns (SplToken.MintAccountData) {
+        return SplToken.get_mint_account_data(tx.accounts.add);
     }
 }
     "#;
@@ -287,12 +287,7 @@ contract Foo {
 
     let res = vm
         .function("mint_account")
-        .arguments(&[BorshToken::Address(account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(account),
-            is_writable: false,
-            is_signer: false,
-        }])
+        .accounts(vec![("add", account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -324,12 +319,7 @@ contract Foo {
 
     let res = vm
         .function("mint_account")
-        .arguments(&[BorshToken::Address(account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(account),
-            is_writable: false,
-            is_signer: false,
-        }])
+        .accounts(vec![("add", account)])
         .call()
         .unwrap()
         .unwrap_tuple();

@@ -5,7 +5,7 @@ contract C {
 		(D.new){value: 1}();
 		D.new{value: 1}();
 	}
-	function g() public {
+	function g() external {
 		// Three different parse tree for callargs
 		D.func{value: 1}();
 		(D.func){value: 1}();
@@ -16,7 +16,7 @@ contract C {
 @program_id("A2tWahcQqU7Mic5o4nGWPKt9rQaLVyh7cyF4MmCXksJt")
 contract D {
 	constructor() payable {}
-	function func() payable public {}
+	function func() payable external {}
 }
 
 // ---- Expect: diagnostics ----

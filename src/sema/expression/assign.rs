@@ -197,7 +197,7 @@ pub(super) fn assign_expr(
     ) {
         ResolveTo::Unknown
     } else {
-        ResolveTo::Type(var_ty.deref_any())
+        ResolveTo::Type(var_ty.deref_any().deref_any())
     };
 
     let set = expression(right, context, ns, symtable, diagnostics, resolve_to)?;

@@ -146,20 +146,18 @@ library SplToken {
 	}
 
 	/// Get the total supply for the mint, i.e. the total amount in circulation
-	/// @param mint the mint for this token
-	function total_supply(address mint) internal view returns (uint64) {
-		AccountInfo account = get_account_info(mint);
-
+	/// @param account The AccountInfo struct for the mint account
+	function total_supply(AccountInfo account) internal view returns (uint64) {
+	
 		return account.data.readUint64LE(36);
 	}
 
 	/// Get the balance for an account.
 	///
-	/// @param account the account for which we want to know a balance
-	function get_balance(address account) internal view returns (uint64) {
-		AccountInfo ai = get_account_info(account);
+	/// @param account the struct AccountInfo whose account balance we want to retrive
+	function get_balance(AccountInfo account) internal view returns (uint64) {
 
-		return ai.data.readUint64LE(64);
+		return account.data.readUint64LE(64);
 	}
 
 	/// Get the account info for an account. This walks the transaction account infos
@@ -201,11 +199,10 @@ library SplToken {
 
 	/// Fetch the owner, mint account and balance for an associated token account.
 	///
-	/// @param tokenAccount The token account
+	/// @param ai the AccountInfo struct for the token account
 	/// @return struct TokenAccountData
-	function get_token_account_data(address tokenAccount) public view returns (TokenAccountData) {
-		AccountInfo ai = get_account_info(tokenAccount);
-
+	function get_token_account_data(AccountInfo ai) public pure returns (TokenAccountData) {
+		
 		TokenAccountData data = TokenAccountData(
 			{
 				mintAccount: ai.data.readAddress(0), 
@@ -238,10 +235,9 @@ library SplToken {
 
 	/// Retrieve the information saved in a mint account
 	///
-	/// @param mintAccount the account whose information we want to retrive
+	/// @param ai the AccountInfo struct for the mint accounts
 	/// @return the MintAccountData struct
-	function get_mint_account_data(address mintAccount) public view returns (MintAccountData) {
-		AccountInfo ai = get_account_info(mintAccount);
+	function get_mint_account_data(AccountInfo ai) public pure returns (MintAccountData) {
 
 		uint32 authority_present = ai.data.readUint32LE(0);
 		uint32 freeze_authority_present = ai.data.readUint32LE(46);

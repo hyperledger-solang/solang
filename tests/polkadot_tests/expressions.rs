@@ -478,8 +478,7 @@ fn complement() {
 
     runtime.function("do_test", Vec::new());
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let args = vec![0; 32];
 
     runtime.function("do_complement", args);
 
@@ -523,8 +522,7 @@ fn bitwise() {
 
     runtime.function("do_test", Vec::new());
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_xor", args);
@@ -534,8 +532,7 @@ fn bitwise() {
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_or", args);
@@ -545,8 +542,7 @@ fn bitwise() {
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_and", args);
@@ -630,8 +626,7 @@ fn assign_bitwise() {
 
     runtime.function("do_test", Vec::new());
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_xor", args);
@@ -641,8 +636,7 @@ fn assign_bitwise() {
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_or", args);
@@ -652,8 +646,7 @@ fn assign_bitwise() {
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_and", args);

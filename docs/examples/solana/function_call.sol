@@ -10,7 +10,7 @@ contract A {
             uint32(5)
         );
 
-        (bool success, bytes rawresult) = v.call(data);
+        (bool success, bytes rawresult) = v.call{accounts: []}(data);
 
         assert(success == true);
 

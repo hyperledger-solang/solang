@@ -25,7 +25,7 @@ macro_rules! impl_with_cast {
             impl PartialOrd for $t {
                 #[inline]
                 fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-                    PartialOrd::partial_cmp(self.as_discriminant(), other.as_discriminant())
+                    Some(self.cmp(other))
                 }
             }
 

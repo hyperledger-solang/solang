@@ -16,7 +16,7 @@ use crate::sema::solana_accounts::BuiltinAccounts;
 use crate::Target;
 use indexmap::map::Entry;
 use num_traits::ToPrimitive;
-use solang_parser::pt::{self, Annotation, CodeLocation};
+use solang_parser::pt::{self, Annotation, CodeLocation, Visibility};
 use std::str::FromStr;
 
 /// Annotations are processed in two different places during sema. When we are resolving the
@@ -48,6 +48,28 @@ pub fn function_prototype_annotations(
     for annotation in annotations {
         match annotation.id.name.as_str() {
             "selector" => function_selector(func, annotation, &mut diagnostics, ns),
+            "account" | "signer" | "mutableAccount" | "mutableSigner"
+                if ns.target == Target::Solana =>
+            {
+                if !func.is_constructor() && !matches!(func.visibility, Visibility::External(..)) {
+                    diagnostics.push(Diagnostic::error(
+                        annotation.loc,
+                        "account declarations are only valid in functions declared as external"
+                            .to_string(),
+                    ));
+                    continue;
+                }
+
+                account_declaration(
+                    &annotation.loc,
+                    annotation.value.as_ref().unwrap(),
+                    func,
+                    annotation.id.name.as_str(),
+                    &mut ns.diagnostics,
+                    &mut ConstructorAnnotations::default(),
+                );
+            }
+
             _ if !func.has_body => {
                 // function_body_annotations() is called iff there is a body
                 diagnostics.push(Diagnostic::error(
@@ -180,10 +202,8 @@ pub(super) fn function_body_annotations(
 
     // On Solana, the seeds and bump for a constructor can be specified using annotations, for example
     //
-    // @seed(param1)
     // @seed("fizbaz")
-    // @bump(param2)
-    // constructor(bytes param1, uint8 param2) {}
+    // constructor(@seed bytes param1, @bump uint8 param2) {}
 
     let mut has_annotation = false;
 
@@ -249,62 +269,19 @@ pub(super) fn function_body_annotations(
                 );
             }
             "payer" if is_solana_constructor => {
-                let loc = note.loc;
-                if let pt::Expression::Variable(id) = note.value.as_ref().unwrap() {
-                    if BuiltinAccounts::from_str(&id.name).is_ok() {
-                        diagnostics.push(Diagnostic::error(
-                            id.loc,
-                            format!("'{}' is a reserved account name", id.name),
-                        ));
-                        continue;
-                    } else if id.name.contains(BuiltinAccounts::DataAccount.as_str()) {
-                        diagnostics.push(Diagnostic::error(
-                            id.loc,
-                            "account names that contain 'dataAccount' are reserved".to_string(),
-                        ));
-                        continue;
-                    }
-
-                    match ns.functions[function_no]
-                        .solana_accounts
-                        .borrow_mut()
-                        .entry(id.name.clone())
-                    {
-                        Entry::Occupied(other_account) => {
-                            diagnostics.push(Diagnostic::error_with_note(
-                                id.loc,
-                                format!("account '{}' already defined", id.name),
-                                other_account.get().loc,
-                                "previous definition".to_string(),
-                            ));
-                        }
-                        Entry::Vacant(vacancy) => {
-                            if let Some((prev, _)) = &annotations.payer {
-                                duplicate_annotation(
-                                    &mut diagnostics,
-                                    "payer",
-                                    loc,
-                                    *prev,
-                                    ns.functions[function_no].ty.as_str(),
-                                );
-                            } else {
-                                vacancy.insert(SolanaAccount {
-                                    loc: note.loc,
-                                    is_signer: true,
-                                    is_writer: true,
-                                    generated: false,
-                                });
-                                annotations.payer = Some((loc, id.name.clone()));
-                            }
-                        }
-                    }
-                } else {
-                    diagnostics.push(Diagnostic::error(
-                        note.loc,
-                        "invalid parameter for annotation".to_string(),
-                    ));
-                }
+                account_declaration(
+                    &note.loc,
+                    note.value.as_ref().unwrap(),
+                    &ns.functions[function_no],
+                    note.id.name.as_str(),
+                    &mut diagnostics,
+                    &mut annotations,
+                );
             }
+            "account" | "signer" | "mutableAccount" | "mutableSigner"
+            // We already deal with these cases in `function_prototype_annotation`
+                if ns.target == Target::Solana => (),
+
             _ => diagnostics.push(Diagnostic::error(
                 note.loc,
                 format!(
@@ -519,4 +496,70 @@ fn duplicate_annotation(
         old_loc,
         format!("previous @{}", name),
     ));
+}
+
+fn account_declaration(
+    loc: &pt::Loc,
+    expr: &pt::Expression,
+    func: &Function,
+    annotation_name: &str,
+    diagnostics: &mut Diagnostics,
+    resolved_annotations: &mut ConstructorAnnotations,
+) {
+    if let pt::Expression::Variable(id) = expr {
+        if BuiltinAccounts::from_str(&id.name).is_ok() {
+            diagnostics.push(Diagnostic::error(
+                id.loc,
+                format!("'{}' is a reserved account name", id.name),
+            ));
+            return;
+        } else if id.name.contains("dataAccount") {
+            diagnostics.push(Diagnostic::error(
+                id.loc,
+                "account names that contain 'dataAccount' are reserved".to_string(),
+            ));
+            return;
+        }
+
+        match func.solana_accounts.borrow_mut().entry(id.name.clone()) {
+            Entry::Occupied(other_account) => {
+                diagnostics.push(Diagnostic::error_with_note(
+                    id.loc,
+                    format!("account '{}' already defined", id.name),
+                    other_account.get().loc,
+                    "previous definition".to_string(),
+                ));
+            }
+            Entry::Vacant(vacancy) => {
+                if let Some(prev) = &resolved_annotations.payer {
+                    duplicate_annotation(
+                        diagnostics,
+                        annotation_name,
+                        *loc,
+                        prev.0,
+                        func.ty.as_str(),
+                    );
+                } else {
+                    vacancy.insert(SolanaAccount {
+                        loc: *loc,
+                        is_signer: matches!(annotation_name, "payer" | "signer" | "mutableSigner"),
+                        is_writer: matches!(
+                            annotation_name,
+                            "mutableAccount" | "payer" | "mutableSigner"
+                        ),
+                        generated: false,
+                    });
+
+                    if annotation_name == "payer" {
+                        resolved_annotations.payer = Some((*loc, id.name.clone()));
+                    }
+                }
+            }
+        }
+    } else {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "invalid parameter for annotation".to_string(),
+        ));
+    }
 }

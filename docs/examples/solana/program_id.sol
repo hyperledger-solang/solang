@@ -17,7 +17,7 @@ contract Bar {
     }
 
     function call_foo() public {
-        Foo.say_hello();
+        Foo.say_hello{accounts: []}();
     }
 
     function foo_at_another_address(address other_foo_id) external {

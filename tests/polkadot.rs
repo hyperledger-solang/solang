@@ -937,7 +937,7 @@ impl MockSubstrate {
             },
             Err(err) => panic!("unexpected error: {err:?}"),
             Ok(_) => match self.0.data().output {
-                HostReturn::Data(flags, _) if flags == 1 => (),
+                HostReturn::Data(1, _) => (),
                 _ => panic!("unexpected return from main"),
             },
         }
@@ -965,8 +965,6 @@ impl MockSubstrate {
         let mem = self.0.data().memory.unwrap().data(&mut self.0);
         let memsize = mem.len();
         println!("memory size:{memsize}");
-        let mut buf = Vec::new();
-        buf.resize(memsize, 0);
 
         let mut current_elem = 0x10000;
         let mut last_elem = 0u32;

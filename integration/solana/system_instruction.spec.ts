@@ -18,54 +18,55 @@ describe('Test system instructions', function () {
         const to_key_pair = Keypair.generate();
 
         await program.methods.createAccount(
-            payer.publicKey,
-            to_key_pair.publicKey,
             new BN(100000000),
             new BN(5),
-            TOKEN_PROGRAM_ID)
+            TOKEN_PROGRAM_ID
+        ).accounts(
+                {
+                    from: payer.publicKey,
+                    to: to_key_pair.publicKey
+                }
+            )
             .remainingAccounts([
                 { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: false },
-                { pubkey: to_key_pair.publicKey, isSigner: true, isWritable: true },
             ])
             .signers([payer, to_key_pair]).rpc();
     });
 
     it('create account with seed', async function create_account_with_seed() {
-        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
+        const { payer, program } = await loadContractAndCallConstructor('TestingInstruction');
         const base_keypair = Keypair.generate();
         const to_key_pair = await PublicKey.createWithSeed(base_keypair.publicKey, seed, TOKEN_PROGRAM_ID);
 
         await program.methods.createAccountWithSeed(
-            payer.publicKey,
-            to_key_pair,
-            base_keypair.publicKey,
             seed,
             new BN(100000000),
             new BN(5),
             TOKEN_PROGRAM_ID)
+            .accounts({
+                from: payer.publicKey,
+                to: to_key_pair,
+                base: base_keypair.publicKey
+            })
             .remainingAccounts([
                 { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: false },
-                { pubkey: to_key_pair, isSigner: false, isWritable: true },
-                { pubkey: base_keypair.publicKey, isSigner: true, isWritable: false },
             ])
             .signers([payer, base_keypair]).rpc();
     });
 
     it('assign', async function assign() {
-        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
+        const { program } = await loadContractAndCallConstructor('TestingInstruction');
         const to_key_pair = Keypair.generate();
 
         const assign_account = new PublicKey('AddressLookupTab1e1111111111111111111111111');
         await program.methods.assign(
-            to_key_pair.publicKey,
             assign_account)
-            .remainingAccounts([
-                { pubkey: payer.publicKey, isSigner: false, isWritable: false },
-                { pubkey: to_key_pair.publicKey, isSigner: true, isWritable: true },
-            ])
-            .signers([payer, to_key_pair]).rpc();
+            .accounts(
+                {
+                    assignAccount: to_key_pair.publicKey,
+                }
+            )
+            .signers([to_key_pair]).rpc();
     });
 
     it('assign with seed', async function assign_with_with_seed() {
@@ -74,15 +75,12 @@ describe('Test system instructions', function () {
         const to_key_pair = await PublicKey.createWithSeed(payer.publicKey, seed, assign_account);
 
         await program.methods.assignWithSeed(
-            to_key_pair,
-            payer.publicKey,
             seed,
             assign_account)
-            .remainingAccounts([
-                { pubkey: assign_account, isSigner: false, isWritable: false },
-                { pubkey: payer.publicKey, isSigner: false, isWritable: false },
-                { pubkey: to_key_pair, isSigner: false, isWritable: true },
-            ])
+            .accounts({
+                assignAccount: to_key_pair,
+                owner: payer.publicKey,
+            })
             .signers([payer]).rpc();
     });
 
@@ -91,18 +89,16 @@ describe('Test system instructions', function () {
         const dest = new Keypair();
 
         await program.methods.transfer(
-            payer.publicKey,
-            dest.publicKey,
             new BN(100000000))
-            .remainingAccounts([
-                { pubkey: payer.publicKey, isSigner: false, isWritable: true },
-                { pubkey: dest.publicKey, isSigner: false, isWritable: true },
-            ])
+            .accounts({
+                from: payer.publicKey,
+                to: dest.publicKey,
+            })
             .signers([payer]).rpc();
     });
 
     it('transfer with seed', async function transfer_with_seed() {
-        const { storage, payer, provider, program } = await loadContractAndCallConstructor('TestingInstruction');
+        const { payer, provider, program } = await loadContractAndCallConstructor('TestingInstruction');
         const dest = new Keypair();
         const assign_account = new PublicKey('AddressLookupTab1e1111111111111111111111111');
         const derived_payer = await PublicKey.createWithSeed(payer.publicKey, seed, assign_account);
@@ -111,32 +107,27 @@ describe('Test system instructions', function () {
         await provider.connection.confirmTransaction(signature, 'confirmed');
 
         await program.methods.transferWithSeed(
-            derived_payer, // from_pubkey
-            payer.publicKey, // from_base
             seed, // seed
             assign_account, // from_owner
-            dest.publicKey, // to_pubkey
             new BN(100000000))
-            .remainingAccounts([
-                { pubkey: assign_account, isSigner: false, isWritable: false },
-                { pubkey: derived_payer, isSigner: false, isWritable: true },
-                { pubkey: dest.publicKey, isSigner: false, isWritable: true },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: false },
-            ])
-            .signers([payer]).rpc();
+            .accounts(
+                {
+                    fromKey: derived_payer,
+                    fromBase: payer.publicKey,
+                    toKey: dest.publicKey,
+                }
+            )
+            .signers([payer]).rpc({commitment: "confirmed"});
     });
 
     it('allocate', async function allocate() {
-        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
+        const {  program } = await loadContractAndCallConstructor('TestingInstruction');
         const account = Keypair.generate();
 
         await program.methods.allocate(
-            account.publicKey,
             new BN(2))
-            .remainingAccounts([
-                { pubkey: account.publicKey, isSigner: true, isWritable: true },
-            ])
-            .signers([payer, account]).rpc();
+            .accounts({accKey: account.publicKey})
+            .signers([account]).rpc();
     });
 
     it('allocate with seed', async function allocate_with_seed() {
@@ -146,17 +137,14 @@ describe('Test system instructions', function () {
         const derived_key = await PublicKey.createWithSeed(account.publicKey, seed, owner);
 
         await program.methods.allocateWithSeed(
-            derived_key,
-            account.publicKey,
             seed,
             new BN(200),
             owner)
-            .remainingAccounts([
-                { pubkey: owner, isSigner: false, isWritable: false },
-                { pubkey: account.publicKey, isSigner: true, isWritable: false },
-                { pubkey: derived_key, isSigner: false, isWritable: true },
-            ])
-            .signers([payer, account]).rpc();
+            .accounts({
+                accKey: derived_key,
+                base: account.publicKey,
+            })
+            .signers([account]).rpc();
     });
 
     it('create nonce account with seed', async function create_nonce_account_with_seed() {
@@ -166,20 +154,19 @@ describe('Test system instructions', function () {
         const authority = Keypair.generate();
 
         await program.methods.createNonceAccountWithSeed(
-            payer.publicKey,
-            derived_account,
-            base_address.publicKey,
             seed,
             authority.publicKey,
             new BN(100000000))
+            .accounts(
+                {from: payer.publicKey,
+                nonce: derived_account,
+                base: base_address.publicKey}
+            )
             .remainingAccounts([
                 { pubkey: recent_block_hashes, isSigner: false, isWritable: false },
                 { pubkey: rentAddress, isSigner: false, isWritable: false },
-                { pubkey: payer.publicKey, isSigner: false, isWritable: true },
-                { pubkey: derived_account, isSigner: false, isWritable: true },
-                { pubkey: base_address.publicKey, isSigner: true, isWritable: true },
             ])
-            .signers([payer, base_address]).rpc();
+            .signers([payer, base_address]).rpc({commitment: "confirmed"});
     });
 
     it('nonce accounts', async function nonce_accounts() {
@@ -188,52 +175,48 @@ describe('Test system instructions', function () {
         const authority = Keypair.generate();
 
         await program.methods.createNonceAccount(
-            payer.publicKey,
-            nonce.publicKey,
             authority.publicKey,
             new BN(100000000))
+            .accounts(
+                {
+                    from: payer.publicKey,
+                    nonce: nonce.publicKey
+                }
+            )
             .remainingAccounts([
                 { pubkey: recent_block_hashes, isSigner: false, isWritable: false },
                 { pubkey: rentAddress, isSigner: false, isWritable: false },
-                { pubkey: payer.publicKey, isSigner: false, isWritable: true },
-                { pubkey: nonce.publicKey, isSigner: true, isWritable: true },
             ])
             .signers([payer, nonce]).rpc();
 
-        await program.methods.advanceNonceAccount(
-            nonce.publicKey,
-            authority.publicKey)
+        await program.methods.advanceNonceAccount(authority.publicKey)
+            .accounts({nonce: nonce.publicKey})
             .remainingAccounts([
                 { pubkey: recent_block_hashes, isSigner: false, isWritable: false },
                 { pubkey: authority.publicKey, isSigner: true, isWritable: false },
-                { pubkey: nonce.publicKey, isSigner: false, isWritable: true },
             ])
             .signers([authority]).rpc();
 
         await program.methods.withdrawNonceAccount(
-            nonce.publicKey,
-            authority.publicKey,
-            payer.publicKey,
             new BN(1000))
+            .accounts({
+                nonce: nonce.publicKey,
+                to: payer.publicKey,
+                authority: authority.publicKey
+            })
             .remainingAccounts([
                 { pubkey: recent_block_hashes, isSigner: false, isWritable: false },
                 { pubkey: rentAddress, isSigner: false, isWritable: false },
-                { pubkey: authority.publicKey, isSigner: true, isWritable: false },
-                { pubkey: nonce.publicKey, isSigner: false, isWritable: true },
-                { pubkey: payer.publicKey, isSigner: false, isWritable: true },
             ])
             .signers([authority]).rpc();
 
         const new_authority = Keypair.generate();
         await program.methods.authorizeNonceAccount(
-            nonce.publicKey,
-            authority.publicKey,
             new_authority.publicKey)
-
-            .remainingAccounts([
-                { pubkey: authority.publicKey, isSigner: true, isWritable: false },
-                { pubkey: nonce.publicKey, isSigner: false, isWritable: true },
-            ])
+            .accounts({
+                nonce: nonce.publicKey,
+                authority: authority.publicKey
+            })
             .signers([authority]).rpc();
     });
 });

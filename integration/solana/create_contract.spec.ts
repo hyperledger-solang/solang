@@ -74,8 +74,8 @@ describe('ChildContract', function () {
 
         const seed1 = new Program(idl, seed_program, provider);
 
-        let res = await seed1.methods.sign(program_key)
-            .accounts({ dataAccount: address, creator_programId: program_key })
+        const res = await seed1.methods.sign()
+            .accounts({ dataAccount: address, creator_program_id: program_key })
             .simulate();
 
         expect(res.raw.toString()).toContain('Signer found');
@@ -119,8 +119,8 @@ describe('ChildContract', function () {
 
         expect(res.raw.toString()).toContain('I am PDA.');
 
-        res = await seed2.methods.sign(program_key)
-            .accounts({ dataAccount: address, creator_programId: program_key })
+        res = await seed2.methods.sign()
+            .accounts({ dataAccount: address, creator_program_id: program_key })
             .simulate();
 
         expect(res.raw.toString()).toContain('Signer found');
@@ -130,15 +130,12 @@ describe('ChildContract', function () {
         let child = Keypair.generate();
         let child_program = new PublicKey("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT");
 
-        const signature = await program.methods.createChildWithMetas(child.publicKey, payer.publicKey)
+        const signature = await program.methods.createChildWithMetas()
             .accounts({
-                dataAccount: storage.publicKey,
+                child: child.publicKey,
+                payer: payer.publicKey,
                 Child_programId: child_program,
             })
-            .remainingAccounts([
-                { pubkey: child.publicKey, isSigner: true, isWritable: true },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
-            ])
             .signers([payer, child])
             .rpc({ commitment: 'confirmed' });
 

@@ -5,6 +5,7 @@ use crate::codegen::subexpression_elimination::common_subexpression_tracker::Com
 use crate::codegen::subexpression_elimination::AvailableExpression;
 use crate::codegen::subexpression_elimination::{AvailableExpressionSet, AvailableVariable};
 use crate::codegen::Expression;
+use crate::sema::ast::ExternalCallAccounts;
 
 impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     /// Check if we can add the expressions of an instruction to the graph
@@ -126,7 +127,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
 
-                if let Some(expr) = accounts {
+                if let ExternalCallAccounts::Present(expr) = accounts {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
             }
@@ -143,7 +144,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 if let Some(expr) = address {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
-                if let Some(expr) = accounts {
+                if let ExternalCallAccounts::Present(expr) = accounts {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
                 if let Some(expr) = seeds {
