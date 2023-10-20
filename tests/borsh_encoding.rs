@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use anchor_syn::idl::{IdlType, IdlTypeDefinition, IdlTypeDefinitionTy};
+use anchor_syn::idl::types::{IdlType, IdlTypeDefinition, IdlTypeDefinitionTy};
 use byte_slice_cast::AsByteSlice;
 use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
@@ -341,6 +341,9 @@ pub fn decode_at_offset(
 
                     BorshToken::Tuple(read_items)
                 }
+                IdlTypeDefinitionTy::Alias { value } => {
+                    decode_at_offset(data, offset, value, custom_types)
+                }
             }
         }
         IdlType::Bytes => {
@@ -353,7 +356,12 @@ pub fn decode_at_offset(
             BorshToken::Bytes(read_data.to_vec())
         }
 
-        IdlType::Option(_) | IdlType::F32 | IdlType::F64 => {
+        IdlType::Option(_)
+        | IdlType::F32
+        | IdlType::F64
+        | IdlType::Generic(..)
+        | IdlType::DefinedWithTypeArgs { .. }
+        | IdlType::GenericLenArray(..) => {
             unreachable!("Type not available in Solidity")
         }
     }

@@ -2,7 +2,8 @@
 
 use crate::solana_tests::abi_encode::create_response;
 use crate::{build_solidity, BorshToken};
-use borsh::BorshSerialize;
+use borsh::to_vec;
+use borsh_derive::BorshSerialize;
 
 #[test]
 fn integers_bool_enum() {
@@ -80,7 +81,7 @@ fn integers_bool_enum() {
         day: WeekDay::Wednesday,
         h: false,
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("decodeTest1")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -91,7 +92,7 @@ fn integers_bool_enum() {
         item_2: WeekDay::Saturday,
         item_3: WeekDay::Friday,
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("decodeTest2")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -128,7 +129,7 @@ fn decode_address() {
         address: vm.stack[0].id,
         this: vm.stack[0].id,
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("testAddress")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -164,7 +165,7 @@ fn string_and_bytes() {
         a: "coffee".to_string(),
         b: b"tea".to_vec(),
     };
-    let encoded = data.try_to_vec().unwrap();
+    let encoded = to_vec(&data).unwrap();
     let _ = vm
         .function("testStringAndBytes")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -221,7 +222,7 @@ fn primitive_struct() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
     let data = NoPadStruct { a: 1238, b: 87123 };
-    let encoded = data.try_to_vec().unwrap();
+    let encoded = to_vec(&data).unwrap();
     let _ = vm
         .function("testNoPadStruct")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -234,7 +235,7 @@ fn primitive_struct() {
         b: 240,
         c: <[u8; 32]>::try_from(&elem[0..32]).unwrap(),
     };
-    let encoded = data.try_to_vec().unwrap();
+    let encoded = to_vec(&data).unwrap();
     let _ = vm
         .function("testPaddedStruct")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -265,7 +266,7 @@ fn returned_string() {
     let data = Input {
         rr: "cortado".to_string(),
     };
-    let encoded = data.try_to_vec().unwrap();
+    let encoded = to_vec(&data).unwrap();
     let returns = vm
         .function("returnedString")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -304,7 +305,7 @@ fn test_string_array() {
             "cappuccino".to_string(),
         ],
     };
-    let encoded = data.try_to_vec().unwrap();
+    let encoded = to_vec(&data).unwrap();
     let returns = vm
         .function("testStringVector")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -396,7 +397,7 @@ fn struct_within_struct() {
         no_pad,
         pad,
     };
-    let encoded = data.try_to_vec().unwrap();
+    let encoded = to_vec(&data).unwrap();
     let _ = vm
         .function("testStruct")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -510,7 +511,7 @@ fn struct_in_array() {
             c: <[u8; 32]>::try_from(bytes_string).unwrap(),
         },
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("twoStructs")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -525,7 +526,7 @@ fn struct_in_array() {
             NoPadStruct { a: 945, b: 7453 },
         ],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("fixedArrays")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -534,7 +535,7 @@ fn struct_in_array() {
     let input = Input3 {
         vec: vec![NoPadStruct { a: 5, b: 6 }, NoPadStruct { a: 7, b: 8 }],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("primitiveDynamic")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -627,7 +628,7 @@ fn arrays() {
             },
         ],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("decodeComplex")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -636,7 +637,7 @@ fn arrays() {
     let input = Input2 {
         vec: vec![-90, 5523, -89],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("dynamicArray")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -645,7 +646,7 @@ fn arrays() {
     let input = Input3 {
         multi_dim: [[1, 2], [4, 5], [6, 7]],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("decodeMultiDim")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -805,7 +806,7 @@ fn multi_dimensional_arrays() {
         ]],
         item_2: -90,
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("multiDimStruct")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -817,7 +818,7 @@ fn multi_dimensional_arrays() {
             [[9, 10, 11, 12], [13, 14, 15, 16]],
         ],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("multiDimInt")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -826,7 +827,7 @@ fn multi_dimensional_arrays() {
     let input = Input3 {
         vec: vec![9, 3, 4, 90, 834],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("uniqueDim")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -873,7 +874,7 @@ fn empty_arrays() {
         vec_1: vec![],
         vec_2: vec![],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("testEmpty")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -910,7 +911,7 @@ fn external_function() {
             24, 25, 26, 27, 28, 29, 30, 31,
         ],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
 
     let returns = vm
         .function("testExternalFunction")
@@ -959,7 +960,7 @@ fn bytes_arrays() {
         item_1: [b"abcd".to_owned(), b"efgh".to_owned()],
         item_2: vec![b"12345".to_owned(), b"67890".to_owned()],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("testByteArrays")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -997,7 +998,7 @@ fn different_types() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
     let input = Input1 { a: -789, b: 14234 };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("testByteArrays")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -1030,7 +1031,7 @@ fn more_elements() {
         .call();
 
     let input = Input { vec: [1, 4, 5, 6] };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("wrongNumber")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -1066,7 +1067,7 @@ fn extra_element() {
         vec: vec![-90, 89, -2341],
     };
 
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("extraElement")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -1099,7 +1100,7 @@ fn invalid_type() {
         .call();
 
     let input = Input { item: 5 };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("invalidType")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -1136,7 +1137,7 @@ fn longer_buffer() {
         item_1: 4,
         item_2: 5,
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("testLongerBuffer")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -1174,7 +1175,7 @@ fn longer_buffer_array() {
         item_1: 23434,
         item_2: [1, 2, 3, 4],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("testLongerBuffer")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -1212,7 +1213,7 @@ fn dynamic_array_of_array() {
     let input = Input {
         vec: vec![[0, 1], [2, -3]],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("testArrayAssign")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -1271,7 +1272,7 @@ fn test_struct_validation() {
             d: "string".to_string(),
         },
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("test")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -1329,7 +1330,7 @@ fn test_struct_validation_invalid() {
             d: "string".to_string(),
         },
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("test")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -1369,7 +1370,7 @@ fn string_fixed_array() {
             "d".to_string(),
         ],
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("testing")
         .arguments(&[BorshToken::Bytes(encoded)])
@@ -1410,7 +1411,7 @@ fn double_dynamic_array() {
         item_2: vec![vec![99, 20], vec![15, 88]],
         item_3: -755,
     };
-    let encoded = input.try_to_vec().unwrap();
+    let encoded = to_vec(&input).unwrap();
     let _ = vm
         .function("testThis")
         .arguments(&[BorshToken::Bytes(encoded)])
