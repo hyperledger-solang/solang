@@ -124,6 +124,14 @@ describe('ChildContract', function () {
             .simulate();
 
         expect(res.raw.toString()).toContain('Signer found');
+
+        const [pdaSigner, bump2] = PublicKey.findProgramAddressSync([Buffer.from("mint_authority")], seed_program);
+
+        res = await seed2.methods.pdaSign(new BN(bump2))
+            .accounts({pdaSigner: pdaSigner, creatorId: program_key})
+            .simulate();
+
+        expect(res.raw.toString()).toContain('Signer found');
     });
 
     it('Create Contract with account metas vector', async function () {

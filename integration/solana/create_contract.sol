@@ -129,6 +129,20 @@ contract Seed2 {
 
         creator.call_with_signer{seeds: seeds, accounts: metas, program_id: creator_program_id}();
     }
+
+    @account(pdaSigner)
+    @account(creatorId)
+    function pda_sign(uint8 bump) external view {
+        (address pda, bytes1 _bump) = try_find_program_address(["mint_authority"], address(this));
+        assert(bump == _bump);
+        assert(pda == tx.accounts.pdaSigner.key);
+
+        AccountMeta[1] metas = [
+            AccountMeta({pubkey: tx.accounts.pdaSigner.key, is_signer: true, is_writable: false})
+        ];
+
+        creator.call_with_signer{accounts: metas, seeds: [["mint_authority", abi.encode(_bump)]], program_id: tx.accounts.creatorId.key}();
+    }
 }
 
 @program_id("8gTkAidfM82u3DGbKcZpHwL5p47KQA16MDb4WmrHdmF6")
