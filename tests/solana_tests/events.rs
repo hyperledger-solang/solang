@@ -2,6 +2,7 @@
 
 use crate::build_solidity;
 use borsh::BorshDeserialize;
+use borsh_derive::BorshDeserialize;
 use sha2::{Digest, Sha256};
 
 #[test]

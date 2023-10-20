@@ -86,6 +86,14 @@ pub mod anchor {
         })
     }
 
+    pub fn test_event(_ctx: Context<State>) -> Result<()> {
+        emit!(MyEvent {
+            data: 6,
+            label: "bye".to_string(),
+        });
+        Ok(())
+    }
+
     pub fn multi_dimensional(
         _ctx: Context<NoAccountsNeeded>,
         arr: [[u16; 3]; 4],
@@ -180,4 +188,11 @@ pub struct MyAccount {
 pub struct State<'info> {
     #[account()]
     pub my_account: Account<'info, MyAccount>,
+}
+
+#[event]
+pub struct MyEvent {
+    pub data: i64,
+    #[index]
+    pub label: String,
 }

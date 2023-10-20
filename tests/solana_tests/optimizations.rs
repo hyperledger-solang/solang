@@ -4,7 +4,7 @@ use crate::{
     borsh_encoding::{visit_mut, VisitorMut},
     AccountMeta, BorshToken, Pubkey, VirtualMachineBuilder,
 };
-use anchor_syn::idl::IdlAccountItem;
+use anchor_syn::idl::types::IdlAccountItem;
 use once_cell::sync::Lazy;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::IntoParallelIterator;

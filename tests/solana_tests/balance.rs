@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account_new, build_solidity, AccountMeta, AccountState, BorshToken, Pubkey};
-use anchor_syn::idl::IdlInstruction;
+use anchor_syn::idl::types::IdlInstruction;
 use num_bigint::BigInt;
 
 #[test]

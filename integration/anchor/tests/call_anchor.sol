@@ -73,4 +73,8 @@ contract call_anchor {
         require(ret8[1][2] == 8000, "array 2");
         require(ret8[2][0] == 3000, "array 3");
     }
+
+    function test_event() public {
+        emit MyEvent({data: 102, label: "yadayada" });
+    }
 }
