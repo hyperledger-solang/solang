@@ -19,20 +19,17 @@ contract Enum {
     mapping(Lender => address) lenders;
 
     // BEGIN-CHECK: Enum::Enum::constructor::7d622c65
-    constructor(
-        address usdt,
-        address usdc,
-        address dai
-    ) {
+    constructor(address usdt, address usdc, address dai) {
         lenders[Lender.USDT] = usdt;
         lenders[Lender.USDC] = usdc;
         lenders[Lender.DAI] = dai;
 
-        // CHECK: ty:address storage %temp.17 = (arg #0)
+        // FIXME: unused variable detection after codegen
+        // CHECK: ty:address %temp.17 = (arg #0)
         // CHECK: store storage slot(hex"f31349e4056d5e5c8ce6d8359404f2ca89b2a6884691bff0f55ce7629f869af3") ty:address = %temp.17
-        // CHECK: ty:address storage %temp.18 = (arg #1)
+        // CHECK: ty:address %temp.18 = (arg #1)
         // CHECK: store storage slot(hex"e062efc721ea447b5e3918617d57f26130f3d8bc01b883eed1efcb4864d73ac1") ty:address = %temp.18
-        // CHECK: ty:address storage %temp.19 = (arg #2)
+        // CHECK: ty:address %temp.19 = (arg #2)
         // CHECK: store storage slot(hex"b2573af2738ebd4810a3198e92bab190f29b8718f1d5ed1b83e468f2bb322d10") ty:address = %temp.19
     }
 
