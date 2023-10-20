@@ -9,6 +9,6 @@ contract TestContract {
 
     // Calculate and return the maximum value between x and 65536 using the InstanceLibrary.
     function calculateMax(uint64 x) public pure returns (uint64) {
-        return x.getMax(x);
+        return x.getMax(65536);
     }
 }
