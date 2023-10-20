@@ -24,7 +24,10 @@ contract Enum {
         lenders[Lender.USDC] = usdc;
         lenders[Lender.DAI] = dai;
 
-        // FIXME: unused variable detection after codegen
+        // TODO / FIXME:
+        // We need an unused variable detection pass in codegen, and run all optimization until the CFG converges.
+        // This will get rid of the unused temp variable assignments below.
+
         // CHECK: ty:address %temp.17 = (arg #0)
         // CHECK: store storage slot(hex"f31349e4056d5e5c8ce6d8359404f2ca89b2a6884691bff0f55ce7629f869af3") ty:address = (arg #0)
         // CHECK: ty:address %temp.18 = (arg #1)
