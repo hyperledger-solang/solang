@@ -83,7 +83,7 @@ struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
 #[derive(Default, Debug, Clone)]
 pub struct Symtable {
     pub vars: IndexMap<usize, Variable>,
-    names: Vec<VarScope>,
+    scopes: Vec<VarScope>,
     pub arguments: Vec<Option<usize>>,
     pub returns: Vec<usize>,
 }
@@ -92,7 +92,7 @@ impl Symtable {
     pub fn new() -> Self {
         Symtable {
             vars: IndexMap::new(),
-            names: vec![VarScope(HashMap::new(), None)],
+            scopes: vec![VarScope(HashMap::new(), None)],
             arguments: Vec::new(),
             returns: Vec::new(),
         }
@@ -137,7 +137,7 @@ impl Symtable {
                 return None;
             }
 
-            self.names
+            self.scopes
                 .last_mut()
                 .unwrap()
                 .0
@@ -174,7 +174,7 @@ impl Symtable {
     }
 
     pub fn find(&self, name: &str) -> Option<&Variable> {
-        for scope in self.names.iter().rev() {
+        for scope in self.scopes.iter().rev() {
             if let Some(n) = scope.0.get(name) {
                 return self.vars.get(n);
             }
@@ -183,12 +183,12 @@ impl Symtable {
         None
     }
 
-    pub fn new_scope(&mut self) {
-        self.names.push(VarScope(HashMap::new(), None));
+    pub fn enter_scope(&mut self) {
+        self.scopes.push(VarScope(HashMap::new(), None));
     }
 
     pub fn leave_scope(&mut self) {
-        self.names.pop();
+        self.scopes.pop();
     }
 
     pub fn get_name(&self, pos: usize) -> &str {
@@ -214,7 +214,7 @@ impl LoopScopes {
         LoopScopes(Vec::new())
     }
 
-    pub fn new_scope(&mut self) {
+    pub fn enter_scope(&mut self) {
         self.0.push(LoopScope {
             no_breaks: 0,
             no_continues: 0,

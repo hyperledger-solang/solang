@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::cli::IdlCommand;
-use anchor_syn::idl::{Idl, IdlAccountItem, IdlInstruction, IdlType, IdlTypeDefinitionTy};
+use anchor_syn::idl::types::{Idl, IdlAccountItem, IdlInstruction, IdlType, IdlTypeDefinitionTy};
 use itertools::Itertools;
 use serde_json::Value as JsonValue;
 use solang::abi::anchor::discriminator;
@@ -176,7 +176,7 @@ fn write_solidity(idl: &Idl, mut f: File) -> Result<(), std::io::Error> {
 
                 let name = &ty_names.iter().find(|e| *e.0 == event.name).unwrap().1;
 
-                writeln!(f, "event {name} {{")?;
+                writeln!(f, "event {name} (")?;
                 let mut iter = event.fields.iter().enumerate();
                 let mut next = iter.next();
                 while let Some((no, e)) = next {
@@ -191,7 +191,7 @@ fn write_solidity(idl: &Idl, mut f: File) -> Result<(), std::io::Error> {
                         if next.is_some() { "," } else { "" }
                     )?;
                 }
-                writeln!(f, "}}")?;
+                writeln!(f, ");")?;
             } else {
                 eprintln!(
                     "event {} has fields of type {} which is not supported on Solidity",
@@ -367,6 +367,9 @@ fn idltype_to_solidity(ty: &IdlType, ty_names: &[(String, String)]) -> Result<St
             Ok(ty) => Ok(format!("{ty}[{size}]")),
             Err(ty) => Err(format!("{ty}[{size}]")),
         },
+        IdlType::Generic(..)
+        | IdlType::GenericLenArray(..)
+        | IdlType::DefinedWithTypeArgs { .. } => Err("generics are not supported".into()),
     }
 }
 
