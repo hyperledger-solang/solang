@@ -2,7 +2,7 @@
 
 use crate::borsh_encoding::BorshToken;
 use crate::{account_new, build_solidity, create_program_address, AccountState};
-use anchor_syn::idl::{IdlAccount, IdlAccountItem, IdlInstruction};
+use anchor_syn::idl::types::{IdlAccount, IdlAccountItem, IdlInstruction};
 
 #[test]
 fn access_payer() {

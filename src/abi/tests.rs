@@ -7,7 +7,7 @@ use crate::codegen::{codegen, Options};
 use crate::file_resolver::FileResolver;
 use crate::sema::ast::Namespace;
 use crate::{codegen, parse_and_resolve, Target};
-use anchor_syn::idl::{
+use anchor_syn::idl::types::{
     IdlAccount, IdlAccountItem, IdlEnumVariant, IdlEvent, IdlEventField, IdlField, IdlType,
     IdlTypeDefinition, IdlTypeDefinitionTy,
 };
@@ -311,7 +311,8 @@ fn instructions_and_types() {
                         ty: IdlType::String,
                     }
                 ]
-            }
+            },
+            generics: None
         }
     );
 
@@ -408,7 +409,8 @@ contract caller {
                         fields: None,
                     }
                 ]
-            }
+            },
+            generics: None
         }
     );
 
@@ -664,6 +666,7 @@ contract Testing {
                     }
                 ],
             },
+            generics: None
         }
     );
 }
@@ -765,7 +768,8 @@ contract Testing {
                         ty: IdlType::U64
                     }
                 ]
-            }
+            },
+            generics: None
         }
     );
 
@@ -789,7 +793,8 @@ contract Testing {
                         ty: IdlType::I32
                     }
                 ]
-            }
+            },
+            generics: None
         }
     );
 }
@@ -832,6 +837,7 @@ fn name_collision() {
                     ty: IdlType::String,
                 }]
             },
+            generics: None
         }
     );
 
@@ -855,7 +861,8 @@ fn name_collision() {
                         ty: IdlType::U64
                     }
                 ]
-            }
+            },
+            generics: None
         }
     );
 
@@ -879,7 +886,8 @@ fn name_collision() {
                         ty: IdlType::I32
                     }
                 ]
-            }
+            },
+            generics: None
         }
     );
 }
@@ -926,6 +934,7 @@ fn double_name_collision() {
                     ty: IdlType::String,
                 }]
             },
+            generics: None
         }
     );
 
@@ -940,7 +949,8 @@ fn double_name_collision() {
                     docs: None,
                     ty: IdlType::Bytes
                 },]
-            }
+            },
+            generics: None
         }
     );
 
@@ -964,7 +974,8 @@ fn double_name_collision() {
                         ty: IdlType::U64
                     }
                 ]
-            }
+            },
+            generics: None
         }
     );
 
@@ -988,7 +999,8 @@ fn double_name_collision() {
                         ty: IdlType::I32
                     }
                 ]
-            }
+            },
+            generics: None
         }
     );
 }
@@ -1054,7 +1066,8 @@ fn deduplication() {
                         ty: IdlType::PublicKey
                     }
                 ]
-            }
+            },
+            generics: None
         }
     );
 
