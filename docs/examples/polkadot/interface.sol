@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
 
 // Interface for an operator that performs an operation on two int32 values.
 interface Operator {
