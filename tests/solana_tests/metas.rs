@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account_new, build_solidity, build_solidity_with_cache, AccountState, BorshToken};
-use borsh::BorshSerialize;
+use borsh::to_vec;
+use borsh_derive::BorshSerialize;
 use num_bigint::BigInt;
 use solang::file_resolver::FileResolver;
 
@@ -130,7 +131,7 @@ contract Foo {
         close_authority: account_new(),
     };
 
-    let encoded = data.try_to_vec().unwrap();
+    let encoded = to_vec(&data).unwrap();
 
     let account = account_new();
     vm.account_data.insert(
@@ -187,7 +188,7 @@ contract Foo {
     data.is_native_present = 1;
     data.close_authority_present = 1;
 
-    let encoded = data.try_to_vec().unwrap();
+    let encoded = to_vec(&data).unwrap();
     vm.account_data.get_mut(&account).unwrap().data = encoded;
 
     let res = vm
@@ -269,7 +270,7 @@ contract Foo {
         freeze_authority: account_new(),
     };
 
-    let encoded = data.try_to_vec().unwrap();
+    let encoded = to_vec(&data).unwrap();
     let account = account_new();
     vm.account_data.insert(
         account,
@@ -314,7 +315,7 @@ contract Foo {
     data.authority_present = 1;
     data.is_initialized = true;
     data.freeze_authority_present = 1;
-    let encoded = data.try_to_vec().unwrap();
+    let encoded = to_vec(&data).unwrap();
     vm.account_data.get_mut(&account).unwrap().data = encoded;
 
     let res = vm

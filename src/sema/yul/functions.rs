@@ -44,7 +44,7 @@ impl FunctionsTable {
         }
     }
 
-    pub fn new_scope(&mut self) {
+    pub fn enter_scope(&mut self) {
         self.scopes.push(HashMap::new());
     }
 

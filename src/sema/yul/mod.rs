@@ -32,8 +32,8 @@ pub fn resolve_inline_assembly(
 ) -> (InlineAssembly, bool) {
     let start = ns.yul_functions.len();
     let mut functions_table = FunctionsTable::new(start);
-    functions_table.new_scope();
-    symtable.new_scope();
+    functions_table.enter_scope();
+    symtable.enter_scope();
     let mut loop_scope = LoopScopes::new();
 
     let (body, reachable) = process_statements(

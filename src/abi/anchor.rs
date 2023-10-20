@@ -3,7 +3,7 @@
 use crate::sema::ast::{
     ArrayLength, Contract, Function, Namespace, Parameter, StructDecl, StructType, Tag, Type,
 };
-use anchor_syn::idl::{
+use anchor_syn::idl::types::{
     Idl, IdlAccount, IdlAccountItem, IdlEnumVariant, IdlEvent, IdlEventField, IdlField,
     IdlInstruction, IdlType, IdlTypeDefinition, IdlTypeDefinitionTy,
 };
@@ -243,6 +243,7 @@ impl TypeManager<'_> {
                 func.name
             )]),
             ty: IdlTypeDefinitionTy::Struct { fields },
+            generics: None,
         });
 
         IdlType::Defined(name)
@@ -313,6 +314,7 @@ impl TypeManager<'_> {
             name,
             docs,
             ty: IdlTypeDefinitionTy::Struct { fields },
+            generics: None,
         });
     }
 
@@ -337,6 +339,7 @@ impl TypeManager<'_> {
                 name,
                 docs: item.docs,
                 ty: item.ty,
+                generics: None,
             });
         }
 
@@ -372,6 +375,7 @@ impl TypeManager<'_> {
             name,
             docs,
             ty: IdlTypeDefinitionTy::Enum { variants },
+            generics: None,
         });
     }
 
