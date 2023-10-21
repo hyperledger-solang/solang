@@ -1,47 +1,49 @@
 // SPDX-License-Identifier: Apache-2.0
+
 use std::sync::Arc;
 
-use crate::codegen::cfg::ControlFlowGraph;
 use crate::ssa_ir::cfg::{Block, Cfg};
 use crate::ssa_ir::converter::Converter;
 use crate::ssa_ir::ssa_type::Parameter;
-use crate::ssa_ir::vartable::Vartable;
 
-impl Converter {
-    pub fn from_control_flow_graph(cfg: &ControlFlowGraph) -> Result<Cfg, &'static str> {
-        let mut vartable = Vartable::try_from(&cfg.vars)?;
+impl Converter<'_> {
+    pub fn get_ssa_ir_cfg(&self) -> Result<Cfg, String> {
+        let mut vartable = self.from_vars(&self.cfg.vars)?;
 
-        let blocks = cfg
+        let blocks = self
+            .cfg
             .blocks
             .iter()
-            .map(|block| Converter::from_basic_block(block, &mut vartable))
-            .collect::<Result<Vec<Block>, &'static str>>()?;
+            .map(|block| self.from_basic_block(block, &mut vartable))
+            .collect::<Result<Vec<Block>, String>>()?;
 
-        let params = cfg
+        let params = self
+            .cfg
             .params
             .iter()
-            .map(|p| Parameter::try_from(p))
-            .collect::<Result<Vec<Parameter>, &'static str>>()?;
+            .map(|p| self.from_ast_parameter(p))
+            .collect::<Result<Vec<Parameter>, String>>()?;
 
-        let returns = cfg
+        let returns = self
+            .cfg
             .returns
             .iter()
-            .map(|p| Parameter::try_from(p))
-            .collect::<Result<Vec<Parameter>, &'static str>>()?;
+            .map(|p| self.from_ast_parameter(p))
+            .collect::<Result<Vec<Parameter>, String>>()?;
 
-        let cfg = Cfg {
-            name: cfg.name.clone(),
-            function_no: cfg.function_no,
+        let ssa_ir_cfg = Cfg {
+            name: self.cfg.name.clone(),
+            function_no: self.cfg.function_no,
             params: Arc::new(params),
             returns: Arc::new(returns),
             vartable,
             blocks,
-            nonpayable: cfg.nonpayable,
-            public: cfg.public,
-            ty: cfg.ty,
-            selector: cfg.selector.clone(),
+            nonpayable: self.cfg.nonpayable,
+            public: self.cfg.public,
+            ty: self.cfg.ty,
+            selector: self.cfg.selector.clone(),
         };
 
-        Ok(cfg)
+        Ok(ssa_ir_cfg)
     }
 }

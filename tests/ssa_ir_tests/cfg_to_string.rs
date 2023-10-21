@@ -9,6 +9,7 @@ use solang::ssa_ir::{
     ssa_type::{Parameter, Type},
     vartable::Vartable,
 };
+use solang::stringfy_cfg;
 use solang_parser::pt::{Identifier, Loc};
 
 #[test]
@@ -55,23 +56,28 @@ fn test_stringfy_cfg() {
         ),
     ]);
 
+    let var_table = Vartable {
+        vars: IndexMap::new(),
+        next_id: 0,
+    };
+
     assert_eq!(
         format!(
             "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
             "public function sol#0 test_cfg (int32, int32) returns (int32):",
-            "block entry:",
+            "block#0 entry:",
             "    %0 = load_storage %3;",
             "    cbr %0 block#1 else block#2;",
-            "block blk1:",
+            "block#1 blk1:",
             "    print uint8(1);",
             "    br block#3;",
-            "block blk2:",
+            "block#2 blk2:",
             "    print uint8(2);",
             "    br block#3;",
-            "block exit:",
-            "    return %0 of length uint8(1);"
+            "block#3 exit:",
+            "    return_data %0 of length uint8(1);"
         ),
-        format!("{}", cfg)
+        stringfy_cfg!(&var_table, &cfg)
     )
 }
 

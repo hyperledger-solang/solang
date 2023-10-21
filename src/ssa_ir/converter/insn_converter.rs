@@ -1,42 +1,43 @@
 // SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::Instr;
 use crate::sema::ast::RetrieveType;
 use crate::ssa_ir::converter::Converter;
 use crate::ssa_ir::expr::Expr;
 use crate::ssa_ir::insn::Insn;
-use crate::ssa_ir::ssa_type::Type;
-use crate::ssa_ir::typechecker;
+use crate::ssa_ir::typechecker::TypeChecker;
 use crate::ssa_ir::vartable::Vartable;
 use solang_parser::pt::Loc;
 
-impl Converter {
+impl Converter<'_> {
     pub(crate) fn from_instr(
+        &self,
         instr: &Instr,
         vartable: &mut Vartable,
-    ) -> Result<Vec<Insn>, &'static str> {
+    ) -> Result<Vec<Insn>, String> {
         match instr {
             Instr::Nop => Ok(vec![Insn::Nop]),
             Instr::Set { loc, res, expr } => {
+                TypeChecker::check_assignment(&self.get_ast_type_by_id(res)?, &expr.ty())?;
                 // [t] a = b + c * d
                 // converts to:
                 //   1. [t1] tmp_1 = c * d;
                 //   2. [t2] tmp_2 = b + tmp_1
                 //   3. [t] a = tmp_2;
-                let expr_operand = vartable.get_operand(res)?;
-                let mut expr_insns = Converter::from_expression(&expr_operand, &expr, vartable)?;
+                let dest_operand = vartable.get_operand(res)?;
+                let mut expr_insns = self.from_expression(&dest_operand, &expr, vartable)?;
 
-                // TODO type checking
+                // type checking
                 let dest_ty = vartable.get_type(res)?;
-                typechecker::check_assignment(dest_ty, &Type::try_from(&expr.ty())?)?;
 
-                let mut insns = Vec::new();
+                let mut insns = vec![];
                 insns.append(&mut expr_insns);
                 insns.push(Insn::Set {
                     loc: loc.clone(),
                     res: res.clone(),
                     expr: Expr::Cast {
                         loc: Loc::Codegen,
-                        operand: Box::new(expr_operand),
+                        operand: Box::new(dest_operand),
                         to_ty: dest_ty.clone(),
                     },
                 });
@@ -46,11 +47,11 @@ impl Converter {
             Instr::Store { dest, data } => {
                 // type checking the dest.ty() and data.ty()
 
-                let dest_op = vartable.new_temp(Type::try_from(&dest.ty())?);
-                let mut dest_insns = Converter::from_expression(&dest_op, dest, vartable)?;
+                let dest_op = vartable.new_temp(&self.from_ast_type(&dest.ty())?);
+                let mut dest_insns = self.from_expression(&dest_op, dest, vartable)?;
 
-                let data_op = vartable.new_temp(Type::try_from(&data.ty())?);
-                let mut data_insns = Converter::from_expression(&data_op, data, vartable)?;
+                let data_op = vartable.new_temp(&self.from_ast_type(&data.ty())?);
+                let mut data_insns = self.from_expression(&data_op, data, vartable)?;
 
                 let mut insns = Vec::new();
                 insns.append(&mut dest_insns);
@@ -62,13 +63,10 @@ impl Converter {
                 Ok(insns)
             }
             Instr::PushMemory {
-                res,
-                ty,
-                array,
-                value,
+                res, array, value, ..
             } => {
-                let value_op = vartable.new_temp(Type::try_from(&value.ty())?);
-                let mut value_insns = Converter::from_expression(&value_op, value, vartable)?;
+                let value_op = vartable.get_operand(res)?;
+                let mut value_insns = self.from_expression(&value_op, value, vartable)?;
 
                 let mut insns = Vec::new();
                 insns.append(&mut value_insns);
@@ -99,7 +97,51 @@ impl Converter {
                 accounts,
                 loc,
             } => todo!("Constructor"),
-            _ => Err("Not implemented yet"),
+            Instr::Branch { block } => Ok(vec![Insn::Branch {
+                block: block.clone(),
+            }]),
+            Instr::BranchCond {
+                cond,
+                true_block,
+                false_block,
+            } => {
+                let op = vartable.new_temp(&self.from_ast_type(&cond.ty())?);
+                let mut cond_insns = self.from_expression(&op, cond, vartable)?;
+                let mut insns = Vec::new();
+                insns.append(&mut cond_insns);
+                insns.push(Insn::BranchCond {
+                    cond: op,
+                    true_block: true_block.clone(),
+                    false_block: false_block.clone(),
+                });
+                Ok(insns)
+            }
+            Instr::Return { value } => {
+                let mut operands = Vec::new();
+                let mut insns = Vec::new();
+                for v in value {
+                    let tmp = vartable.new_temp(&self.from_ast_type(&v.ty())?);
+                    let mut expr_insns = self.from_expression(&tmp, v, vartable)?;
+                    insns.append(&mut expr_insns);
+                    operands.push(tmp);
+                }
+                insns.push(Insn::Return { value: operands });
+                Ok(insns)
+            }
+            Instr::AssertFailure { encoded_args } => match encoded_args {
+                Some(args) => {
+                    let tmp = vartable.new_temp(&self.from_ast_type(&args.ty())?);
+                    let mut expr_insns = self.from_expression(&tmp, args, vartable)?;
+                    let mut insns = Vec::new();
+                    insns.append(&mut expr_insns);
+                    insns.push(Insn::AssertFailure {
+                        encoded_args: Some(tmp),
+                    });
+                    Ok(insns)
+                }
+                None => Ok(vec![Insn::AssertFailure { encoded_args: None }]),
+            },
+            _ => unimplemented!("{:?}", instr),
         }
     }
 }
