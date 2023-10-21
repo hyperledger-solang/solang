@@ -187,9 +187,3 @@ impl PhiInput {
         Self { operand, block_no }
     }
 }
-
-impl fmt::Display for PhiInput {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}, block#{}]", self.operand, self.block_no)
-    }
-}

@@ -3,6 +3,9 @@ use std::sync::Arc;
 use crate::num_literal;
 use crate::ssa_ir_tests::helpers::{identifier, num_literal};
 use indexmap::IndexMap;
+use num_bigint::BigInt;
+use solang::ssa_ir::printer::Printer;
+use solang::ssa_ir::vartable::{Storage, Var};
 use solang::ssa_ir::{
     cfg::{Block, Cfg},
     insn::Insn,
@@ -56,28 +59,55 @@ fn test_stringfy_cfg() {
         ),
     ]);
 
-    let var_table = Vartable {
+    let mut var_table = Vartable {
         vars: IndexMap::new(),
         next_id: 0,
     };
 
+    // construct a index map for the vartable
+    var_table.vars.insert(
+        0,
+        Var {
+            id: 0,
+            ty: Type::Int(32),
+            name: String::from("x"),
+            storage: Storage::Local,
+        },
+    );
+    var_table.vars.insert(
+        3,
+        Var {
+            id: 1,
+            ty: Type::StoragePtr(false, Box::new(Type::Int(32))),
+            name: String::from("st"),
+            storage: Storage::Contract(BigInt::from(0)),
+        },
+    );
+    let printer = Printer {
+        vartable: Box::new(var_table),
+    };
+
     assert_eq!(
         format!(
-            "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
+            "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
             "public function sol#0 test_cfg (int32, int32) returns (int32):",
             "block#0 entry:",
-            "    %0 = load_storage %3;",
-            "    cbr %0 block#1 else block#2;",
+            "    int32 %x = load_storage storage_ptr<int32>(%st);",
+            "    cbr int32(%x) block#1 else block#2;",
+            "",
             "block#1 blk1:",
             "    print uint8(1);",
             "    br block#3;",
+            "",
             "block#2 blk2:",
             "    print uint8(2);",
             "    br block#3;",
+            "",
             "block#3 exit:",
-            "    return_data %0 of length uint8(1);"
+            "    return_data int32(%x) of length uint8(1);",
+            ""
         ),
-        stringfy_cfg!(&var_table, &cfg)
+        stringfy_cfg!(&printer, &cfg)
     )
 }
 

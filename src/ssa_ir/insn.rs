@@ -5,8 +5,6 @@ use crate::sema::ast::CallTy;
 use crate::ssa_ir::expr::{Expr, Operand};
 use crate::ssa_ir::ssa_type::InternalCallTy;
 use solang_parser::pt::Loc;
-use std::fmt;
-use std::fmt::Formatter;
 
 use super::ssa_type::PhiInput;
 

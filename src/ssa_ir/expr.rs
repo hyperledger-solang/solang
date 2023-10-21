@@ -21,7 +21,7 @@ pub enum Operand {
 
 /// binary operators
 // LLVM doesn't diff signed and unsigned
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BinaryOperator {
     Add { overflowing: bool },
     Sub { overflowing: bool },
@@ -58,7 +58,7 @@ pub enum BinaryOperator {
     UShr,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// unary operators
 pub enum UnaryOperator {
     Not,
@@ -66,7 +66,7 @@ pub enum UnaryOperator {
     BitNot,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expr {
     BinaryExpr {
         loc: Loc,
@@ -227,16 +227,6 @@ pub enum Expr {
     ReturnData {
         loc: Loc,
     },
-}
-
-impl fmt::Display for Operand {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Operand::Id { id, .. } => write!(f, "%{}", id),
-            Operand::BoolLiteral { value } => write!(f, "{}", value),
-            Operand::NumberLiteral { value, ty } => write!(f, "{}({})", ty, value),
-        }
-    }
 }
 
 impl fmt::Display for BinaryOperator {

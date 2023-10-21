@@ -5,16 +5,15 @@ use crate::ssa_ir::printer::Printer;
 
 #[macro_export]
 macro_rules! stringfy_cfg {
-    ($vartable:expr, $cfg:expr) => {{
+    ($printer:expr, $cfg:expr) => {{
         use solang::ssa_ir::printer::Printer;
-        let mut printer = Printer { vartable: $vartable };
         let mut buf = Vec::new();
-        printer.print_cfg(&mut buf, $cfg).unwrap();
+        $printer.print_cfg(&mut buf, $cfg).unwrap();
         String::from_utf8(buf).unwrap()
     }}
 }
 
-impl Printer<'_> {
+impl Printer {
     pub fn print_cfg(&self, f: &mut dyn Write, cfg: &Cfg) -> std::io::Result<()> {
         let function_no = match cfg.function_no {
             ASTFunction::SolidityFunction(no) => format!("sol#{}", no),
@@ -54,6 +53,7 @@ impl Printer<'_> {
         for (i, block) in cfg.blocks.iter().enumerate() {
             writeln!(f, "block#{} {}:", i, block.name)?;
             self.print_block(f, block)?;
+            writeln!(f)?;
         }
         Ok(())
     }

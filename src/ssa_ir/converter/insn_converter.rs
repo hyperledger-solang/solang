@@ -3,11 +3,9 @@
 use crate::codegen::cfg::Instr;
 use crate::sema::ast::RetrieveType;
 use crate::ssa_ir::converter::Converter;
-use crate::ssa_ir::expr::Expr;
 use crate::ssa_ir::insn::Insn;
 use crate::ssa_ir::typechecker::TypeChecker;
 use crate::ssa_ir::vartable::Vartable;
-use solang_parser::pt::Loc;
 
 impl Converter<'_> {
     pub(crate) fn from_instr(
@@ -25,24 +23,7 @@ impl Converter<'_> {
                 //   2. [t2] tmp_2 = b + tmp_1
                 //   3. [t] a = tmp_2;
                 let dest_operand = vartable.get_operand(res)?;
-                let mut expr_insns = self.from_expression(&dest_operand, &expr, vartable)?;
-
-                // type checking
-                let dest_ty = vartable.get_type(res)?;
-
-                let mut insns = vec![];
-                insns.append(&mut expr_insns);
-                insns.push(Insn::Set {
-                    loc: loc.clone(),
-                    res: res.clone(),
-                    expr: Expr::Cast {
-                        loc: Loc::Codegen,
-                        operand: Box::new(dest_operand),
-                        to_ty: dest_ty.clone(),
-                    },
-                });
-
-                Ok(insns)
+                self.from_expression(&dest_operand, &expr, vartable)
             }
             Instr::Store { dest, data } => {
                 // type checking the dest.ty() and data.ty()

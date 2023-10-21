@@ -1,19 +1,30 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::vartable::Storage;
+use crate::codegen::vartable;
 use crate::ssa_ir::expr::Operand;
 use crate::ssa_ir::ssa_type::Type;
 use indexmap::IndexMap;
+use num_bigint::BigInt;
 
-#[derive(Debug)]
-pub struct Var {
-    id: usize,
-    ty: Type,
-    name: String,
-    storage: Storage,
+/// define a constant prefix for temporary variables
+pub const TEMP_PREFIX: &str = "temp.ssa_ir.";
+
+#[derive(Debug, Clone)]
+pub enum Storage {
+    Constant(usize),
+    Contract(BigInt),
+    Local,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct Var {
+    pub id: usize,
+    pub ty: Type,
+    pub name: String,
+    pub storage: Storage,
+}
+
+#[derive(Debug, Clone)]
 pub struct Vartable {
     pub vars: IndexMap<usize, Var>,
     pub next_id: usize,
@@ -35,36 +46,55 @@ impl Vartable {
         self.vars
             .get(id)
             .map(|var| &var.ty)
-            .ok_or("Variable not found".to_string())
+            .ok_or(format!("Variable {} not found.", id))
     }
 
     pub(crate) fn get_name(&self, id: &usize) -> Result<&str, String> {
         self.vars
             .get(id)
             .map(|var| var.name.as_str())
-            .ok_or("Variable not found".to_string())
+            .ok_or(format!("Variable {} not found.", id))
     }
 
     pub(crate) fn get_operand(&self, id: &usize) -> Result<Operand, String> {
         self.vars
             .get(id)
             .map(|var| Operand::Id { id: var.id })
-            .ok_or("Variable not found".to_string())
+            .ok_or(format!("Variable {} not found.", id))
+    }
+
+    pub(crate) fn set_tmp(&mut self, id: usize, ty: &Type) {
+        let var = Var {
+            id,
+            ty: ty.clone(),
+            name: format!("{}{}", TEMP_PREFIX, id),
+            storage: Storage::Local,
+        };
+        self.next_id = self.next_id.max(id + 1);
+        self.vars.insert(id, var);
     }
 
     pub(crate) fn new_temp(&mut self, ty: &Type) -> Operand {
-        self.next_id += 1;
-
-        let name = format!("temp.{}", self.next_id);
+        let name = format!("{}{}", TEMP_PREFIX, self.next_id);
         let var = Var {
             id: self.next_id,
             ty: ty.clone(),
             name: name.clone(),
             storage: Storage::Local,
         };
-
         self.vars.insert(self.next_id, var);
+        let op = Operand::Id { id: self.next_id };
+        self.next_id += 1;
+        op
+    }
+}
 
-        Operand::Id { id: self.next_id }
+impl From<&vartable::Storage> for Storage {
+    fn from(value: &vartable::Storage) -> Self {
+        match value {
+            vartable::Storage::Constant(id) => Storage::Constant(id.clone()),
+            vartable::Storage::Contract(addr) => Storage::Contract(addr.clone()),
+            vartable::Storage::Local => Storage::Local,
+        }
     }
 }
