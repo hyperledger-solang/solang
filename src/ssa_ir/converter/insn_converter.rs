@@ -15,7 +15,7 @@ impl Converter<'_> {
     ) -> Result<Vec<Insn>, String> {
         match instr {
             Instr::Nop => Ok(vec![Insn::Nop]),
-            Instr::Set { loc, res, expr } => {
+            Instr::Set { res, expr, .. } => {
                 TypeChecker::check_assignment(&self.get_ast_type_by_id(res)?, &expr.ty())?;
                 // [t] a = b + c * d
                 // converts to:
@@ -59,24 +59,10 @@ impl Converter<'_> {
                 Ok(insns)
             }
             Instr::PopMemory {
-                res,
-                ty,
-                array,
-                loc,
+                ..
             } => todo!("PopMemory"),
             Instr::Constructor {
-                success,
-                res,
-                contract_no,
-                constructor_no,
-                encoded_args,
-                value,
-                gas,
-                salt,
-                address,
-                seeds,
-                accounts,
-                loc,
+                ..
             } => todo!("Constructor"),
             Instr::Branch { block } => Ok(vec![Insn::Branch {
                 block: block.clone(),

@@ -130,7 +130,6 @@ impl Converter<'_> {
             Expression::GetRef { .. } => todo!("Expression::GetRef"),
             Expression::InternalFunctionCfg { .. } => todo!("Expression::InternalFunctionCfg"),
             Expression::Keccak256 { .. } => todo!("Expression::Keccak256"),
-            Expression::List { .. } => todo!("Expression::List"),
             Expression::Less {
                 loc,
                 left,
@@ -162,8 +161,48 @@ impl Converter<'_> {
             Expression::Load { .. } => todo!("Expression::Load"),
             Expression::UnsignedModulo { .. } => todo!("Expression::UnsignedModulo"),
             Expression::SignedModulo { .. } => todo!("Expression::SignedModulo"),
-            Expression::More { .. } => todo!("Expression::More"),
-            Expression::MoreEqual { .. } => todo!("Expression::MoreEqual"),
+            Expression::More {
+                left,
+                right,
+                signed,
+                ..
+            } => {
+                let operator = if *signed {
+                    BinaryOperator::Gt
+                } else {
+                    BinaryOperator::UGt
+                };
+                self.binary_operation(
+                    dest,
+                    &Loc::Codegen,
+                    &ast::Type::Bool,
+                    operator,
+                    left,
+                    right,
+                    vartable,
+                )
+            }
+            Expression::MoreEqual {
+                left,
+                right,
+                signed,
+                ..
+            } => {
+                let operator = if *signed {
+                    BinaryOperator::Gte
+                } else {
+                    BinaryOperator::UGte
+                };
+                self.binary_operation(
+                    dest,
+                    &Loc::Codegen,
+                    &ast::Type::Bool,
+                    operator,
+                    left,
+                    right,
+                    vartable,
+                )
+            }
             Expression::Multiply { .. } => todo!("Expression::Multiply"),
             Expression::Not { .. } => todo!("Expression::Not"),
             Expression::NotEqual { .. } => todo!("Expression::NotEqual"),
@@ -216,7 +255,37 @@ impl Converter<'_> {
             Expression::StringConcat { .. } => todo!("Expression::StringConcat"),
             Expression::StructLiteral { .. } => todo!("Expression::StructLiteral"),
             Expression::StructMember { .. } => todo!("Expression::StructMember"),
-            Expression::Subscript { .. } => todo!("Expression::Subscript"),
+            Expression::Subscript {
+                loc,
+                array_ty,
+                ty: elem_ty,
+                expr,
+                index,
+                ..
+            } => {
+                TypeChecker::check_subscript(&array_ty, &elem_ty, &index.ty())?;
+
+                let array_op = vartable.new_temp(&self.from_ast_type(array_ty)?);
+                let array_insns = self.from_expression(&array_op, expr, vartable)?;
+
+                let index_op = vartable.new_temp(&self.from_ast_type(&index.ty())?);
+                let index_insns = self.from_expression(&index_op, index, vartable)?;
+
+                let mut insns = vec![];
+                insns.extend(array_insns);
+                insns.extend(index_insns);
+                insns.push(Insn::Set {
+                    loc: loc.clone(),
+                    res: dest.get_id_or_err()?,
+                    expr: Expr::Subscript {
+                        loc: loc.clone(),
+                        arr: Box::new(array_op),
+                        index: Box::new(index_op),
+                    },
+                });
+
+                Ok(insns)
+            }
             Expression::Subtract { .. } => todo!("Expression::Subtract"),
             Expression::Trunc { .. } => todo!("Expression::Trunc"),
             Expression::Negate { .. } => todo!("Expression::Negate"),
@@ -242,13 +311,13 @@ impl Converter<'_> {
         &self,
         dest: &Operand,
         loc: &Loc,
-        ty: &ast::Type,
+        _: &ast::Type,
         operator: BinaryOperator,
         left: &Expression,
         right: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        TypeChecker::check_binary_op(&ty, &left.ty(), &right.ty())?;
+        TypeChecker::check_binary_op(&left.ty(), &right.ty())?;
 
         let left_ty = self.from_ast_type(&left.ty())?;
         let right_ty = self.from_ast_type(&right.ty())?;
@@ -286,7 +355,7 @@ impl Converter<'_> {
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
         let res_ty = self.from_ast_type(ty)?;
-        TypeChecker::check_unary_op(&operator, &expr.ty())?;
+        TypeChecker::check_unary_op(ty, &expr.ty())?;
 
         let expr_op = vartable.new_temp(&res_ty);
         let expr_insns = self.from_expression(&expr_op, expr, vartable)?;

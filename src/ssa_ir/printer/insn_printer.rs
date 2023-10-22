@@ -458,7 +458,11 @@ impl Printer {
                     .map(|value| stringfy_rhs_operand!(self, value))
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(f, "return {};", rhs)
+                if rhs.len() > 0 {
+                    write!(f, "return {};", rhs)
+                } else {
+                    write!(f, "return;")
+                }
             }
             Insn::AssertFailure { encoded_args, .. } => match encoded_args {
                 Some(encoded_args) => {

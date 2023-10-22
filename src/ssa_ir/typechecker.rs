@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    sema::ast::{ArrayLength, Type},
-    ssa_ir::expr::UnaryOperator,
-};
+use crate::sema::ast::{ArrayLength, Type};
 
 pub struct TypeChecker {}
 
@@ -15,23 +12,22 @@ impl TypeChecker {
         Ok(())
     }
 
-    pub fn check_binary_op(
-        lhs_ty: &Type,
-        rhs_left_ty: &Type,
-        rhs_right_ty: &Type,
-    ) -> Result<(), String> {
-        // the three types has to be equal
-        // if lhs_ty != rhs_left_ty || lhs_ty != rhs_right_ty {
-        //     return Err(format!(
-        //         "Type mismatch: lhs_ty: {:?}, rhs_left_ty: {:?}, rhs_right_ty: {:?}",
-        //         lhs_ty, rhs_left_ty, rhs_right_ty
-        //     ));
-        // }
+    pub fn check_binary_op(rhs_left_ty: &Type, rhs_right_ty: &Type) -> Result<(), String> {
+        // the two types has to be equal
+        if rhs_left_ty != rhs_right_ty {
+            return Err(format!(
+                "Type mismatch: rhs_left_ty: {:?}, rhs_right_ty: {:?}",
+                rhs_left_ty, rhs_right_ty
+            ));
+        }
         Ok(())
     }
 
-    pub fn check_unary_op(op: &UnaryOperator, ty: &Type) -> Result<(), String> {
-        todo!("Implement type checking")
+    pub fn check_unary_op(res_ty: &Type, ty: &Type) -> Result<(), String> {
+        if res_ty != ty {
+            return Err(format!("Type mismatch: res_ty: {:?}, ty: {:?}", res_ty, ty));
+        }
+        Ok(())
     }
 
     pub fn check_alloc_dynamic_bytes(ty: &Type, size_ty: &Type) -> Result<(), String> {
@@ -45,6 +41,35 @@ impl TypeChecker {
             _ => Err(format!(
                 "Type mismatch: ty: {:?}, size_ty: {:?}",
                 ty, size_ty
+            )),
+        }
+    }
+
+    pub fn check_subscript(arr_ty: &Type, elem_ty: &Type, index_ty: &Type) -> Result<(), String> {
+        match index_ty {
+            Type::Uint(_) => {}
+            Type::Int(_) => {}
+            _ => {
+                return Err(format!(
+                    "Expected index type to be uint or int, got {:?}",
+                    index_ty
+                ))
+            }
+        }
+
+        match (arr_ty, elem_ty) {
+            (Type::Array(arr_elem_ty, _), Type::Ref(elem_ty)) => {
+                if arr_elem_ty.as_ref() != elem_ty.as_ref() {
+                    return Err(format!(
+                        "Expecting array element type {:?} to be equal to {:?}",
+                        arr_elem_ty, elem_ty
+                    ));
+                }
+                Ok(())
+            }
+            _ => Err(format!(
+                "Type mismatch: arr_ty: {:?}, elem_ty: {:?}",
+                arr_ty, elem_ty
             )),
         }
     }
