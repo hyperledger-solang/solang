@@ -2,6 +2,36 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## v0.3.3 Atlantis
+
+This release improves the Solana developer experience, since now required
+accounts can be specified using annotations. There are many fixes all over
+the code base.
+
+### Added
+- **Solana** the required accounts for instructions can now be specified using function annotations. [LucasSte](https://github.com/LucasSte)
+  ```
+  contract Foo {
+      @account(oneAccount)
+      @signer(mySigner)
+      @mutableAccount(otherAccount)
+      @mutableSigner(otherSigner)
+      function bar() external returns (uint64) {}
+  }
+  ```
+- The language server can now format Solidity source code using the `forge-fmt` crate. [chioni16](https://github.com/chioni16)
+- The langauge server can now do go references, go to implementation, and go to type
+  definition. [chioni16](https://github.com/chioni16)
+
+### Fixed
+- **Solana** the data field of AccountInfo can now be modified. [LucasSte](https://github.com/LucasSte)
+- The vscode extension now uses the solang binary in the path, if available. [seanyoung](https://github.com/seanyoung)
+
+### Changed
+- **breaking** **Solana** the contract Solidity type can no longer be used. This type
+  used to represent a single address, but this does not make sense as there are many
+  accounts associated with a contract call. [LucasSte](https://github.com/LucasSte)
+
 ## v0.3.2 Brasília
 
 The language server is much improved, and many fixes all over.

@@ -4,8 +4,12 @@
 	"description": "Use the solang compiler for syntax highlighting, compiler warnings and errors, and hovers",
 	"publisher": "solang",
 	"icon": "hl_solang.png",
-	"author": "Shivam Balikondwar <shivambalikondwar@icloud.com>",
-	"version": "0.3.2",
+	"contributors": [
+		"Shivam Balikondwar <shivambalikondwar@icloud.com>",
+		"Govardhan G D <chioni1620@gmail.com>",
+		"Sean Young <sean@mess.org>"
+	],
+	"version": "0.3.3",
 	"repository": "github.com/hyperledger/solang",
 	"engines": {
 		"vscode": "^1.43.0"
