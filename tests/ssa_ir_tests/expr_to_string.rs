@@ -2,6 +2,7 @@ use crate::num_literal;
 use crate::ssa_ir_tests::helpers::{binop_expr, bool_literal, identifier, num_literal, unop_expr};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
+use solang::codegen::Builtin;
 use solang::sema::ast::{self, ArrayLength, FormatArg, StringLocation};
 use solang::ssa_ir::expr::{BinaryOperator, Expr, UnaryOperator};
 use solang::ssa_ir::printer::Printer;
@@ -330,10 +331,7 @@ fn test_stringfy_unary_expr() {
     // BitNot,
     printer.set_tmp_var(4, &Type::Int(16));
     assert_eq!(
-        stringfy_expr!(
-            &printer,
-            &unop_expr(UnaryOperator::BitNot, identifier(4))
-        ),
+        stringfy_expr!(&printer, &unop_expr(UnaryOperator::BitNot, identifier(4))),
         "~int16(%temp.ssa_ir.4)"
     );
 }
@@ -654,7 +652,7 @@ fn test_stringfy_alloc_dyn_bytes() {
             &new_printer(),
             &Expr::AllocDynamicBytes {
                 loc: Loc::Codegen,
-                ty: Type::Ptr(Box::new(Type::Bytes(1))),
+                ty: Type::Bytes(1),
                 size: Box::new(num_literal!(10)),
                 initializer: None,
             }
@@ -670,7 +668,7 @@ fn test_stringfy_alloc_dyn_bytes() {
             &new_printer(),
             &Expr::AllocDynamicBytes {
                 loc: Loc::Codegen,
-                ty: Type::Ptr(Box::new(Type::Bytes(1))),
+                ty: Type::Bytes(1),
                 size: Box::new(num_literal!(3)),
                 initializer: Some(vec![b'\x01', b'\x02', b'\x03']),
             }
@@ -736,7 +734,7 @@ fn test_stringfy_struct_member_expr() {
                 operand: Box::new(identifier(1)),
             }
         ),
-        "ptr<struct.0>(%temp.ssa_ir.1)->3"
+        "ptr<struct.0>(%temp.ssa_ir.1).3"
     );
 }
 
@@ -1093,5 +1091,25 @@ fn test_stringfy_return_data() {
     assert_eq!(
         stringfy_expr!(&new_printer(), &Expr::ReturnData { loc: Loc::Codegen }),
         "(extern_call_ret_data)"
+    );
+}
+
+#[test]
+fn test_stringfy_builtin() {
+    let mut printer = new_printer();
+    printer.set_tmp_var(1, &Type::Int(16));
+    printer.set_tmp_var(2, &Type::Int(16));
+
+    // example: builtin "addmod"(%1, %2, 0x100)
+    assert_eq!(
+        stringfy_expr!(
+            &printer,
+            &Expr::Builtin {
+                loc: Loc::Codegen,
+                kind: Builtin::AddMod,
+                args: vec![identifier(1), identifier(2), num_literal!(0x100, 16)],
+            }
+        ),
+        "builtin: AddMod(int16(%temp.ssa_ir.1), int16(%temp.ssa_ir.2), uint16(256))"
     );
 }

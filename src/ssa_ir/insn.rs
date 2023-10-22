@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen;
-use crate::sema::ast::CallTy;
+use crate::sema::ast::{CallTy, ExternalCallAccounts};
 use crate::ssa_ir::expr::{Expr, Operand};
 use crate::ssa_ir::ssa_type::InternalCallTy;
 use solang_parser::pt::Loc;
@@ -55,7 +55,7 @@ pub enum Insn {
         salt: Option<Operand>,
         address: Option<Operand>,
         seeds: Option<Operand>,
-        accounts: Option<Operand>,
+        accounts: ExternalCallAccounts<Operand>,
         loc: Loc,
     },
 
@@ -109,7 +109,7 @@ pub enum Insn {
         // Polkadot specific
         success: Option<usize>,
         address: Option<Operand>,
-        accounts: Option<Operand>,
+        accounts: ExternalCallAccounts<Operand>,
         // Solana specific
         // for deriving and proving the ownership of an account
         seeds: Option<Operand>,

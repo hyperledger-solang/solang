@@ -1,7 +1,6 @@
 use crate::sema::ast::StringLocation;
 use crate::ssa_ir::expr::{Expr, Operand};
 use crate::ssa_ir::printer::Printer;
-use crate::ssa_ir::ssa_type::Type;
 use std::io::Write;
 
 #[macro_export]
@@ -186,7 +185,7 @@ impl Printer {
                 write!(f, " to {})", to_ty)
             }
             Expr::AllocDynamicBytes {
-                ty: Type::Ptr(ty),
+                ty,
                 size,
                 initializer,
                 ..
@@ -241,7 +240,7 @@ impl Printer {
             } => {
                 // write!(f, "{}->{}", operand, member)
                 self.print_rhs_operand(f, operand)?;
-                write!(f, "->{}", member)
+                write!(f, ".{}", member)
             }
             Expr::Subscript { arr, index, .. } => {
                 // example: ptr<uint8[2]> %1[uint8(0)]
@@ -350,7 +349,18 @@ impl Printer {
                 write!(f, "{}", value)
             }
             Expr::BoolLiteral { value, .. } => write!(f, "{}", value),
-            _ => panic!("unsupported expr: {:?}", expr),
+            Expr::Builtin { kind, args, .. } => {
+                // example: builtin: abi_encode(%1, %2, %3)
+                write!(f, "builtin: {:?}(", kind)?;
+                args.iter().enumerate().for_each(|(i, arg)| {
+                    if i != 0 {
+                        write!(f, ", ").unwrap();
+                    }
+                    // write!(f, "{}", arg).unwrap();
+                    self.print_rhs_operand(f, arg).unwrap();
+                });
+                write!(f, ")")
+            }
         }
     }
 }

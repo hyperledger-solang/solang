@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
-    codegen::{self, cfg::ControlFlowGraph},
+    codegen::{
+        self,
+        cfg::{self, ControlFlowGraph},
+    },
     sema::ast::{self, Namespace, RetrieveType},
 };
 
 use super::{
-    expr::Operand, insn::Insn, ssa_type::Type, typechecker::TypeChecker, vartable::Vartable,
+    expr::Operand,
+    insn::Insn,
+    ssa_type::{InternalCallTy, Type},
+    typechecker::TypeChecker,
+    vartable::Vartable,
 };
 
 mod cfg_converter;
@@ -84,6 +91,80 @@ impl<'input> Converter<'input> {
                 let tmp = vartable.new_temp(&self.from_ast_type(&expr.ty())?);
                 let dest_insns = self.from_expression(&tmp, expr, vartable)?;
                 Ok((tmp, dest_insns))
+            }
+        }
+    }
+
+    pub fn as_operand_option_and_insns(
+        &self,
+        expr: &Option<codegen::Expression>,
+        vartable: &mut Vartable,
+    ) -> Result<(Option<Operand>, Vec<Insn>), String> {
+        match expr {
+            Some(address) => {
+                let (tmp, expr_insns) = self.as_operand_and_insns(address, vartable)?;
+                Ok((Some(tmp), expr_insns))
+            }
+            None => Ok((None, vec![])),
+        }
+    }
+
+    pub fn as_string_location_and_insns(
+        &self,
+        location: &ast::StringLocation<codegen::Expression>,
+        vartable: &mut Vartable,
+    ) -> Result<(ast::StringLocation<Operand>, Vec<Insn>), String> {
+        match location {
+            ast::StringLocation::CompileTime(str) => Ok((
+                ast::StringLocation::CompileTime(str.clone()) as ast::StringLocation<Operand>,
+                vec![],
+            )),
+            ast::StringLocation::RunTime(expr) => {
+                let (op, insns) = self.as_operand_and_insns(expr, vartable)?;
+                Ok((ast::StringLocation::RunTime(Box::new(op)), insns))
+            }
+        }
+    }
+
+    pub fn as_external_call_accounts_and_insns(
+        &self,
+        accounts: &ast::ExternalCallAccounts<codegen::Expression>,
+        vartable: &mut Vartable,
+    ) -> Result<(ast::ExternalCallAccounts<Operand>, Vec<Insn>), String> {
+        match accounts {
+            ast::ExternalCallAccounts::Present(accounts) => {
+                let (tmp, expr_insns) = self.as_operand_and_insns(&accounts, vartable)?;
+                Ok((ast::ExternalCallAccounts::Present(tmp), expr_insns))
+            }
+            ast::ExternalCallAccounts::NoAccount => Ok((
+                ast::ExternalCallAccounts::NoAccount as ast::ExternalCallAccounts<Operand>,
+                vec![],
+            )),
+            ast::ExternalCallAccounts::AbsentArgument => Ok((
+                ast::ExternalCallAccounts::AbsentArgument as ast::ExternalCallAccounts<Operand>,
+                vec![],
+            )),
+        }
+    }
+
+    pub fn as_internal_call_ty_and_insns(
+        &self,
+        call: &cfg::InternalCallTy,
+        vartable: &mut Vartable,
+    ) -> Result<(InternalCallTy, Vec<Insn>), String> {
+        match call {
+            cfg::InternalCallTy::Builtin { ast_func_no } => Ok((
+                InternalCallTy::Builtin {
+                    ast_func_no: *ast_func_no,
+                },
+                vec![],
+            )),
+            cfg::InternalCallTy::Static { cfg_no } => {
+                Ok((InternalCallTy::Static { cfg_no: *cfg_no }, vec![]))
+            }
+            cfg::InternalCallTy::Dynamic(expr) => {
+                let (tmp, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
+                Ok((InternalCallTy::Dynamic(tmp), expr_insns))
             }
         }
     }

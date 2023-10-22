@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::codegen;
 use crate::sema::ast::{FormatArg, StringLocation};
 use crate::ssa_ir::ssa_type::Type;
 use num_bigint::BigInt;
@@ -215,6 +216,11 @@ pub enum Expr {
         left: StringLocation<Operand>,
         right: StringLocation<Operand>,
     },
+    Builtin {
+        loc: Loc,
+        kind: codegen::Builtin,
+        args: Vec<Operand>,
+    },
 
     /*************************** RPC Calls ***************************/
     // a storage array is in the account
@@ -282,7 +288,7 @@ impl fmt::Display for UnaryOperator {
 }
 
 impl Operand {
-    pub fn get_id_or_err(&self) -> Result<usize, &'static str> {
+    pub fn get_id(&self) -> Result<usize, &'static str> {
         match self {
             Operand::Id { id, .. } => Ok(*id),
             _ => Err("Operand is not an id"),

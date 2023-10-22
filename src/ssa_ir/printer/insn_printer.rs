@@ -1,3 +1,4 @@
+use crate::sema::ast;
 use crate::ssa_ir::insn::Insn;
 use crate::ssa_ir::printer::Printer;
 use crate::ssa_ir::ssa_type::{InternalCallTy, PhiInput};
@@ -139,8 +140,11 @@ impl Printer {
                     stringfy_rhs_operand!(self, encoded_args)
                 );
                 let rhs_accounts = match accounts {
-                    Some(accounts) => format!("accounts:{}", stringfy_rhs_operand!(self, accounts)),
-                    None => format!(""),
+                    ast::ExternalCallAccounts::NoAccount => format!(""),
+                    ast::ExternalCallAccounts::Present(acc) => {
+                        format!("accounts:{}", stringfy_rhs_operand!(self, acc))
+                    }
+                    ast::ExternalCallAccounts::AbsentArgument => format!("accounts:_"),
                 };
                 write!(
                     f,
@@ -311,10 +315,11 @@ impl Printer {
                     None => String::from(" _"),
                 };
                 let rhs_accounts = match accounts {
-                    Some(accounts) => {
-                        format!(" accounts:{}", stringfy_rhs_operand!(self, accounts))
+                    ast::ExternalCallAccounts::NoAccount => format!(""),
+                    ast::ExternalCallAccounts::Present(acc) => {
+                        format!("accounts:{}", stringfy_rhs_operand!(self, acc))
                     }
-                    None => String::from(" _"),
+                    ast::ExternalCallAccounts::AbsentArgument => format!("accounts:_"),
                 };
                 let rhs_seeds = match seeds {
                     Some(seeds) => format!(" seeds:{}", stringfy_rhs_operand!(self, seeds)),
@@ -435,11 +440,15 @@ impl Printer {
                 default,
                 ..
             } => {
-                // switch %1 cases: [%4 => block#11, %5 => block#12, %6 => block#13] default: block#14;
+                // switch %1 case: %4 => block#11, case: %5 => block#12, case: %6 => block#13, default: block#14;
                 let rhs_cases = cases
                     .iter()
                     .map(|(cond, block)| {
-                        format!("{} => block#{}", stringfy_rhs_operand!(self, cond), block)
+                        format!(
+                            "\n    case:    {} => block#{}",
+                            stringfy_rhs_operand!(self, cond),
+                            block
+                        )
                     })
                     .collect::<Vec<String>>()
                     .join(", ");
@@ -450,7 +459,7 @@ impl Printer {
                 // )
                 write!(f, "switch ")?;
                 self.print_rhs_operand(f, cond)?;
-                write!(f, " cases: [{}] default: block#{};", rhs_cases, default)
+                write!(f, ":{}\n    default: block#{};", rhs_cases, default)
             }
             Insn::Return { value, .. } => {
                 let rhs = value

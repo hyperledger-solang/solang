@@ -609,21 +609,27 @@ fn test_stringfy_switch_insn() {
     printer.set_tmp_var(5, &Type::Uint(8));
     printer.set_tmp_var(6, &Type::Uint(8));
 
+    let s = stringfy_insn!(
+        &printer,
+        &Insn::Switch {
+            cond: identifier(1),
+            cases: vec![
+                (identifier(4), 11),
+                (identifier(5), 12),
+                (identifier(6), 13),
+            ],
+            default: 14,
+        }
+    );
+    // println!("{}", s);
     assert_eq!(
-        stringfy_insn!(
-            &printer,
-            &Insn::Switch {
-                cond: identifier(1),
-                cases: vec![
-                    (identifier(4), 11),
-                    (identifier(5), 12),
-                    (identifier(6), 13),
-                ],
-                default: 14,
-            }
-        ),
+        s,
         // "switch %1 cases: [%4 => block#11, %5 => block#12, %6 => block#13] default: block#14;"
-        "switch uint8(%temp.ssa_ir.1) cases: [uint8(%temp.ssa_ir.4) => block#11, uint8(%temp.ssa_ir.5) => block#12, uint8(%temp.ssa_ir.6) => block#13] default: block#14;"
+        r#"switch uint8(%temp.ssa_ir.1):
+    case:    uint8(%temp.ssa_ir.4) => block#11, 
+    case:    uint8(%temp.ssa_ir.5) => block#12, 
+    case:    uint8(%temp.ssa_ir.6) => block#13
+    default: block#14;"#
     )
 }
 
