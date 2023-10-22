@@ -171,7 +171,7 @@ you may need to consult. `Ninja <https://ninja-build.org>`_ is necessary for bui
 
 .. code-block:: bash
 
-	git clone --depth 1 --branch solana-rustc/15.0-2022-08-09 https://github.com/solana-labs/llvm-project
+	git clone --depth 1 --branch solana-rustc/15.0-2022-12-07 https://github.com/solana-labs/llvm-project
 	cd llvm-project
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with a directory where you would like to have LLVM installed, and then run the build:
