@@ -14,9 +14,9 @@ use std::fmt::Formatter;
 /// Variable and Literal
 #[derive(Clone, Debug)]
 pub enum Operand {
-    Id { id: usize },
-    BoolLiteral { value: bool },
-    NumberLiteral { value: BigInt, ty: Type },
+    Id { loc: Loc, id: usize },
+    BoolLiteral { loc: Loc, value: bool },
+    NumberLiteral { loc: Loc, value: BigInt, ty: Type },
 }
 
 /// binary operators
@@ -284,8 +284,24 @@ impl fmt::Display for UnaryOperator {
 impl Operand {
     pub fn get_id_or_err(&self) -> Result<usize, &'static str> {
         match self {
-            Operand::Id { id } => Ok(*id),
+            Operand::Id { id, .. } => Ok(*id),
             _ => Err("Operand is not an id"),
+        }
+    }
+
+    pub fn new_id(id: usize, loc: Loc) -> Self {
+        Operand::Id { id, loc }
+    }
+
+    pub fn new_bool_literal(value: bool, loc: Loc) -> Self {
+        Operand::BoolLiteral { value, loc }
+    }
+
+    pub fn new_number_literal(value: &BigInt, ty: Type, loc: Loc) -> Self {
+        Operand::NumberLiteral {
+            loc,
+            value: value.clone(),
+            ty,
         }
     }
 }

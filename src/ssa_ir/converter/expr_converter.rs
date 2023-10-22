@@ -223,15 +223,15 @@ impl Converter<'_> {
             Expression::ReturnData { .. } => todo!("Expression::ReturnData"),
             Expression::SignExt { loc, ty, expr, .. } => {
                 // TODO: type checking
-                let tmp = vartable.new_temp(&self.from_ast_type(&expr.ty())?);
-                let mut expr_insns = self.from_expression(&tmp, expr, vartable)?;
+                // TypeChecker::check_sign_ext(&ty, &expr.ty())?;
+                let (tmp, expr_insns) = self.as_operand_and_insns(expr, vartable)?; // TODO: type checking
                 let sext = Expr::SignExt {
                     loc: loc.clone(),
                     operand: Box::new(tmp),
                     to_ty: self.from_ast_type(ty)?,
                 };
                 let mut insns = vec![];
-                insns.append(&mut expr_insns);
+                insns.extend(expr_insns);
                 insns.push(Insn::Set {
                     loc: loc.clone(),
                     res: dest.get_id_or_err()?,
@@ -264,13 +264,8 @@ impl Converter<'_> {
                 ..
             } => {
                 TypeChecker::check_subscript(&array_ty, &elem_ty, &index.ty())?;
-
-                let array_op = vartable.new_temp(&self.from_ast_type(array_ty)?);
-                let array_insns = self.from_expression(&array_op, expr, vartable)?;
-
-                let index_op = vartable.new_temp(&self.from_ast_type(&index.ty())?);
-                let index_insns = self.from_expression(&index_op, index, vartable)?;
-
+                let (array_op, array_insns) = self.as_operand_and_insns(expr, vartable)?;
+                let (index_op, index_insns) = self.as_operand_and_insns(index, vartable)?;
                 let mut insns = vec![];
                 insns.extend(array_insns);
                 insns.extend(index_insns);
@@ -318,16 +313,8 @@ impl Converter<'_> {
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
         TypeChecker::check_binary_op(&left.ty(), &right.ty())?;
-
-        let left_ty = self.from_ast_type(&left.ty())?;
-        let right_ty = self.from_ast_type(&right.ty())?;
-
-        let left_op = vartable.new_temp(&left_ty);
-        let left_insns = self.from_expression(&left_op, left, vartable)?;
-
-        let right_op = vartable.new_temp(&right_ty);
-        let right_insns = self.from_expression(&right_op, right, vartable)?;
-
+        let (left_op, left_insns) = self.as_operand_and_insns(left, vartable)?;
+        let (right_op, right_insns) = self.as_operand_and_insns(right, vartable)?;
         let mut insns = vec![];
         insns.extend(left_insns);
         insns.extend(right_insns);
@@ -354,12 +341,8 @@ impl Converter<'_> {
         expr: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let res_ty = self.from_ast_type(ty)?;
         TypeChecker::check_unary_op(ty, &expr.ty())?;
-
-        let expr_op = vartable.new_temp(&res_ty);
-        let expr_insns = self.from_expression(&expr_op, expr, vartable)?;
-
+        let (expr_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
         let mut insns = vec![];
         insns.extend(expr_insns);
         insns.push(Insn::Set {
@@ -385,10 +368,7 @@ impl Converter<'_> {
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
         TypeChecker::check_alloc_dynamic_bytes(ty, &size.ty())?;
-
-        let size_op = vartable.new_temp(&self.from_ast_type(&size.ty())?);
-        let left_insns = self.from_expression(&size_op, size, vartable)?;
-
+        let (size_op, left_insns) = self.as_operand_and_insns(size, vartable)?;
         let mut insns = vec![];
         insns.extend(left_insns);
         insns.push(Insn::Set {
@@ -421,8 +401,7 @@ impl Converter<'_> {
         let value_ops = values
             .iter()
             .map(|value| {
-                let op = vartable.new_temp(&arr_ty);
-                let insn = self.from_expression(&op, value, vartable)?;
+                let (op, insn) = self.as_operand_and_insns(value, vartable)?;
                 insns.extend(insn);
                 Ok(op)
             })

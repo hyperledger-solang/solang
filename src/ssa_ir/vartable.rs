@@ -5,6 +5,7 @@ use crate::ssa_ir::expr::Operand;
 use crate::ssa_ir::ssa_type::Type;
 use indexmap::IndexMap;
 use num_bigint::BigInt;
+use solang_parser::pt::Loc;
 
 /// define a constant prefix for temporary variables
 pub const TEMP_PREFIX: &str = "temp.ssa_ir.";
@@ -56,10 +57,10 @@ impl Vartable {
             .ok_or(format!("Variable {} not found.", id))
     }
 
-    pub(crate) fn get_operand(&self, id: &usize) -> Result<Operand, String> {
+    pub(crate) fn get_operand(&self, id: &usize, loc: Loc) -> Result<Operand, String> {
         self.vars
             .get(id)
-            .map(|var| Operand::Id { id: var.id })
+            .map(|var| Operand::Id { id: var.id, loc })
             .ok_or(format!("Variable {} not found.", id))
     }
 
@@ -83,7 +84,7 @@ impl Vartable {
             storage: Storage::Local,
         };
         self.vars.insert(self.next_id, var);
-        let op = Operand::Id { id: self.next_id };
+        let op = Operand::Id { id: self.next_id, loc: Loc::Codegen };
         self.next_id += 1;
         op
     }

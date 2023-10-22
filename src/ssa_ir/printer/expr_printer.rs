@@ -50,8 +50,8 @@ impl Printer {
                 let name = self.get_var_name(id).unwrap();
                 write!(f, "{}(%{})", ty, name)
             }
-            Operand::BoolLiteral { value } => write!(f, "{}", value),
-            Operand::NumberLiteral { value, ty } => write!(f, "{}({})", ty, value),
+            Operand::BoolLiteral { value, .. } => write!(f, "{}", value),
+            Operand::NumberLiteral { value, ty, .. } => write!(f, "{}({})", ty, value),
         }
     }
 

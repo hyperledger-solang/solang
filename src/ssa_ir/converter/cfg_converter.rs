@@ -2,9 +2,12 @@
 
 use std::sync::Arc;
 
+use crate::codegen::cfg::BasicBlock;
+use crate::sema::ast;
 use crate::ssa_ir::cfg::{Block, Cfg};
 use crate::ssa_ir::converter::Converter;
 use crate::ssa_ir::ssa_type::Parameter;
+use crate::ssa_ir::vartable::Vartable;
 
 impl Converter<'_> {
     pub fn get_ssa_ir_cfg(&self) -> Result<Cfg, String> {
@@ -45,5 +48,39 @@ impl Converter<'_> {
         };
 
         Ok(ssa_ir_cfg)
+    }
+
+    fn from_basic_block(
+        &self,
+        basic_block: &BasicBlock,
+        vartable: &mut Vartable,
+    ) -> Result<Block, String> {
+        let mut instructions = vec![];
+        for insn in &basic_block.instr {
+            let insns = self.from_instr(insn, vartable)?;
+            insns.into_iter().for_each(|i| instructions.push(i));
+        }
+
+        let block = Block {
+            name: basic_block.name.clone(),
+            instructions,
+        };
+
+        Ok(block)
+    }
+
+    fn from_ast_parameter(&self, param: &ast::Parameter) -> Result<Parameter, String> {
+        let ty = self.from_ast_type(&param.ty)?;
+        Ok(Parameter {
+            loc: param.loc,
+            id: param.id.clone(),
+            ty,
+            ty_loc: param.ty_loc,
+            indexed: param.indexed,
+            readonly: param.readonly,
+            infinite_size: param.infinite_size,
+            recursive: param.recursive,
+            annotation: param.annotation.clone(),
+        })
     }
 }

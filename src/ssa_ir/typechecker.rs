@@ -5,29 +5,24 @@ use crate::sema::ast::{ArrayLength, Type};
 pub struct TypeChecker {}
 
 impl TypeChecker {
-    pub fn check_assignment(lhs: &Type, rhs: &Type) -> Result<(), String> {
-        if lhs != rhs {
-            return Err(format!("Type mismatch: lhs: {:?}, rhs: {:?}", lhs, rhs));
+    pub fn assert_ty_eq(t1: &Type, t2: &Type) -> Result<(), String> {
+        if t1 != t2 {
+            return Err(format!("Type mismatch, expected {:?}, got {:?}", t1, t2));
         }
         Ok(())
+    }
+
+    pub fn check_assignment(lhs: &Type, rhs: &Type) -> Result<(), String> {
+        TypeChecker::assert_ty_eq(lhs, rhs)
     }
 
     pub fn check_binary_op(rhs_left_ty: &Type, rhs_right_ty: &Type) -> Result<(), String> {
         // the two types has to be equal
-        if rhs_left_ty != rhs_right_ty {
-            return Err(format!(
-                "Type mismatch: rhs_left_ty: {:?}, rhs_right_ty: {:?}",
-                rhs_left_ty, rhs_right_ty
-            ));
-        }
-        Ok(())
+        TypeChecker::assert_ty_eq(rhs_left_ty, rhs_right_ty)
     }
 
     pub fn check_unary_op(res_ty: &Type, ty: &Type) -> Result<(), String> {
-        if res_ty != ty {
-            return Err(format!("Type mismatch: res_ty: {:?}, ty: {:?}", res_ty, ty));
-        }
-        Ok(())
+        TypeChecker::assert_ty_eq(res_ty, ty)
     }
 
     pub fn check_alloc_dynamic_bytes(ty: &Type, size_ty: &Type) -> Result<(), String> {
@@ -59,13 +54,7 @@ impl TypeChecker {
 
         match (arr_ty, elem_ty) {
             (Type::Array(arr_elem_ty, _), Type::Ref(elem_ty)) => {
-                if arr_elem_ty.as_ref() != elem_ty.as_ref() {
-                    return Err(format!(
-                        "Expecting array element type {:?} to be equal to {:?}",
-                        arr_elem_ty, elem_ty
-                    ));
-                }
-                Ok(())
+                TypeChecker::assert_ty_eq(arr_elem_ty, elem_ty)
             }
             _ => Err(format!(
                 "Type mismatch: arr_ty: {:?}, elem_ty: {:?}",

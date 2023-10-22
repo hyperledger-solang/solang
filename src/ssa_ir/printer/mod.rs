@@ -1,6 +1,6 @@
 use crate::ssa_ir::vartable::Vartable;
 
-use super::{ssa_type::Type, expr::Operand};
+use super::{expr::Operand, ssa_type::Type};
 
 pub mod block_printer;
 pub mod cfg_printer;
@@ -26,6 +26,10 @@ impl Printer {
     }
 
     pub(crate) fn get_var_operand(&self, id: &usize) -> Result<Operand, String> {
-        self.vartable.get_operand(id)
+        self.vartable.get_operand(
+            id,
+            // the location is not important for printing
+            solang_parser::pt::Loc::Codegen,
+        )
     }
 }

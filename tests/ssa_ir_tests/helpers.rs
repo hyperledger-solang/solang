@@ -30,6 +30,7 @@ pub(crate) fn num_literal(value: i32, signed: bool, width: u16) -> Operand {
         } else {
             Type::Uint(width)
         },
+        loc: Loc::Codegen,
     }
 }
 
@@ -48,9 +49,9 @@ macro_rules! num_literal {
 }
 
 pub(crate) fn bool_literal(value: bool) -> Operand {
-    Operand::BoolLiteral { value }
+    Operand::BoolLiteral { value, loc: Loc::Codegen }
 }
 
 pub(crate) fn identifier(id: usize) -> Operand {
-    Operand::Id { id }
+    Operand::Id { id, loc: Loc::Codegen }
 }
