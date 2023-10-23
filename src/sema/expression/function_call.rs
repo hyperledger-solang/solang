@@ -1133,6 +1133,19 @@ fn try_type_method(
 
         Type::Address(is_payable) => {
             if func.name == "transfer" || func.name == "send" {
+                if ns.target == Target::Solana {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "method '{}' not available on Solana. Use the lamports \
+                        field from the AccountInfo struct directly to operate on balances.",
+                            func.name
+                        ),
+                    ));
+
+                    return Err(());
+                }
+
                 if !is_payable {
                     diagnostics.push(Diagnostic::error(
                         *loc,

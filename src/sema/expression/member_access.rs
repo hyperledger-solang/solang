@@ -369,6 +369,14 @@ pub(super) fn member_access(
                     ));
                     return Err(());
                 }
+            } else if ns.target == Target::Solana {
+                diagnostics.push(Diagnostic::error(
+                    expr.loc(),
+                    "balance is not available on Solana. Use \
+                    tx.accounts.account_name.lamports to fetch the balance."
+                        .to_string(),
+                ));
+                return Err(());
             }
             used_variable(ns, &expr, symtable);
             return Ok(Expression::Builtin {
