@@ -2228,6 +2228,9 @@ fn basic_value_to_slice<'a>(
         Type::Slice(_) | Type::DynamicBytes | Type::String => {
             let data = bin.vector_bytes(val);
             let len = bin.vector_len(val);
+            let len = bin
+                .builder
+                .build_int_z_extend(len, bin.context.i64_type(), "ext");
 
             (data, len)
         }

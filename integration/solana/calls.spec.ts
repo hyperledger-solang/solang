@@ -18,16 +18,16 @@ describe('Testing calls', function () {
 
         await callee.program.methods.setX(new BN(102))
             .accounts({ dataAccount: callee.storage.publicKey })
-            .rpc({commitment: "confirmed"});
+            .rpc({commitment: "processed"});
 
         let res = await callee.program.methods.getX()
             .accounts({ dataAccount: callee.storage.publicKey })
-            .view({commitment: "confirmed"});
+            .view({commitment: "processed"});
 
         expect(res).toEqual(new BN(102));
 
         res = await caller.program.methods.whoAmI()
-            .view({commitment: "confirmed"});
+            .view({commitment: "processed"});
 
         expect(res).toStrictEqual(caller.program_key);
 
@@ -36,11 +36,11 @@ describe('Testing calls', function () {
                 callee_dataAccount: callee.storage.publicKey,
                 callee_pid: callee.program_key,
                 })
-            .rpc({commitment: "confirmed"});
+            .rpc({commitment: "processed"});
 
         res = await callee.program.methods.getX()
             .accounts({ dataAccount: callee.storage.publicKey })
-            .view({commitment: "confirmed"});
+            .view({commitment: "processed"});
 
         expect(res).toEqual(new BN(13123));
 
@@ -49,7 +49,7 @@ describe('Testing calls', function () {
                 callee_dataAccount: callee.storage.publicKey,
                 callee_pid: callee.program_key,
             })
-            .view({commitment: "confirmed"});
+            .view({commitment: "processed"});
 
         expect(res).toEqual(new BN(33123));
 
@@ -58,7 +58,7 @@ describe('Testing calls', function () {
                 callee2_pid: callee2.program_key,
                 callee_pid: callee.program_key,
             })
-            .view({commitment: "confirmed"});
+            .view({commitment: "processed"});
 
         expect(res.return0).toEqual(new BN(24));
         expect(res.return1).toBe("my name is callee");
@@ -69,7 +69,7 @@ describe('Testing calls', function () {
                 callee_pid: callee.program_key,
                 other_callee2: callee2.program_key,
             })
-            .view({commitment: "confirmed"});
+            .view({commitment: "processed"});
 
         expect(res.return0).toEqual(new BN(10));
         expect(res.return1).toBe("x:asda");
