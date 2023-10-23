@@ -247,7 +247,7 @@ contract Testing {
 
         // CHECK: block20: # buffer_read
         // CHECK: ty:struct Testing.NonConstantStruct[] %arr = %temp.33
-        // CHECK: ty:struct Testing.NonConstantStruct[] storage %temp.47 = %arr
+        // CHECK: ty:struct Testing.NonConstantStruct[] %temp.47 = %arr
         // CHECK: store storage slot(uint32 16) ty:struct Testing.NonConstantStruct[] = %temp.47
 
         storage_vec = arr;

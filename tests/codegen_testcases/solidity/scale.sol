@@ -5,7 +5,7 @@ contract ExternalFunctions {
 
     // BEGIN-CHECK: ExternalFunctions::ExternalFunctions::function::to_storage
     function to_storage() public {
-        // CHECK: ty:function(int32) external returns (uint64) storage %temp.4 = function(int32) external returns (uint64)(function(int32) external returns (uint64)(struct { hex"42761137", (load (builtin GetAddress ())) }))
+        // CHECK: ty:function(int32) external returns (uint64) %temp.4 = function(int32) external returns (uint64)(function(int32) external returns (uint64)(struct { hex"42761137", (load (builtin GetAddress ())) }))
         // CHECK: store storage slot(uint256 0) ty:function(int32) external returns (uint64) = %temp.4
         func = this.foo;
     }

@@ -2579,9 +2579,9 @@ pub fn assign_single(
         }
         _ => {
             let left_ty = left.ty();
-            let ty = left_ty.deref_memory();
+            let ty = cfg_right.ty();
 
-            let pos = vartab.temp_anonymous(ty);
+            let pos = vartab.temp_anonymous(&ty);
 
             // Set a subscript in storage bytes needs special handling
             let set_storage_bytes = if let ast::Expression::Subscript { array_ty, .. } = &left {
@@ -2667,7 +2667,7 @@ pub fn assign_single(
 
             Expression::Variable {
                 loc: left.loc(),
-                ty: ty.clone(),
+                ty,
                 var_no: pos,
             }
         }
