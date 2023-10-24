@@ -28,11 +28,11 @@ Option 2: Download binaries
 
 There are binaries available on github releases:
 
-- `Linux x86-64 <https://github.com/hyperledger/solang/releases/download/v0.3.2/solang-linux-x86-64>`_
-- `Linux arm64 <https://github.com/hyperledger/solang/releases/download/v0.3.2/solang-linux-arm64>`_
-- `Windows x64 <https://github.com/hyperledger/solang/releases/download/v0.3.2/solang.exe>`_
-- `MacOS intel <https://github.com/hyperledger/solang/releases/download/v0.3.2/solang-mac-intel>`_
-- `MacOS arm <https://github.com/hyperledger/solang/releases/download/v0.3.2/solang-mac-arm>`_
+- `Linux x86-64 <https://github.com/hyperledger/solang/releases/download/v0.3.3/solang-linux-x86-64>`_
+- `Linux arm64 <https://github.com/hyperledger/solang/releases/download/v0.3.3/solang-linux-arm64>`_
+- `Windows x64 <https://github.com/hyperledger/solang/releases/download/v0.3.3/solang.exe>`_
+- `MacOS intel <https://github.com/hyperledger/solang/releases/download/v0.3.3/solang-mac-intel>`_
+- `MacOS arm <https://github.com/hyperledger/solang/releases/download/v0.3.3/solang-mac-arm>`_
 
 Download the file and save it somewhere in your ``$PATH``, for example the bin directory in your home directory. If the
 path you use is not already in ``$PATH``, then you need to add it yourself.
@@ -56,7 +56,7 @@ Option 3: Use ghcr.io/hyperledger/solang containers
 
 New images are automatically made available on
 `solang containers <https://github.com/hyperledger/solang/pkgs/container/solang>`_.
-There is a release `v0.3.2` tag and a `latest` tag:
+There is a release `v0.3.3` tag and a `latest` tag:
 
 .. code-block:: bash
 
@@ -126,8 +126,8 @@ Linux
 ~~~~~
 
 A pre-built version of LLVM, specifically configured for Solang, is available at
-`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-linux-x86-64.tar.xz>`_ for x86 processors
-and at `<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-linux-arm64.tar.xz>`_ for ARM.
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-2/llvm15.0-linux-x86-64.tar.xz>`_ for x86 processors
+and at `<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-2/llvm15.0-linux-arm64.tar.xz>`_ for ARM.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
@@ -139,7 +139,7 @@ Windows
 ~~~~~~~
 
 A pre-built version of LLVM, specifically configured for Solang, is available at
-`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-win.zip>`_.
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-2/llvm15.0-win.zip>`_.
 
 After unzipping the file, add the bin directory to your path.
 
@@ -151,8 +151,8 @@ Mac
 ~~~
 
 A pre-built version of LLVM for intel macs, is available at
-`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-mac-intel.tar.xz>`_ and for arm macs there is
-`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-mac-arm.tar.xz>`_. After downloading,
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-2/llvm15.0-mac-intel.tar.xz>`_ and for arm macs there is
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-2/llvm15.0-mac-arm.tar.xz>`_. After downloading,
 untar the file in a terminal and add it to your path like so:
 
 .. code-block:: bash
@@ -171,7 +171,7 @@ you may need to consult. `Ninja <https://ninja-build.org>`_ is necessary for bui
 
 .. code-block:: bash
 
-	git clone --depth 1 --branch solana-rustc/15.0-2022-08-09 https://github.com/solana-labs/llvm-project
+	git clone --depth 1 --branch solana-rustc/15.0-2022-12-07 https://github.com/solana-labs/llvm-project
 	cd llvm-project
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with a directory where you would like to have LLVM installed, and then run the build:
