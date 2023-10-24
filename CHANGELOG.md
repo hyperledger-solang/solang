@@ -28,7 +28,7 @@ the code base.
 - The vscode extension now uses the solang binary in the path, if available. [seanyoung](https://github.com/seanyoung)
 
 ### Changed
-- **breaking** **Solana** the contract Solidity type can no longer be used. This type
+- **BREAKING:** **Solana** the contract Solidity type can no longer be used. This type
   used to represent a single address, but this does not make sense as there are many
   accounts associated with a contract call. [LucasSte](https://github.com/LucasSte)
 
