@@ -5,11 +5,10 @@ use core::panic;
 use solang_parser::pt::Loc;
 
 use crate::codegen::Expression;
-use crate::sema::ast::{self, RetrieveType};
+use crate::sema::ast;
 use crate::ssa_ir::converter::Converter;
 use crate::ssa_ir::expr::{BinaryOperator, Expr, Operand, UnaryOperator};
 use crate::ssa_ir::insn::Insn;
-use crate::ssa_ir::typechecker::TypeChecker;
 use crate::ssa_ir::vartable::Vartable;
 
 impl Converter<'_> {
@@ -116,7 +115,6 @@ impl Converter<'_> {
                 ty,
                 ..
             } => {
-                TypeChecker::assert_ty_eq(from, &expr.ty())?;
                 let (from_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
                 let mut insns = vec![];
                 insns.extend(expr_insns);
@@ -170,14 +168,6 @@ impl Converter<'_> {
                 values,
                 ..
             } => {
-                let arr_ty = self.from_ast_type(ty)?;
-
-                // check values type
-                TypeChecker::check_array_elem_tys(
-                    ty,
-                    &values.iter().map(|v| v.ty()).collect::<Vec<_>>(),
-                )?;
-
                 let mut insns = vec![];
 
                 let value_ops = values
@@ -194,7 +184,7 @@ impl Converter<'_> {
                     res: dest.get_id()?,
                     expr: Expr::ConstArrayLiteral {
                         loc: loc.clone(),
-                        ty: arr_ty,
+                        ty: self.from_ast_type(ty)?,
                         dimensions: dimensions.clone(),
                         values: value_ops,
                     },
@@ -256,6 +246,7 @@ impl Converter<'_> {
                     arg_no: arg_no.clone(),
                 };
                 let res = dest.get_id()?;
+                vartable.add_function_arg(arg_no.clone(), res);
                 Ok(vec![Insn::Set {
                     loc: loc.clone(),
                     res,
@@ -334,8 +325,6 @@ impl Converter<'_> {
                 self.binary_operation(dest, loc, &ast::Type::Bool, operator, left, right, vartable)
             }
             Expression::Load { loc, ty, expr, .. } => {
-                TypeChecker::check_load(ty, &expr.ty())?;
-
                 let (from_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
                 let mut insns = vec![];
                 insns.extend(expr_insns);
@@ -464,8 +453,6 @@ impl Converter<'_> {
             }
             Expression::ReturnData { .. } => todo!("Expression::ReturnData"),
             Expression::SignExt { loc, ty, expr, .. } => {
-                // TODO: type checking
-                // TypeChecker::check_sign_ext(&ty, &expr.ty())?;
                 let (tmp, expr_insns) = self.as_operand_and_insns(expr, vartable)?; // TODO: type checking
                 let sext = Expr::SignExt {
                     loc: loc.clone(),
@@ -507,8 +494,6 @@ impl Converter<'_> {
                 self.binary_operation(dest, loc, ty, operator, left, right, vartable)
             }
             Expression::StorageArrayLength { loc, ty, array, .. } => {
-                TypeChecker::assert_ty_eq(&array.ty(), ty)?;
-
                 let (array_op, array_insns) = self.as_operand_and_insns(array, vartable)?;
                 let mut insns = vec![];
                 insns.extend(array_insns);
@@ -571,16 +556,7 @@ impl Converter<'_> {
             Expression::StructLiteral {
                 loc, ty, values, ..
             } => {
-                let struct_ty = self.from_ast_type(ty)?;
-
-                // check values type
-                // TypeChecker::check_struct_elem_tys(
-                //     ty,
-                //     &values.iter().map(|v| v.ty()).collect::<Vec<_>>(),
-                // )?;
-
                 let mut insns = vec![];
-
                 let value_ops = values
                     .iter()
                     .map(|value| {
@@ -595,7 +571,7 @@ impl Converter<'_> {
                     res: dest.get_id()?,
                     expr: Expr::StructLiteral {
                         loc: loc.clone(),
-                        ty: struct_ty,
+                        ty: self.from_ast_type(ty)?,
                         values: value_ops,
                     },
                 });
@@ -627,7 +603,6 @@ impl Converter<'_> {
                 index,
                 ..
             } => {
-                TypeChecker::check_subscript(&array_ty, &elem_ty, &index.ty())?;
                 let (array_op, array_insns) = self.as_operand_and_insns(expr, vartable)?;
                 let (index_op, index_insns) = self.as_operand_and_insns(index, vartable)?;
                 let mut insns = vec![];
@@ -746,7 +721,6 @@ impl Converter<'_> {
         right: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        TypeChecker::check_binary_op(&left.ty(), &right.ty())?;
         let (left_op, left_insns) = self.as_operand_and_insns(left, vartable)?;
         let (right_op, right_insns) = self.as_operand_and_insns(right, vartable)?;
         let mut insns = vec![];
@@ -774,7 +748,6 @@ impl Converter<'_> {
         expr: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        TypeChecker::check_unary_op(ty, &expr.ty())?;
         let (expr_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
         let mut insns = vec![];
         insns.extend(expr_insns);
@@ -800,7 +773,6 @@ impl Converter<'_> {
         initializer: &Option<Vec<u8>>,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        TypeChecker::check_alloc_dynamic_bytes(ty, &size.ty())?;
         let (size_op, left_insns) = self.as_operand_and_insns(size, vartable)?;
         let mut insns = vec![];
         insns.extend(left_insns);
@@ -827,8 +799,6 @@ impl Converter<'_> {
         values: &Vec<Expression>,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let arr_ty = self.from_ast_type(ty)?;
-
         let mut insns = vec![];
 
         let value_ops = values
@@ -845,7 +815,7 @@ impl Converter<'_> {
             res: dest.get_id()?,
             expr: Expr::ArrayLiteral {
                 loc: loc.clone(),
-                ty: arr_ty,
+                ty: self.from_ast_type(ty)?,
                 dimensions: dimensions.clone(),
                 values: value_ops,
             },

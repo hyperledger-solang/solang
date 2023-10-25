@@ -15,6 +15,7 @@ use solang_parser::pt::Loc;
 fn new_printer() -> Printer {
     let t = Vartable {
         vars: IndexMap::new(),
+        args: IndexMap::new(),
         next_id: 0,
     };
     Printer {

@@ -137,9 +137,6 @@ impl fmt::Display for Type {
                 }
             }
             Type::Array(ty, len) => {
-                // example, for fixed length: ty: uint8, len: [2, 3] -> uint8[2][3]
-                // for dynamic length: ty: uint8, len: dyn -> uint8[]
-                // for any fixed length: ty: uint8, len: [any, any] -> uint8[?][?]
                 write!(f, "{}", ty)?;
                 len.iter().for_each(|len| match len {
                     ArrayLength::Fixed(len) => write!(f, "[{}]", len).unwrap(),
@@ -151,8 +148,6 @@ impl fmt::Display for Type {
             Type::Slice(ty) => write!(f, "slice<{}>", ty),
             Type::Struct(ty) => write!(f, "struct.{}", ty),
             Type::Function { params, returns } => {
-                // example: fn(uint8, uint8) -> (uint8, uint8)
-                // example: fn(uint8, uint8) -> ()
                 write!(f, "fn(")?;
                 for (i, param) in params.iter().enumerate() {
                     if i != 0 {

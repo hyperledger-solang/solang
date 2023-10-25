@@ -14,6 +14,7 @@ use solang_parser::pt::Loc;
 fn new_printer() -> Printer {
     let v = Vartable {
         vars: IndexMap::new(),
+        args: IndexMap::new(),
         next_id: 0,
     };
     Printer {
@@ -853,7 +854,7 @@ fn test_stringfy_function_arg_expr() {
                 arg_no: 2,
             }
         ),
-        "arg#2"
+        "uint8(arg#2)"
     );
 }
 

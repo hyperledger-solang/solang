@@ -1,7 +1,7 @@
-use std::io::Write;
 use crate::codegen::cfg::ASTFunction;
 use crate::ssa_ir::cfg::Cfg;
 use crate::ssa_ir::printer::Printer;
+use std::io::Write;
 
 #[macro_export]
 macro_rules! stringfy_cfg {
@@ -10,7 +10,7 @@ macro_rules! stringfy_cfg {
         let mut buf = Vec::new();
         $printer.print_cfg(&mut buf, $cfg).unwrap();
         String::from_utf8(buf).unwrap()
-    }}
+    }};
 }
 
 impl Printer {
@@ -23,11 +23,7 @@ impl Printer {
 
         let access_ctl = if cfg.public { "public" } else { "private" };
 
-        write!(
-            f,
-            "{} {} {} {} ",
-            access_ctl, cfg.ty, function_no, cfg.name
-        )?;
+        write!(f, "{} {} {} {} ", access_ctl, cfg.ty, function_no, cfg.name)?;
 
         write!(f, "(")?;
         for (i, param) in cfg.params.iter().enumerate() {

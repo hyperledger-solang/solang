@@ -9,10 +9,8 @@ use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct Cfg {
-    // FIXME: need some adjustments on the params and types
     pub name: String,
     pub function_no: ASTFunction,
-    // TODO: define a new type for params?
     pub params: Arc<Vec<Parameter>>,
     pub returns: Arc<Vec<Parameter>>,
     pub vartable: Vartable,

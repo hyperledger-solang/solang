@@ -28,6 +28,7 @@ pub struct Var {
 #[derive(Debug, Clone)]
 pub struct Vartable {
     pub vars: IndexMap<usize, Var>,
+    pub args: IndexMap</* arg no */ usize, /* var id */ usize>,
     pub next_id: usize,
 }
 
@@ -84,9 +85,26 @@ impl Vartable {
             storage: Storage::Local,
         };
         self.vars.insert(self.next_id, var);
-        let op = Operand::Id { id: self.next_id, loc: Loc::Codegen };
+        let op = Operand::Id {
+            id: self.next_id,
+            loc: Loc::Codegen,
+        };
         self.next_id += 1;
         op
+    }
+
+    pub fn get_function_arg(&self, arg_no: usize, loc: Loc) -> Option<Operand> {
+        match self.args.get(&arg_no) {
+            Some(id) => {
+                let op = self.get_operand(id, loc).unwrap();
+                Some(op)
+            }
+            None => None,
+        }
+    }
+
+    pub fn add_function_arg(&mut self, arg_no: usize, var_id: usize) {
+        self.args.insert(arg_no, var_id);
     }
 }
 

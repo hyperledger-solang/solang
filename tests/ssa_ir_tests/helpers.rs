@@ -49,9 +49,15 @@ macro_rules! num_literal {
 }
 
 pub(crate) fn bool_literal(value: bool) -> Operand {
-    Operand::BoolLiteral { value, loc: Loc::Codegen }
+    Operand::BoolLiteral {
+        value,
+        loc: Loc::Codegen,
+    }
 }
 
 pub(crate) fn identifier(id: usize) -> Operand {
-    Operand::Id { id, loc: Loc::Codegen }
+    Operand::Id {
+        id,
+        loc: Loc::Codegen,
+    }
 }

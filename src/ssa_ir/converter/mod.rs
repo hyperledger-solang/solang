@@ -62,7 +62,11 @@ impl<'input> Converter<'input> {
         }
     }
 
-    pub fn as_operand(&self, expr: &codegen::Expression) -> Option<Operand> {
+    pub fn as_operand(
+        &self,
+        expr: &codegen::Expression,
+        vartable: &mut Vartable,
+    ) -> Option<Operand> {
         match expr {
             codegen::Expression::NumberLiteral { ty, value, loc, .. } => {
                 let ssa_ty = self.from_ast_type(ty).unwrap();
@@ -76,6 +80,9 @@ impl<'input> Converter<'input> {
                 TypeChecker::assert_ty_eq(&var_ty, ty).unwrap();
                 Some(Operand::new_id(var_no.clone(), loc.clone()))
             }
+            codegen::Expression::FunctionArg { loc, ty, arg_no } => {
+                vartable.get_function_arg(arg_no.clone(), loc.clone())
+            }
             _ => None,
         }
     }
@@ -85,7 +92,7 @@ impl<'input> Converter<'input> {
         expr: &codegen::Expression,
         vartable: &mut Vartable,
     ) -> Result<(Operand, Vec<Insn>), String> {
-        match self.as_operand(expr) {
+        match self.as_operand(expr, vartable) {
             Some(op) => Ok((op, vec![])),
             None => {
                 let tmp = vartable.new_temp(&self.from_ast_type(&expr.ty())?);

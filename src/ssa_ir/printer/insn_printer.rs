@@ -25,7 +25,6 @@ macro_rules! stringfy_phi {
 
 impl Printer {
     pub fn print_phi(&self, f: &mut dyn Write, phi: &PhiInput) -> std::io::Result<()> {
-        // write!(f, "[{}, block#{}]", phi.operand, phi.block_no)
         write!(f, "[")?;
         self.print_rhs_operand(f, &phi.operand)?;
         write!(f, ", block#{}]", phi.block_no)
@@ -35,7 +34,6 @@ impl Printer {
         match insn {
             Insn::Nop => write!(f, "nop;"),
             Insn::ReturnData { data, data_len } => {
-                // write!(f, "return_data {} of length {};", data, data_len)
                 write!(f, "return_data ")?;
                 self.print_rhs_operand(f, data)?;
                 write!(f, " of length ",)?;
@@ -50,7 +48,6 @@ impl Printer {
                 write!(f, ";")
             }
             Insn::Store { dest, data, .. } => {
-                // write!(f, "store {} to {};", data, dest)
                 write!(f, "store ")?;
                 self.print_rhs_operand(f, data)?;
                 write!(f, " to ")?;
@@ -60,7 +57,6 @@ impl Printer {
             Insn::PushMemory {
                 res, array, value, ..
             } => {
-                // %101 = push_mem ptr<int32[10]> %3 uint32(1);
                 let res_op = self.get_var_operand(res).unwrap();
                 let array_op = self.get_var_operand(array).unwrap();
                 write!(
@@ -73,7 +69,6 @@ impl Printer {
                 write!(f, ";")
             }
             Insn::PopMemory { res, array, .. } => {
-                // %101 = pop_mem ptr<int32[10]> %3;
                 let res_op = self.get_var_operand(res).unwrap();
                 let array_op = self.get_var_operand(array).unwrap();
                 write!(
@@ -162,7 +157,6 @@ impl Printer {
             }
             Insn::LoadStorage { res, storage, .. } => {
                 let res_op = self.get_var_operand(res).unwrap();
-                // write!(f, "%{} = load_storage {};", res, storage)
                 write!(
                     f,
                     "{} = load_storage ",
@@ -172,13 +166,11 @@ impl Printer {
                 write!(f, ";")
             }
             Insn::ClearStorage { storage, .. } => {
-                // write!(f, "clear_storage {};", storage)
                 write!(f, "clear_storage ")?;
                 self.print_rhs_operand(f, storage)?;
                 write!(f, ";")
             }
             Insn::SetStorage { value, storage, .. } => {
-                // write!(f, "set_storage {} {};", storage, value)
                 write!(f, "set_storage ")?;
                 self.print_rhs_operand(f, storage)?;
                 write!(f, " ")?;
@@ -191,12 +183,6 @@ impl Printer {
                 offset,
                 ..
             } => {
-                // set_storage_bytes {} offset:{} value:{}
-                // write!(
-                //     f,
-                //     "set_storage_bytes {} offset:{} value:{};",
-                //     storage, offset, value
-                // )
                 write!(f, "set_storage_bytes ")?;
                 self.print_rhs_operand(f, storage)?;
                 write!(f, " offset:")?;
@@ -211,12 +197,10 @@ impl Printer {
                 storage,
                 ..
             } => {
-                // "%{} = push storage ty:{} slot:{} = {}",
                 let rhs = match value {
                     Some(value) => format!("{}", stringfy_rhs_operand!(self, value)),
                     None => format!("empty"),
                 };
-                // write!(f, "%{} = push_storage {} {};", res, storage, rhs)
                 let res_op = self.get_var_operand(res).unwrap();
                 write!(
                     f,
@@ -227,7 +211,6 @@ impl Printer {
                 write!(f, " {};", rhs)
             }
             Insn::PopStorage { res, storage, .. } =>
-            // "%{} = pop storage ty:{} slot({})"
             {
                 match res {
                     Some(res) => {
@@ -253,7 +236,6 @@ impl Printer {
                     .collect::<Vec<String>>()
                     .join(", ");
 
-                // rhs: call [builtin | static | dynamic] [call] args: %0, %1, ...
                 let rhs_call = match call {
                     InternalCallTy::Builtin { ast_func_no, .. } => {
                         format!("builtin#{}", ast_func_no)
@@ -271,8 +253,6 @@ impl Printer {
                 write!(f, "{} = call {}({});", lhs, rhs_call, rhs_args)
             }
             Insn::Print { operand, .. } => {
-                // "print {}"
-                // write!(f, "print {};", operand)
                 write!(f, "print ")?;
                 self.print_rhs_operand(f, operand)?;
                 write!(f, ";")
@@ -280,8 +260,6 @@ impl Printer {
             Insn::MemCopy {
                 src, dest, bytes, ..
             } => {
-                // memcopy %4 from %3 for uint8(11);
-                // write!(f, "memcopy {} to {} for {} bytes;", src, dest, bytes)
                 write!(f, "memcopy ")?;
                 self.print_rhs_operand(f, src)?;
                 write!(f, " to ")?;
@@ -335,7 +313,6 @@ impl Printer {
                     Some(flags) => format!(" flags:{}", stringfy_rhs_operand!(self, flags)),
                     None => String::from(" _"),
                 };
-                // "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{} contract|function:{} flags:{}",
                 write!(
                     f,
                     "{}call_ext [{}]{}{}{}{}{}{}{}{};",
@@ -357,7 +334,6 @@ impl Printer {
                 value,
                 ..
             } => {
-                // "%{} = value_transfer {} to {}}",
                 let lhs = match success {
                     Some(success) => {
                         let success_op = self.get_var_operand(success).unwrap();
@@ -365,7 +341,6 @@ impl Printer {
                     }
                     None => String::from("_"),
                 };
-                // write!(f, "{} = transfer {} to {};", lhs, value, address)
                 write!(f, "{} = value_transfer ", lhs)?;
                 self.print_rhs_operand(f, value)?;
                 write!(f, " to ")?;
@@ -373,7 +348,6 @@ impl Printer {
                 write!(f, ";")
             }
             Insn::SelfDestruct { recipient, .. } => {
-                // "selfdestruct {}",
                 write!(
                     f,
                     "self_destruct {};",
@@ -386,17 +360,11 @@ impl Printer {
                 event_no,
                 ..
             } => {
-                // "emit event#{} to topics[{}], data: {};",
                 let rhs_topics = topics
                     .iter()
                     .map(|topic| stringfy_rhs_operand!(self, topic))
                     .collect::<Vec<String>>()
                     .join(", ");
-                // write!(
-                //     f,
-                //     "emit event#{} to topics[{}], data: {};",
-                //     event_no, rhs_topics, data
-                // )
                 write!(
                     f,
                     "emit event#{} to topics[{}], data: ",
@@ -408,8 +376,6 @@ impl Printer {
             Insn::WriteBuffer {
                 buf, offset, value, ..
             } => {
-                // "write_buf {} offset:{} value:{}",
-                // write!(f, "write_buf {} offset:{} value:{};", buf, offset, value)
                 write!(f, "write_buf ")?;
                 self.print_rhs_operand(f, buf)?;
                 write!(f, " offset:")?;
@@ -425,11 +391,6 @@ impl Printer {
                 false_block,
                 ..
             } => {
-                // write!(
-                //     f,
-                //     "cbr {} block#{} else block#{};",
-                //     cond, true_block, false_block
-                // )
                 write!(f, "cbr ")?;
                 self.print_rhs_operand(f, cond)?;
                 write!(f, " block#{} else block#{};", true_block, false_block)
@@ -440,7 +401,6 @@ impl Printer {
                 default,
                 ..
             } => {
-                // switch %1 case: %4 => block#11, case: %5 => block#12, case: %6 => block#13, default: block#14;
                 let rhs_cases = cases
                     .iter()
                     .map(|(cond, block)| {
@@ -452,11 +412,6 @@ impl Printer {
                     })
                     .collect::<Vec<String>>()
                     .join(", ");
-                // write!(
-                //     f,
-                //     "switch {} cases: [{}] default: block#{};",
-                //     cond, rhs_cases, default
-                // )
                 write!(f, "switch ")?;
                 self.print_rhs_operand(f, cond)?;
                 write!(f, ":{}\n    default: block#{};", rhs_cases, default)

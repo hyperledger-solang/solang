@@ -27,6 +27,7 @@ impl Converter<'_> {
 
         Ok(Vartable {
             vars,
+            args: IndexMap::new(),
             next_id: max_id + 1,
         })
     }

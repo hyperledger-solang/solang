@@ -61,6 +61,7 @@ fn test_stringfy_cfg() {
 
     let mut var_table = Vartable {
         vars: IndexMap::new(),
+        args: IndexMap::new(),
         next_id: 0,
     };
 
@@ -150,6 +151,7 @@ fn new_parameter(name: String, ty: Type) -> Parameter {
 fn new_vartable() -> Vartable {
     Vartable {
         vars: IndexMap::new(),
+        args: IndexMap::new(),
         next_id: 0,
     }
 }
