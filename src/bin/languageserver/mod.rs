@@ -334,16 +334,17 @@ impl SolangServer {
         let files = self.files.lock().await;
         if let Some(cache) = files.caches.get(&path) {
             let f = &cache.file;
-            let offset = f.get_offset(
+            if let Some(offset) = f.get_offset(
                 params.text_document_position_params.position.line as _,
                 params.text_document_position_params.position.character as _,
-            );
-            if let Some(reference) = cache
-                .references
-                .find(offset, offset + 1)
-                .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
-            {
-                return Ok(Some(reference.val.clone()));
+            ) {
+                if let Some(reference) = cache
+                    .references
+                    .find(offset, offset + 1)
+                    .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+                {
+                    return Ok(Some(reference.val.clone()));
+                }
             }
         }
         Ok(None)
@@ -1729,10 +1730,13 @@ impl<'a> Builder<'a> {
                 file_no,
                 ReferenceEntry {
                     start: file
-                        .get_offset(range.start.line as usize, range.start.character as usize),
+                        .get_offset(range.start.line as usize, range.start.character as usize)
+                        .unwrap(),
                     // 1 is added to account for the fact that `Lapper` expects half open ranges of the type:  [`start`, `stop`)
                     // i.e, `start` included but `stop` excluded.
-                    stop: file.get_offset(range.end.line as usize, range.end.character as usize)
+                    stop: file
+                        .get_offset(range.end.line as usize, range.end.character as usize)
+                        .unwrap()
                         + 1,
                     val: di.clone(),
                 },
@@ -1761,7 +1765,9 @@ impl<'a> Builder<'a> {
                         .filter(|h| h.0 == i)
                         .map(|(_, i)| {
                             let mut i = i.clone();
-                            i.val.def_path = defs_to_files[&i.val.def_type].clone();
+                            if let Some(path) = defs_to_files.get(&i.val.def_type) {
+                                i.val.def_path = path.clone();
+                            }
                             i
                         })
                         .collect(),
@@ -1990,24 +1996,25 @@ impl LanguageServer for SolangServer {
         if let Ok(path) = uri.to_file_path() {
             let files = &self.files.lock().await;
             if let Some(cache) = files.caches.get(&path) {
-                let offset = cache
+                if let Some(offset) = cache
                     .file
-                    .get_offset(pos.line as usize, pos.character as usize);
-
-                // The shortest hover for the position will be most informative
-                if let Some(hover) = cache
-                    .hovers
-                    .find(offset, offset + 1)
-                    .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+                    .get_offset(pos.line as usize, pos.character as usize)
                 {
-                    let range = get_range_exclusive(hover.start, hover.stop, &cache.file);
+                    // The shortest hover for the position will be most informative
+                    if let Some(hover) = cache
+                        .hovers
+                        .find(offset, offset + 1)
+                        .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+                    {
+                        let range = get_range_exclusive(hover.start, hover.stop, &cache.file);
 
-                    return Ok(Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::from_markdown(
-                            hover.val.to_string(),
-                        )),
-                        range: Some(range),
-                    }));
+                        return Ok(Some(Hover {
+                            contents: HoverContents::Scalar(MarkedString::from_markdown(
+                                hover.val.to_string(),
+                            )),
+                            range: Some(range),
+                        }));
+                    }
                 }
             }
         }
