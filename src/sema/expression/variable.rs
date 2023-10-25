@@ -12,7 +12,7 @@ use solang_parser::pt;
 pub(super) fn variable(
     id: &pt::Identifier,
     context: &ExprContext,
-    ns: &mut Namespace,
+    ns: &Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
@@ -116,8 +116,15 @@ pub(super) fn variable(
                 };
 
                 name_matches += 1;
+
+                let id_path = pt::IdentifierPath {
+                    loc: id.loc,
+                    identifiers: vec![id.clone()],
+                };
+
                 expr = Some(Expression::InternalFunction {
                     loc: id.loc,
+                    id: id_path,
                     ty,
                     function_no,
                     signature: if func.is_virtual || func.is_override.is_some() {

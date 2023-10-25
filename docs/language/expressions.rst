@@ -96,7 +96,7 @@ The result of a comparison operator can be assigned to a bool. For example:
 
  	bool even = (value % 2) == 0;
 
-It is not allowed to assign an integer to a bool; an explicit comparision is needed to turn it into
+It is not allowed to assign an integer to a bool; an explicit comparison is needed to turn it into
 a bool.
 
 Increment and Decrement operators

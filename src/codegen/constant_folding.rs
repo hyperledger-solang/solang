@@ -245,9 +245,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, dry_run: bool, ns: &mut Name
                     let seeds = seeds
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
-                    let accounts = accounts
-                        .as_ref()
-                        .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
+                    let accounts = accounts.map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
                     if !dry_run {
                         cfg.blocks[block_no].instr[instr_no] = Instr::Constructor {
@@ -285,9 +283,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, dry_run: bool, ns: &mut Name
                     let address = address
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
-                    let accounts = accounts
-                        .as_ref()
-                        .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
+                    let accounts = accounts.map(|expr| expression(expr, Some(&vars), cfg, ns).0);
                     let seeds = seeds
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
@@ -620,12 +616,12 @@ fn expression(
         Expression::StringCompare { loc, left, right } => {
             string_compare(loc, left, right, vars, cfg, ns)
         }
-        Expression::StringConcat {
+        Expression::Builtin {
             loc,
-            ty,
-            left,
-            right,
-        } => string_concat(loc, ty, left, right, vars, cfg, ns),
+            kind: Builtin::Concat,
+            args,
+            ..
+        } => bytes_concat(loc, args, vars, cfg, ns),
         Expression::Builtin {
             loc,
             tys,
@@ -1632,15 +1628,43 @@ fn bytes_cast(
 ) -> (Expression, bool) {
     let (expr, _) = expression(expr, vars, cfg, ns);
 
-    (
-        Expression::BytesCast {
-            loc: *loc,
-            ty: to.clone(),
-            from: from.clone(),
-            expr: Box::new(expr),
-        },
-        false,
-    )
+    if let Expression::NumberLiteral {
+        loc,
+        ty: Type::Bytes(len),
+        value,
+    } = expr
+    {
+        let (_, mut bs) = value.to_bytes_be();
+
+        while bs.len() < len as usize {
+            bs.insert(0, 0);
+        }
+
+        (
+            Expression::AllocDynamicBytes {
+                loc,
+                ty: Type::DynamicBytes,
+                size: Expression::NumberLiteral {
+                    loc,
+                    ty: Type::Uint(32),
+                    value: len.into(),
+                }
+                .into(),
+                initializer: Some(bs),
+            },
+            false,
+        )
+    } else {
+        (
+            Expression::BytesCast {
+                loc: *loc,
+                ty: to.clone(),
+                from: from.clone(),
+                expr: Box::new(expr),
+            },
+            false,
+        )
+    }
 }
 
 fn more(
@@ -1928,51 +1952,90 @@ fn string_compare(
     }
 }
 
-fn string_concat(
+fn bytes_concat(
     loc: &pt::Loc,
-    ty: &Type,
-    left: &StringLocation<Expression>,
-    right: &StringLocation<Expression>,
+    args: &[Expression],
     vars: Option<&reaching_definitions::VarDefs>,
     cfg: &ControlFlowGraph,
     ns: &mut Namespace,
 ) -> (Expression, bool) {
-    if let (StringLocation::CompileTime(left), StringLocation::CompileTime(right)) = (left, right) {
-        let mut bs = Vec::with_capacity(left.len() + right.len());
+    let mut last = None;
+    let mut res = Vec::new();
 
-        bs.extend(left);
-        bs.extend(right);
+    for arg in args {
+        let expr = expression(arg, vars, cfg, ns).0;
 
-        (
-            Expression::BytesLiteral {
-                loc: *loc,
-                ty: ty.clone(),
-                value: bs,
-            },
-            true,
-        )
+        if let Expression::AllocDynamicBytes {
+            initializer: Some(bs),
+            ..
+        } = &expr
+        {
+            if bs.is_empty() {
+                continue;
+            }
+
+            if let Some(Expression::AllocDynamicBytes {
+                size,
+                initializer: Some(init),
+                ..
+            }) = &mut last
+            {
+                let Expression::NumberLiteral { value, .. } = size.as_mut() else {
+                    unreachable!();
+                };
+
+                *value += bs.len();
+
+                init.extend_from_slice(bs);
+            } else {
+                last = Some(expr);
+            }
+        } else {
+            if let Some(expr) = last {
+                res.push(expr);
+                last = None;
+            }
+            res.push(expr);
+        }
+    }
+
+    if res.is_empty() {
+        if let Some(expr) = last {
+            (expr, false)
+        } else {
+            (
+                Expression::AllocDynamicBytes {
+                    loc: *loc,
+                    ty: Type::DynamicBytes,
+                    size: Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Uint(32),
+                        value: 0.into(),
+                    }
+                    .into(),
+                    initializer: None,
+                },
+                false,
+            )
+        }
     } else {
-        let left = if let StringLocation::RunTime(left) = left {
-            StringLocation::RunTime(Box::new(expression(left, vars, cfg, ns).0))
-        } else {
-            left.clone()
-        };
+        if let Some(expr) = last {
+            res.push(expr);
+        }
 
-        let right = if let StringLocation::RunTime(right) = right {
-            StringLocation::RunTime(Box::new(expression(right, vars, cfg, ns).0))
+        if res.len() == 1 {
+            (res[0].clone(), false)
         } else {
-            right.clone()
-        };
-
-        (
-            Expression::StringConcat {
-                loc: *loc,
-                ty: ty.clone(),
-                left,
-                right,
-            },
-            false,
-        )
+            (
+                Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![Type::DynamicBytes],
+                    kind: Builtin::Concat,
+                    args: res,
+                },
+                false,
+            )
+        }
     }
 }
 

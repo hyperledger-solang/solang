@@ -8,7 +8,7 @@ contract Builder {
         Built.new("my_seed");
     }
 
-    function call_that() public view {
+    function call_that() external view {
         Built.say_this("Hold up! I'm calling!");
     }
 }

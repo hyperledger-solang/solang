@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast::{
-    Builtin, CallArgs, Diagnostic, EventDecl, Expression, Namespace, RetrieveType,
+    Builtin, CallArgs, Diagnostic, EventDecl, Expression, ExternalCallAccounts, Namespace,
+    RetrieveType,
 };
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::{ast, symtable};
@@ -272,7 +273,7 @@ fn check_call_args(ns: &mut Namespace, call_args: &CallArgs, symtable: &mut Symt
     if let Some(value) = &call_args.value {
         used_variable(ns, value.as_ref(), symtable);
     }
-    if let Some(accounts) = &call_args.accounts {
+    if let ExternalCallAccounts::Present(accounts) = &call_args.accounts {
         used_variable(ns, accounts.as_ref(), symtable);
     }
     if let Some(seeds) = &call_args.seeds {
@@ -515,7 +516,7 @@ pub fn check_unused_events(ns: &mut Namespace) {
             // is there a global event with the same name
             if let Some(ast::Symbol::Event(events)) =
                 ns.variable_symbols
-                    .get(&(event.loc.file_no(), None, event.name.to_owned()))
+                    .get(&(event.loc.file_no(), None, event.id.name.to_owned()))
             {
                 shadowing_events(event_no, event, &mut shadows, events, ns);
             }
@@ -524,10 +525,11 @@ pub fn check_unused_events(ns: &mut Namespace) {
             for base_no in ns.contract_bases(contract_no) {
                 let base_file_no = ns.contracts[base_no].loc.file_no();
 
-                if let Some(ast::Symbol::Event(events)) =
-                    ns.variable_symbols
-                        .get(&(base_file_no, Some(base_no), event.name.to_owned()))
-                {
+                if let Some(ast::Symbol::Event(events)) = ns.variable_symbols.get(&(
+                    base_file_no,
+                    Some(base_no),
+                    event.id.name.to_owned(),
+                )) {
                     shadowing_events(event_no, event, &mut shadows, events, ns);
                 }
             }
@@ -551,8 +553,8 @@ pub fn check_unused_events(ns: &mut Namespace) {
             }
 
             ns.diagnostics.push(Diagnostic::warning(
-                event.loc,
-                format!("event '{}' has never been emitted", event.name),
+                event.id.loc,
+                format!("event '{}' has never been emitted", event.id),
             ));
         }
     }

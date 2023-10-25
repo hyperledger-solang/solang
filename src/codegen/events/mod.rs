@@ -27,6 +27,9 @@ pub(super) trait EventEmitter {
         vartab: &mut Vartable,
         opt: &Options,
     );
+
+    /// Generates the selector
+    fn selector(&self, emitting_contract_no: usize) -> Vec<u8>;
 }
 
 /// Create a new event emitter based on the target blockchain

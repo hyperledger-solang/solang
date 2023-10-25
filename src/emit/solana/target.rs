@@ -1232,7 +1232,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
         mut contract_args: ContractArgs<'b>,
-        _ns: &ast::Namespace,
+        ns: &ast::Namespace,
         _loc: Loc,
     ) {
         contract_args.program_id = Some(address);
@@ -1242,7 +1242,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         assert!(contract_args.accounts.is_some());
         // The AccountMeta array is always present for Solana contracts
-        self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args);
+        self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args, ns);
     }
 
     fn builtin_function(
@@ -1254,7 +1254,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         first_arg_type: BasicTypeEnum,
         ns: &ast::Namespace,
     ) -> Option<BasicValueEnum<'a>> {
-        if builtin_func.name == "create_program_address" {
+        if builtin_func.id.name == "create_program_address" {
             let func = binary
                 .module
                 .get_function("sol_create_program_address")
@@ -1288,7 +1288,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .left()
                 .unwrap();
             Some(ret)
-        } else if builtin_func.name == "try_find_program_address" {
+        } else if builtin_func.id.name == "try_find_program_address" {
             let func = binary
                 .module
                 .get_function("sol_try_find_program_address")
@@ -1344,12 +1344,19 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     ) {
         let address = address.unwrap();
 
+        if contract_args.accounts.is_none() {
+            contract_args.accounts = Some((
+                binary
+                    .context
+                    .i64_type()
+                    .ptr_type(AddressSpace::default())
+                    .const_zero(),
+                binary.context.i32_type().const_zero(),
+            ))
+        };
+
         contract_args.program_id = Some(address);
-        if contract_args.accounts.is_some() {
-            self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args);
-        } else {
-            self.build_external_call(binary, payload, payload_len, contract_args, ns);
-        }
+        self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args, ns);
     }
 
     /// Get return buffer for external call
@@ -1477,34 +1484,15 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     /// Send value to address
     fn value_transfer<'b>(
         &self,
-        binary: &Binary<'b>,
+        _binary: &Binary<'b>,
         _function: FunctionValue,
-        success: Option<&mut BasicValueEnum<'b>>,
-        address: PointerValue<'b>,
-        value: IntValue<'b>,
+        _success: Option<&mut BasicValueEnum<'b>>,
+        _address: PointerValue<'b>,
+        _value: IntValue<'b>,
         _ns: &ast::Namespace,
         _loc: Loc,
     ) {
-        let parameters = self.sol_parameters(binary);
-
-        if let Some(success) = success {
-            *success = binary
-                .builder
-                .build_call(
-                    binary.module.get_function("sol_try_transfer").unwrap(),
-                    &[address.into(), value.into(), parameters.into()],
-                    "success",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap();
-        } else {
-            binary.builder.build_call(
-                binary.module.get_function("sol_transfer").unwrap(),
-                &[address.into(), value.into(), parameters.into()],
-                "",
-            );
-        }
+        unreachable!();
     }
 
     /// Terminate execution, destroy binary and send remaining funds to addr
@@ -1832,36 +1820,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         "success",
                     )
                     .into()
-            }
-            codegen::Expression::Builtin {
-                kind: codegen::Builtin::Balance,
-                args,
-                ..
-            } => {
-                assert_eq!(args.len(), 1);
-
-                let address = binary.build_alloca(function, binary.address_type(ns), "address");
-
-                binary.builder.build_store(
-                    address,
-                    expression(self, binary, &args[0], vartab, function, ns).into_array_value(),
-                );
-
-                let account_lamport = binary.module.get_function("sol_account_lamport").unwrap();
-
-                let parameters = self.sol_parameters(binary);
-
-                let lamport = binary
-                    .builder
-                    .build_call(account_lamport, &[address.into(), parameters.into()], "")
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_pointer_value();
-
-                binary
-                    .builder
-                    .build_load(binary.context.i64_type(), lamport, "lamport")
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::Accounts,

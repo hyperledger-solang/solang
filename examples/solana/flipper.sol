@@ -1,4 +1,3 @@
-@program_id("F1ipperKF9EfD821ZbbYjS319LXYiBmjhzkkf5a26rC")
 contract flipper {
 	bool private value;
 

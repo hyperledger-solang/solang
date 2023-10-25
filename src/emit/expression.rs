@@ -31,6 +31,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
     function: FunctionValue<'a>,
     ns: &Namespace,
 ) -> BasicValueEnum<'a> {
+    emit_context!(bin);
+
     match e {
         Expression::FunctionArg { arg_no, .. } => function.get_nth_param(*arg_no as u32).unwrap(),
         Expression::BoolLiteral { value, .. } => bin
@@ -1550,20 +1552,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .left()
                 .unwrap()
         }
-        Expression::StringConcat { left, right, .. } => {
-            let (left, left_len) = string_location(target, bin, left, vartab, function, ns);
-            let (right, right_len) = string_location(target, bin, right, vartab, function, ns);
-
-            bin.builder
-                .build_call(
-                    bin.module.get_function("concat").unwrap(),
-                    &[left.into(), left_len.into(), right.into(), right_len.into()],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-        }
         Expression::ReturnData { .. } => target.return_data(bin, function).into(),
         Expression::StorageArrayLength { array, elem_ty, .. } => {
             let slot = expression(target, bin, array, vartab, function, ns).into_int_value();
@@ -1815,6 +1803,84 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     ns,
                 )
                 .into()
+        }
+        Expression::Builtin {
+            kind: Builtin::Concat,
+            args,
+            ..
+        } => {
+            let vector_ty = bin.module.get_struct_type("struct.vector").unwrap();
+
+            let mut length = i32_zero!();
+
+            let args: Vec<_> = args
+                .iter()
+                .map(|arg| {
+                    let v = expression(target, bin, arg, vartab, function, ns);
+
+                    length = bin
+                        .builder
+                        .build_int_add(length, bin.vector_len(v), "length");
+
+                    v
+                })
+                .collect();
+
+            let size = bin.builder.build_int_add(
+                length,
+                vector_ty
+                    .size_of()
+                    .unwrap()
+                    .const_cast(bin.context.i32_type(), false),
+                "size",
+            );
+
+            let v = bin
+                .builder
+                .build_call(
+                    bin.module.get_function("__malloc").unwrap(),
+                    &[size.into()],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_pointer_value();
+
+            let mut dest = bin.vector_bytes(v.into());
+
+            for arg in args {
+                let from = bin.vector_bytes(arg);
+                let len = bin.vector_len(arg);
+
+                dest = bin
+                    .builder
+                    .build_call(
+                        bin.module.get_function("__memcpy").unwrap(),
+                        &[dest.into(), from.into(), len.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+            }
+
+            // Update the len and size field of the vector struct
+            let len_ptr = bin
+                .builder
+                .build_struct_gep(vector_ty, v, 0, "len")
+                .unwrap();
+            bin.builder.build_store(len_ptr, length);
+
+            let size_ptr = bin
+                .builder
+                .build_struct_gep(vector_ty, v, 1, "size")
+                .unwrap();
+
+            bin.builder.build_store(size_ptr, length);
+
+            v.into()
         }
         Expression::Builtin { .. } => target.builtin(bin, e, vartab, function, ns),
         Expression::InternalFunctionCfg { cfg_no, .. } => bin.functions[cfg_no]
@@ -2228,6 +2294,9 @@ fn basic_value_to_slice<'a>(
         Type::Slice(_) | Type::DynamicBytes | Type::String => {
             let data = bin.vector_bytes(val);
             let len = bin.vector_len(val);
+            let len = bin
+                .builder
+                .build_int_z_extend(len, bin.context.i64_type(), "ext");
 
             (data, len)
         }

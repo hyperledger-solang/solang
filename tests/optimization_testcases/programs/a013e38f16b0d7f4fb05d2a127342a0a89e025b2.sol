@@ -4,7 +4,7 @@ contract c1 {
         string bst = "from Solang";
 
         while (ast == bst) {
-            ast = ast + "a";
+            ast = string.concat(ast, "a");
         }
 
         return ast;

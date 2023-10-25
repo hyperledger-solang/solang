@@ -13,7 +13,7 @@ pub fn generate_abi(
     ns: &Namespace,
     code: &[u8],
     verbose: bool,
-    default_authors: &Vec<String>,
+    default_authors: &[String],
     version: &str,
 ) -> (String, &'static str) {
     match ns.target {
@@ -21,7 +21,7 @@ pub fn generate_abi(
             if verbose {
                 eprintln!(
                     "info: Generating ink! metadata for contract {}",
-                    ns.contracts[contract_no].name
+                    ns.contracts[contract_no].id
                 );
             }
 
@@ -33,7 +33,7 @@ pub fn generate_abi(
             if verbose {
                 eprintln!(
                     "info: Generating Anchor metadata for contract {}",
-                    ns.contracts[contract_no].name
+                    ns.contracts[contract_no].id
                 );
             }
 
@@ -45,7 +45,7 @@ pub fn generate_abi(
             if verbose {
                 eprintln!(
                     "info: Generating Ethereum ABI for contract {}",
-                    ns.contracts[contract_no].name
+                    ns.contracts[contract_no].id
                 );
             }
 

@@ -43,18 +43,14 @@ describe('Simple collectible', function () {
         const nft_uri = "www.nft.com";
 
         // Create a collectible for an owner given a mint authority.
-        await program.methods.createCollectible(
-            nft_uri,
-            mint_authority.publicKey,
-            owner_token_account.address)
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([
-                { pubkey: mint, isSigner: false, isWritable: true },
-                { pubkey: owner_token_account.address, isSigner: false, isWritable: true },
-                { pubkey: mint_authority.publicKey, isSigner: true, isWritable: false },
-                { pubkey: metadata_authority.publicKey, isSigner: true, isWritable: true }
-            ])
-            .signers([mint_authority, metadata_authority])
+        await program.methods.createCollectible()
+            .accounts({
+                dataAccount: storage.publicKey,
+                mintAccount: mint,
+                ownerTokenAccount: owner_token_account.address,
+                mintAuthority: mint_authority.publicKey,
+            })
+            .signers([mint_authority])
             .rpc();
 
         const new_owner = Keypair.generate();
@@ -69,43 +65,33 @@ describe('Simple collectible', function () {
 
 
         // Transfer ownership to another owner
-        await program.methods.transferOwnership(
-            owner_token_account.address,
-            new_owner_token_account.address)
-            .remainingAccounts([
-                { pubkey: new_owner_token_account.address, isSigner: false, isWritable: true },
-                { pubkey: owner_token_account.address, isSigner: false, isWritable: true },
-                { pubkey: nft_owner.publicKey, isSigner: true, isWritable: false },
-            ])
+        await program.methods.transferOwnership()
+            .accounts({
+                oldTokenAccount: owner_token_account.address,
+                newTokenAccount: new_owner_token_account.address,
+                oldOwner: nft_owner.publicKey
+            })
             .signers([nft_owner])
             .rpc();
 
         // Confirm that the ownership transference worked
         const verify_transfer_result = await program.methods.isOwner(
-            new_owner.publicKey,
-            new_owner_token_account.address)
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([
-                { pubkey: new_owner_token_account.address, isSigner: false, isWritable: false },
-            ])
+            new_owner.publicKey)
+            .accounts({
+                dataAccount: storage.publicKey,
+                tokenAccount: new_owner_token_account.address
+            })
             .view();
 
         expect(verify_transfer_result).toBe(true);
 
-        // Retrieve information about the NFT
-        const token_uri = await program.methods.getNftUri()
-            .accounts({ dataAccount: storage.publicKey })
-            .view();
-
-        expect(token_uri).toBe(nft_uri);
-
         // Update the NFT URI
         const new_uri = "www.token.com";
         await program.methods.updateNftUri(new_uri)
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([
-                { pubkey: metadata_authority.publicKey, isSigner: true, isWritable: true },
-            ])
+            .accounts({
+                dataAccount: storage.publicKey,
+                metadataSigner: metadata_authority.publicKey
+            })
             .signers([metadata_authority])
             .rpc();
 

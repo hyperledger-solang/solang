@@ -30,7 +30,7 @@ contract bar2 is bar1 {
         return hello({b: g, a: f});
     }
 
-    function test4(int c, int d) public returns (int) {
+    function test4(int c, int d) external returns (int) {
         // This is allowed
         return this.this_is_external(c, d) + this.hello(d, c);
     }
@@ -42,6 +42,7 @@ contract bar2 is bar1 {
 }
 
 // ---- Expect: diagnostics ----
+// error: 4:12-55: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external
 // error: 25:16-27: functions declared external cannot be called via an internal function call
 // 	note 19:5-61: declaration of function 'hello'
 // error: 30:16-35: functions declared external cannot be called via an internal function call

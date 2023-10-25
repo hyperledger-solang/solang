@@ -11,7 +11,8 @@ use solang::{
     parse_and_resolve,
     sema::{
         ast::{self, RetrieveType, StructType, Type},
-        builtin::get_prototype,
+        builtin::{get_prototype, BUILTIN_FUNCTIONS, BUILTIN_METHODS, BUILTIN_VARIABLE},
+        builtin_structs::BUILTIN_STRUCTS,
         symtable,
         tags::render,
     },
@@ -62,7 +63,7 @@ enum DefinitionType {
     // (contract id where the variable is declared, variable id)
     NonLocalVariable(Option<usize>, usize),
     // user-defined struct id
-    Struct(usize),
+    Struct(StructType),
     // (user-defined struct id, field id)
     Field(Type, usize),
     // enum index in Namespace::enums
@@ -74,6 +75,7 @@ enum DefinitionType {
     // event index in Namespace::events
     Event(usize),
     UserType(usize),
+    DynamicBytes,
 }
 
 /// Uniquely identifies a code object.
@@ -120,6 +122,7 @@ type Declarations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
 type Properties = HashMap<DefinitionIndex, HashMap<String, Option<DefinitionIndex>>>;
 
 /// Stores information used by language server for every opened file
+#[derive(Default)]
 struct Files {
     caches: HashMap<PathBuf, FileCache>,
     text_buffers: HashMap<PathBuf, String>,
@@ -147,6 +150,7 @@ struct FileCache {
 /// * `declarations` maps the `DefinitionIndex` of a `Contract` method to a list of methods that it overrides. The overridden methods belong to the parent `Contract`s
 /// * `implementations` maps the `DefinitionIndex` of a `Contract` to the `DefinitionIndex`s of methods defined as part of the `Contract`.
 /// * `properties` maps the `DefinitionIndex` of a code objects to the name and type of fields, variants or methods defined in the code object.
+#[derive(Default)]
 struct GlobalCache {
     definitions: Definitions,
     types: Types,
@@ -221,17 +225,8 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
         target,
         importpaths,
         importmaps,
-        files: Mutex::new(Files {
-            caches: HashMap::new(),
-            text_buffers: HashMap::new(),
-        }),
-        global_cache: Mutex::new(GlobalCache {
-            definitions: HashMap::new(),
-            types: HashMap::new(),
-            declarations: HashMap::new(),
-            implementations: HashMap::new(),
-            properties: HashMap::new(),
-        }),
+        files: Mutex::new(Default::default()),
+        global_cache: Mutex::new(Default::default()),
     });
 
     Server::new(stdin, stdout, socket).serve(service).await;
@@ -312,8 +307,6 @@ impl SolangServer {
                 })
             }));
 
-            std::fs::write("/tmp/ns", format!("{:#?}", ns)).unwrap();
-
             let res = self.client.publish_diagnostics(uri, diags, None);
 
             let (file_caches, global_cache) = Builder::new(&ns).build();
@@ -347,16 +340,17 @@ impl SolangServer {
         let files = self.files.lock().await;
         if let Some(cache) = files.caches.get(&path) {
             let f = &cache.file;
-            let offset = f.get_offset(
+            if let Some(offset) = f.get_offset(
                 params.text_document_position_params.position.line as _,
                 params.text_document_position_params.position.character as _,
-            );
-            if let Some(reference) = cache
-                .references
-                .find(offset, offset + 1)
-                .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
-            {
-                return Ok(Some(reference.val.clone()));
+            ) {
+                if let Some(reference) = cache
+                    .references
+                    .find(offset, offset + 1)
+                    .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+                {
+                    return Ok(Some(reference.val.clone()));
+                }
             }
         }
         Ok(None)
@@ -701,8 +695,9 @@ impl<'a> Builder<'a> {
                     }
                 ));
             }
-            ast::Expression::StructLiteral { loc, ty, values } => {
+            ast::Expression::StructLiteral { id: id_path, ty, values, .. } => {
                 if let Type::Struct(StructType::UserDefined(id)) = ty {
+                    let loc = id_path.identifiers.last().unwrap().loc;
                     self.references.push((
                         loc.file_no(),
                         ReferenceEntry {
@@ -710,13 +705,28 @@ impl<'a> Builder<'a> {
                             stop: loc.exclusive_end(),
                             val: DefinitionIndex {
                                 def_path: Default::default(),
-                                def_type: DefinitionType::Struct(*id),
+                                def_type: DefinitionType::Struct(StructType::UserDefined(*id)),
                             },
                         },
                     ));
                 }
-                for expr in values {
+
+                for (i, (field_name, expr)) in values.iter().enumerate() {
                     self.expression(expr, symtab);
+
+                    if let Some(pt::Identifier { loc: field_name_loc, ..}) = field_name {
+                        self.references.push((
+                            field_name_loc.file_no(),
+                            ReferenceEntry {
+                                start: field_name_loc.start(),
+                                stop: field_name_loc.exclusive_end(),
+                                val: DefinitionIndex {
+                                    def_path: Default::default(),
+                                    def_type: DefinitionType::Field(ty.clone(), i),
+                                },
+                            },
+                        ));
+                    }
                 }
             }
             ast::Expression::ArrayLiteral { values, .. }
@@ -923,7 +933,7 @@ impl<'a> Builder<'a> {
             }
             ast::Expression::ConstantVariable { loc, ty, contract_no, var_no } => {
                 let (contract, name) = if let Some(contract_no) = contract_no {
-                    let contract = format!("{}.", self.ns.contracts[*contract_no].name);
+                    let contract = format!("{}.", self.ns.contracts[*contract_no].id);
                     let name = &self.ns.contracts[*contract_no].variables[*var_no].name;
                     (contract, name)
                 } else {
@@ -962,7 +972,7 @@ impl<'a> Builder<'a> {
             ast::Expression::StorageVariable { loc, ty, contract_no, var_no } => {
                 let contract = &self.ns.contracts[*contract_no];
                 let name = &contract.variables[*var_no].name;
-                let val = format!("{} {}.{}", ty.to_string(self.ns), contract.name, name);
+                let val = format!("{} {}.{}", ty.to_string(self.ns), contract.id, name);
                 self.hovers.push((
                     loc.file_no(),
                     HoverEntry {
@@ -1074,16 +1084,8 @@ impl<'a> Builder<'a> {
                     self.expression(expr, symtab);
                 }
             }
-            ast::Expression::StringConcat { left, right, .. } => {
-                if let ast::StringLocation::RunTime(expr) = left {
-                    self.expression(expr, symtab);
-                }
-                if let ast::StringLocation::RunTime(expr) = right {
-                    self.expression(expr, symtab);
-                }
-            }
 
-            ast::Expression::InternalFunction {loc, function_no, ..} => {
+            ast::Expression::InternalFunction {id, function_no, ..} => {
                 let fnc = &self.ns.functions[*function_no];
                 let mut msg_tg = render(&fnc.tags[..]);
                 if !msg_tg.is_empty() {
@@ -1100,23 +1102,25 @@ impl<'a> Builder<'a> {
                         msg
                     }).join(", ");
 
-                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
+                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].id)).unwrap_or_default();
 
-                let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
+                let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.id, params, rets);
+
+                let func_loc = id.identifiers.last().unwrap().loc;
 
                 self.hovers.push((
-                    loc.file_no(),
+                    func_loc.file_no(),
                     HoverEntry {
-                        start: loc.start(),
-                        stop: loc.exclusive_end(),
+                        start: func_loc.start(),
+                        stop: func_loc.exclusive_end(),
                         val: format!("{}{}", msg_tg, make_code_block(val)),
                     },
                 ));
                 self.references.push((
-                    loc.file_no(),
+                    func_loc.file_no(),
                     ReferenceEntry {
-                        start: loc.start(),
-                        stop: loc.exclusive_end(),
+                        start: func_loc.start(),
+                        stop: func_loc.exclusive_end(),
                         val: DefinitionIndex {
                             def_path: Default::default(),
                             def_type: DefinitionType::Function(*function_no),
@@ -1158,9 +1162,9 @@ impl<'a> Builder<'a> {
                         msg
                     }).join(", ");
 
-                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
+                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].id)).unwrap_or_default();
 
-                let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
+                let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.id, params, rets);
 
                 self.hovers.push((
                     loc.file_no(),
@@ -1349,14 +1353,14 @@ impl<'a> Builder<'a> {
                 ));
             }
         }
-
-        let file_no = field.loc.file_no();
+        let loc = field.id.as_ref().map(|id| &id.loc).unwrap_or(&field.loc);
+        let file_no = loc.file_no();
         let file = &self.ns.files[file_no];
         self.hovers.push((
             file_no,
             HoverEntry {
-                start: field.loc.start(),
-                stop: field.loc.exclusive_end(),
+                start: loc.start(),
+                stop: loc.exclusive_end(),
                 val: make_code_block(format!(
                     "{} {}",
                     field.ty.to_string(self.ns),
@@ -1372,8 +1376,7 @@ impl<'a> Builder<'a> {
                 field_id,
             ),
         };
-        self.definitions
-            .insert(di.clone(), loc_to_range(&field.loc, file));
+        self.definitions.insert(di.clone(), loc_to_range(loc, file));
         if let Some(dt) = get_type_definition(&field.ty) {
             self.types.insert(di, dt.into());
         }
@@ -1393,7 +1396,7 @@ impl<'a> Builder<'a> {
                         stop: loc.exclusive_end(),
                         val: make_code_block(format!(
                             "enum {}.{} {}",
-                            enum_decl.name, nam, discriminant
+                            enum_decl.id, nam, discriminant
                         )),
                     },
                 ));
@@ -1408,22 +1411,23 @@ impl<'a> Builder<'a> {
                 self.types.insert(di, dt.into());
             }
 
-            let file_no = enum_decl.loc.file_no();
+            let file_no = enum_decl.id.loc.file_no();
             let file = &self.ns.files[file_no];
             self.hovers.push((
                 file_no,
                 HoverEntry {
-                    start: enum_decl.loc.start(),
-                    stop: enum_decl.loc.start() + enum_decl.name.len(),
+                    start: enum_decl.id.loc.start(),
+                    stop: enum_decl.id.loc.exclusive_end(),
                     val: render(&enum_decl.tags[..]),
                 },
             ));
+
             let di = DefinitionIndex {
                 def_path: file.path.clone(),
                 def_type: DefinitionType::Enum(ei),
             };
             self.definitions
-                .insert(di.clone(), loc_to_range(&enum_decl.loc, file));
+                .insert(di.clone(), loc_to_range(&enum_decl.id.loc, file));
 
             self.properties.insert(
                 di.clone(),
@@ -1436,32 +1440,33 @@ impl<'a> Builder<'a> {
 
             if enum_decl.contract.is_none() {
                 self.top_level_code_objects
-                    .push((file_no, (enum_decl.name.clone(), Some(di))));
+                    .push((file_no, (enum_decl.id.name.clone(), Some(di))));
             }
         }
 
         for (si, struct_decl) in self.ns.structs.iter().enumerate() {
-            if let pt::Loc::File(_, start, _) = &struct_decl.loc {
+            if matches!(struct_decl.loc, pt::Loc::File(_, _, _)) {
                 for (fi, field) in struct_decl.fields.iter().enumerate() {
                     self.field(si, fi, field);
                 }
 
-                let file_no = struct_decl.loc.file_no();
+                let file_no = struct_decl.id.loc.file_no();
                 let file = &self.ns.files[file_no];
                 self.hovers.push((
                     file_no,
                     HoverEntry {
-                        start: *start,
-                        stop: start + struct_decl.name.len(),
+                        start: struct_decl.id.loc.start(),
+                        stop: struct_decl.id.loc.exclusive_end(),
                         val: render(&struct_decl.tags[..]),
                     },
                 ));
+
                 let di = DefinitionIndex {
                     def_path: file.path.clone(),
-                    def_type: DefinitionType::Struct(si),
+                    def_type: DefinitionType::Struct(StructType::UserDefined(si)),
                 };
                 self.definitions
-                    .insert(di.clone(), loc_to_range(&struct_decl.loc, file));
+                    .insert(di.clone(), loc_to_range(&struct_decl.id.loc, file));
 
                 self.properties.insert(
                     di.clone(),
@@ -1480,7 +1485,7 @@ impl<'a> Builder<'a> {
 
                 if struct_decl.contract.is_none() {
                     self.top_level_code_objects
-                        .push((file_no, (struct_decl.name.clone(), Some(di))));
+                        .push((file_no, (struct_decl.id.name.clone(), Some(di))));
                 }
             }
         }
@@ -1515,14 +1520,16 @@ impl<'a> Builder<'a> {
             }
 
             for (i, param) in func.params.iter().enumerate() {
+                let loc = param.id.as_ref().map(|id| &id.loc).unwrap_or(&param.loc);
                 self.hovers.push((
-                    param.loc.file_no(),
+                    loc.file_no(),
                     HoverEntry {
-                        start: param.loc.start(),
-                        stop: param.loc.exclusive_end(),
+                        start: loc.start(),
+                        stop: loc.exclusive_end(),
                         val: self.expanded_ty(&param.ty),
                     },
                 ));
+
                 if let Some(Some(var_no)) = func.symtable.arguments.get(i) {
                     if let Some(id) = &param.id {
                         let file_no = id.loc.file_no();
@@ -1539,13 +1546,13 @@ impl<'a> Builder<'a> {
                     }
                 }
 
-                if let Some(loc) = param.ty_loc {
+                if let Some(ty_loc) = param.ty_loc {
                     if let Some(dt) = get_type_definition(&param.ty) {
                         self.references.push((
-                            loc.file_no(),
+                            ty_loc.file_no(),
                             ReferenceEntry {
-                                start: loc.start(),
-                                stop: loc.exclusive_end(),
+                                start: ty_loc.start(),
+                                stop: ty_loc.exclusive_end(),
                                 val: dt.into(),
                             },
                         ));
@@ -1554,11 +1561,12 @@ impl<'a> Builder<'a> {
             }
 
             for (i, ret) in func.returns.iter().enumerate() {
+                let loc = ret.id.as_ref().map(|id| &id.loc).unwrap_or(&ret.loc);
                 self.hovers.push((
-                    ret.loc.file_no(),
+                    loc.file_no(),
                     HoverEntry {
-                        start: ret.loc.start(),
-                        stop: ret.loc.exclusive_end(),
+                        start: loc.start(),
+                        stop: loc.exclusive_end(),
                         val: self.expanded_ty(&ret.ty),
                     },
                 ));
@@ -1579,13 +1587,13 @@ impl<'a> Builder<'a> {
                     }
                 }
 
-                if let Some(loc) = ret.ty_loc {
+                if let Some(ty_loc) = ret.ty_loc {
                     if let Some(dt) = get_type_definition(&ret.ty) {
                         self.references.push((
-                            loc.file_no(),
+                            ty_loc.file_no(),
                             ReferenceEntry {
-                                start: loc.start(),
-                                stop: loc.exclusive_end(),
+                                start: ty_loc.start(),
+                                stop: ty_loc.exclusive_end(),
                                 val: dt.into(),
                             },
                         ));
@@ -1597,14 +1605,14 @@ impl<'a> Builder<'a> {
                 self.statement(stmt, &func.symtable);
             }
 
-            let file_no = func.loc.file_no();
+            let file_no = func.id.loc.file_no();
             let file = &self.ns.files[file_no];
             self.definitions.insert(
                 DefinitionIndex {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Function(i),
                 },
-                loc_to_range(&func.loc, file),
+                loc_to_range(&func.id.loc, file),
             );
 
             self.scopes.push((
@@ -1617,20 +1625,9 @@ impl<'a> Builder<'a> {
                         .map(|stmt| stmt.loc())
                         .unwrap_or(func.loc)
                         .exclusive_end(),
-                    // val: func
-                    //     .symtable
-                    //     .vars
-                    //     .values()
-                    //     .map(|val| {
-                    //         (
-                    //             val.id.name.clone(),
-                    //             get_type_definition(&val.ty).map(|dt| dt.into()),
-                    //         )
-                    //     })
-                    //     .collect(),
                     val: func
                         .symtable
-                        .names
+                        .scopes
                         .first()
                         .map(|curr_scope| {
                             curr_scope
@@ -1652,7 +1649,7 @@ impl<'a> Builder<'a> {
 
             if func.contract_no.is_none() {
                 self.top_level_code_objects
-                    .push((file_no, (func.name.clone(), None)))
+                    .push((file_no, (func.id.name.clone(), None)))
             }
         }
 
@@ -1687,7 +1684,7 @@ impl<'a> Builder<'a> {
                         stop: base.loc.exclusive_end(),
                         val: make_code_block(format!(
                             "contract {}",
-                            self.ns.contracts[base.contract_no].name
+                            self.ns.contracts[base.contract_no].id
                         )),
                     },
                 ));
@@ -1714,8 +1711,8 @@ impl<'a> Builder<'a> {
             self.hovers.push((
                 file_no,
                 HoverEntry {
-                    start: contract.loc.start(),
-                    stop: contract.loc.start() + contract.name.len(),
+                    start: contract.id.loc.start(),
+                    stop: contract.id.loc.exclusive_end(),
                     val: render(&contract.tags[..]),
                 },
             ));
@@ -1726,7 +1723,7 @@ impl<'a> Builder<'a> {
             };
 
             self.definitions
-                .insert(cdi.clone(), loc_to_range(&contract.loc, file));
+                .insert(cdi.clone(), loc_to_range(&contract.id.loc, file));
 
             let impls = contract
                 .functions
@@ -1770,7 +1767,7 @@ impl<'a> Builder<'a> {
                         })
                         .reduce(|acc, e| acc.union(&e).copied().collect());
 
-                    // get the `DefinitionIndex`s of the overridden funcions
+                    // get the `DefinitionIndex`s of the overridden functions
                     parent_decls.map(|parent_decls| {
                         let decls = parent_decls
                             .iter()
@@ -1791,10 +1788,12 @@ impl<'a> Builder<'a> {
 
             //////////// Code objects defined within the contract ////////////
 
-            let functions = contract
-                .functions
-                .iter()
-                .filter_map(|&fno| self.ns.functions.get(fno).map(|f| (f.name.clone(), None)));
+            let functions = contract.functions.iter().filter_map(|&fno| {
+                self.ns
+                    .functions
+                    .get(fno)
+                    .map(|f| (f.id.name.clone(), None))
+            });
 
             let structs =
                 self.ns
@@ -1802,9 +1801,10 @@ impl<'a> Builder<'a> {
                     .iter()
                     .enumerate()
                     .filter_map(|(i, s)| match &s.contract {
-                        Some(c) if c == &contract.name => {
-                            Some((s.name.clone(), Some(DefinitionType::Struct(i))))
-                        }
+                        Some(c) if c == &contract.id.name => Some((
+                            s.id.name.clone(),
+                            Some(DefinitionType::Struct(StructType::UserDefined(i))),
+                        )),
                         _ => None,
                     });
 
@@ -1814,8 +1814,8 @@ impl<'a> Builder<'a> {
                 .iter()
                 .enumerate()
                 .filter_map(|(i, e)| match &e.contract {
-                    Some(c) if c == &contract.name => {
-                        Some((e.name.clone(), Some(DefinitionType::Enum(i))))
+                    Some(c) if c == &contract.id.name => {
+                        Some((e.id.name.clone(), Some(DefinitionType::Enum(i))))
                     }
                     _ => None,
                 });
@@ -1826,7 +1826,9 @@ impl<'a> Builder<'a> {
                 .iter()
                 .enumerate()
                 .filter_map(|(i, e)| match &e.contract {
-                    Some(c) if *c == ci => Some((e.name.clone(), Some(DefinitionType::Event(i)))),
+                    Some(c) if *c == ci => {
+                        Some((e.id.name.clone(), Some(DefinitionType::Event(i))))
+                    }
                     _ => None,
                 });
 
@@ -1865,7 +1867,7 @@ impl<'a> Builder<'a> {
             // Contracts can't be defined within other contracts.
             // So all the contracts are top level objects in a file.
             self.top_level_code_objects
-                .push((file_no, (contract.name.clone(), Some(cdi))));
+                .push((file_no, (contract.id.name.clone(), Some(cdi))));
         }
 
         for (ei, event) in self.ns.events.iter().enumerate() {
@@ -1873,13 +1875,13 @@ impl<'a> Builder<'a> {
                 self.field(ei, fi, field);
             }
 
-            let file_no = event.loc.file_no();
+            let file_no = event.id.loc.file_no();
             let file = &self.ns.files[file_no];
             self.hovers.push((
                 file_no,
                 HoverEntry {
-                    start: event.loc.start(),
-                    stop: event.loc.start() + event.name.len(),
+                    start: event.id.loc.start(),
+                    stop: event.id.loc.exclusive_end(),
                     val: render(&event.tags[..]),
                 },
             ));
@@ -1889,11 +1891,11 @@ impl<'a> Builder<'a> {
                 def_type: DefinitionType::Event(ei),
             };
             self.definitions
-                .insert(di.clone(), loc_to_range(&event.loc, file));
+                .insert(di.clone(), loc_to_range(&event.id.loc, file));
 
             if event.contract.is_none() {
                 self.top_level_code_objects
-                    .push((file_no, (event.name.clone(), Some(di))));
+                    .push((file_no, (event.id.name.clone(), Some(di))));
             }
         }
 
@@ -1926,24 +1928,30 @@ impl<'a> Builder<'a> {
             .collect::<HashMap<PathBuf, usize>>();
 
         for val in self.types.values_mut() {
-            val.def_path = defs_to_files[&val.def_type].clone();
+            if let Some(path) = defs_to_files.get(&val.def_type) {
+                val.def_path = path.clone();
+            }
         }
 
         for (di, range) in &self.definitions {
-            let file_no = defs_to_file_nos[&di.def_path];
-            let file = &self.ns.files[file_no];
-            self.references.push((
-                file_no,
-                ReferenceEntry {
-                    start: file
-                        .get_offset(range.start.line as usize, range.start.character as usize),
-                    // 1 is added to account for the fact that `Lapper` expects half open ranges of the type:  [`start`, `stop`)
-                    // i.e, `start` included but `stop` excluded.
-                    stop: file.get_offset(range.end.line as usize, range.end.character as usize)
-                        + 1,
-                    val: di.clone(),
-                },
-            ));
+            if let Some(&file_no) = defs_to_file_nos.get(&di.def_path) {
+                let file = &self.ns.files[file_no];
+                self.references.push((
+                    file_no,
+                    ReferenceEntry {
+                        start: file
+                            .get_offset(range.start.line as usize, range.start.character as usize)
+                            .unwrap(),
+                        // 1 is added to account for the fact that `Lapper` expects half open ranges of the type:  [`start`, `stop`)
+                        // i.e, `start` included but `stop` excluded.
+                        stop: file
+                            .get_offset(range.end.line as usize, range.end.character as usize)
+                            .unwrap()
+                            + 1,
+                        val: di.clone(),
+                    },
+                ));
+            }
         }
 
         let file_caches = self
@@ -1968,7 +1976,9 @@ impl<'a> Builder<'a> {
                         .filter(|r| r.0 == i)
                         .map(|(_, i)| {
                             let mut i = i.clone();
-                            i.val.def_path = defs_to_files[&i.val.def_type].clone();
+                            if let Some(def_path) = defs_to_files.get(&i.val.def_type) {
+                                i.val.def_path = def_path.clone();
+                            }
                             i
                         })
                         .collect(),
@@ -1981,7 +1991,9 @@ impl<'a> Builder<'a> {
                             let mut s = s.clone();
                             for val in &mut s.val {
                                 if let Some(val) = &mut val.1 {
-                                    val.def_path = defs_to_files[&val.def_type].clone();
+                                    if let Some(def_path) = defs_to_files.get(&val.def_type) {
+                                        val.def_path = def_path.clone();
+                                    }
                                 }
                             }
                             s
@@ -1995,7 +2007,9 @@ impl<'a> Builder<'a> {
                     .map(|co| {
                         if let Some(DefinitionIndex { def_path, def_type }) = &mut co.1 .1 {
                             if def_path.to_str().unwrap() == "" {
-                                *def_path = defs_to_files[def_type].clone();
+                                if let Some(dp) = defs_to_files.get(def_type) {
+                                    *def_path = dp.clone();
+                                }
                             }
                         }
                         co.1.clone()
@@ -2007,7 +2021,9 @@ impl<'a> Builder<'a> {
         for sc in &mut self.properties {
             for di in sc.1.values_mut().flatten() {
                 if di.def_path.to_str().unwrap() == "" {
-                    di.def_path = defs_to_files[&di.def_type].clone();
+                    if let Some(def_path) = defs_to_files.get(&di.def_type) {
+                        di.def_path = def_path.clone();
+                    }
                 }
             }
         }
@@ -2229,16 +2245,6 @@ impl LanguageServer for SolangServer {
     /// * All other cases where the request is raised by user typing characters other than `.`
     ///     - Here, we return a list of variables, structs, enums, contracts, functions etc. accessible from the current scope.
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
-        use std::fs::OpenOptions;
-        use std::io::Write;
-        let mut data_file = OpenOptions::new()
-            .append(true)
-            .open("/tmp/completion")
-            .expect("cannot open file");
-        data_file
-            .write_all(format!("{}\n", "-".repeat(50)).as_bytes())
-            .expect("write failed");
-
         let uri = params.text_document_position.text_document.uri;
         let path = uri.to_file_path().map_err(|_| Error {
             code: ErrorCode::InvalidRequest,
@@ -2246,37 +2252,22 @@ impl LanguageServer for SolangServer {
             data: None,
         })?;
 
-        data_file
-            .write_all(format!("URI: {uri}\n").as_bytes())
-            .expect("write failed");
-
         let files = self.files.lock().await;
 
         let Some(cache) = files.caches.get(&path) else {
             return Ok(None);
         };
 
-        let offset = cache.file.get_offset(
-            params.text_document_position.position.line as _,
-            params.text_document_position.position.character as _,
-        );
-        data_file
-            .write_all(format!("Offset: {offset}\n").as_bytes())
-            .expect("write failed");
-
-        data_file
-            .write_all(format!("All scopes in the file: {:#?}\n", cache.scopes).as_bytes())
-            .expect("write failed");
-
-        data_file
-            .write_all(
-                format!(
-                    "Enclosing Scopes: {:#?}\n",
-                    cache.scopes.find(offset, offset + 1).collect::<Vec<_>>()
-                )
-                .as_bytes(),
+        let offset = cache
+            .file
+            .get_offset(
+                params.text_document_position.position.line as _,
+                params.text_document_position.position.character as _,
             )
-            .expect("write failed");
+            .unwrap();
+
+        let builtin_functions = BUILTIN_FUNCTIONS.iter().map(|f| (f.name.to_string(), None));
+        let builtin_variables = BUILTIN_VARIABLE.iter().map(|v| (v.name.to_string(), None));
 
         // Get all the code objects available from the lexical scope from which the request was raised.
         let code_objects_in_scope = cache
@@ -2286,7 +2277,9 @@ impl LanguageServer for SolangServer {
             .flat_map(|scope| scope.val.iter().cloned())
             // get the top level code objects in the file
             .chain(cache.top_level_code_objects.clone())
-            // TODO: get the builtin functions
+            // builtins
+            .chain(builtin_functions)
+            .chain(builtin_variables)
             .collect::<HashMap<_, _>>();
 
         let gc = self.global_cache.lock().await;
@@ -2296,19 +2289,33 @@ impl LanguageServer for SolangServer {
                 trigger_kind: CompletionTriggerKind::TRIGGER_CHARACTER,
                 trigger_character: Some(trigger_character),
             }) if trigger_character == "." => {
-                data_file
-                    .write_all("Inside trigger character \".\"\n".to_string().as_bytes())
-                    .expect("write failed");
                 let Some(text_buf) = files.text_buffers.get(&path) else {
                     return Ok(None);
                 };
 
-                data_file
-                    .write_all(
-                        format!("Inside text_buf: {:?}\n\n", text_buf.chars().nth(offset))
-                            .as_bytes(),
-                    )
-                    .expect("write failed");
+                let mut builtin_methods =
+                    HashMap::<DefinitionType, HashMap<String, Option<DefinitionIndex>>>::new();
+                for method in BUILTIN_METHODS.iter() {
+                    if let Some(dt) = get_type_definition(&method.method[0]) {
+                        builtin_methods
+                            .entry(dt)
+                            .or_default()
+                            .insert(method.name.to_string(), None);
+                    }
+                }
+
+                let builtin_structs = BUILTIN_STRUCTS
+                    .iter()
+                    .map(|s| {
+                        let dt = DefinitionType::Struct(s.1);
+                        let fields =
+                            s.0.fields
+                                .iter()
+                                .map(|f| (f.name_as_str().to_string(), None))
+                                .collect();
+                        (dt, fields)
+                    })
+                    .collect::<HashMap<_, HashMap<_, _>>>();
 
                 // Extract code object from source code for which `Completion` request was triggered.
                 // Extracts all the characters connected to the "." character.
@@ -2328,10 +2335,6 @@ impl LanguageServer for SolangServer {
                     }
                     let name = b[curr as usize..offset - 1].iter().collect::<String>();
 
-                    data_file
-                        .write_all(format!("Inside text_buf, sending: \"{name}\"\n").as_bytes())
-                        .expect("write failed");
-
                     name
                 };
 
@@ -2339,24 +2342,27 @@ impl LanguageServer for SolangServer {
                 // The parts are basically a field, a variant or a method defined on the previous part.
                 let mut code_object_parts = code_object.split('.');
 
-                // for prop in name_iter {
-                //     properties = properties
-                //         .and_then(|p| p.get(prop))
-                //         .and_then(|a| a.as_ref())
-                //         .and_then(|n| gc.scope_contents.get(n));
-                // }
-
                 // `properties` gives the list of fields, variants and methods defined for the code object in question.
                 let properties = code_object_parts.next().and_then(|n| {
                     code_objects_in_scope
                         .get(n)
                         .and_then(|a| a.as_ref())
-                        .and_then(|n| gc.properties.get(n))
+                        .and_then(|n| {
+                            gc.properties
+                                .get(n)
+                                .or_else(|| builtin_methods.get(&n.def_type))
+                                .or_else(|| builtin_structs.get(&n.def_type))
+                        })
                 });
                 let properties = code_object_parts.fold(properties, |acc, prop| {
                     acc.and_then(|p| p.get(prop))
                         .and_then(|a| a.as_ref())
-                        .and_then(|n| gc.properties.get(n))
+                        .and_then(|n| {
+                            gc.properties
+                                .get(n)
+                                .or_else(|| builtin_methods.get(&n.def_type))
+                                .or_else(|| builtin_structs.get(&n.def_type))
+                        })
                 });
 
                 // Return a list of suggestions using the `properties` extracted previously by converting them into the expected format.
@@ -2398,24 +2404,25 @@ impl LanguageServer for SolangServer {
         if let Ok(path) = uri.to_file_path() {
             let files = &self.files.lock().await;
             if let Some(cache) = files.caches.get(&path) {
-                let offset = cache
+                if let Some(offset) = cache
                     .file
-                    .get_offset(pos.line as usize, pos.character as usize);
-
-                // The shortest hover for the position will be most informative
-                if let Some(hover) = cache
-                    .hovers
-                    .find(offset, offset + 1)
-                    .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+                    .get_offset(pos.line as usize, pos.character as usize)
                 {
-                    let range = get_range_exclusive(hover.start, hover.stop, &cache.file);
+                    // The shortest hover for the position will be most informative
+                    if let Some(hover) = cache
+                        .hovers
+                        .find(offset, offset + 1)
+                        .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+                    {
+                        let range = get_range_exclusive(hover.start, hover.stop, &cache.file);
 
-                    return Ok(Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::from_markdown(
-                            hover.val.to_string(),
-                        )),
-                        range: Some(range),
-                    }));
+                        return Ok(Some(Hover {
+                            contents: HoverContents::Scalar(MarkedString::from_markdown(
+                                hover.val.to_string(),
+                            )),
+                            range: Some(range),
+                        }));
+                    }
                 }
             }
         }
@@ -2817,12 +2824,13 @@ fn get_range_exclusive(start: usize, end: usize, file: &ast::File) -> Range {
 fn get_type_definition(ty: &Type) -> Option<DefinitionType> {
     match ty {
         Type::Enum(id) => Some(DefinitionType::Enum(*id)),
-        Type::Struct(StructType::UserDefined(id)) => Some(DefinitionType::Struct(*id)),
+        Type::Struct(st) => Some(DefinitionType::Struct(*st)),
         Type::Array(ty, _) => get_type_definition(ty),
         Type::Ref(ty) => get_type_definition(ty),
         Type::StorageRef(_, ty) => get_type_definition(ty),
         Type::Contract(id) => Some(DefinitionType::Contract(*id)),
         Type::UserType(id) => Some(DefinitionType::UserType(*id)),
+        Type::DynamicBytes => Some(DefinitionType::DynamicBytes),
         _ => None,
     }
 }

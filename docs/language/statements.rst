@@ -72,7 +72,7 @@ For example, to loop from 0 to 1000 by steps of 100:
 
 The declaration ``uint i = 0`` can be omitted if no new variable needs to be declared, and
 similarly the post increment ``i += 100`` can be omitted if not necessary. The loop condition
-must evaluate to a boolean, or it can be omitted completely. If it is ommited the block must
+must evaluate to a boolean, or it can be omitted completely. If it is omitted the block must
 contain a ``break`` or ``return`` statement, else execution will
 repeat infinitely (or until all gas is spent):
 

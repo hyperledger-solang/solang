@@ -12,7 +12,7 @@ use crate::sema::ast::ParameterAnnotation;
 use crate::sema::function_annotation::unexpected_parameter_annotation;
 use crate::sema::namespace::ResolveTypeContext;
 use crate::Target;
-use solang_parser::pt::FunctionTy;
+use solang_parser::pt::{FunctionTy, Identifier};
 use solang_parser::{
     doccomment::DocComment,
     pt,
@@ -37,7 +37,7 @@ pub fn contract_function(
         pt::FunctionTy::Function => {
             // Function name cannot be the same as the contract name
             if let Some(n) = &func.name {
-                if n.name == ns.contracts[contract_no].name {
+                if n.name == ns.contracts[contract_no].id.name {
                     ns.diagnostics.push(Diagnostic::error(
                         func.loc,
                         "function cannot have same name as the contract".to_string(),
@@ -206,7 +206,7 @@ pub fn contract_function(
                                 name.loc,
                                 format!(
                                     "override '{}' is not a base contract of '{}'",
-                                    name, ns.contracts[contract_no].name
+                                    name, ns.contracts[contract_no].id
                                 ),
                             ));
                         } else {
@@ -428,18 +428,17 @@ pub fn contract_function(
         return None;
     }
 
-    let name = func
-        .name
-        .as_ref()
-        .map(|s| s.name.as_str())
-        .unwrap_or_else(|| {
-            if ns.target.is_polkadot() && func.ty == pt::FunctionTy::Constructor {
-                "new"
-            } else {
-                ""
-            }
-        })
-        .to_owned();
+    let name = func.name.clone().unwrap_or_else(|| {
+        let name = if ns.target.is_polkadot() && func.ty == pt::FunctionTy::Constructor {
+            "new"
+        } else {
+            ""
+        };
+        Identifier {
+            name: name.to_string(),
+            loc: func.name_loc,
+        }
+    });
 
     let bases = ns.contract_bases(contract_no);
 
@@ -773,7 +772,7 @@ pub fn function(
     }
 
     let name = match &func.name {
-        Some(s) => s.name.to_owned(),
+        Some(s) => s.to_owned(),
         None => {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
@@ -904,7 +903,7 @@ pub fn resolve_params(
                             "parameter of type '{}' not alowed in public or external functions",
                             ty.to_string(ns)
                         );
-                        ns.diagnostics.push(Diagnostic::error(p.ty.loc(), message));
+                        diagnostics.push(Diagnostic::error(p.ty.loc(), message));
                         success = false
                     }
                 }
@@ -1032,7 +1031,7 @@ pub fn resolve_returns(
                             "return type '{}' not allowed in public or external functions",
                             ty.to_string(ns)
                         );
-                        ns.diagnostics.push(Diagnostic::error(r.ty.loc(), message));
+                        diagnostics.push(Diagnostic::error(r.ty.loc(), message));
                         success = false
                     }
                 }
@@ -1112,7 +1111,10 @@ fn signatures() {
     let mut ns = Namespace::new(Target::EVM);
 
     ns.contracts.push(ast::Contract::new(
-        "bar",
+        &pt::Identifier {
+            name: "bar".to_string(),
+            loc: pt::Loc::Implicit,
+        },
         pt::ContractTy::Contract(pt::Loc::Implicit),
         Vec::new(),
         pt::Loc::Implicit,
@@ -1120,7 +1122,10 @@ fn signatures() {
 
     let fdecl = Function::new(
         pt::Loc::Implicit,
-        "foo".to_owned(),
+        pt::Identifier {
+            name: "foo".to_owned(),
+            loc: pt::Loc::Implicit,
+        },
         None,
         vec![],
         pt::FunctionTy::Function,

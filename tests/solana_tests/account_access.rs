@@ -2,7 +2,7 @@
 
 use crate::borsh_encoding::BorshToken;
 use crate::{account_new, build_solidity, create_program_address, AccountState};
-use anchor_syn::idl::{IdlAccount, IdlAccountItem, IdlInstruction};
+use anchor_syn::idl::types::{IdlAccount, IdlAccountItem, IdlInstruction};
 
 #[test]
 fn access_payer() {
@@ -120,4 +120,81 @@ contract hatchling {
         .must_fail();
 
     assert_eq!(res.unwrap(), 2);
+}
+
+#[test]
+fn accounts_on_constructors() {
+    let mut vm = build_solidity(
+        r#"
+        contract Test {
+    @payer(my_payer)
+    @account(acc1)
+    @mutableAccount(acc2)
+    @signer(acc3)
+    @mutableSigner(acc4)
+    constructor () {
+        assert(tx.accounts.acc3.is_signer);
+        assert(tx.accounts.acc4.is_signer);
+
+        assert(tx.accounts.acc1.lamports == 5);
+
+        tx.accounts.acc2.lamports -= 7;
+        tx.accounts.acc4.lamports += 7;
+    }
+}
+        "#,
+    );
+
+    let data_account = vm.initialize_data_account();
+    let acc1 = account_new();
+    let acc2 = account_new();
+    let acc3 = account_new();
+    let acc4 = account_new();
+    let my_payer = account_new();
+
+    vm.account_data.insert(
+        acc1,
+        AccountState {
+            data: vec![],
+            owner: None,
+            lamports: 5,
+        },
+    );
+
+    vm.account_data.insert(
+        acc2,
+        AccountState {
+            data: vec![],
+            owner: None,
+            lamports: 8,
+        },
+    );
+
+    vm.account_data.insert(acc3, AccountState::default());
+
+    vm.account_data.insert(
+        acc4,
+        AccountState {
+            data: vec![],
+            owner: None,
+            lamports: 7,
+        },
+    );
+
+    vm.account_data.insert(my_payer, AccountState::default());
+
+    vm.function("new")
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("acc1", acc1),
+            ("acc2", acc2),
+            ("acc3", acc3),
+            ("acc4", acc4),
+            ("my_payer", my_payer),
+            ("systemProgram", [0; 32]),
+        ])
+        .call();
+
+    assert_eq!(vm.account_data[&acc2].lamports, 1);
+    assert_eq!(vm.account_data[&acc4].lamports, 14);
 }

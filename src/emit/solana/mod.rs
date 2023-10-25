@@ -7,7 +7,7 @@ use crate::Target;
 use std::cmp::Ordering;
 
 use crate::codegen::{cfg::ReturnCode, Options};
-use crate::sema::ast::Type;
+use crate::sema::ast::{Namespace, StructType, Type};
 use inkwell::module::{Linkage, Module};
 use inkwell::types::BasicType;
 use inkwell::values::{
@@ -37,7 +37,7 @@ impl SolanaTarget {
         let mut binary = Binary::new(
             context,
             Target::Solana,
-            &contract.name,
+            &contract.id.name,
             filename.as_str(),
             opt,
             std_lib,
@@ -209,6 +209,33 @@ impl SolanaTarget {
                     address.into(),
                     address.into(),
                     u8_ptr.into(),
+                ],
+                false,
+            ),
+            None,
+        );
+        function
+            .as_global_value()
+            .set_unnamed_address(UnnamedAddress::Local);
+
+        let function = binary.module.add_function(
+            "sol_invoke_signed_c",
+            u64_ty.fn_type(
+                &[
+                    u8_ptr.into(),
+                    binary
+                        .module
+                        .get_struct_type("struct.SolAccountInfo")
+                        .unwrap()
+                        .ptr_type(AddressSpace::default())
+                        .into(),
+                    binary.context.i32_type().into(),
+                    binary
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::default())
+                        .into(),
+                    binary.context.i32_type().into(),
                 ],
                 false,
             ),
@@ -1050,60 +1077,6 @@ impl SolanaTarget {
             .as_basic_value_enum()
     }
 
-    /// Construct the LLVM-IR to call 'external_call' from solana.c
-    fn build_external_call<'b>(
-        &self,
-        binary: &Binary,
-        payload: PointerValue<'b>,
-        payload_len: IntValue<'b>,
-        contract_args: ContractArgs<'b>,
-        ns: &ast::Namespace,
-    ) {
-        let parameters = self.sol_parameters(binary);
-        let external_call = binary.module.get_function("external_call").unwrap();
-
-        let program_id = contract_args.program_id.unwrap_or_else(|| {
-            binary
-                .llvm_type(&Type::Address(false), ns)
-                .ptr_type(AddressSpace::default())
-                .const_null()
-        });
-
-        let (seeds, seeds_len) = contract_args
-            .seeds
-            .map(|(seeds, len)| {
-                (
-                    seeds,
-                    binary.builder.build_int_cast(
-                        len,
-                        external_call.get_type().get_param_types()[4].into_int_type(),
-                        "len",
-                    ),
-                )
-            })
-            .unwrap_or((
-                external_call.get_type().get_param_types()[3]
-                    .ptr_type(AddressSpace::default())
-                    .const_null(),
-                external_call.get_type().get_param_types()[4]
-                    .into_int_type()
-                    .const_zero(),
-            ));
-
-        binary.builder.build_call(
-            external_call,
-            &[
-                payload.into(),
-                payload_len.into(),
-                program_id.into(),
-                seeds.into(),
-                seeds_len.into(),
-                parameters.into(),
-            ],
-            "",
-        );
-    }
-
     /// Construct the LLVM-IR to call 'sol_invoke_signed_c'.
     fn build_invoke_signed_c<'b>(
         &self,
@@ -1112,12 +1085,33 @@ impl SolanaTarget {
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         contract_args: ContractArgs<'b>,
+        ns: &Namespace,
     ) {
         let instruction_ty: BasicTypeEnum = binary
-            .module
-            .get_struct_type("struct.SolInstruction")
-            .unwrap()
-            .into();
+            .context
+            .struct_type(
+                &[
+                    binary
+                        .module
+                        .get_struct_type("struct.SolPubkey")
+                        .unwrap()
+                        .ptr_type(AddressSpace::default())
+                        .as_basic_type_enum(),
+                    binary
+                        .llvm_type(&Type::Struct(StructType::AccountMeta), ns)
+                        .ptr_type(AddressSpace::default())
+                        .as_basic_type_enum(),
+                    binary.context.i64_type().as_basic_type_enum(),
+                    binary
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::default())
+                        .as_basic_type_enum(),
+                    binary.context.i64_type().as_basic_type_enum(),
+                ],
+                false,
+            )
+            .as_basic_type_enum();
 
         let instruction = binary.build_alloca(function, instruction_ty, "instruction");
 

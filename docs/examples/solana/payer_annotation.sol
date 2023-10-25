@@ -30,6 +30,10 @@ contract Builder {
                 })
         ];
         BeingBuilt.new{accounts: metas}("my_seed");
+
+
+        // No accounts are needed in this call, so we pass an empty vector.
+        BeingBuilt.say_this{accounts: []}("It's summertime!");
     }
 }
 

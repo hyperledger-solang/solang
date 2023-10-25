@@ -542,7 +542,7 @@ contract creator {
 
         Child.new{accounts: metas}(payer);
 
-        Child.say_hello();
+        Child.say_hello{accounts: []}();
     }
 }
 

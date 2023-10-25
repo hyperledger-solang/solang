@@ -83,7 +83,7 @@ pub struct VarScope(pub HashMap<String, usize>, Option<HashSet<usize>>);
 #[derive(Default, Debug, Clone)]
 pub struct Symtable {
     pub vars: IndexMap<usize, Variable>,
-    pub names: Vec<VarScope>,
+    pub scopes: Vec<VarScope>,
     pub arguments: Vec<Option<usize>>,
     pub returns: Vec<usize>,
 }
@@ -92,7 +92,7 @@ impl Symtable {
     pub fn new() -> Self {
         Symtable {
             vars: IndexMap::new(),
-            names: vec![VarScope(HashMap::new(), None)],
+            scopes: vec![VarScope(HashMap::new(), None)],
             arguments: Vec::new(),
             returns: Vec::new(),
         }
@@ -137,7 +137,7 @@ impl Symtable {
                 return None;
             }
 
-            self.names
+            self.scopes
                 .last_mut()
                 .unwrap()
                 .0
@@ -174,7 +174,7 @@ impl Symtable {
     }
 
     pub fn find(&self, name: &str) -> Option<&Variable> {
-        for scope in self.names.iter().rev() {
+        for scope in self.scopes.iter().rev() {
             if let Some(n) = scope.0.get(name) {
                 return self.vars.get(n);
             }
@@ -183,12 +183,12 @@ impl Symtable {
         None
     }
 
-    pub fn new_scope(&mut self) {
-        self.names.push(VarScope(HashMap::new(), None));
+    pub fn enter_scope(&mut self) {
+        self.scopes.push(VarScope(HashMap::new(), None));
     }
 
     pub fn leave_scope(&mut self, ns: &mut Namespace, loc: pt::Loc) {
-        if let Some(curr_scope) = self.names.pop() {
+        if let Some(curr_scope) = self.scopes.pop() {
             let curr_scope = curr_scope
                 .0
                 .values()
@@ -198,7 +198,7 @@ impl Symtable {
                         .map(|var| (var.id.name.clone(), var.ty.clone()))
                 })
                 .collect();
-            ns.scopes.insert(loc, curr_scope);
+            ns.scopes.push((loc, curr_scope));
         }
     }
 
@@ -225,7 +225,7 @@ impl LoopScopes {
         LoopScopes(Vec::new())
     }
 
-    pub fn new_scope(&mut self) {
+    pub fn enter_scope(&mut self) {
         self.0.push(LoopScope {
             no_breaks: 0,
             no_continues: 0,
@@ -256,21 +256,3 @@ impl LoopScopes {
         }
     }
 }
-
-// impl Namespace {
-//     pub fn add_scope(&mut self, loc: pt::Loc, scope: Option<VarScope>) {
-//         symtable.leave_scope().map(|curr_scope| {
-//             let curr_scope = curr_scope
-//                 .0
-//                 .values()
-//                 .filter_map(|pos| {
-//                     symtable
-//                         .vars
-//                         .get(pos)
-//                         .map(|var| (var.id.name.clone(), var.ty.clone()))
-//                 })
-//                 .collect();
-//             self.scopes.insert(loc, curr_scope);
-//         });
-//     }
-// }

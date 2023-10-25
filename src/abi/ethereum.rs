@@ -85,7 +85,7 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
             None
         })
         .map(|func| ABI {
-            name: func.name.to_owned(),
+            name: func.id.name.to_owned(),
             mutability: format!("{}", func.mutability),
             ty: func.ty.to_string(),
             inputs: if func.ty == pt::FunctionTy::Function || func.ty == pt::FunctionTy::Constructor
@@ -119,7 +119,7 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
                     let event = &ns.events[*event_no];
 
                     ABI {
-                        name: event.name.to_owned(),
+                        name: event.id.name.to_owned(),
                         mutability: String::new(),
                         inputs: Some(
                             event

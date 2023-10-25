@@ -49,12 +49,6 @@ contract RuntimeErrors {
         return sesa;
     }
 
-    // value transfer failure
-    function transfer_abort() public {
-        address a = address(0);
-        payable(a).transfer(1e15);
-    }
-
     //  pop from empty storage array
     function pop_empty_storage() public {
         arr.pop();
@@ -62,7 +56,7 @@ contract RuntimeErrors {
 
     // external call failed
     function call_ext() public {
-        Creature.say_my_name();
+        Creature.say_my_name{accounts: []}();
     }
 
     function i_will_revert() public {

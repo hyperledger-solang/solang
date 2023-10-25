@@ -608,7 +608,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 77] =
             doc: "balance(a) returns the wei balance at address a",
             ty: YulBuiltInFunction::Balance,
             stops_execution: false,
-            availability: [true, true, true],
+            availability: [true, true, false],
         },
         YulBuiltinPrototype {
             name: "selfbalance",
@@ -617,7 +617,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 77] =
             doc: "Returns the wei balance at the address of the current contract / execution context",
             ty: YulBuiltInFunction::SelfBalance,
             stops_execution: false,
-            availability: [true, true, true],
+            availability: [true, true, false],
         },
         YulBuiltinPrototype {
             name: "caller",

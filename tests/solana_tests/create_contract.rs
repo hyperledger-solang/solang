@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_new, build_solidity, create_program_address, Account, AccountMeta, AccountState,
-    BorshToken, Pubkey,
+    account_new, build_solidity, create_program_address, Account, AccountState, BorshToken,
 };
 use base58::{FromBase58, ToBase58};
 use num_bigint::BigInt;
@@ -16,7 +15,7 @@ fn simple_create_contract_no_seed() {
                 bar1.new("yo from bar0");
             }
 
-            function call_bar1_at_address(string x) public {
+            function call_bar1_at_address(string x) external {
                 bar1.say_hello(x);
             }
         }
@@ -25,7 +24,7 @@ fn simple_create_contract_no_seed() {
         contract bar1 {
             @payer(payer)
             constructor(string v) {
-                print("bar1 says: " + v);
+                print(string.concat("bar1 says: ", v));
             }
 
             function say_hello(string v) public {
@@ -69,11 +68,6 @@ fn simple_create_contract_no_seed() {
             ("payer", payer),
             ("systemProgram", [0; 32]),
         ])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(acc),
-            is_writable: true,
-            is_signer: true,
-        }])
         .call();
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0");
@@ -102,7 +96,7 @@ fn simple_create_contract() {
                 bar1.new("yo from bar0");
             }
 
-            function call_bar1_at_address(string x) public {
+            function call_bar1_at_address(string x) external {
                 bar1.say_hello(x);
             }
         }
@@ -111,7 +105,7 @@ fn simple_create_contract() {
         contract bar1 {
             @payer(pay)
             constructor(string v) {
-                print("bar1 says: " + v);
+                print(string.concat("bar1 says: ", v));
             }
 
             function say_hello(string v) public {
@@ -275,7 +269,7 @@ fn missing_contract() {
                 bar1.new("yo from bar0");
             }
 
-            function call_bar1_at_address(string x) public {
+            function call_bar1_at_address(string x) external {
                 bar1.say_hello(x);
             }
         }
@@ -283,7 +277,7 @@ fn missing_contract() {
         @program_id("7vJKRaKLGCNUPuHWdeHCTknkYf3dHXXEZ6ri7dc6ngeV")
         contract bar1 {
             constructor(string v) {
-                print("bar1 says: " + v);
+                print(string.concat("bar1 says: ", v));
             }
 
             function say_hello(string v) public {
@@ -326,14 +320,18 @@ fn two_contracts() {
         import 'solana';
 
         contract bar0 {
-            function test_other(address a, address b, address payer) external {
+
+            @mutableSigner(a)
+            @mutableSigner(b)
+            @mutableSigner(payer)
+            function test_other() external {
                 AccountMeta[2] bar1_metas = [
-                    AccountMeta({pubkey: a, is_writable: true, is_signer: true}),
-                    AccountMeta({pubkey: payer, is_writable: true, is_signer: true})
+                    AccountMeta({pubkey: tx.accounts.a.key, is_writable: true, is_signer: true}),
+                    AccountMeta({pubkey: tx.accounts.payer.key, is_writable: true, is_signer: true})
                 ];
                 AccountMeta[2] bar2_metas = [
-                    AccountMeta({pubkey: b, is_writable: true, is_signer: true}),
-                    AccountMeta({pubkey: payer, is_writable: true, is_signer: true})
+                    AccountMeta({pubkey: tx.accounts.b.key, is_writable: true, is_signer: true}),
+                    AccountMeta({pubkey: tx.accounts.payer.key, is_writable: true, is_signer: true})
                 ];
                 bar1.new{accounts: bar1_metas}("yo from bar0");
                 bar1.new{accounts: bar2_metas}("hi from bar0");
@@ -344,7 +342,7 @@ fn two_contracts() {
         contract bar1 {
             @payer(payer_account)
             constructor(string v) {
-                print("bar1 says: " + v);
+                print(string.concat("bar1 says: ", v));
             }
         }"#,
     );
@@ -370,31 +368,12 @@ fn two_contracts() {
     vm.account_data.insert(payer, AccountState::default());
 
     vm.function("test_other")
-        .arguments(&[
-            BorshToken::Address(seed1.0),
-            BorshToken::Address(seed2.0),
-            BorshToken::Address(payer),
-        ])
         .accounts(vec![
+            ("a", seed1.0),
+            ("b", seed2.0),
+            ("payer", payer),
             ("systemProgram", [0; 32]),
             ("bar1_programId", program_id),
-        ])
-        .remaining_accounts(&[
-            AccountMeta {
-                pubkey: Pubkey(seed1.0),
-                is_signer: true,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: Pubkey(seed2.0),
-                is_signer: true,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: Pubkey(payer),
-                is_signer: true,
-                is_writable: true,
-            },
         ])
         .call();
 
@@ -660,11 +639,6 @@ fn create_child() {
             ("payer", payer),
             ("systemProgram", [0; 32]),
         ])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(seed.0),
-            is_signer: true,
-            is_writable: true,
-        }])
         .call();
 
     assert_eq!(
@@ -680,16 +654,19 @@ fn create_child_with_meta() {
         import 'solana';
 
 contract creator {
-    function create_child_with_meta(address child, address payer) public {
+
+    @mutableSigner(child)
+    @mutableSigner(payer)
+    function create_child_with_meta() external {
         print("Going to create child");
         AccountMeta[2] metas = [
-            AccountMeta({pubkey: child, is_signer: true, is_writable: true}),
-            AccountMeta({pubkey: payer, is_signer: true, is_writable: true})
+            AccountMeta({pubkey: tx.accounts.child.key, is_signer: true, is_writable: true}),
+            AccountMeta({pubkey: tx.accounts.payer.key, is_signer: true, is_writable: true})
             // Passing the system account here crashes the VM, even if I add it to vm.account_data
             // AccountMeta({pubkey: address"11111111111111111111111111111111", is_writable: false, is_signer: false})
         ];
         Child.new{accounts: metas}();
-        Child.say_hello();
+        Child.say_hello{accounts: []}();
     }
 }
 
@@ -727,22 +704,11 @@ contract Child {
         .unwrap();
 
     vm.function("create_child_with_meta")
-        .arguments(&[BorshToken::Address(seed.0), BorshToken::Address(payer)])
         .accounts(vec![
             ("Child_programId", child_program_id),
+            ("child", seed.0),
+            ("payer", payer),
             ("systemProgram", [0; 32]),
-        ])
-        .remaining_accounts(&[
-            AccountMeta {
-                pubkey: Pubkey(seed.0),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: Pubkey(payer),
-                is_signer: true,
-                is_writable: false,
-            },
         ])
         .call();
 

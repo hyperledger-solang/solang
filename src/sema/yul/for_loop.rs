@@ -23,8 +23,8 @@ pub(crate) fn resolve_for_loop(
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
 ) -> Result<(YulStatement, bool), ()> {
-    symtable.new_scope();
-    function_table.new_scope();
+    symtable.enter_scope();
+    function_table.enter_scope();
     let mut next_reachable = reachable;
     let resolved_init_block = resolve_for_init_block(
         &yul_for.init_block,
@@ -40,7 +40,7 @@ pub(crate) fn resolve_for_loop(
     let resolved_cond =
         resolve_condition(&yul_for.condition, context, symtable, function_table, ns)?;
 
-    loop_scope.new_scope();
+    loop_scope.enter_scope();
 
     let resolved_exec_block = resolve_yul_block(
         &yul_for.execution_block.loc,

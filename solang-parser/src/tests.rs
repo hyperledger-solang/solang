@@ -1334,3 +1334,14 @@ contract MyTest {
 
     assert_eq!(expected_tree, actual_parse_tree);
 }
+
+#[test]
+fn loc_union() {
+    let mut first = Loc::File(1, 10, 24);
+    let mut second = Loc::File(1, 4, 15);
+    let other_first = first;
+    first.union(&second);
+    assert_eq!(first, Loc::File(1, 4, 24));
+    second.union(&other_first);
+    assert_eq!(second, Loc::File(1, 4, 24));
+}

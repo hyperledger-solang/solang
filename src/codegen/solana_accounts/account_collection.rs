@@ -3,7 +3,7 @@
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::solana_accounts::account_from_number;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{Contract, Function, Namespace, SolanaAccount};
+use crate::sema::ast::{Contract, ExternalCallAccounts, Function, Namespace, SolanaAccount};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::solana_accounts::BuiltinAccounts;
 use crate::sema::Recurse;
@@ -229,7 +229,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                     _ => (),
                 }
             } else if let InternalCallTy::Builtin { ast_func_no } = call {
-                let name = &data.functions[*ast_func_no].name;
+                let name = &data.functions[*ast_func_no].id.name;
                 if name == "create_program_address" {
                     data.add_system_account();
                 }
@@ -263,12 +263,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
             }
         }
 
-        Instr::ValueTransfer {
-            address: expr1,
-            value: expr2,
-            ..
-        }
-        | Instr::ReturnData {
+        Instr::ReturnData {
             data: expr1,
             data_len: expr2,
         }
@@ -334,39 +329,43 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 salt.recurse(data, check_expression);
             }
             if let Some(address) = address {
+                // If the address is a number literal, it comes from the `@program_id` annotation,
+                // so we need to include it in the IDL.
+                // If it is not a literal, we assume users are fetching it from a declared account
+                // (@account(my_id) => tx.accounts.my_id.key)
+                if matches!(address, Expression::NumberLiteral { .. }) {
+                    data.add_program_id(&data.contracts[*contract_no].id.name);
+                }
+
                 address.recurse(data, check_expression);
             }
             if let Some(seeds) = seeds {
                 seeds.recurse(data, check_expression);
             }
-            if let Some(accounts) = accounts {
+            if let ExternalCallAccounts::Present(accounts) = accounts {
                 accounts.recurse(data, check_expression);
-            } else {
-                // If the one passes the AccountMeta vector to the constructor call, there is no
+            } else if let Some(constructor_no) = constructor_no {
+                // If one passes the AccountMeta vector to the constructor call, there is no
                 // need to collect accounts for the IDL.
-                if let Some(constructor_no) = constructor_no {
-                    transfer_accounts(loc, *contract_no, *constructor_no, data);
-                } else {
-                    data.add_account(
-                        format!("{}_dataAccount", data.contracts[*contract_no].name),
-                        &SolanaAccount {
-                            loc: *loc,
-                            is_signer: false,
-                            is_writer: true,
-                            generated: true,
-                        },
-                    );
-                }
+                transfer_accounts(loc, *contract_no, *constructor_no, data);
+            } else {
+                data.add_account(
+                    format!("{}_dataAccount", data.contracts[*contract_no].id),
+                    &SolanaAccount {
+                        loc: *loc,
+                        is_signer: false,
+                        is_writer: true,
+                        generated: true,
+                    },
+                );
             }
 
-            data.add_program_id(&data.contracts[*contract_no].name);
             data.add_system_account();
         }
         Instr::ExternalCall {
             loc,
             address,
             accounts,
-            seeds,
             payload,
             value,
             gas,
@@ -380,7 +379,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 return;
             }
 
-            let mut program_id_populated = false;
+            let mut should_add_program_id = false;
             if let Some(address) = address {
                 address.recurse(data, check_expression);
                 if let Expression::NumberLiteral { value, .. } = address {
@@ -395,28 +394,31 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                                 generated: true,
                             },
                         );
-                        program_id_populated = true;
+                    } else {
+                        // If the address is a literal, it came from the @program_id annotation,
+                        // so it is not in the IDL.
+                        should_add_program_id = true;
+                        // If it is not a literal, we assume it is an account declared with @account,
+                        // in which case it is already in the IDL.
                     }
                 }
             }
-            if let Some(seeds) = seeds {
-                seeds.recurse(data, check_expression);
-            }
+
             payload.recurse(data, check_expression);
             value.recurse(data, check_expression);
             gas.recurse(data, check_expression);
             // External calls always need the system account
             data.add_system_account();
 
-            if let Some(accounts) = accounts {
+            if let ExternalCallAccounts::Present(accounts) = accounts {
                 accounts.recurse(data, check_expression);
             }
 
             if let Some((contract_no, function_no)) = contract_function_no {
-                if !program_id_populated {
-                    data.add_program_id(&data.contracts[*contract_no].name);
+                if should_add_program_id {
+                    data.add_program_id(&data.contracts[*contract_no].id.name);
                 }
-                if accounts.is_none() {
+                if accounts.is_absent() {
                     transfer_accounts(loc, *contract_no, *function_no, data);
                 }
             }
@@ -438,6 +440,8 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 expr.recurse(data, check_expression);
             }
         }
+
+        Instr::ValueTransfer { .. } => unreachable!("Value transfer does not exist on Solana"),
         Instr::AccountAccess { .. } => (),
     }
 }
@@ -499,7 +503,7 @@ fn transfer_accounts(
 
     for (name, mut account) in accounts_to_add {
         if name == BuiltinAccounts::DataAccount {
-            let idl_name = format!("{}_dataAccount", data.contracts[contract_no].name);
+            let idl_name = format!("{}_dataAccount", data.contracts[contract_no].id);
             if let Some(acc) = data.functions[data.ast_no]
                 .solana_accounts
                 .borrow()
@@ -510,7 +514,7 @@ fn transfer_accounts(
                         Diagnostic::error_with_note(
                             *loc,
                             format!("contract '{}' is called more than once in this function, so automatic account collection cannot happen. \
-                                         Please, provide the necessary accounts using the {{accounts:..}} call argument", data.contracts[contract_no].name),
+                                         Please, provide the necessary accounts using the {{accounts:..}} call argument", data.contracts[contract_no].id),
                             acc.loc,
                             "other call".to_string(),
                         )

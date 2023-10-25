@@ -11,8 +11,8 @@ use super::{
 use crate::codegen::subexpression_elimination::common_sub_expression_elimination;
 use crate::codegen::{undefined_variable, Expression, LLVMName};
 use crate::sema::ast::{
-    CallTy, Contract, FunctionAttributes, Namespace, Parameter, RetrieveType, Statement,
-    StringLocation, StructType, Type,
+    CallTy, Contract, ExternalCallAccounts, FunctionAttributes, Namespace, Parameter, RetrieveType,
+    Statement, StringLocation, StructType, Type,
 };
 use crate::sema::{contracts::collect_base_args, diagnostics::Diagnostics, Recurse};
 use crate::{sema::ast, Target};
@@ -126,7 +126,7 @@ pub enum Instr {
         salt: Option<Expression>,
         address: Option<Expression>,
         seeds: Option<Expression>,
-        accounts: Option<Expression>,
+        accounts: ExternalCallAccounts<Expression>,
         loc: Loc,
     },
     /// Call external functions. If the call fails, set the success failure
@@ -135,7 +135,7 @@ pub enum Instr {
         loc: Loc,
         success: Option<usize>,
         address: Option<Expression>,
-        accounts: Option<Expression>,
+        accounts: ExternalCallAccounts<Expression>,
         seeds: Option<Expression>,
         payload: Expression,
         value: Expression,
@@ -299,7 +299,7 @@ impl Instr {
                     expr.recurse(cx, f);
                 }
 
-                if let Some(expr) = accounts {
+                if let ExternalCallAccounts::Present(expr) = accounts {
                     expr.recurse(cx, f);
                 }
             }
@@ -657,10 +657,10 @@ impl ControlFlowGraph {
                 dimensions, values, ..
             } => format!(
                 "constant {} [ {} ]",
-                dimensions
-                    .iter()
-                    .map(|d| format!("[{d}]"))
-                    .collect::<String>(),
+                dimensions.iter().fold(String::new(), |mut output, d| {
+                    write!(output, "[{d}]").unwrap();
+                    output
+                }),
                 values
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
@@ -671,10 +671,10 @@ impl ControlFlowGraph {
                 dimensions, values, ..
             } => format!(
                 "{} [ {} ]",
-                dimensions
-                    .iter()
-                    .map(|d| format!("[{d}]"))
-                    .collect::<String>(),
+                dimensions.iter().fold(String::new(), |mut output, d| {
+                    write!(output, "[{d}]").unwrap();
+                    output
+                }),
                 values
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
@@ -925,11 +925,6 @@ impl ControlFlowGraph {
                 self.location_to_string(contract, ns, left),
                 self.location_to_string(contract, ns, right)
             ),
-            Expression::StringConcat { left, right, .. } => format!(
-                "(concat ({}) ({}))",
-                self.location_to_string(contract, ns, left),
-                self.location_to_string(contract, ns, right)
-            ),
             Expression::Keccak256 { exprs, .. } => format!(
                 "(keccak256 {})",
                 exprs
@@ -1135,7 +1130,7 @@ impl ControlFlowGraph {
                     .map(|local| format!("%{}", self.vars[local].id.name))
                     .collect::<Vec<String>>()
                     .join(", "),
-                ns.functions[*ast_func_no].name,
+                ns.functions[*ast_func_no].id,
                 args.iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))
                     .collect::<Vec<String>>()
@@ -1202,7 +1197,7 @@ impl ControlFlowGraph {
                     self.expr_to_string(contract, ns, payload),
                     self.expr_to_string(contract, ns, value),
                     self.expr_to_string(contract, ns, gas),
-                    if let Some(accounts) = accounts {
+                    if let ExternalCallAccounts::Present(accounts) = accounts {
                         self.expr_to_string(contract, ns, accounts)
                     } else {
                         String::new()
@@ -1283,9 +1278,9 @@ impl ControlFlowGraph {
                 } else {
                     String::new()
                 },
-                ns.contracts[*contract_no].name,
+                ns.contracts[*contract_no].id,
                 self.expr_to_string(contract, ns, encoded_args),
-                if let Some(accounts) = accounts {
+                if let ExternalCallAccounts::Present(accounts) = accounts {
                     self.expr_to_string(contract, ns, accounts)
                 } else {
                     String::new()
@@ -1615,9 +1610,9 @@ fn function_cfg(
     let contract_name = match func.contract_no {
         Some(base_contract_no) => format!(
             "{}::{}",
-            ns.contracts[contract_no].name, ns.contracts[base_contract_no].name
+            ns.contracts[contract_no].id, ns.contracts[base_contract_no].id
         ),
-        None => ns.contracts[contract_no].name.to_string(),
+        None => ns.contracts[contract_no].id.to_string(),
     };
 
     let name = match func.ty {
@@ -1793,6 +1788,10 @@ fn function_cfg(
             None,
             opt,
         );
+
+        if !stmt.reachable() {
+            break;
+        }
     }
 
     if func.body.last().map(Statement::reachable).unwrap_or(true) {
@@ -1889,8 +1888,8 @@ fn generate_modifier_dispatch(
     let modifier = &ns.functions[modifier_no];
     let name = format!(
         "{}::{}::{}::modifier{}::{}",
-        &ns.contracts[contract_no].name,
-        &ns.contracts[func.contract_no.unwrap()].name,
+        &ns.contracts[contract_no].id,
+        &ns.contracts[func.contract_no.unwrap()].id,
         func.llvm_symbol(ns),
         chain_no,
         modifier.llvm_symbol(ns)
@@ -2032,7 +2031,7 @@ fn generate_modifier_dispatch(
 impl Contract {
     /// Print the entire contract; storage initializers, constructors and functions and their CFGs
     pub fn print_cfg(&self, ns: &Namespace) -> String {
-        let mut out = format!("#\n# Contract: {}\n#\n\n", self.name);
+        let mut out = format!("#\n# Contract: {}\n#\n\n", self.id);
 
         for cfg in &self.cfg {
             if !cfg.is_placeholder() {

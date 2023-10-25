@@ -33,7 +33,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: Lazy<[Prototype; 25]> = Lazy::new(|| {
+pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::Assert,
@@ -322,11 +322,33 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             doc: "Recover the address associated with the public key from elliptic curve signature",
             constant: false,
         },
+        Prototype {
+            builtin: Builtin::StringConcat,
+            namespace: Some("string"),
+            method: vec![],
+            name: "concat",
+            params: vec![Type::String, Type::String],
+            ret: vec![Type::String],
+            target: vec![],
+            doc: "Concatenate string",
+            constant: true,
+        },
+        Prototype {
+            builtin: Builtin::BytesConcat,
+            namespace: Some("bytes"),
+            method: vec![],
+            name: "concat",
+            params: vec![Type::DynamicBytes, Type::DynamicBytes],
+            ret: vec![Type::DynamicBytes],
+            target: vec![],
+            doc: "Concatenate bytes",
+            constant: true,
+        },
     ]
 });
 
 // A list of all Solidity builtins variables
-static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
+pub static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::BlockCoinbase,
@@ -522,7 +544,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins methods
-static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
+pub static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::ReadInt8,
@@ -1044,8 +1066,38 @@ pub(super) fn resolve_namespace_call(
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
+    if name == "concat" {
+        let (kind, ty) = match namespace {
+            "string" => (Builtin::StringConcat, Type::String),
+            "bytes" => (Builtin::BytesConcat, Type::DynamicBytes),
+            _ => unreachable!(),
+        };
+
+        let mut resolved_args = Vec::new();
+
+        for arg in args {
+            let expr = expression(
+                arg,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Type(&ty),
+            )?;
+
+            resolved_args.push(expr.cast(loc, &ty, true, ns, diagnostics)?);
+        }
+
+        return Ok(Expression::Builtin {
+            loc: *loc,
+            tys: vec![ty],
+            kind,
+            args: resolved_args,
+        });
+    }
+
     // The abi.* functions need special handling, others do not
-    if namespace != "abi" {
+    if namespace != "abi" && namespace != "string" {
         return resolve_call(
             loc,
             Some(namespace),
@@ -1503,7 +1555,10 @@ impl Namespace {
 
         let mut func = Function::new(
             pt::Loc::Builtin,
-            "create_program_address".to_string(),
+            pt::Identifier {
+                name: "create_program_address".to_string(),
+                loc: pt::Loc::Builtin,
+            },
             None,
             Vec::new(),
             pt::FunctionTy::Function,
@@ -1554,7 +1609,7 @@ impl Namespace {
 
         let func_no = self.functions.len();
         let id = Identifier {
-            name: func.name.to_owned(),
+            name: func.id.name.to_owned(),
             loc: pt::Loc::Builtin,
         };
 
@@ -1569,7 +1624,10 @@ impl Namespace {
 
         let mut func = Function::new(
             pt::Loc::Builtin,
-            "try_find_program_address".to_string(),
+            pt::Identifier {
+                name: "try_find_program_address".to_string(),
+                loc: pt::Loc::Builtin,
+            },
             None,
             Vec::new(),
             pt::FunctionTy::Function,
@@ -1633,7 +1691,7 @@ impl Namespace {
 
         let func_no = self.functions.len();
         let id = Identifier {
-            name: func.name.to_owned(),
+            name: func.id.name.to_owned(),
             loc: pt::Loc::Builtin,
         };
 
@@ -1684,7 +1742,10 @@ impl Namespace {
         for mut func in [
             Function::new(
                 loc,
-                "chain_extension".to_string(),
+                pt::Identifier {
+                    name: "chain_extension".to_string(),
+                    loc,
+                },
                 None,
                 Vec::new(),
                 pt::FunctionTy::Function,
@@ -1743,7 +1804,10 @@ impl Namespace {
             // is_contract API
             Function::new(
                 loc,
-                "is_contract".to_string(),
+                pt::Identifier {
+                    name: "is_contract".to_string(),
+                    loc,
+                },
                 None,
                 Vec::new(),
                 pt::FunctionTy::Function,
@@ -1776,7 +1840,10 @@ impl Namespace {
             // set_code_hash API
             Function::new(
                 loc,
-                "set_code_hash".to_string(),
+                pt::Identifier {
+                    name: "set_code_hash".to_string(),
+                    loc,
+                },
                 None,
                 Vec::new(),
                 pt::FunctionTy::Function,
@@ -1810,7 +1877,7 @@ impl Namespace {
         ] {
             func.has_body = true;
             let func_no = self.functions.len();
-            let id = identifier(&func.name);
+            let id = identifier(&func.id.name);
             self.functions.push(func);
             assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
         }

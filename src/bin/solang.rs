@@ -12,7 +12,6 @@ use solang::{
     file_resolver::FileResolver,
     sema::{ast::Namespace, file::PathDisplay},
     standard_json::{EwasmContract, JsonContract, JsonResult},
-    Target,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -230,7 +229,7 @@ fn compile(compile_args: &Compile) {
             !namespaces
                 .iter()
                 .flat_map(|ns| ns.contracts.iter())
-                .any(|contract| **name == contract.name)
+                .any(|contract| **name == contract.id.name)
         })
         .collect();
 
@@ -243,8 +242,11 @@ fn compile(compile_args: &Compile) {
         let mut seen_contracts = HashMap::new();
 
         let authors = if let Some(authors) = &compile_args.package.authors {
-            if target == Target::Solana {
-                eprintln!("warning: the `authors` flag will be ignored for solana target")
+            if !target.is_polkadot() {
+                eprintln!(
+                    "warning: the `authors` flag will be ignored for {} target",
+                    target
+                )
             }
             authors.clone()
         } else {
@@ -348,7 +350,7 @@ fn contract_results(
     json_contracts: &mut HashMap<String, JsonContract>,
     seen_contracts: &mut HashMap<String, String>,
     opt: &Options,
-    default_authors: &Vec<String>,
+    default_authors: &[String],
     version: &str,
 ) {
     let verbose = compiler_output.verbose;
@@ -370,15 +372,15 @@ fn contract_results(
 
     let loc = ns.loc_to_string(PathDisplay::FullPath, &resolved_contract.loc);
 
-    if let Some(other_loc) = seen_contracts.get(&resolved_contract.name) {
+    if let Some(other_loc) = seen_contracts.get(&resolved_contract.id.name) {
         eprintln!(
             "error: contract {} defined at {other_loc} and {}",
-            resolved_contract.name, loc
+            resolved_contract.id, loc
         );
         exit(1);
     }
 
-    seen_contracts.insert(resolved_contract.name.to_string(), loc);
+    seen_contracts.insert(resolved_contract.id.to_string(), loc);
 
     if let Some("cfg") = compiler_output.emit.as_deref() {
         println!("{}", resolved_contract.print_cfg(ns));
@@ -389,13 +391,13 @@ fn contract_results(
         if ns.target == solang::Target::Solana {
             eprintln!(
                 "info: contract {} uses at least {} bytes account data",
-                resolved_contract.name, resolved_contract.fixed_layout_size,
+                resolved_contract.id, resolved_contract.fixed_layout_size,
             );
         }
 
         eprintln!(
             "info: Generating LLVM IR for contract {} with target {}",
-            resolved_contract.name, ns.target
+            resolved_contract.id, ns.target
         );
     }
 
@@ -413,7 +415,7 @@ fn contract_results(
     if let Some(level) = opt.wasm_opt.filter(|_| ns.target.is_polkadot() && verbose) {
         eprintln!(
             "info: wasm-opt level '{}' for contract {}",
-            level, resolved_contract.name
+            level, resolved_contract.id
         );
     }
 

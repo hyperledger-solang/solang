@@ -17,8 +17,7 @@ impl RetrieveType for Expression {
             | Expression::Not { .. }
             | Expression::StringCompare { .. } => Type::Bool,
             Expression::CodeLiteral { .. } => Type::DynamicBytes,
-            Expression::StringConcat { ty, .. }
-            | Expression::BytesLiteral { ty, .. }
+            Expression::BytesLiteral { ty, .. }
             | Expression::NumberLiteral { ty, .. }
             | Expression::RationalNumberLiteral { ty, .. }
             | Expression::StructLiteral { ty, .. }
@@ -62,7 +61,8 @@ impl RetrieveType for Expression {
             | Expression::InternalFunction { ty, .. }
             | Expression::ExternalFunction { ty, .. }
             | Expression::NamedMember { ty, .. }
-            | Expression::StorageArrayLength { ty, .. } => ty.clone(),
+            | Expression::StorageArrayLength { ty, .. }
+            | Expression::EventSelector { ty, .. } => ty.clone(),
             Expression::ExternalFunctionCallRaw { .. } => {
                 panic!("two return values");
             }

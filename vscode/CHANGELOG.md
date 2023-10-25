@@ -2,7 +2,7 @@
 
 All notable changes to the "solang" extension will be documented in this file.
 
-## Unreleased
+## [0.3.3]
 
 - The same version of solang should be used by the language server as on the command line,
   so first look in the $PATH for solang before downloading the solang binary. As a result, the

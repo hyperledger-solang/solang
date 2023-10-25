@@ -14,10 +14,8 @@ use super::{
     tags::resolve_tags,
     ContractDefinition,
 };
-use crate::sema::eval::check_term_for_constant_overflow;
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::namespace::ResolveTypeContext;
-use crate::sema::Recurse;
 use solang_parser::{
     doccomment::DocComment,
     pt::{self, CodeLocation, OptionalCodeLocation},
@@ -190,7 +188,7 @@ pub fn variable_decl<'a>(
                                     name.loc,
                                     format!(
                                         "override '{}' is not a base contract of '{}'",
-                                        name, ns.contracts[contract_no].name
+                                        name, ns.contracts[contract_no].id
                                     ),
                                 ));
                             } else {
@@ -322,9 +320,10 @@ pub fn variable_decl<'a>(
         return None;
     }
 
+    let mut diagnostics = Diagnostics::default();
+
     let initializer = if constant {
         if let Some(initializer) = &def.initializer {
-            let mut diagnostics = Diagnostics::default();
             let context = ExprContext {
                 file_no,
                 unchecked: false,
@@ -347,22 +346,16 @@ pub fn variable_decl<'a>(
                     // implicitly conversion to correct ty
                     match res.cast(&def.loc, &ty, true, ns, &mut diagnostics) {
                         Ok(res) => {
-                            res.recurse(ns, check_term_for_constant_overflow);
+                            res.check_constant_overflow(&mut diagnostics);
                             Some(res)
                         }
-                        Err(_) => {
-                            ns.diagnostics.extend(diagnostics);
-                            None
-                        }
+                        Err(_) => None,
                     }
                 }
-                Err(()) => {
-                    ns.diagnostics.extend(diagnostics);
-                    None
-                }
+                Err(()) => None,
             }
         } else {
-            ns.diagnostics.push(Diagnostic::decl_error(
+            diagnostics.push(Diagnostic::decl_error(
                 def.loc,
                 "missing initializer for constant".to_string(),
             ));
@@ -372,6 +365,8 @@ pub fn variable_decl<'a>(
     } else {
         None
     };
+
+    ns.diagnostics.extend(diagnostics);
 
     let bases = contract_no.map(|contract_no| ns.contract_bases(contract_no));
 
@@ -472,7 +467,7 @@ pub fn variable_decl<'a>(
 
             let mut func = Function::new(
                 def.name.as_ref().unwrap().loc,
-                def.name.as_ref().unwrap().name.to_owned(),
+                def.name.as_ref().unwrap().clone(),
                 Some(contract_no),
                 Vec::new(),
                 pt::FunctionTy::Function,
@@ -803,7 +798,7 @@ pub fn resolve_initializers(
             ResolveTo::Type(&ty),
         ) {
             if let Ok(res) = res.cast(&initializer.loc(), &ty, true, ns, &mut diagnostics) {
-                res.recurse(ns, check_term_for_constant_overflow);
+                res.check_constant_overflow(&mut diagnostics);
                 ns.contracts[*contract_no].variables[*var_no].initializer = Some(res);
             }
         }

@@ -17,7 +17,7 @@ use crate::sema::unused_variable::{assigned_variable, used_variable};
 use crate::Target;
 use num_bigint::{BigInt, Sign};
 use num_traits::{FromPrimitive, One, Zero};
-use solang_parser::diagnostics::Diagnostic;
+use solang_parser::diagnostics::{Diagnostic, Note};
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 use std::ops::{Shl, Sub};
@@ -69,6 +69,19 @@ pub(super) fn member_access(
         return Ok(expr);
     }
 
+    // is it an event selector
+    if let Some(expr) = event_selector(
+        loc,
+        e,
+        id,
+        context.file_no,
+        context.contract_no,
+        ns,
+        diagnostics,
+    )? {
+        return Ok(expr);
+    }
+
     // is it a constant (unless basecontract is a local variable)
     if let Some(expr) = contract_constant(
         loc,
@@ -94,14 +107,19 @@ pub(super) fn member_access(
                 for function_no in ns.contracts[call_contract_no].all_functions.keys() {
                     let func = &ns.functions[*function_no];
 
-                    if func.name != id.name || func.ty != pt::FunctionTy::Function {
+                    if func.id.name != id.name || func.ty != pt::FunctionTy::Function {
                         continue;
                     }
 
                     name_matches += 1;
 
+                    let mut id_path = ns.expr_to_identifier_path(e).unwrap();
+                    id_path.identifiers.push(id.clone());
+                    id_path.loc = *loc;
+
                     expr = Ok(Expression::InternalFunction {
                         loc: e.loc(),
+                        id: id_path,
                         ty: function_type(func, false, resolve_to),
                         function_no: *function_no,
                         signature: None,
@@ -114,7 +132,7 @@ pub(super) fn member_access(
                             e.loc(),
                             format!(
                                 "contract '{}' does not have a member called '{}'",
-                                ns.contracts[call_contract_no].name, id.name,
+                                ns.contracts[call_contract_no].id, id.name,
                             ),
                         ));
                         Err(())
@@ -125,7 +143,7 @@ pub(super) fn member_access(
                             e.loc(),
                             format!(
                                 "function '{}' of contract '{}' is overloaded",
-                                id.name, ns.contracts[call_contract_no].name,
+                                id.name, ns.contracts[call_contract_no].id,
                             ),
                         ));
                         Err(())
@@ -302,7 +320,7 @@ pub(super) fn member_access(
                         id.loc,
                         format!(
                             "struct '{}' does not have a field called '{}'",
-                            str_ty.definition(ns).name,
+                            str_ty.definition(ns).id,
                             id.name
                         ),
                     ));
@@ -369,6 +387,14 @@ pub(super) fn member_access(
                     ));
                     return Err(());
                 }
+            } else if ns.target == Target::Solana {
+                diagnostics.push(Diagnostic::error(
+                    expr.loc(),
+                    "balance is not available on Solana. Use \
+                    tx.accounts.account_name.lamports to fetch the balance."
+                        .to_string(),
+                ));
+                return Err(());
             }
             used_variable(ns, &expr, symtable);
             return Ok(Expression::Builtin {
@@ -401,7 +427,9 @@ pub(super) fn member_access(
             for function_no in ns.contracts[ref_contract_no].all_functions.keys() {
                 let func = &ns.functions[*function_no];
 
-                if func.name != id.name || func.ty != pt::FunctionTy::Function || !func.is_public()
+                if func.id.name != id.name
+                    || func.ty != pt::FunctionTy::Function
+                    || !func.is_public()
                 {
                     continue;
                 }
@@ -428,7 +456,7 @@ pub(super) fn member_access(
                         format!(
                             "{} '{}' has no public function '{}'",
                             ns.contracts[ref_contract_no].ty,
-                            ns.contracts[ref_contract_no].name,
+                            ns.contracts[ref_contract_no].id,
                             id.name
                         ),
                     ));
@@ -442,7 +470,7 @@ pub(super) fn member_access(
                             "function '{}' of {} '{}' is overloaded",
                             id.name,
                             ns.contracts[ref_contract_no].ty,
-                            ns.contracts[ref_contract_no].name
+                            ns.contracts[ref_contract_no].id
                         ),
                     ));
                     Err(())
@@ -534,7 +562,7 @@ fn contract_constant(
                         *loc,
                         format!(
                             "need instance of contract '{}' to get variable value '{}'",
-                            ns.contracts[contract_no].name,
+                            ns.contracts[contract_no].id,
                             ns.contracts[contract_no].variables[var_no].name,
                         ),
                     ));
@@ -635,6 +663,64 @@ fn enum_value(
     }
 }
 
+fn event_selector(
+    loc: &pt::Loc,
+    expr: &pt::Expression,
+    id: &pt::Identifier,
+    file_no: usize,
+    contract_no: Option<usize>,
+    ns: &mut Namespace,
+    diagnostics: &mut Diagnostics,
+) -> Result<Option<Expression>, ()> {
+    if id.name != "selector" {
+        return Ok(None);
+    }
+
+    if let Ok(events) = ns.resolve_event(file_no, contract_no, expr, &mut Diagnostics::default()) {
+        if events.len() == 1 {
+            let event_no = events[0];
+
+            if ns.events[event_no].anonymous {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "anonymous event has no selector".into(),
+                ));
+                Err(())
+            } else {
+                Ok(Some(Expression::EventSelector {
+                    loc: *loc,
+                    event_no,
+                    ty: if ns.target == Target::Solana {
+                        Type::Bytes(8)
+                    } else {
+                        Type::Bytes(32)
+                    },
+                }))
+            }
+        } else {
+            let notes = events
+                .into_iter()
+                .map(|ev_no| {
+                    let ev = &ns.events[ev_no];
+                    Note {
+                        loc: ev.id.loc,
+                        message: format!("possible definition of '{}'", ev.id),
+                    }
+                })
+                .collect();
+
+            diagnostics.push(Diagnostic::error_with_notes(
+                *loc,
+                "multiple definitions of event".into(),
+                notes,
+            ));
+            Err(())
+        }
+    } else {
+        Ok(None)
+    }
+}
+
 /// Resolve type(x).foo
 fn type_name_expr(
     loc: &pt::Loc,
@@ -688,7 +774,7 @@ fn type_name_expr(
         (Type::Contract(n), "name") => Ok(Expression::BytesLiteral {
             loc: *loc,
             ty: Type::String,
-            value: ns.contracts[*n].name.as_bytes().to_vec(),
+            value: ns.contracts[*n].id.name.as_bytes().to_vec(),
         }),
         (Type::Contract(n), "interfaceId") => {
             let contract = &ns.contracts[*n];
@@ -698,7 +784,7 @@ fn type_name_expr(
                     *loc,
                     format!(
                         "type(…).interfaceId is permitted on interface, not {} {}",
-                        contract.ty, contract.name
+                        contract.ty, contract.id
                     ),
                 ));
                 Err(())
@@ -723,7 +809,7 @@ fn type_name_expr(
                     *loc,
                     format!(
                         "{} '{}' has no declared program_id",
-                        contract.ty, contract.name
+                        contract.ty, contract.id
                     ),
                 ));
                 Err(())
@@ -750,7 +836,7 @@ fn type_name_expr(
                     *loc,
                     format!(
                         "containing our own contract code for '{}' would generate infinite size contract",
-                        ns.contracts[*no].name
+                        ns.contracts[*no].id
                     ),
                 ));
                 return Err(());
@@ -761,7 +847,7 @@ fn type_name_expr(
                     *loc,
                     format!(
                         "circular reference creating contract code for '{}'",
-                        ns.contracts[*no].name
+                        ns.contracts[*no].id
                     ),
                 ));
                 return Err(());

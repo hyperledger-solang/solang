@@ -183,16 +183,16 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
             }
 
             top.events.push(EventDecl {
-                name: &event_decl.name,
+                name: &event_decl.id.name,
                 contract: event_decl
                     .contract
-                    .map(|contract_no| file.contracts[contract_no].name.as_str()),
+                    .map(|contract_no| file.contracts[contract_no].id.name.as_str()),
                 title: get_tag("title", &event_decl.tags),
                 notice: get_tag("notice", &event_decl.tags),
                 author: get_tag("author", &event_decl.tags),
                 dev: get_tag("dev", &event_decl.tags),
                 anonymous: event_decl.anonymous,
-                loc: event_decl.loc,
+                loc: event_decl.id.loc,
                 field,
             });
         }
@@ -216,7 +216,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
                 }
 
                 top.structs.push(StructDecl {
-                    name: &struct_decl.name,
+                    name: &struct_decl.id.name,
                     contract: struct_decl.contract.as_deref(),
                     title: get_tag("title", &struct_decl.tags),
                     notice: get_tag("notice", &struct_decl.tags),
@@ -241,7 +241,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
             }
 
             top.enums.push(EnumDecl {
-                name: &enum_decl.name,
+                name: &enum_decl.id.name,
                 contract: enum_decl.contract.as_deref(),
                 title: get_tag("title", &enum_decl.tags),
                 notice: get_tag("notice", &enum_decl.tags),
@@ -305,7 +305,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
                 }
 
                 Function {
-                    name: &func.name,
+                    name: &func.id.name,
                     ty: format!("{}", func.ty),
                     mutability: format!("{}", func.mutability),
                     base_contract,
@@ -356,7 +356,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
                 for var in base
                     .variables
                     .iter()
-                    .map(|var| map_var(file, Some(&base.name), var))
+                    .map(|var| map_var(file, Some(&base.id.name), var))
                 {
                     base_variables.push(var);
                 }
@@ -365,7 +365,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
                     let f = &file.functions[*function_no];
 
                     if f.has_body {
-                        Some(map_func(file, Some(&base.name), f))
+                        Some(map_func(file, Some(&base.id.name), f))
                     } else {
                         None
                     }
@@ -376,7 +376,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
 
             top.contracts.push(Contract {
                 loc: contract.loc,
-                name: &contract.name,
+                name: &contract.id.name,
                 ty: format!("{}", contract.ty),
                 title: get_tag("title", &contract.tags),
                 notice: get_tag("notice", &contract.tags),

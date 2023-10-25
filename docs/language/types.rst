@@ -200,7 +200,7 @@ is represented as a ``uint8`` in the ABI. Enum are limited to 256 values.
 An enum can be converted to and from integer, but this requires an explicit cast. The value of an enum
 is numbered from 0, like in C and Rust.
 
-If enum is declared in another contract, the type can be refered to with `contractname.typename`. The
+If enum is declared in another contract, the type can be referred to with `contractname.typename`. The
 individual enum values are `contractname.typename.value`. The enum declaration does not have to appear
 in a contract, in which case it can be used without the contract name prefix.
 
@@ -507,6 +507,16 @@ a function on particular contract instance.
             :code: solidity
 
 
+On Solana, external calls from variables of type external functions require the ``accounts`` call argument. The
+compiler cannot determine the accounts such a function needs, so it does not automatically generate the
+``AccountsMeta`` array.
+
+.. code-block:: solidity
+
+    function test(function(int32, string) external myFunc) public {
+        myFunc{accounts: []}(24, "accounts");
+    }
+
 Storage References
 __________________
 
@@ -534,7 +544,7 @@ is used, for example in function arguments or return values.
 .. include:: ../examples/user_defined_type.sol
   :code: solidity
 
-Note that the wrapped value ``Value v`` cannot be used in any type of arithmetic or comparision. It needs to
+Note that the wrapped value ``Value v`` cannot be used in any type of arithmetic or comparison. It needs to
 be unwrapped before it can be used.
 
 User Defined Types can be used with :ref:`user defined operators <user_defined_operators>`.

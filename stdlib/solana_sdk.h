@@ -400,7 +400,7 @@ typedef struct
  */
 typedef struct
 {
-    const SolSignerSeed *addr; /** An arry of a signer's seeds */
+    const SolSignerSeed *addr; /** An array of a signer's seeds */
     uint64_t len;              /** Number of seeds */
 } SolSignerSeeds;
 

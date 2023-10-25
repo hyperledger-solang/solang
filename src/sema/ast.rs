@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::symtable::Symtable;
-use crate::abi::anchor::discriminator;
+use crate::abi::anchor::function_discriminator;
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::diagnostics::Diagnostics;
+use crate::sema::ast::ExternalCallAccounts::{AbsentArgument, NoAccount};
 use crate::sema::yul::ast::{InlineAssembly, YulFunction};
 use crate::sema::Recurse;
 use crate::{codegen, Target};
@@ -155,7 +156,7 @@ pub enum StructType {
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct StructDecl {
     pub tags: Vec<Tag>,
-    pub name: String,
+    pub id: pt::Identifier,
     pub loc: pt::Loc,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
@@ -168,7 +169,7 @@ pub struct StructDecl {
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct EventDecl {
     pub tags: Vec<Tag>,
-    pub name: String,
+    pub id: pt::Identifier,
     pub loc: pt::Loc,
     pub contract: Option<usize>,
     pub fields: Vec<Parameter>,
@@ -180,8 +181,8 @@ pub struct EventDecl {
 impl EventDecl {
     pub fn symbol_name(&self, ns: &Namespace) -> String {
         match &self.contract {
-            Some(c) => format!("{}.{}", ns.contracts[*c].name, self.name),
-            None => self.name.to_string(),
+            Some(c) => format!("{}.{}", ns.contracts[*c].id, self.id),
+            None => self.id.to_string(),
         }
     }
 }
@@ -199,7 +200,7 @@ pub struct ErrorDecl {
 impl ErrorDecl {
     pub fn symbol_name(&self, ns: &Namespace) -> String {
         match &self.contract {
-            Some(c) => format!("{}.{}", ns.contracts[*c].name, self.name),
+            Some(c) => format!("{}.{}", ns.contracts[*c].id, self.name),
             None => self.name.to_string(),
         }
     }
@@ -210,8 +211,8 @@ impl fmt::Display for StructDecl {
     /// inside or outside a contract.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.contract {
-            Some(c) => write!(f, "{}.{}", c, self.name),
-            None => write!(f, "{}", self.name),
+            Some(c) => write!(f, "{}.{}", c, self.id),
+            None => write!(f, "{}", self.id),
         }
     }
 }
@@ -219,7 +220,7 @@ impl fmt::Display for StructDecl {
 #[derive(Debug)]
 pub struct EnumDecl {
     pub tags: Vec<Tag>,
-    pub name: String,
+    pub id: pt::Identifier,
     pub contract: Option<String>,
     pub loc: pt::Loc,
     pub ty: Type,
@@ -231,8 +232,8 @@ impl fmt::Display for EnumDecl {
     /// inside or outside a contract.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.contract {
-            Some(c) => write!(f, "{}.{}", c, self.name),
-            None => write!(f, "{}", self.name),
+            Some(c) => write!(f, "{}.{}", c, self.id),
+            None => write!(f, "{}", self.id),
         }
     }
 }
@@ -319,7 +320,7 @@ pub struct Function {
     pub tags: Vec<Tag>,
     /// The location of the prototype (not body)
     pub loc: pt::Loc,
-    pub name: String,
+    pub id: pt::Identifier,
     pub contract_no: Option<usize>,
     pub ty: pt::FunctionTy,
     pub signature: String,
@@ -401,7 +402,7 @@ impl FunctionAttributes for Function {
 impl Function {
     pub fn new(
         loc: pt::Loc,
-        name: String,
+        name: pt::Identifier,
         contract_no: Option<usize>,
         tags: Vec<Tag>,
         ty: pt::FunctionTy,
@@ -414,7 +415,7 @@ impl Function {
         let signature = match ty {
             pt::FunctionTy::Fallback => String::from("@fallback"),
             pt::FunctionTy::Receive => String::from("@receive"),
-            _ => ns.signature(&name, &params),
+            _ => ns.signature(&name.name, &params),
         };
 
         let mutability = match mutability {
@@ -436,7 +437,7 @@ impl Function {
         Function {
             tags,
             loc,
-            name,
+            id: name,
             contract_no,
             ty,
             signature,
@@ -467,14 +468,14 @@ impl Function {
             selector.clone()
         } else if ns.target == Target::Solana {
             match self.ty {
-                FunctionTy::Constructor => discriminator("global", "new"),
+                FunctionTy::Constructor => function_discriminator("new"),
                 _ => {
                     let discriminator_image = if self.mangled_name_contracts.contains(contract_no) {
                         &self.mangled_name
                     } else {
-                        &self.name
+                        &self.id.name
                     };
-                    discriminator("global", discriminator_image.as_str())
+                    function_discriminator(discriminator_image.as_str())
                 }
             }
         } else {
@@ -528,18 +529,6 @@ impl Function {
     /// Is this function accessable only from same contract
     pub fn is_private(&self) -> bool {
         matches!(self.visibility, pt::Visibility::Private(_))
-    }
-
-    /// Print the function type, contract name, and name
-    pub fn print_name(&self, ns: &Namespace) -> String {
-        if let Some(contract_no) = &self.contract_no {
-            format!(
-                "{} {}.{}",
-                self.ty, ns.contracts[*contract_no].name, self.name
-            )
-        } else {
-            format!("{} {}", self.ty, self.name)
-        }
     }
 }
 
@@ -705,8 +694,12 @@ pub struct Namespace {
     pub var_constants: HashMap<pt::Loc, codegen::Expression>,
     /// Overrides for hover in the language server
     pub hover_overrides: HashMap<pt::Loc, String>,
-
-    pub scopes: HashMap<pt::Loc, Vec<(String, Type)>>,
+    /// Inner scopes of all functions in the namespace.
+    /// Inner scopes of a function includes all block scopes in a function
+    /// excluding the outermost scope that includes named function params,
+    /// return values and variables defined outside any of the inner scopes.
+    /// Used by the language server.
+    pub scopes: Vec<(pt::Loc, Vec<(String, Type)>)>,
 }
 
 #[derive(Debug)]
@@ -750,7 +743,7 @@ pub struct Contract {
     pub tags: Vec<Tag>,
     pub loc: pt::Loc,
     pub ty: pt::ContractTy,
-    pub name: String,
+    pub id: pt::Identifier,
     pub bases: Vec<Base>,
     pub using: Vec<Using>,
     pub layout: Vec<Layout>,
@@ -851,8 +844,10 @@ pub enum Expression {
     },
     StructLiteral {
         loc: pt::Loc,
+        id: pt::IdentifierPath,
         ty: Type,
-        values: Vec<Expression>,
+        // pt::Identifier represents the field name
+        values: Vec<(Option<pt::Identifier>, Expression)>,
     },
     ArrayLiteral {
         loc: pt::Loc,
@@ -1130,12 +1125,6 @@ pub enum Expression {
         left: StringLocation<Expression>,
         right: StringLocation<Expression>,
     },
-    StringConcat {
-        loc: pt::Loc,
-        ty: Type,
-        left: StringLocation<Expression>,
-        right: StringLocation<Expression>,
-    },
 
     Or {
         loc: pt::Loc,
@@ -1149,6 +1138,7 @@ pub enum Expression {
     },
     InternalFunction {
         loc: pt::Loc,
+        id: pt::IdentifierPath,
         ty: Type,
         function_no: usize,
         signature: Option<String>,
@@ -1211,6 +1201,11 @@ pub enum Expression {
         function_no: usize,
         args: Vec<Expression>,
     },
+    EventSelector {
+        loc: pt::Loc,
+        ty: Type,
+        event_no: usize,
+    },
 }
 
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
@@ -1218,10 +1213,67 @@ pub struct CallArgs {
     pub gas: Option<Box<Expression>>,
     pub salt: Option<Box<Expression>>,
     pub value: Option<Box<Expression>>,
-    pub accounts: Option<Box<Expression>>,
+    pub accounts: ExternalCallAccounts<Box<Expression>>,
     pub seeds: Option<Box<Expression>>,
     pub flags: Option<Box<Expression>>,
     pub program_id: Option<Box<Expression>>,
+}
+
+/// This enum manages the accounts in an external call on Solana. There can be three options:
+/// 1. The developer explicitly specifies there are not accounts for the call (`NoAccount`).
+/// 2. The accounts call argument is absent, in which case we attempt to generate the AccountMetas
+/// vector automatically (`AbsentArgumet`).
+/// 3. There are accounts specified in the accounts call argument (Present).
+#[derive(PartialEq, Eq, Clone, Debug, Default)]
+pub enum ExternalCallAccounts<T> {
+    NoAccount,
+    #[default]
+    AbsentArgument,
+    Present(T),
+}
+
+impl<T> ExternalCallAccounts<T> {
+    /// Is the accounts call argument missing?
+    pub fn is_absent(&self) -> bool {
+        matches!(self, ExternalCallAccounts::AbsentArgument)
+    }
+
+    /// Returns if the accounts call argument was present in the call
+    pub fn argument_provided(&self) -> bool {
+        matches!(
+            self,
+            ExternalCallAccounts::Present(_) | ExternalCallAccounts::NoAccount
+        )
+    }
+
+    /// Applies a function on the nested objects
+    pub fn map<P, F>(&self, func: F) -> ExternalCallAccounts<P>
+    where
+        F: FnOnce(&T) -> P,
+    {
+        match self {
+            NoAccount => NoAccount,
+            AbsentArgument => AbsentArgument,
+            ExternalCallAccounts::Present(value) => ExternalCallAccounts::Present(func(value)),
+        }
+    }
+
+    /// Transform the nested object into a reference
+    pub const fn as_ref(&self) -> ExternalCallAccounts<&T> {
+        match self {
+            ExternalCallAccounts::Present(value) => ExternalCallAccounts::Present(value),
+            NoAccount => NoAccount,
+            AbsentArgument => AbsentArgument,
+        }
+    }
+
+    /// Return a reference to the nested object
+    pub fn unwrap(&self) -> &T {
+        match self {
+            ExternalCallAccounts::Present(value) => value,
+            _ => panic!("unwrap called at variant without a nested object"),
+        }
+    }
 }
 
 impl Recurse for CallArgs {
@@ -1236,7 +1288,7 @@ impl Recurse for CallArgs {
         if let Some(value) = &self.value {
             value.recurse(cx, f);
         }
-        if let Some(accounts) = &self.accounts {
+        if let ExternalCallAccounts::Present(accounts) = &self.accounts {
             accounts.recurse(cx, f);
         }
         if let Some(flags) = &self.flags {
@@ -1250,8 +1302,13 @@ impl Recurse for Expression {
     fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Expression, ctx: &mut T) -> bool) {
         if f(self, cx) {
             match self {
-                Expression::StructLiteral { values, .. }
-                | Expression::ArrayLiteral { values, .. }
+                Expression::StructLiteral { values, .. } => {
+                    for (_, e) in values {
+                        e.recurse(cx, f);
+                    }
+                }
+
+                Expression::ArrayLiteral { values, .. }
                 | Expression::ConstArrayLiteral { values, .. } => {
                     for e in values {
                         e.recurse(cx, f);
@@ -1326,8 +1383,7 @@ impl Recurse for Expression {
 
                 Expression::AllocDynamicBytes { length, .. } => length.recurse(cx, f),
                 Expression::StorageArrayLength { array, .. } => array.recurse(cx, f),
-                Expression::StringCompare { left, right, .. }
-                | Expression::StringConcat { left, right, .. } => {
+                Expression::StringCompare { left, right, .. } => {
                     if let StringLocation::RunTime(expr) = left {
                         expr.recurse(cx, f);
                     }
@@ -1398,7 +1454,8 @@ impl Recurse for Expression {
                 | Expression::RationalNumberLiteral { .. }
                 | Expression::CodeLiteral { .. }
                 | Expression::BytesLiteral { .. }
-                | Expression::BoolLiteral { .. } => (),
+                | Expression::BoolLiteral { .. }
+                | Expression::EventSelector { .. } => (),
             }
         }
     }
@@ -1454,7 +1511,6 @@ impl CodeLocation for Expression {
             | Expression::AllocDynamicBytes { loc, .. }
             | Expression::StorageArrayLength { loc, .. }
             | Expression::StringCompare { loc, .. }
-            | Expression::StringConcat { loc, .. }
             | Expression::InternalFunction { loc, .. }
             | Expression::ExternalFunction { loc, .. }
             | Expression::InternalFunctionCall { loc, .. }
@@ -1472,7 +1528,8 @@ impl CodeLocation for Expression {
             | Expression::InterfaceId { loc, .. }
             | Expression::And { loc, .. }
             | Expression::NamedMember { loc, .. }
-            | Expression::UserDefinedOperator { loc, .. } => *loc,
+            | Expression::UserDefinedOperator { loc, .. }
+            | Expression::EventSelector { loc, .. } => *loc,
         }
     }
 }
@@ -1656,6 +1713,8 @@ pub enum Builtin {
     UserTypeWrap,
     UserTypeUnwrap,
     ECRecover,
+    StringConcat,
+    BytesConcat,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]

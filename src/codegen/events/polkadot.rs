@@ -9,7 +9,7 @@ use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression, Options};
-use crate::sema::ast::{self, Function, Namespace, RetrieveType, StringLocation, Type};
+use crate::sema::ast::{self, Function, Namespace, RetrieveType, Type};
 use ink_env::hash::{Blake2x256, CryptoHash};
 use parity_scale_codec::Encode;
 use solang_parser::pt;
@@ -23,18 +23,27 @@ pub(super) struct PolkadotEventEmitter<'a> {
     pub(super) event_no: usize,
 }
 
-/// Takes a scale-encoded topic and makes it into a topic hash.
-fn topic_hash(encoded: &[u8]) -> Vec<u8> {
-    let mut buf = [0; 32];
-    if encoded.len() <= 32 {
-        buf[..encoded.len()].copy_from_slice(encoded);
-    } else {
-        <Blake2x256 as CryptoHash>::hash(encoded, &mut buf);
-    };
-    buf.into()
-}
-
 impl EventEmitter for PolkadotEventEmitter<'_> {
+    fn selector(&self, emitting_contract_no: usize) -> Vec<u8> {
+        let event = &self.ns.events[self.event_no];
+        // For freestanding events the name of the emitting contract is used
+        let contract_name = &self.ns.contracts[event.contract.unwrap_or(emitting_contract_no)]
+            .id
+            .name;
+
+        // First byte is 0 because there is no prefix for the event topic
+        let encoded = format!("\0{}::{}", contract_name, &event.id);
+
+        // Takes a scale-encoded topic and makes it into a topic hash.
+        let mut buf = [0; 32];
+        if encoded.len() <= 32 {
+            buf[..encoded.len()].copy_from_slice(encoded.as_bytes());
+        } else {
+            <Blake2x256 as CryptoHash>::hash(encoded.as_bytes(), &mut buf);
+        };
+        buf.into()
+    }
+
     fn emit(
         &self,
         contract_no: usize,
@@ -46,7 +55,9 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
         let loc = pt::Loc::Builtin;
         let event = &self.ns.events[self.event_no];
         // For freestanding events the name of the emitting contract is used
-        let contract_name = &self.ns.contracts[event.contract.unwrap_or(contract_no)].name;
+        let contract_name = &self.ns.contracts[event.contract.unwrap_or(contract_no)]
+            .id
+            .name;
         let hash_len = Box::new(Expression::NumberLiteral {
             loc,
             ty: Type::Uint(32),
@@ -67,13 +78,14 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
         // Events that are not anonymous always have themselves as a topic.
         // This is static and can be calculated at compile time.
         if !event.anonymous {
+            let topic_hash = self.selector(contract_no);
+
             // First byte is 0 because there is no prefix for the event topic
-            let encoded = format!("\0{}::{}", contract_name, &event.name);
             topics.push(Expression::AllocDynamicBytes {
                 loc,
                 ty: Type::Slice(Type::Uint(8).into()),
                 size: hash_len.clone(),
-                initializer: Some(topic_hash(encoded.as_bytes())),
+                initializer: Some(topic_hash),
             });
         };
 
@@ -83,14 +95,9 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
             .iter()
             .filter(|field| field.indexed)
             .map(|field| {
-                format!(
-                    "{}::{}::{}",
-                    contract_name,
-                    &event.name,
-                    &field.name_as_str()
-                )
-                .into_bytes()
-                .encode()
+                format!("{}::{}::{}", contract_name, &event.id, &field.name_as_str())
+                    .into_bytes()
+                    .encode()
             })
             .collect();
 
@@ -117,13 +124,23 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
             }
 
             let encoded = abi_encode(&loc, vec![value], self.ns, vartab, cfg, false).0;
-            let prefix = StringLocation::CompileTime(topic_prefixes.pop_front().unwrap());
-            let value = StringLocation::RunTime(encoded.into());
-            let concatenated = Expression::StringConcat {
+            let first_prefix = topic_prefixes.pop_front().unwrap();
+            let prefix = Expression::AllocDynamicBytes {
                 loc,
-                ty: Type::DynamicBytes,
-                left: prefix,
-                right: value,
+                ty: Type::Slice(Type::Bytes(1).into()),
+                size: Expression::NumberLiteral {
+                    loc,
+                    ty: Type::Uint(32),
+                    value: first_prefix.len().into(),
+                }
+                .into(),
+                initializer: Some(first_prefix),
+            };
+            let concatenated = Expression::Builtin {
+                loc,
+                kind: Builtin::Concat,
+                tys: vec![Type::DynamicBytes],
+                args: vec![prefix, encoded],
             };
 
             vartab.new_dirty_tracker();

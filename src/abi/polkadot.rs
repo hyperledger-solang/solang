@@ -197,7 +197,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                 })
                 .collect::<Vec<Field<PortableForm>>>();
             let c = TypeDefComposite::new(fields);
-            let path = path!(&def.name);
+            let path = path!(&def.id);
             let ty = Type::new(path, vec![], TypeDef::Composite(c), Default::default());
             registry.register_type(ty)
         }
@@ -215,7 +215,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                 })
                 .collect::<Vec<_>>();
             let variant = TypeDef::Variant(TypeDefVariant::new(variants));
-            let path = path!(&decl.name);
+            let path = path!(&decl.id);
             let ty = Type::new(path, vec![], variant, Default::default());
             registry.register_type(ty)
         }
@@ -309,7 +309,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             }
         })
         .collect();
-    let contract_name = ns.contracts[contract_no].name.clone();
+    let contract_name = ns.contracts[contract_no].id.name.clone();
     let storage = Layout::Struct(StructLayout::new(contract_name, fields));
 
     let constructor_spec = |f: &Function| -> ConstructorSpec<PortableForm> {
@@ -329,13 +329,20 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
 
-        ConstructorSpec::from_label(if f.name.is_empty() { "new" } else { &f.name }.into())
-            .selector(f.selector(ns, &contract_no).try_into().unwrap())
-            .payable(payable)
-            .args(args)
-            .docs(vec![render(&f.tags).as_str()])
-            .returns(ReturnTypeSpec::new(None))
-            .done()
+        ConstructorSpec::from_label(
+            if f.id.name.is_empty() {
+                "new"
+            } else {
+                &f.id.name
+            }
+            .into(),
+        )
+        .selector(f.selector(ns, &contract_no).try_into().unwrap())
+        .payable(payable)
+        .args(args)
+        .docs(vec![render(&f.tags).as_str()])
+        .returns(ReturnTypeSpec::new(None))
+        .done()
     };
 
     let constructors = ns.contracts[contract_no]
@@ -384,7 +391,11 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
 
                 let t = TypeDefTuple::new_portable(fields);
 
-                let path = path!(&ns.contracts[contract_no].name, &f.name, "return_type");
+                let path = path!(
+                    &ns.contracts[contract_no].id.name,
+                    &f.id.name,
+                    "return_type"
+                );
 
                 let ty = registry.register_type(Type::new(
                     path,
@@ -413,7 +424,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         let label = if f.mangled_name_contracts.contains(&contract_no) {
             &f.mangled_name
         } else {
-            &f.name
+            &f.id.name
         };
         MessageSpec::from_label(label.into())
             .selector(f.selector(ns, &contract_no).try_into().unwrap())
@@ -449,7 +460,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     .done()
             })
             .collect::<Vec<_>>();
-        EventSpec::new(e.name.clone())
+        EventSpec::new(e.id.name.clone())
             .args(args)
             .docs(vec![render(&e.tags).as_str()])
             .done()
@@ -544,7 +555,7 @@ pub fn metadata(
     contract_no: usize,
     code: &[u8],
     ns: &ast::Namespace,
-    default_authors: &Vec<String>,
+    default_authors: &[String],
     contract_version: &str,
 ) -> Value {
     let hash = blake2_rfc::blake2b::blake2b(32, &[], code);
@@ -562,7 +573,7 @@ pub fn metadata(
     );
 
     let mut builder = Contract::builder();
-    builder.name(&ns.contracts[contract_no].name);
+    builder.name(&ns.contracts[contract_no].id.name);
     let mut description = tags(contract_no, "title", ns);
     description.extend(tags(contract_no, "notice", ns));
     if !description.is_empty() {

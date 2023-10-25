@@ -13,7 +13,7 @@ use crate::sema::yul::ast::YulSuffix;
 use crate::{sema, Target};
 use num_bigint::{BigInt, Sign};
 use once_cell::unsync::OnceCell;
-use solang_parser::pt::{ContractTy, Loc, StorageLocation, Visibility};
+use solang_parser::pt::{self, ContractTy, Loc, StorageLocation, Visibility};
 
 #[test]
 fn bool_literal() {
@@ -139,7 +139,10 @@ fn contract_constant_variable() {
         tags: vec![],
         loc,
         ty: ContractTy::Contract(loc),
-        name: "".to_string(),
+        id: pt::Identifier {
+            name: "".to_string(),
+            loc: pt::Loc::Codegen,
+        },
         bases: vec![],
         using: vec![],
         layout: vec![],
@@ -274,7 +277,10 @@ fn slot_suffix() {
         tags: vec![],
         loc: Loc::Builtin,
         ty: ContractTy::Contract(loc),
-        name: "".to_string(),
+        id: pt::Identifier {
+            name: "".to_string(),
+            loc: pt::Loc::Builtin,
+        },
         bases: vec![],
         using: vec![],
         layout: vec![layout],

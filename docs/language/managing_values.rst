@@ -12,27 +12,36 @@ Value in Solidity is represented by ``uint128``.
     need support for a different type, please raise an
     `issue <https://github.com/hyperledger/solang/issues>`_.
 
+.. _balance:
+
 Checking your balance
 _____________________
 
-The balance of a contract can be checked with `address` ``.balance``, so your own balance
-is ``address(this).balance``.
+.. tabs::
 
-.. note::
-    Polkadot cannot check the balance for contracts other than the current
-    one. If you need to check the balance of another contract, then add a balance
-    function to that contract like the one below, and call that function instead.
+    .. group-tab:: Polkadot
 
-.. note::
-    On Solana, checking the balance of an account different than the program account
-    requires that it be passed as an AccountMeta during the transaction.
-    It is not common practice for the program account to hold native Solana tokens.
+        Polkadot cannot check the balance for contracts other than the current
+        one. If you need to check the balance of another contract, then add a balance
+        function to that contract like the one below, and call that function instead.
 
-.. code-block:: solidity
+        .. code-block:: solidity
 
-    function balance() public returns (uint128) {
-        return address(this).balance;
-    }
+            function balance() public returns (uint128) {
+                return address(this).balance;
+            }
+
+    .. group-tab:: Solana
+
+        On Solana, the balance of an account can be accessed using the ``lamports`` member of the ``AccountInfo``
+        struct. Every account whose value we want to check must be declared with an account annotation.
+
+        .. code-block::
+
+            @account(my_acc)
+            function balance() external returns (uint64) {
+                return tx.accounts.my_acc.lamports;
+            }
 
 Creating contracts with an initial value
 ________________________________________
@@ -53,50 +62,63 @@ explained in :ref:`passing value and gas with external calls <passing_value_gas>
 Sending value using ``send()`` and ``transfer()``
 _________________________________________________
 
-The ``send()`` and ``transfer()`` functions are available as method on a
-``address payable`` variable. The single arguments is the amount of value you
-would like to send. The difference between the two functions is what happens
-in the failure case: ``transfer()`` will revert the current call, ``send()``
-returns a ``bool`` which will be ``false``.
+.. tabs::
 
-In order for the receiving contract to receive the value, it needs a ``receive()``
-function, see :ref:`fallback() and receive() function <fallback_receive>`.
+    .. group-tab:: Polkadot
 
-Here is an example:
+        The ``send()`` and ``transfer()`` functions are available as method on a
+        ``address payable`` variable. The single arguments is the amount of value you
+        would like to send. The difference between the two functions is what happens
+        in the failure case: ``transfer()`` will revert the current call, ``send()``
+        returns a ``bool`` which will be ``false``.
 
-.. code-block:: solidity
+        In order for the receiving contract to receive the value, it needs a ``receive()``
+        function, see :ref:`fallback() and receive() function <fallback_receive>`.
 
-    contract A {
-        B other;
+        Here is an example:
 
-        constructor() {
-            other = new B();
+        .. code-block:: solidity
 
-            bool complete = payable(other).transfer(100);
+            contract A {
+                B other;
 
-            if (!complete) {
-                // oops
+                constructor() {
+                    other = new B();
+
+                    bool complete = payable(other).transfer(100);
+
+                    if (!complete) {
+                        // oops
+                    }
+
+                    // if the following fails, our transaction will fail
+                    other.send(100);
+                }
             }
 
-            // if the following fails, our transaction will fail
-            other.send(100);
-        }
-    }
+            contract B {
+                receive() payable external {
+                    // ..
+                }
+            }
 
-    contract B {
-        receive() payable external {
-            // ..
-        }
-    }
+        .. note::
+            On Subtrate, this uses the ``seal_transfer()`` mechanism rather than ``seal_call()``, since this
+            does not come with gas overhead. This means the ``receive()`` function is not required in the
+            receiving contract, and it will not be called if it is present. If you want the ``receive()``
+            function to be called, use ``address.call{value: 100}("")`` instead.
 
-.. note::
-    On Subtrate, this uses the ``seal_transfer()`` mechanism rather than ``seal_call()``, since this
-    does not come with gas overhead. This means the ``receive()`` function is not required in the
-    receiving contract, and it will not be called if it is present. If you want the ``receive()``
-    function to be called, use ``address.call{value: 100}("")`` instead.
+    .. group-tab:: Solana
 
-.. note::
-    On Solana, ``send()`` and ``transfer()`` can only transfer native tokens between accounts owned
-    by the contract's program account, since only the account owner can modify its balance.
-    Use the :ref:`system instruction library <system_instruction_library>` to transfer
-    native tokens between accounts owned by Solana's system program.
+        On Solana, there are no ``transfer`` and ``send`` functions. In order to alter the balance of accounts,
+        one might increment or decrement the ``lamports`` field from the ``AccountInfo`` struct directly. This
+        is only possible if the accounts whose balance is being changed are owned by the program.
+
+        .. code-block::
+
+            @mutableAccount(acc1)
+            @mutableAccount(acc2)
+            function transfer(uint64 amount) external {
+                tx.accounts.acc1.lamports += amount;
+                tx.accounts.acc2.lamports -= amount;
+            }

@@ -82,11 +82,13 @@ impl File {
     }
 
     /// Convert line + char to offset
-    pub fn get_offset(&self, line_no: usize, column_no: usize) -> usize {
+    pub fn get_offset(&self, line_no: usize, column_no: usize) -> Option<usize> {
         if line_no == 0 {
-            column_no
+            Some(column_no)
         } else {
-            self.line_starts[line_no - 1] + column_no
+            self.line_starts
+                .get(line_no - 1)
+                .map(|offset| offset + column_no)
         }
     }
 

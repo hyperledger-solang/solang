@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    build_solidity, create_program_address, AccountMeta, AccountState, BorshToken, Instruction,
-    Pubkey, VirtualMachine,
+    build_solidity, create_program_address, AccountState, BorshToken, Instruction, Pubkey,
+    VirtualMachine,
 };
 use base58::FromBase58;
 use num_bigint::BigInt;
@@ -14,17 +14,18 @@ fn simple_external_call() {
         r#"
         contract bar0 {
             function test_bar(string v) public {
-                print("bar0 says: " + v);
+                print(string.concat("bar0", " ", "says: ", v, ""));
             }
 
-            function test_other(address x) public {
-                bar1.test_bar{program_id: x}("cross contract call");
+            @account(pid)
+            function test_other() external {
+                bar1.test_bar{program_id: tx.accounts.pid.key}("cross contract call");
             }
         }
 
         contract bar1 {
             function test_bar(string v) public {
-                print("bar1 says: " + v);
+                print(string.concat("bar1 says: ", v));
             }
         }"#,
     );
@@ -59,23 +60,7 @@ fn simple_external_call() {
     vm.logs.truncate(0);
 
     vm.function("test_other")
-        .accounts(vec![
-            ("bar1_programId", bar1_program_id),
-            ("systemProgram", [0; 32]),
-        ])
-        .remaining_accounts(&[
-            AccountMeta {
-                pubkey: Pubkey(bar1_account),
-                is_writable: false,
-                is_signer: false,
-            },
-            AccountMeta {
-                pubkey: Pubkey(bar1_program_id),
-                is_signer: false,
-                is_writable: false,
-            },
-        ])
-        .arguments(&[BorshToken::Address(bar1_program_id)])
+        .accounts(vec![("pid", bar1_program_id), ("systemProgram", [0; 32])])
         .call();
 
     assert_eq!(vm.logs, "bar1 says: cross contract call");
@@ -86,8 +71,9 @@ fn external_call_with_returns() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other(address x) public returns (int64) {
-                return bar1.test_bar{program_id: x}(7) + 5;
+            @account(pid)
+            function test_other() external returns (int64) {
+                return bar1.test_bar{program_id: tx.accounts.pid.key}(7) + 5;
             }
         }
 
@@ -130,23 +116,7 @@ fn external_call_with_returns() {
 
     let res = vm
         .function("test_other")
-        .arguments(&[BorshToken::Address(bar1_program_id)])
-        .accounts(vec![
-            ("bar1_programId", bar1_program_id),
-            ("systemProgram", [0; 32]),
-        ])
-        .remaining_accounts(&[
-            AccountMeta {
-                pubkey: Pubkey(bar1_account),
-                is_writable: false,
-                is_signer: false,
-            },
-            AccountMeta {
-                pubkey: Pubkey(bar1_program_id),
-                is_signer: false,
-                is_writable: false,
-            },
-        ])
+        .accounts(vec![("pid", bar1_program_id), ("systemProgram", [0; 32])])
         .call()
         .unwrap();
 
@@ -166,11 +136,12 @@ fn external_raw_call_with_returns() {
         contract bar0 {
             bytes8 private constant SELECTOR = bytes8(sha256(bytes('global:test_bar')));
 
-            function test_other(address x) public returns (int64) {
+            @account(bar1_pid)
+            function test_other() external returns (int64) {
                 bytes select = abi.encodeWithSelector(SELECTOR, int64(7));
                 bytes signature = abi.encodeWithSignature("global:test_bar", int64(7));
                 require(select == signature, "must be the same");
-                (, bytes raw) = address(x).call(signature);
+                (, bytes raw) = tx.accounts.bar1_pid.key.call{accounts: []}(signature);
                 (int64 v) = abi.decode(raw, (int64));
                 return v + 5;
             }
@@ -215,19 +186,9 @@ fn external_raw_call_with_returns() {
 
     let res = vm
         .function("test_other")
-        .arguments(&[BorshToken::Address(bar1_program_id)])
-        .accounts(vec![("systemProgram", [0; 32])])
-        .remaining_accounts(&[
-            AccountMeta {
-                pubkey: Pubkey(bar1_account),
-                is_writable: false,
-                is_signer: false,
-            },
-            AccountMeta {
-                pubkey: Pubkey(bar1_program_id),
-                is_signer: false,
-                is_writable: false,
-            },
+        .accounts(vec![
+            ("bar1_pid", bar1_program_id),
+            ("systemProgram", [0; 32]),
         ])
         .call()
         .unwrap();
@@ -254,7 +215,7 @@ fn call_external_func_type() {
     function doTest() public view returns (int, int) {
     function(int) external pure returns (int, int) sfPtr = this.testPtr;
 
-       (int a, int b) = sfPtr(2);
+       (int a, int b) = sfPtr{accounts: []}(2);
        return (a, b);
     }
 }
@@ -293,15 +254,17 @@ fn external_call_with_string_returns() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other(address x) public returns (string) {
-                string y = bar1.test_bar{program_id: x}(7);
+            @account(pid)
+            function test_other() external returns (string) {
+                string y = bar1.test_bar{program_id: tx.accounts.pid.key}(7);
                 print(y);
                 return y;
             }
 
-            function test_this(address x) public {
-                address a = bar1.who_am_i{program_id: x}();
-                assert(a == address(x));
+            @account(pid)
+            function test_this() external {
+                address a = bar1.who_am_i{program_id: tx.accounts.pid.key}();
+                assert(a == tx.accounts.pid.key);
             }
         }
 
@@ -342,46 +305,14 @@ fn external_call_with_string_returns() {
 
     let res = vm
         .function("test_other")
-        .arguments(&[BorshToken::Address(bar1_program_id)])
-        .accounts(vec![
-            ("bar1_programId", bar1_program_id),
-            ("systemProgram", [0; 32]),
-        ])
-        .remaining_accounts(&[
-            AccountMeta {
-                pubkey: Pubkey(bar1_account),
-                is_writable: false,
-                is_signer: false,
-            },
-            AccountMeta {
-                pubkey: Pubkey(bar1_program_id),
-                is_signer: false,
-                is_writable: false,
-            },
-        ])
+        .accounts(vec![("pid", bar1_program_id), ("systemProgram", [0; 32])])
         .call()
         .unwrap();
 
     assert_eq!(res, BorshToken::String(String::from("foo:7")));
 
     vm.function("test_this")
-        .arguments(&[BorshToken::Address(bar1_program_id)])
-        .accounts(vec![
-            ("bar1_programId", bar1_program_id),
-            ("systemProgram", [0; 32]),
-        ])
-        .remaining_accounts(&[
-            AccountMeta {
-                pubkey: Pubkey(bar1_account),
-                is_writable: false,
-                is_signer: false,
-            },
-            AccountMeta {
-                pubkey: Pubkey(bar1_program_id),
-                is_signer: false,
-                is_writable: false,
-            },
-        ])
+        .accounts(vec![("pid", bar1_program_id), ("systemProgram", [0; 32])])
         .call();
 }
 
@@ -392,11 +323,12 @@ fn encode_call() {
         contract bar0 {
             bytes8 private constant SELECTOR = bytes8(sha256(bytes('global:test_bar')));
 
-            function test_other(address x) public returns (int64) {
+            @account(bar1_pid)
+            function test_other() external returns (int64) {
                 bytes select = abi.encodeWithSelector(SELECTOR, int64(7));
                 bytes signature = abi.encodeCall(bar1.test_bar, 7);
                 require(select == signature, "must be the same");
-                (, bytes raw) = address(x).call(signature);
+                (, bytes raw) = tx.accounts.bar1_pid.key.call{accounts: []}(signature);
                 (int64 v) = abi.decode(raw, (int64));
                 return v + 5;
             }
@@ -441,19 +373,9 @@ fn encode_call() {
 
     let res = vm
         .function("test_other")
-        .arguments(&[BorshToken::Address(bar1_program_id)])
-        .accounts(vec![("systemProgram", [0; 32])])
-        .remaining_accounts(&[
-            AccountMeta {
-                pubkey: Pubkey(bar1_account),
-                is_writable: false,
-                is_signer: false,
-            },
-            AccountMeta {
-                pubkey: Pubkey(bar1_program_id),
-                is_signer: false,
-                is_writable: false,
-            },
+        .accounts(vec![
+            ("bar1_pid", bar1_program_id),
+            ("systemProgram", [0; 32]),
         ])
         .call()
         .unwrap();

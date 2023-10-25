@@ -9,10 +9,10 @@ contract c {
 	function g() public {
 		g({x: foo>1});
 	}
-	function g(int) public {
+	function g(int) external {
 		this.g(oo);
 	}
-	function g(bool) public {
+	function g(bool) external {
 		this.g({x: foo>1});
 	}
 }

@@ -14,8 +14,10 @@ use super::{
 use super::{polkadot, Options};
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
+use crate::codegen::events::new_event_emitter;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
+use crate::sema::ast::ExternalCallAccounts;
 use crate::sema::{
     ast,
     ast::{
@@ -334,12 +336,14 @@ pub fn expression(
             overflowing: *unchecked,
             expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         },
-        ast::Expression::StructLiteral { loc, ty, values } => Expression::StructLiteral {
+        ast::Expression::StructLiteral {
+            loc, ty, values, ..
+        } => Expression::StructLiteral {
             loc: *loc,
             ty: ty.clone(),
             values: values
                 .iter()
-                .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
+                .map(|(_, e)| expression(e, cfg, contract_no, func, ns, vartab, opt))
                 .collect(),
         },
         ast::Expression::ArrayLiteral {
@@ -594,6 +598,15 @@ pub fn expression(
                 func_expr.external_function_selector()
             }
         },
+        ast::Expression::EventSelector { loc, ty, event_no } => {
+            let emitter = new_event_emitter(loc, *event_no, &[], ns);
+
+            Expression::BytesLiteral {
+                loc: *loc,
+                ty: ty.clone(),
+                value: emitter.selector(contract_no),
+            }
+        }
         ast::Expression::InternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCallRaw { .. }
@@ -717,17 +730,6 @@ pub fn expression(
         }
         ast::Expression::StringCompare { loc, left, right } => Expression::StringCompare {
             loc: *loc,
-            left: string_location(left, cfg, contract_no, func, ns, vartab, opt),
-            right: string_location(right, cfg, contract_no, func, ns, vartab, opt),
-        },
-        ast::Expression::StringConcat {
-            loc,
-            ty,
-            left,
-            right,
-        } => Expression::StringConcat {
-            loc: *loc,
-            ty: ty.clone(),
             left: string_location(left, cfg, contract_no, func, ns, vartab, opt),
             right: string_location(right, cfg, contract_no, func, ns, vartab, opt),
         },
@@ -1586,7 +1588,7 @@ fn payable_send(
                 loc: *loc,
                 success: Some(success),
                 address: Some(address),
-                accounts: None,
+                accounts: ExternalCallAccounts::AbsentArgument,
                 seeds: None,
                 payload: Expression::AllocDynamicBytes {
                     loc: *loc,
@@ -1625,14 +1627,10 @@ fn payable_send(
         },
     );
 
-    if ns.target.is_polkadot() {
+    if ns.target != Target::Solana {
         polkadot::check_transfer_ret(loc, success, cfg, ns, opt, vartab, false).unwrap()
     } else {
-        Expression::Variable {
-            loc: *loc,
-            ty: Type::Bool,
-            var_no: success,
-        }
+        unreachable!("Value transfer does not exist on Solana");
     }
 }
 
@@ -1655,7 +1653,7 @@ fn payable_transfer(
             Instr::ExternalCall {
                 loc: *loc,
                 success: None,
-                accounts: None,
+                accounts: ExternalCallAccounts::AbsentArgument,
                 seeds: None,
                 address: Some(address),
                 payload: Expression::AllocDynamicBytes {
@@ -2578,9 +2576,9 @@ pub fn assign_single(
         }
         _ => {
             let left_ty = left.ty();
-            let ty = left_ty.deref_memory();
+            let ty = cfg_right.ty();
 
-            let pos = vartab.temp_anonymous(ty);
+            let pos = vartab.temp_anonymous(&ty);
 
             // Set a subscript in storage bytes needs special handling
             let set_storage_bytes = if let ast::Expression::Subscript { array_ty, .. } = &left {
@@ -2666,7 +2664,7 @@ pub fn assign_single(
 
             Expression::Variable {
                 loc: left.loc(),
-                ty: ty.clone(),
+                ty,
                 var_no: pos,
             }
         }
@@ -2844,7 +2842,6 @@ pub fn emit_function_call(
             };
             let accounts = call_args
                 .accounts
-                .as_ref()
                 .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
             let seeds = call_args
                 .seeds
@@ -2932,7 +2929,6 @@ pub fn emit_function_call(
                 };
                 let accounts = call_args
                     .accounts
-                    .as_ref()
                     .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
                 let seeds = call_args
                     .seeds
@@ -3065,7 +3061,7 @@ pub fn emit_function_call(
                     Instr::ExternalCall {
                         loc: *loc,
                         success,
-                        accounts: None,
+                        accounts: ExternalCallAccounts::AbsentArgument,
                         seeds: None,
                         address: Some(address),
                         payload,

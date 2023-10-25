@@ -33,7 +33,7 @@ fn constructor(
                 *loc,
                 format!(
                     "new cannot construct current contract '{}'",
-                    ns.contracts[no].name
+                    ns.contracts[no].id
                 ),
             ));
             return Err(());
@@ -53,7 +53,7 @@ fn constructor(
             *loc,
             format!(
                 "cannot construct '{}' of type '{}'",
-                ns.contracts[no].name, ns.contracts[no].ty
+                ns.contracts[no].id, ns.contracts[no].ty
             ),
         ));
 
@@ -66,7 +66,7 @@ fn constructor(
             *loc,
             format!(
                 "circular reference creating contract '{}'",
-                ns.contracts[no].name
+                ns.contracts[no].id
             ),
         ));
         return Err(());
@@ -246,7 +246,7 @@ pub fn constructor_named_args(
                 *loc,
                 format!(
                     "new cannot construct current contract '{}'",
-                    ns.contracts[no].name
+                    ns.contracts[no].id
                 ),
             ));
             return Err(());
@@ -266,7 +266,7 @@ pub fn constructor_named_args(
             *loc,
             format!(
                 "cannot construct '{}' of type '{}'",
-                ns.contracts[no].name, ns.contracts[no].ty
+                ns.contracts[no].id, ns.contracts[no].ty
             ),
         ));
 
@@ -279,7 +279,7 @@ pub fn constructor_named_args(
             *loc,
             format!(
                 "circular reference creating contract '{}'",
-                ns.contracts[no].name
+                ns.contracts[no].id
             ),
         ));
         return Err(());
@@ -615,8 +615,7 @@ pub(super) fn solana_constructor_check(
             *loc,
             format!(
                 "cannot construct '{}' of type '{}'",
-                ns.contracts[constructor_contract_no].name,
-                ns.contracts[constructor_contract_no].ty
+                ns.contracts[constructor_contract_no].id, ns.contracts[constructor_contract_no].ty
             ),
         ));
     }
@@ -627,7 +626,7 @@ pub(super) fn solana_constructor_check(
                 *loc,
                 format!(
                     "circular reference creating contract '{}'",
-                    ns.contracts[constructor_contract_no].name
+                    ns.contracts[constructor_contract_no].id
                 ),
             ));
         }
@@ -647,7 +646,7 @@ pub(super) fn solana_constructor_check(
         ));
     }
 
-    if !context.in_a_loop() || call_args.accounts.is_some() {
+    if !context.in_a_loop() || !call_args.accounts.is_absent() {
         return;
     }
 

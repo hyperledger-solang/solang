@@ -3,6 +3,7 @@
 use super::{
     ast::{Diagnostic, Expression, Namespace, Type},
     diagnostics::Diagnostics,
+    Recurse,
 };
 use num_bigint::BigInt;
 use num_bigint::Sign;
@@ -295,9 +296,16 @@ pub fn eval_const_rational(
     }
 }
 
+impl Expression {
+    /// Check the expression for constant overflows, e.g. `uint8 a = 100 + 200;`.
+    pub fn check_constant_overflow(&self, diagnostics: &mut Diagnostics) {
+        self.recurse(diagnostics, check_term_for_constant_overflow);
+    }
+}
+
 /// Function that recurses the expression and folds number literals by calling 'eval_constants_in_expression'.
 /// If the expression is an arithmetic operation of two number literals, overflow_check() will be called on the result.
-pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Namespace) -> bool {
+fn check_term_for_constant_overflow(expr: &Expression, diagnostics: &mut Diagnostics) -> bool {
     match expr {
         Expression::Add { .. }
         | Expression::Subtract { .. }
@@ -310,28 +318,27 @@ pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Names
         | Expression::BitwiseAnd { .. }
         | Expression::BitwiseOr { .. }
         | Expression::BitwiseXor { .. }
-        | Expression::NumberLiteral { .. } => {
-            match eval_constants_in_expression(expr, &mut ns.diagnostics) {
-                (
-                    Some(Expression::NumberLiteral {
-                        loc,
-                        ty,
-                        value: result,
-                    }),
-                    _,
-                ) => {
-                    if let Some(diagnostic) = overflow_diagnostic(&result, &ty, &loc) {
-                        ns.diagnostics.push(diagnostic);
-                    }
+        | Expression::NumberLiteral { .. } => match eval_constants_in_expression(expr, diagnostics)
+        {
+            (
+                Some(Expression::NumberLiteral {
+                    loc,
+                    ty,
+                    value: result,
+                }),
+                _,
+            ) => {
+                if let Some(diagnostic) = overflow_diagnostic(&result, &ty, &loc) {
+                    diagnostics.push(diagnostic);
+                }
 
-                    return false;
-                }
-                (None, false) => {
-                    return false;
-                }
-                _ => {}
+                return false;
             }
-        }
+            (None, false) => {
+                return false;
+            }
+            _ => {}
+        },
         _ => {}
     }
 

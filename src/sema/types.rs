@@ -91,7 +91,7 @@ pub fn resolve_typenames<'a>(
                 ) {
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
-                        name: def.name.as_ref().unwrap().name.to_owned(),
+                        id: def.name.clone().unwrap(),
                         loc: def.name.as_ref().unwrap().loc,
                         contract: None,
                         fields: Vec::new(),
@@ -129,8 +129,8 @@ pub fn resolve_typenames<'a>(
 
                 ns.events.push(EventDecl {
                     tags: Vec::new(),
-                    name: def.name.as_ref().unwrap().name.to_owned(),
-                    loc: def.name.as_ref().unwrap().loc,
+                    id: def.name.as_ref().unwrap().to_owned(),
+                    loc: def.loc,
                     contract: None,
                     fields: Vec::new(),
                     anonymous: def.anonymous,
@@ -263,7 +263,7 @@ fn type_decl(
         loc: def.loc,
         name: def.name.name.to_string(),
         ty,
-        contract: contract_no.map(|no| ns.contracts[no].name.to_string()),
+        contract: contract_no.map(|no| ns.contracts[no].id.to_string()),
     });
 }
 
@@ -381,7 +381,7 @@ fn find_struct_recursion(ns: &mut Namespace) {
         if !notes.is_empty() {
             ns.diagnostics.push(Diagnostic::error_with_notes(
                 ns.structs[n].loc,
-                format!("struct '{}' has infinite size", ns.structs[n].name),
+                format!("struct '{}' has infinite size", ns.structs[n].id),
                 notes,
             ));
         }
@@ -411,7 +411,7 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
         let (tags, fields) = event_decl(event.pt, file_no, &event.comments, contract_no, ns);
 
         ns.events[event.event_no].signature =
-            ns.signature(&ns.events[event.event_no].name, &fields);
+            ns.signature(&ns.events[event.event_no].id.name, &fields);
         ns.events[event.event_no].fields = fields;
         ns.events[event.event_no].tags = tags;
     }
@@ -449,7 +449,7 @@ fn resolve_contract<'a>(
     );
 
     ns.contracts
-        .push(Contract::new(&name.name, def.ty.clone(), doc, def.loc));
+        .push(Contract::new(name, def.ty.clone(), doc, def.loc));
 
     contract_annotations(contract_no, &def.annotations, ns);
 
@@ -495,7 +495,7 @@ fn resolve_contract<'a>(
                 ) {
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
-                        name: pt.name.as_ref().unwrap().name.to_owned(),
+                        id: pt.name.clone().unwrap(),
                         loc: pt.name.as_ref().unwrap().loc,
                         contract: Some(def.name.as_ref().unwrap().name.to_owned()),
                         fields: Vec::new(),
@@ -513,7 +513,7 @@ fn resolve_contract<'a>(
                     broken = true;
                 }
             }
-            pt::ContractPart::EventDefinition(ref pt) => {
+            pt::ContractPart::EventDefinition(pt) => {
                 annotions_not_allowed(&parts.annotations, "event", ns);
 
                 let event_no = ns.events.len();
@@ -536,8 +536,8 @@ fn resolve_contract<'a>(
 
                 ns.events.push(EventDecl {
                     tags: Vec::new(),
-                    name: pt.name.as_ref().unwrap().name.to_owned(),
-                    loc: pt.name.as_ref().unwrap().loc,
+                    id: pt.name.as_ref().unwrap().to_owned(),
+                    loc: pt.loc,
                     contract: Some(contract_no),
                     fields: Vec::new(),
                     anonymous: pt.anonymous,
@@ -627,7 +627,7 @@ fn contract_annotations(
                 note.loc,
                 format!(
                     "unknown annotation '{}' on contract {}",
-                    note.id.name, ns.contracts[contract_no].name,
+                    note.id.name, ns.contracts[contract_no].id,
                 ),
             ));
             continue;
@@ -1073,10 +1073,10 @@ fn enum_decl(
 
     let decl = EnumDecl {
         tags,
-        name: enum_.name.as_ref().unwrap().name.to_string(),
+        id: enum_.name.clone().unwrap(),
         loc: enum_.loc,
         contract: match contract_no {
-            Some(c) => Some(ns.contracts[c].name.to_owned()),
+            Some(c) => Some(ns.contracts[c].id.name.to_owned()),
             None => None,
         },
         ty: Type::Uint(8),
@@ -1289,7 +1289,7 @@ impl Type {
 
                 s
             }
-            Type::Contract(n) => format!("contract {}", ns.contracts[*n].name),
+            Type::Contract(n) => format!("contract {}", ns.contracts[*n].id),
             Type::UserType(n) => format!("usertype {}", ns.user_types[*n]),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(_, ty) => {
@@ -2104,7 +2104,7 @@ impl Type {
                     value.to_llvm_string(ns)
                 )
             }
-            Type::Contract(i) => ns.contracts[*i].name.to_owned(),
+            Type::Contract(i) => ns.contracts[*i].id.name.to_owned(),
             Type::InternalFunction { .. } => "function".to_owned(),
             Type::ExternalFunction { .. } => "function".to_owned(),
             Type::Ref(r) => r.to_llvm_string(ns),

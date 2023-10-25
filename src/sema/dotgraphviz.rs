@@ -129,12 +129,12 @@ impl Dot {
 
     fn add_function(&mut self, func: &Function, ns: &Namespace, parent: usize) {
         let mut labels = vec![
-            format!("{} {}", func.ty, func.name),
+            format!("{} {}", func.ty, func.id),
             ns.loc_to_string(PathDisplay::FullPath, &func.loc),
         ];
 
         if let Some(contract) = func.contract_no {
-            labels.insert(1, format!("contract: {}", ns.contracts[contract].name));
+            labels.insert(1, format!("contract: {}", ns.contracts[contract].id));
         }
 
         if func.ty == pt::FunctionTy::Constructor || func.ty == pt::FunctionTy::Function {
@@ -153,7 +153,7 @@ impl Dot {
                 labels.push(String::from("override"));
             } else {
                 for is_override in is_overrides {
-                    labels.push(format!("override {}", ns.contracts[*is_override].name));
+                    labels.push(format!("override {}", ns.contracts[*is_override].id));
                 }
             }
         }
@@ -163,7 +163,7 @@ impl Dot {
         }
 
         let func_node = self.add_node(
-            Node::new(&func.name, labels),
+            Node::new(&func.id.name, labels),
             Some(parent),
             Some(format!("{}", func.ty)),
         );
@@ -244,8 +244,8 @@ impl Dot {
         for (base_no, (_, _, args)) in &func.bases {
             let node = self.add_node(
                 Node::new(
-                    &ns.contracts[*base_no].name,
-                    vec![ns.contracts[*base_no].name.to_string()],
+                    &ns.contracts[*base_no].id.name,
+                    vec![ns.contracts[*base_no].id.to_string()],
                 ),
                 Some(func_node),
                 Some(String::from("base")),
@@ -302,7 +302,7 @@ impl Dot {
                     format!(
                         "code {}literal contract {}",
                         if *runtime { "runtime " } else { "" },
-                        ns.contracts[*contract_no].name,
+                        ns.contracts[*contract_no].id,
                     ),
                     ns.loc_to_string(PathDisplay::FullPath, loc),
                 ];
@@ -337,7 +337,9 @@ impl Dot {
                     Some(parent_rel),
                 );
             }
-            Expression::StructLiteral { loc, ty, values } => {
+            Expression::StructLiteral {
+                loc, ty, values, ..
+            } => {
                 let labels = vec![
                     format!("struct literal: {}", ty.to_string(ns)),
                     ns.loc_to_string(PathDisplay::FullPath, loc),
@@ -349,7 +351,7 @@ impl Dot {
                     Some(parent_rel),
                 );
 
-                for (no, arg) in values.iter().enumerate() {
+                for (no, (_, arg)) in values.iter().enumerate() {
                     self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
             }
@@ -1146,28 +1148,6 @@ impl Dot {
                 self.add_string_location(left, func, ns, node, String::from("left"));
                 self.add_string_location(right, func, ns, node, String::from("right"));
             }
-            Expression::StringConcat {
-                loc,
-                ty,
-                left,
-                right,
-            } => {
-                let node = self.add_node(
-                    Node::new(
-                        "string_concat",
-                        vec![
-                            format!("string concat {}", ty.to_string(ns)),
-                            ns.loc_to_string(PathDisplay::FullPath, loc),
-                        ],
-                    ),
-                    Some(parent),
-                    Some(parent_rel),
-                );
-
-                self.add_string_location(left, func, ns, node, String::from("left"));
-                self.add_string_location(right, func, ns, node, String::from("right"));
-            }
-
             Expression::Or { loc, left, right } => {
                 let labels = vec![
                     String::from("logical or"),
@@ -1202,6 +1182,7 @@ impl Dot {
                 ty,
                 function_no,
                 signature,
+                ..
             } => {
                 let mut labels = vec![
                     ty.to_string(ns),
@@ -1211,12 +1192,9 @@ impl Dot {
                 let func = &ns.functions[*function_no];
 
                 if let Some(contract_no) = func.contract_no {
-                    labels.insert(
-                        1,
-                        format!("{}.{}", ns.contracts[contract_no].name, func.name),
-                    )
+                    labels.insert(1, format!("{}.{}", ns.contracts[contract_no].id, func.id))
                 } else {
-                    labels.insert(1, format!("free function {}", func.name))
+                    labels.insert(1, format!("free function {}", func.id))
                 }
 
                 if let Some(signature) = signature {
@@ -1243,7 +1221,7 @@ impl Dot {
                 let f = &ns.functions[*function_no];
 
                 if let Some(contract_no) = f.contract_no {
-                    labels.insert(1, format!("{}.{}", ns.contracts[contract_no].name, f.name))
+                    labels.insert(1, format!("{}.{}", ns.contracts[contract_no].id, f.id))
                 }
 
                 let node = self.add_node(
@@ -1333,7 +1311,7 @@ impl Dot {
                 ..
             } => {
                 let labels = vec![
-                    format!("constructor contract {}", ns.contracts[*contract_no].name),
+                    format!("constructor contract {}", ns.contracts[*contract_no].id),
                     ns.loc_to_string(PathDisplay::FullPath, loc),
                 ];
 
@@ -1386,7 +1364,7 @@ impl Dot {
             }
             Expression::InterfaceId { loc, contract_no } => {
                 let labels = vec![
-                    format!("interfaceid contract {}", ns.contracts[*contract_no].name),
+                    format!("interfaceid contract {}", ns.contracts[*contract_no].id),
                     ns.loc_to_string(PathDisplay::FullPath, loc),
                 ];
 
@@ -1413,7 +1391,7 @@ impl Dot {
                     ),
                     format!(
                         "function {} {}",
-                        user_func.name,
+                        user_func.id,
                         ns.loc_to_string(PathDisplay::FullPath, &user_func.loc)
                     ),
                 ];
@@ -1455,6 +1433,20 @@ impl Dot {
                 );
                 self.add_expression(array, func, ns, node, format!("member: {}", name));
             }
+            Expression::EventSelector { loc, event_no, .. } => {
+                let event = &ns.events[*event_no];
+
+                let labels = vec![
+                    format!("event selector {}", event.symbol_name(ns)),
+                    ns.loc_to_string(PathDisplay::FullPath, loc),
+                ];
+
+                self.add_node(
+                    Node::new("event_selector", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+            }
         }
     }
 
@@ -1474,7 +1466,7 @@ impl Dot {
         if let Some(salt) = &call_args.salt {
             self.add_expression(salt, func, ns, node, String::from("salt"));
         }
-        if let Some(accounts) = &call_args.accounts {
+        if let ExternalCallAccounts::Present(accounts) = &call_args.accounts {
             self.add_expression(accounts, func, ns, node, String::from("accounts"));
         }
         if let Some(seeds) = &call_args.seeds {
@@ -2077,7 +2069,7 @@ impl Dot {
                 1,
                 format!(
                     "{}.{}",
-                    ns.contracts[*contract].name, ns.contracts[*contract].variables[var_no].name
+                    ns.contracts[*contract].id, ns.contracts[*contract].variables[var_no].name
                 ),
             );
         } else {
@@ -2105,7 +2097,7 @@ impl Dot {
             String::from("storage variable"),
             format!(
                 "{}.{}",
-                ns.contracts[contract].name, ns.contracts[contract].variables[var_no].name
+                ns.contracts[contract].id, ns.contracts[contract].variables[var_no].name
             ),
             ty.to_string(ns),
             ns.loc_to_string(PathDisplay::FullPath, loc),
@@ -2439,9 +2431,9 @@ impl Namespace {
                 if let Some(contract) = &decl.contract {
                     labels.insert(0, format!("contract: {contract}"));
                 }
-                labels.insert(0, format!("name: {}", decl.name));
+                labels.insert(0, format!("name: {}", decl.id));
 
-                let e = Node::new(&decl.name, labels);
+                let e = Node::new(&decl.id.name, labels);
 
                 let node = dot.add_node(e, Some(enums), None);
 
@@ -2456,7 +2448,7 @@ impl Namespace {
             for decl in &self.structs {
                 if let pt::Loc::File(..) = &decl.loc {
                     let mut labels = vec![
-                        format!("name:{}", decl.name),
+                        format!("name:{}", decl.id),
                         self.loc_to_string(PathDisplay::FullPath, &decl.loc),
                     ];
 
@@ -2472,7 +2464,7 @@ impl Namespace {
                         ));
                     }
 
-                    let e = Node::new(&decl.name, labels);
+                    let e = Node::new(&decl.id.name, labels);
 
                     let node = dot.add_node(e, Some(structs), None);
 
@@ -2487,7 +2479,7 @@ impl Namespace {
 
             for decl in &self.events {
                 let mut labels = vec![
-                    format!("name:{}", decl.name),
+                    format!("name:{}", decl.id),
                     self.loc_to_string(PathDisplay::FullPath, &decl.loc),
                 ];
 
@@ -2508,7 +2500,7 @@ impl Namespace {
                     ));
                 }
 
-                let e = Node::new(&decl.name, labels);
+                let e = Node::new(&decl.id.name, labels);
 
                 let node = dot.add_node(e, Some(events), None);
 
@@ -2591,7 +2583,7 @@ impl Namespace {
                 Node::new(
                     "contract",
                     vec![
-                        format!("contract {}", c.name),
+                        format!("contract {}", c.id),
                         self.loc_to_string(PathDisplay::FullPath, &c.loc),
                     ],
                 ),
@@ -2606,7 +2598,7 @@ impl Namespace {
                     Node::new(
                         "base",
                         vec![
-                            format!("base {}", self.contracts[base.contract_no].name),
+                            format!("base {}", self.contracts[base.contract_no].id),
                             self.loc_to_string(PathDisplay::FullPath, &base.loc),
                         ],
                     ),
@@ -2659,7 +2651,7 @@ impl Namespace {
 
                             let mut label = format!(
                                 "function {} {}",
-                                func.name,
+                                func.id,
                                 self.loc_to_string(PathDisplay::FullPath, &func.loc)
                             );
 
@@ -2672,7 +2664,7 @@ impl Namespace {
                     UsingList::Library(library_no) => {
                         let library = &self.contracts[*library_no];
 
-                        vec![format!("library {}", library.name)]
+                        vec![format!("library {}", library.id)]
                     }
                 };
 

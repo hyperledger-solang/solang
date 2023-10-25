@@ -3,6 +3,9 @@
 - Update the version in `Cargo.toml`, `solang-parser/Cargo.toml`, the binary
   links in `docs/installing.rst`, and `CHANGELOG.md`. Remember to match the
   solang-parser version in the top level `Cargo.toml`.
+- Ensure the `CHANGELOG.md` and `vscode/CHANGELOG.md` are up to date.
+- If the vscode extension is going to be updated, fix the version in
+  `docs/extension.rst`.
 - Copy the contents of the CHANGELOG for this release into commit message,
   using `git commit -s --cleanup=whitespace` so the that the lines beginning
   with `#` are not removed.

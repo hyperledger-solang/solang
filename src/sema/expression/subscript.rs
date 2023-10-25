@@ -2,11 +2,9 @@
 
 use crate::sema::ast::{Expression, Mapping, Namespace, RetrieveType, Type};
 use crate::sema::diagnostics::Diagnostics;
-use crate::sema::eval::check_term_for_constant_overflow;
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
 use crate::sema::symtable::Symtable;
-use crate::sema::Recurse;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
@@ -52,7 +50,7 @@ pub(super) fn array_subscript(
 
     let index_ty = index.ty();
 
-    index.recurse(ns, check_term_for_constant_overflow);
+    index.check_constant_overflow(diagnostics);
 
     match index_ty.deref_any() {
         Type::Uint(_) => (),

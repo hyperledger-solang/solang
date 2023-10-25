@@ -3,7 +3,7 @@
 use crate::sema::ast::{
     ArrayLength, Contract, Function, Namespace, Parameter, StructDecl, StructType, Tag, Type,
 };
-use anchor_syn::idl::{
+use anchor_syn::idl::types::{
     Idl, IdlAccount, IdlAccountItem, IdlEnumVariant, IdlEvent, IdlEventField, IdlField,
     IdlInstruction, IdlType, IdlTypeDefinition, IdlTypeDefinitionTy,
 };
@@ -20,15 +20,26 @@ use solang_parser::pt::FunctionTy;
 /// Generate discriminator based on the name of the function. This is the 8 byte
 /// value anchor uses to dispatch function calls on. This should match
 /// anchor's behaviour - we need to match the discriminator exactly
-pub fn discriminator(namespace: &'static str, name: &str) -> Vec<u8> {
-    let mut hasher = Sha256::new();
+pub fn function_discriminator(name: &str) -> Vec<u8> {
     // must match snake-case npm library, see
     // https://github.com/coral-xyz/anchor/blob/master/ts/packages/anchor/src/coder/borsh/instruction.ts#L389
     let normalized = name
         .from_case(Case::Camel)
         .without_boundaries(&[Boundary::LowerDigit])
         .to_case(Case::Snake);
-    hasher.update(format!("{namespace}:{normalized}"));
+    discriminator("global", &normalized)
+}
+
+/// Generate discriminator based on the name of the event. This is the 8 byte
+/// value anchor uses for events. This should match anchor's behaviour,
+///  generating the same discriminator
+pub fn event_discriminator(name: &str) -> Vec<u8> {
+    discriminator("event", name)
+}
+
+fn discriminator(namespace: &'static str, name: &str) -> Vec<u8> {
+    let mut hasher = Sha256::new();
+    hasher.update(format!("{namespace}:{name}"));
     hasher.finalize()[..8].to_vec()
 }
 
@@ -49,7 +60,7 @@ pub fn generate_anchor_idl(contract_no: usize, ns: &Namespace, contract_version:
 
     Idl {
         version: Version::parse(contract_version).unwrap().to_string(),
-        name: ns.contracts[contract_no].name.clone(),
+        name: ns.contracts[contract_no].id.name.clone(),
         docs,
         constants: vec![],
         instructions,
@@ -85,7 +96,7 @@ fn idl_events(
             }
 
             events.push(IdlEvent {
-                name: def.name.clone(),
+                name: def.id.name.clone(),
                 fields,
             });
         }
@@ -155,7 +166,7 @@ fn idl_instructions(
         } else if func.mangled_name_contracts.contains(&contract_no) {
             func.mangled_name.clone()
         } else {
-            func.name.clone()
+            func.id.name.clone()
         };
 
         let accounts = func
@@ -240,9 +251,10 @@ impl TypeManager<'_> {
             name: name.clone(),
             docs: Some(vec![format!(
                 "Data structure to hold the multiple returns of function {}",
-                func.name
+                func.id
             )]),
             ty: IdlTypeDefinitionTy::Struct { fields },
+            generics: None,
         });
 
         IdlType::Defined(name)
@@ -260,7 +272,8 @@ impl TypeManager<'_> {
         // If the existing type was declared outside a contract or if it is from the current contract,
         // we should change the name of the type we are adding now.
         if other_contract.is_none()
-            || other_contract.as_ref().unwrap() == &self.namespace.contracts[self.contract_no].name
+            || other_contract.as_ref().unwrap()
+                == &self.namespace.contracts[self.contract_no].id.name
         {
             let new_name = if let Some(this_name) = contract {
                 format!("{this_name}_{type_name}")
@@ -302,17 +315,18 @@ impl TypeManager<'_> {
             });
         }
 
-        let name = self.unique_custom_type_name(&def.name, &def.contract);
+        let name = self.unique_custom_type_name(&def.id.name, &def.contract);
 
         self.added_names.insert(
             name.clone(),
-            (self.types.len(), def.contract.clone(), def.name.clone()),
+            (self.types.len(), def.contract.clone(), def.id.name.clone()),
         );
 
         self.types.push(IdlTypeDefinition {
             name,
             docs,
             ty: IdlTypeDefinitionTy::Struct { fields },
+            generics: None,
         });
     }
 
@@ -337,6 +351,7 @@ impl TypeManager<'_> {
                 name,
                 docs: item.docs,
                 ty: item.ty,
+                generics: None,
             });
         }
 
@@ -353,10 +368,10 @@ impl TypeManager<'_> {
 
         let docs = idl_docs(&def.tags);
 
-        let name = self.unique_custom_type_name(&def.name, &def.contract);
+        let name = self.unique_custom_type_name(&def.id.name, &def.contract);
         self.added_names.insert(
             name.clone(),
-            (self.types.len(), def.contract.clone(), def.name.clone()),
+            (self.types.len(), def.contract.clone(), def.id.name.clone()),
         );
 
         let variants = def
@@ -372,6 +387,7 @@ impl TypeManager<'_> {
             name,
             docs,
             ty: IdlTypeDefinitionTy::Enum { variants },
+            generics: None,
         });
     }
 
@@ -403,7 +419,7 @@ impl TypeManager<'_> {
             Type::Struct(struct_type) => {
                 let def = struct_type.definition(self.namespace);
                 self.add_struct_definition(def, ast_type);
-                IdlType::Defined(def.name.clone())
+                IdlType::Defined(def.id.name.clone())
             }
             Type::Array(ty, dims) => {
                 let mut idl_type = self.convert(ty);
@@ -426,7 +442,7 @@ impl TypeManager<'_> {
             Type::Bytes(dim) => IdlType::Array(Box::new(IdlType::U8), *dim as usize),
             Type::Enum(enum_no) => {
                 self.add_enum_definition(*enum_no, ast_type);
-                IdlType::Defined(self.namespace.enums[*enum_no].name.clone())
+                IdlType::Defined(self.namespace.enums[*enum_no].id.name.clone())
             }
             Type::ExternalFunction { .. } => {
                 self.convert(&Type::Struct(StructType::ExternalFunction))

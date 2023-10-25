@@ -52,6 +52,10 @@ pub(crate) fn statement(
                     return_override,
                     opt,
                 );
+
+                if !stmt.reachable() {
+                    break;
+                }
             }
         }
         Statement::VariableDecl(loc, pos, _, Some(init)) => {
@@ -267,7 +271,7 @@ pub(crate) fn statement(
             cfg.set_basic_block(body);
 
             vartab.new_dirty_tracker();
-            loops.new_scope(end, cond);
+            loops.enter_scope(end, cond);
 
             let mut body_reachable = true;
 
@@ -335,7 +339,7 @@ pub(crate) fn statement(
             cfg.set_basic_block(body);
 
             vartab.new_dirty_tracker();
-            loops.new_scope(end, cond);
+            loops.enter_scope(end, cond);
 
             let mut body_reachable = true;
 
@@ -397,7 +401,7 @@ pub(crate) fn statement(
 
             cfg.set_basic_block(body_block);
 
-            loops.new_scope(
+            loops.enter_scope(
                 end_block,
                 if next.is_none() {
                     body_block
@@ -500,7 +504,7 @@ pub(crate) fn statement(
             cfg.set_basic_block(body_block);
 
             // continue goes to next
-            loops.new_scope(end_block, next_block);
+            loops.enter_scope(end_block, next_block);
 
             vartab.new_dirty_tracker();
 
@@ -1024,7 +1028,7 @@ impl LoopScopes {
         LoopScopes(Vec::new())
     }
 
-    pub(crate) fn new_scope(&mut self, break_bb: usize, continue_bb: usize) {
+    pub(crate) fn enter_scope(&mut self, break_bb: usize, continue_bb: usize) {
         self.0.push(LoopScope {
             break_bb,
             continue_bb,
@@ -1059,8 +1063,7 @@ impl Type {
                 value: false,
             }),
             Type::Bytes(n) => {
-                let mut l = Vec::new();
-                l.resize(*n as usize, 0);
+                let l = vec![0; *n as usize];
                 Some(Expression::BytesLiteral {
                     loc: Codegen,
                     ty: self.clone(),
@@ -1140,7 +1143,10 @@ impl Namespace {
     pub fn default_constructor(&self, contract_no: usize) -> Function {
         let mut func = Function::new(
             Codegen,
-            "".to_owned(),
+            pt::Identifier {
+                name: "".to_owned(),
+                loc: Codegen,
+            },
             Some(contract_no),
             vec![],
             pt::FunctionTy::Constructor,

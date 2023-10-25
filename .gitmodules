@@ -1,4 +1,4 @@
-[submodule "solang-parser/testdata/solidity"]
+[submodule "testdata/solidity"]
 	path = testdata/solidity
 	url = https://github.com/ethereum/solidity
 [submodule "integration/polkadot/tornado/tornado-cli"]

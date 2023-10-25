@@ -273,8 +273,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 return Some(exp_id);
             }
 
-            Expression::StringCompare { left, right, .. }
-            | Expression::StringConcat { left, right, .. } => {
+            Expression::StringCompare { left, right, .. } => {
                 return if let (
                     StringLocation::RunTime(operand_1),
                     StringLocation::RunTime(operand_2),
@@ -398,8 +397,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 return self.expr_map.get(&key).copied();
             }
 
-            Expression::StringCompare { left, right, .. }
-            | Expression::StringConcat { left, right, .. } => {
+            Expression::StringCompare { left, right, .. } => {
                 if let (StringLocation::RunTime(operand_1), StringLocation::RunTime(operand_2)) =
                     (left, right)
                 {
@@ -513,7 +511,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
             }
 
             Expression::StringCompare { loc: _, left, right }
-            | Expression::StringConcat {  left, right, .. } => {
+            => {
                 if let (StringLocation::RunTime(operand_1), StringLocation::RunTime(operand_2)) =
                     (left, right)
                 {

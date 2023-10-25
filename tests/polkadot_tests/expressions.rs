@@ -478,8 +478,7 @@ fn complement() {
 
     runtime.function("do_test", Vec::new());
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let args = vec![0; 32];
 
     runtime.function("do_complement", args);
 
@@ -523,8 +522,7 @@ fn bitwise() {
 
     runtime.function("do_test", Vec::new());
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_xor", args);
@@ -534,8 +532,7 @@ fn bitwise() {
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_or", args);
@@ -545,8 +542,7 @@ fn bitwise() {
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_and", args);
@@ -630,8 +626,7 @@ fn assign_bitwise() {
 
     runtime.function("do_test", Vec::new());
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_xor", args);
@@ -641,8 +636,7 @@ fn assign_bitwise() {
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_or", args);
@@ -652,8 +646,7 @@ fn assign_bitwise() {
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
 
-    let mut args = Vec::new();
-    args.resize(32, 0);
+    let mut args = vec![0; 32];
     args.resize(64, 0xff);
 
     runtime.function("do_and", args);
@@ -1863,4 +1856,33 @@ fn sign_extend(sign: Sign) -> u8 {
     } else {
         0
     }
+}
+
+/// Given a chain of assignments, with the leftmost hand being a return parameter.
+/// It should compile fine and all values in the chain should be assigned the right most value.
+#[test]
+fn assign_chained() {
+    let mut runtime = build_solidity(
+        r#"
+    contract C {
+        uint64 public foo;
+        uint64 public bar;
+    
+        function f(uint64 x) public returns (uint64) {
+            return foo = bar = x;
+        }
+    }
+    "#,
+    );
+
+    let expected_output = 42u64.encode();
+
+    runtime.function("f", expected_output.clone());
+    assert_eq!(runtime.output(), &expected_output[..]);
+
+    runtime.function("foo", Vec::new());
+    assert_eq!(runtime.output(), &expected_output[..]);
+
+    runtime.function("bar", Vec::new());
+    assert_eq!(runtime.output(), &expected_output[..]);
 }

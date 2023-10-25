@@ -3,7 +3,6 @@
 use super::ast::*;
 use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
-use super::eval::check_term_for_constant_overflow;
 use super::expression::{
     function_call::{available_functions, call_expr, named_call_expr},
     ExprContext, ResolveTo,
@@ -106,7 +105,7 @@ pub fn resolve_function_body(
                                 *loc,
                                 format!(
                                     "contract '{}' is not a base contract of '{}'",
-                                    base.name, ns.contracts[contract_no].name,
+                                    base.name, ns.contracts[contract_no].id,
                                 ),
                             ));
                             all_ok = false;
@@ -173,7 +172,7 @@ pub fn resolve_function_body(
                         def.loc,
                         format!(
                             "missing arguments to contract '{}' constructor",
-                            ns.contracts[base.contract_no].name
+                            ns.contracts[base.contract_no].id
                         ),
                     ));
                 }
@@ -199,7 +198,7 @@ pub fn resolve_function_body(
                     let modifier_name = &modifier.name.identifiers[0];
                     if let Ok(e) = function_call_pos_args(
                         &modifier.loc,
-                        modifier_name,
+                        &modifier.name,
                         pt::FunctionTy::Modifier,
                         modifier.args.as_ref().unwrap_or(&Vec::new()),
                         available_functions(
@@ -368,7 +367,8 @@ fn statement(
                     ResolveTo::Type(&var_ty),
                 )?;
 
-                expr.recurse(ns, check_term_for_constant_overflow);
+                expr.check_constant_overflow(diagnostics);
+
                 used_variable(ns, &expr, symtable);
 
                 Some(Arc::new(expr.cast(
@@ -421,37 +421,41 @@ fn statement(
             statements,
             unchecked,
         } => {
-            symtable.new_scope();
+            symtable.enter_scope();
             let mut reachable = true;
+            let mut already_unreachable = false;
 
             let mut context = context.clone();
             context.unchecked |= *unchecked;
 
+            let mut resolved_stmts = Vec::new();
+
             for stmt in statements {
-                if !reachable {
-                    ns.diagnostics.push(Diagnostic::error(
+                if !reachable && !already_unreachable {
+                    ns.diagnostics.push(Diagnostic::warning(
                         stmt.loc(),
                         "unreachable statement".to_string(),
                     ));
-                    return Err(());
+                    already_unreachable = true;
                 }
-                reachable = statement(stmt, res, &mut context, symtable, loops, ns, diagnostics)?;
+                reachable = statement(
+                    stmt,
+                    &mut resolved_stmts,
+                    &mut context,
+                    symtable,
+                    loops,
+                    ns,
+                    diagnostics,
+                )?;
             }
 
-            // symtable.leave_scope().map(|curr_scope| {
-            //     let curr_scope = curr_scope
-            //         .0
-            //         .values()
-            //         .filter_map(|pos| {
-            //             symtable
-            //                 .vars
-            //                 .get(pos)
-            //                 .map(|var| (var.id.name.clone(), var.ty.clone()))
-            //         })
-            //         .collect();
-            //     ns.scopes.insert(*loc, curr_scope);
-            // });
             symtable.leave_scope(ns, *loc);
+
+            res.push(Statement::Block {
+                loc: *loc,
+                unchecked: *unchecked,
+                statements: resolved_stmts,
+            });
 
             Ok(reachable)
         }
@@ -492,9 +496,9 @@ fn statement(
             used_variable(ns, &expr, symtable);
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.new_scope();
+            symtable.enter_scope();
             let mut body_stmts = Vec::new();
-            loops.new_scope();
+            loops.enter_scope();
             statement(
                 body,
                 &mut body_stmts,
@@ -524,9 +528,9 @@ fn statement(
             used_variable(ns, &expr, symtable);
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.new_scope();
+            symtable.enter_scope();
             let mut body_stmts = Vec::new();
-            loops.new_scope();
+            loops.enter_scope();
             statement(
                 body,
                 &mut body_stmts,
@@ -556,7 +560,7 @@ fn statement(
 
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.new_scope();
+            symtable.enter_scope();
             let mut then_stmts = Vec::new();
             let mut reachable = statement(
                 then,
@@ -571,7 +575,7 @@ fn statement(
 
             let mut else_stmts = Vec::new();
             if let Some(stmts) = else_ {
-                symtable.new_scope();
+                symtable.enter_scope();
                 reachable |= statement(
                     stmts,
                     &mut else_stmts,
@@ -599,7 +603,7 @@ fn statement(
             Err(())
         }
         pt::Statement::For(loc, init_stmt, None, next_expr, body_stmt) => {
-            symtable.new_scope();
+            symtable.enter_scope();
 
             let mut init = Vec::new();
 
@@ -615,7 +619,7 @@ fn statement(
                 )?;
             }
 
-            loops.new_scope();
+            loops.enter_scope();
             context.enter_loop();
 
             let mut body = Vec::new();
@@ -661,7 +665,7 @@ fn statement(
             Ok(reachable)
         }
         pt::Statement::For(loc, init_stmt, Some(cond_expr), next_expr, body_stmt) => {
-            symtable.new_scope();
+            symtable.enter_scope();
 
             let mut init = Vec::new();
             let mut body = Vec::new();
@@ -692,7 +696,7 @@ fn statement(
             let cond = cond.cast(&cond_expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
             // continue goes to next, and if that does exist, cond
-            loops.new_scope();
+            loops.enter_scope();
 
             let mut body_reachable = match body_stmt {
                 Some(body_stmt) => statement(
@@ -758,7 +762,7 @@ fn statement(
         pt::Statement::Return(loc, Some(returns)) => {
             let expr = return_with_values(returns, loc, context, symtable, ns, diagnostics)?;
 
-            expr.recurse(ns, check_term_for_constant_overflow);
+            expr.check_constant_overflow(diagnostics);
 
             for offset in symtable.returns.iter() {
                 let elem = symtable.vars.get_mut(offset).unwrap();
@@ -818,7 +822,7 @@ fn statement(
                         ResolveTo::Discard,
                     )?;
 
-                    ret.recurse(ns, check_term_for_constant_overflow);
+                    ret.check_constant_overflow(diagnostics);
                     ret
                 }
                 pt::Expression::NamedFunctionCall(loc, ty, args) => {
@@ -833,7 +837,7 @@ fn statement(
                         diagnostics,
                         ResolveTo::Discard,
                     )?;
-                    ret.recurse(ns, check_term_for_constant_overflow);
+                    ret.check_constant_overflow(diagnostics);
                     ret
                 }
                 _ => {
@@ -908,7 +912,7 @@ fn statement(
                 for flag in flags {
                     if flag.string == "memory-safe" && ns.target == Target::EVM {
                         if let Some(prev) = &memory_safe {
-                            ns.diagnostics.push(Diagnostic::error_with_note(
+                            ns.diagnostics.push(Diagnostic::warning_with_note(
                                 flag.loc,
                                 format!("flag '{}' already specified", flag.string),
                                 *prev,
@@ -918,7 +922,7 @@ fn statement(
                             memory_safe = Some(flag.loc);
                         }
                     } else {
-                        ns.diagnostics.push(Diagnostic::error(
+                        ns.diagnostics.push(Diagnostic::warning(
                             flag.loc,
                             format!("flag '{}' not supported", flag.string),
                         ));
@@ -1299,7 +1303,7 @@ fn emit_event(
                         *loc,
                         format!(
                             "event type '{}' has {} fields, {} provided",
-                            event.name,
+                            event.id,
                             event.fields.len(),
                             args.len()
                         ),
@@ -1414,10 +1418,10 @@ fn emit_event(
                     temp_diagnostics.push(Diagnostic::cast_error_with_note(
                         *loc,
                         format!(
-                            "event cannot be emmited with named fields as {unnamed_fields} of its fields do not have names"
+                            "event cannot be emitted with named fields as {unnamed_fields} of its fields do not have names"
                         ),
-                        event.loc,
-                        format!("definition of {}", event.name),
+                        event.id.loc,
+                        format!("definition of {}", event.id),
                     ));
                     matches = false;
                 } else if params_len != arguments.len() {
@@ -1451,7 +1455,7 @@ fn emit_event(
                                 format!(
                                     "missing argument '{}' to event '{}'",
                                     param.name_as_str(),
-                                    ns.events[*event_no].name,
+                                    ns.events[*event_no].id,
                                 ),
                             ));
                             continue;
@@ -2014,7 +2018,7 @@ fn return_with_values(
                     diagnostics,
                     ResolveTo::Type(&return_ty),
                 )?;
-                let expr = expr.cast(loc, &return_ty, true, ns, diagnostics)?;
+                let expr = expr.cast(&expr_return.loc(), &return_ty, true, ns, diagnostics)?;
                 used_variable(ns, &expr, symtable);
                 exprs.push(expr);
             }
@@ -2307,8 +2311,6 @@ fn try_catch(
         }
     };
 
-    symtable.new_scope();
-
     let mut args = match &fcall {
         Expression::ExternalFunctionCall {
             returns: func_returns,
@@ -2357,7 +2359,7 @@ fn try_catch(
         }
     };
 
-    symtable.new_scope();
+    symtable.enter_scope();
 
     let mut params = Vec::new();
     let mut broken = false;
@@ -2484,7 +2486,7 @@ fn try_catch(
 
         match clause_stmt {
             CatchClause::Simple(catch_loc, param, stmt) => {
-                symtable.new_scope();
+                symtable.enter_scope();
 
                 let mut catch_param = None;
                 let mut catch_param_pos = None;
@@ -2595,7 +2597,7 @@ fn try_catch(
                     ));
                 }
 
-                symtable.new_scope();
+                symtable.enter_scope();
 
                 let mut error_pos = None;
                 let mut error_stmt_resolved = Vec::new();

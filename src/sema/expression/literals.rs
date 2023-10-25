@@ -125,7 +125,7 @@ pub(super) fn hex_literal(
 pub(crate) fn hex_number_literal(
     loc: &pt::Loc,
     n: &str,
-    ns: &mut Namespace,
+    ns: &Namespace,
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
@@ -200,7 +200,7 @@ pub(crate) fn hex_number_literal(
 pub(super) fn address_literal(
     loc: &pt::Loc,
     address: &str,
-    ns: &mut Namespace,
+    ns: &Namespace,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     if ns.target.is_polkadot() {
@@ -458,6 +458,7 @@ pub(super) fn rational_number_literal(
 /// Resolve a function call with positional arguments
 pub(super) fn struct_literal(
     loc: &pt::Loc,
+    id: pt::IdentifierPath,
     struct_ty: &StructType,
     args: &[pt::Expression],
     context: &ExprContext,
@@ -474,7 +475,7 @@ pub(super) fn struct_literal(
             *loc,
             format!(
                 "builtin struct '{}' cannot be created using struct literal",
-                struct_def.name,
+                struct_def.id,
             ),
         ));
         Err(())
@@ -483,7 +484,7 @@ pub(super) fn struct_literal(
             *loc,
             format!(
                 "struct '{}' has {} fields, not {}",
-                struct_def.name,
+                struct_def.id,
                 struct_def.fields.len(),
                 args.len()
             ),
@@ -502,11 +503,15 @@ pub(super) fn struct_literal(
                 ResolveTo::Type(&struct_def.fields[i].ty),
             )?;
             used_variable(ns, &expr, symtable);
-            fields.push(expr.cast(loc, &struct_def.fields[i].ty, true, ns, diagnostics)?);
+            fields.push((
+                None,
+                expr.cast(loc, &struct_def.fields[i].ty, true, ns, diagnostics)?,
+            ));
         }
 
         Ok(Expression::StructLiteral {
             loc: *loc,
+            id,
             ty,
             values: fields,
         })
@@ -516,7 +521,7 @@ pub(super) fn struct_literal(
 pub(crate) fn unit_literal(
     loc: &pt::Loc,
     unit: &Option<pt::Identifier>,
-    ns: &mut Namespace,
+    ns: &Namespace,
     diagnostics: &mut Diagnostics,
 ) -> BigInt {
     if let Some(unit) = unit {
@@ -563,6 +568,7 @@ pub(crate) fn unit_literal(
 /// Resolve a struct literal with named fields
 pub(super) fn named_struct_literal(
     loc: &pt::Loc,
+    id: pt::IdentifierPath,
     str_ty: &StructType,
     args: &[pt::NamedArgument],
     context: &ExprContext,
@@ -578,7 +584,7 @@ pub(super) fn named_struct_literal(
             *loc,
             format!(
                 "builtin struct '{}' cannot be created using struct literal",
-                struct_def.name,
+                struct_def.id,
             ),
         ));
         Err(())
@@ -587,7 +593,7 @@ pub(super) fn named_struct_literal(
             *loc,
             format!(
                 "struct '{}' has {} fields, not {}",
-                struct_def.name,
+                struct_def.id,
                 struct_def.fields.len(),
                 args.len()
             ),
@@ -597,10 +603,13 @@ pub(super) fn named_struct_literal(
         let mut fields = Vec::new();
         fields.resize(
             args.len(),
-            Expression::BoolLiteral {
-                loc: Loc::Implicit,
-                value: false,
-            },
+            (
+                None,
+                Expression::BoolLiteral {
+                    loc: Loc::Implicit,
+                    value: false,
+                },
+            ),
         );
         for a in args {
             match struct_def.fields.iter().enumerate().find(|(_, f)| {
@@ -616,15 +625,15 @@ pub(super) fn named_struct_literal(
                         ResolveTo::Type(&f.ty),
                     )?;
                     used_variable(ns, &expr, symtable);
-                    fields[i] = expr.cast(loc, &f.ty, true, ns, diagnostics)?;
+                    fields[i] = (
+                        Some(a.name.clone()),
+                        expr.cast(loc, &f.ty, true, ns, diagnostics)?,
+                    );
                 }
                 None => {
                     diagnostics.push(Diagnostic::error(
                         a.name.loc,
-                        format!(
-                            "struct '{}' has no field '{}'",
-                            struct_def.name, a.name.name,
-                        ),
+                        format!("struct '{}' has no field '{}'", struct_def.id, a.name.name,),
                     ));
                     return Err(());
                 }
@@ -632,6 +641,7 @@ pub(super) fn named_struct_literal(
         }
         Ok(Expression::StructLiteral {
             loc: *loc,
+            id,
             ty,
             values: fields,
         })
