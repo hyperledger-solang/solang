@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::ASTFunction;
+use crate::ssa_ir::cfg::Block;
 use crate::ssa_ir::cfg::Cfg;
 use crate::ssa_ir::printer::Printer;
 use std::io::Write;
@@ -11,6 +12,16 @@ macro_rules! stringfy_cfg {
         use solang::ssa_ir::printer::Printer;
         let mut buf = Vec::new();
         $printer.print_cfg(&mut buf, $cfg).unwrap();
+        String::from_utf8(buf).unwrap()
+    }};
+}
+
+#[macro_export]
+macro_rules! stringfy_block {
+    ($printer:expr, $block:expr) => {{
+        use solang::ssa_ir::printer::Printer;
+        let mut buf = Vec::new();
+        $printer.print_block(&mut buf, $block).unwrap();
         String::from_utf8(buf).unwrap()
     }};
 }
@@ -51,6 +62,15 @@ impl Printer {
         for (i, block) in cfg.blocks.iter().enumerate() {
             writeln!(f, "block#{} {}:", i, block.name)?;
             self.print_block(f, block)?;
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+
+    pub fn print_block(&self, f: &mut dyn Write, block: &Block) -> std::io::Result<()> {
+        for insn in &block.instructions {
+            write!(f, "    ")?;
+            self.print_insn(f, insn)?;
             writeln!(f)?;
         }
         Ok(())

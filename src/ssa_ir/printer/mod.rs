@@ -4,7 +4,6 @@ use crate::ssa_ir::vartable::Vartable;
 
 use super::{expr::Operand, ssa_type::Type};
 
-pub mod block_printer;
 pub mod cfg_printer;
 pub mod expr_printer;
 pub mod insn_printer;
