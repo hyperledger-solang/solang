@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{ffi::OsStr, io::stdout};
+use std::ffi::OsStr;
 
 use solang::{
     codegen::codegen,
