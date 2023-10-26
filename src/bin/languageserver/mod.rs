@@ -1720,7 +1720,9 @@ impl<'a> Builder<'a> {
             .collect::<HashMap<PathBuf, usize>>();
 
         for val in self.types.values_mut() {
-            val.def_path = defs_to_files[&val.def_type].clone();
+            if let Some(path) = defs_to_files.get(&val.def_type) {
+                val.def_path = path.clone();
+            }
         }
 
         for (di, range) in &self.definitions {
