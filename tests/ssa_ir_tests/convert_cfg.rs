@@ -42,7 +42,7 @@ fn assert_cfg_str_eq(src: &str, cfg_no: usize, expected: &str) {
         vartable: Box::new(new_cfg.vartable.clone()),
     };
 
-    printer.print_cfg(&mut stdout(), &new_cfg).unwrap();
+    // printer.print_cfg(&mut stdout(), &new_cfg).unwrap();
     let result = stringfy_cfg!(printer, &new_cfg);
     assert_eq!(result.trim(), expected);
 
