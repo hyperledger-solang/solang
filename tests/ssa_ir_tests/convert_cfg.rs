@@ -15,7 +15,7 @@ fn new_file_resolver(src: &str) -> FileResolver {
     cache
 }
 
-fn assert_cfg_equivalent(src: &str, cfg_no: usize, expected: &str) {
+fn assert_cfg_str_eq(src: &str, cfg_no: usize, expected: &str) {
     let mut resolver = new_file_resolver(src);
     let mut ns: Namespace =
         parse_and_resolve(OsStr::new("test.sol"), &mut resolver, Target::Solana);
@@ -73,7 +73,7 @@ contract dynamicarray {
     }
 }"#;
 
-    assert_cfg_equivalent(
+    assert_cfg_str_eq(
         src,
         0,
         r#"public function sol#2 dynamicarray::dynamicarray::function::test ():
@@ -152,7 +152,7 @@ fn test_bool_exprs() {
 			}
 		}"#;
 
-    assert_cfg_equivalent(
+    assert_cfg_str_eq(
         src,
         cfg_no,
         r#"public function sol#3 test::test::function::is_zombie_reaper () returns (bool):
@@ -185,7 +185,7 @@ fn test_cast() {
 			}
 		}"#;
 
-    assert_cfg_equivalent(
+    assert_cfg_str_eq(
         src,
         cfg_no,
         r#"public function sol#2 test::test::function::systemd_pid () returns (uint32):
@@ -208,7 +208,7 @@ fn test_arithmetic_exprs() {
 			}
 		}"#;
 
-    assert_cfg_equivalent(
+    assert_cfg_str_eq(
         src,
         cfg_no,
         r#"public function sol#2 test::test::function::celcius2fahrenheit__int32 (int32) returns (int32):
@@ -240,7 +240,7 @@ fn test_arithmetic_exprs_1() {
 			}
 		}"#;
 
-    assert_cfg_equivalent(
+    assert_cfg_str_eq(
         src,
         cfg_no,
         r#"public function sol#2 test::test::function::byte8reverse__bytes8 (bytes8) returns (bytes8):
@@ -279,5 +279,198 @@ block#0 entry:
     bytes8 %temp.ssa_ir.29 = bytes8(%temp.ssa_ir.30) & bytes8(%temp.ssa_ir.31);
     bytes8 %out = bytes8(%temp.ssa_ir.2) | bytes8(%temp.ssa_ir.29);
     return bytes8(%out);"#,
+    )
+}
+
+#[test]
+fn test_for_loop() {
+    let cfg_no = 0;
+
+    // read the example.sol file
+    let src = r#"
+		contract test {
+            enum State {
+                Running,
+                Sleeping,
+                Waiting,
+                Stopped,
+                Zombie,
+                StateCount
+            }
+            function get_pid_state(uint64 _pid) pure private returns (State) {
+                uint64 n = 8;
+                for (uint16 i = 1; i < 10; ++i) {
+                    if ((i % 3) == 0) {
+                        n *= _pid / uint64(i);
+                    } else {
+                        n /= 3;
+                    }
+                }
+        
+                return State(n % uint64(State.StateCount));
+            }
+		}"#;
+
+    assert_cfg_str_eq(
+        src,
+        cfg_no,
+        r#"private function sol#2 test::test::function::get_pid_state__uint64 (uint64) returns (uint8):
+block#0 entry:
+    uint64 %_pid = uint64(arg#0);
+    uint64 %n = 8;
+    uint16 %i = 1;
+    br block#2;
+
+block#1 body:
+    uint16 %temp.ssa_ir.6 = uint16(%i) (u)% uint16(3);
+    bool %temp.ssa_ir.5 = uint16(%temp.ssa_ir.6) == uint16(0);
+    cbr bool(%temp.ssa_ir.5) block#5 else block#6;
+
+block#2 cond:
+    bool %temp.ssa_ir.7 = uint16(%i) (u)< uint16(10);
+    cbr bool(%temp.ssa_ir.7) block#1 else block#4;
+
+block#3 next:
+    uint16 %temp.4 = uint16(%i) + uint16(1);
+    uint16 %i = uint16(%temp.4);
+    br block#2;
+
+block#4 endfor:
+    uint64 %temp.ssa_ir.9 = uint64(%n) (u)% uint64(5);
+    uint8 %temp.ssa_ir.8 = (trunc uint64(%temp.ssa_ir.9) to uint8);
+    return uint8(%temp.ssa_ir.8);
+
+block#5 then:
+    uint64 %temp.ssa_ir.11 = (zext uint16(%i) to uint64);
+    uint64 %temp.ssa_ir.10 = uint64(%_pid) (u)/ uint64(%temp.ssa_ir.11);
+    uint64 %n = uint64(%n) * uint64(%temp.ssa_ir.10);
+    br block#7;
+
+block#6 else:
+    uint64 %n = uint64(%n) (u)/ uint64(3);
+    br block#7;
+
+block#7 endif:
+    br block#3;"#,
+    )
+}
+
+#[test]
+fn test_test_more_() {
+    let cfg_no = 0;
+
+    // read the example.sol file
+    let src = r#"
+		contract test {
+            enum suit { club, diamonds, hearts, spades }
+            enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
+            struct card {
+                value v;
+                suit s;
+            }
+			function score_card(card memory c) public pure returns (uint32 score) {
+                if (c.s == suit.hearts) {
+                    if (c.v == value.ace) {
+                        score = 14;
+                    }
+                    if (c.v == value.king) {
+                        score = 13;
+                    }
+                    if (c.v == value.queen) {
+                        score = 12;
+                    }
+                    if (c.v == value.jack) {
+                        score = 11;
+                    }
+                }
+                // all others score 0
+            }
+		}"#;
+
+    assert_cfg_str_eq(
+        src,
+        cfg_no,
+        r#"public function sol#2 test::test::function::score_card__test.card (ptr<struct.0>) returns (uint32):
+block#0 entry:
+    ptr<struct.0> %c = ptr<struct.0>(arg#0);
+    uint32 %score = 0;
+    ptr<uint8> %temp.ssa_ir.4 = access ptr<struct.0>(%c) member 1;
+    uint8 %temp.ssa_ir.3 = *ptr<uint8>(%temp.ssa_ir.4);
+    bool %temp.ssa_ir.2 = uint8(%temp.ssa_ir.3) == uint8(2);
+    cbr bool(%temp.ssa_ir.2) block#1 else block#2;
+
+block#1 then:
+    ptr<uint8> %temp.ssa_ir.7 = access ptr<struct.0>(%c) member 0;
+    uint8 %temp.ssa_ir.6 = *ptr<uint8>(%temp.ssa_ir.7);
+    bool %temp.ssa_ir.5 = uint8(%temp.ssa_ir.6) == uint8(12);
+    cbr bool(%temp.ssa_ir.5) block#3 else block#4;
+
+block#2 endif:
+    return uint32(%score);
+
+block#3 then:
+    uint32 %score = 14;
+    br block#4;
+
+block#4 endif:
+    ptr<uint8> %temp.ssa_ir.10 = access ptr<struct.0>(%c) member 0;
+    uint8 %temp.ssa_ir.9 = *ptr<uint8>(%temp.ssa_ir.10);
+    bool %temp.ssa_ir.8 = uint8(%temp.ssa_ir.9) == uint8(11);
+    cbr bool(%temp.ssa_ir.8) block#5 else block#6;
+
+block#5 then:
+    uint32 %score = 13;
+    br block#6;
+
+block#6 endif:
+    ptr<uint8> %temp.ssa_ir.13 = access ptr<struct.0>(%c) member 0;
+    uint8 %temp.ssa_ir.12 = *ptr<uint8>(%temp.ssa_ir.13);
+    bool %temp.ssa_ir.11 = uint8(%temp.ssa_ir.12) == uint8(10);
+    cbr bool(%temp.ssa_ir.11) block#7 else block#8;
+
+block#7 then:
+    uint32 %score = 12;
+    br block#8;
+
+block#8 endif:
+    ptr<uint8> %temp.ssa_ir.16 = access ptr<struct.0>(%c) member 0;
+    uint8 %temp.ssa_ir.15 = *ptr<uint8>(%temp.ssa_ir.16);
+    bool %temp.ssa_ir.14 = uint8(%temp.ssa_ir.15) == uint8(9);
+    cbr bool(%temp.ssa_ir.14) block#9 else block#10;
+
+block#9 then:
+    uint32 %score = 11;
+    br block#10;
+
+block#10 endif:
+    br block#2;"#,
+    )
+}
+
+#[test]
+fn test_init_struct() {
+    let cfg_no = 0;
+
+    // read the example.sol file
+    let src = r#"
+		contract test {
+            enum suit { club, diamonds, hearts, spades }
+            enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
+            struct card {
+                value v;
+                suit s;
+            }
+			function ace_of_spaces() public pure returns (card memory) {
+                return card({s: suit.spades, v: value.ace });
+            }
+		}"#;
+
+    assert_cfg_str_eq(
+        src,
+        cfg_no,
+        r#"public function sol#2 test::test::function::ace_of_spaces () returns (ptr<struct.0>):
+block#0 entry:
+    ptr<struct.0> %temp.ssa_ir.1 = struct { uint8(12), uint8(3) };
+    return ptr<struct.0>(%temp.ssa_ir.1);"#,
     )
 }
