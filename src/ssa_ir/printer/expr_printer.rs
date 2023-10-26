@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::sema::ast::StringLocation;
 use crate::ssa_ir::expr::{Expr, Operand};
 use crate::ssa_ir::printer::Printer;

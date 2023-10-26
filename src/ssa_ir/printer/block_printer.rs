@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::ssa_ir::cfg::Block;
 use crate::ssa_ir::printer::Printer;
 use std::io::Write;

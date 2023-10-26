@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::sema::ast;
 use crate::ssa_ir::insn::Insn;
 use crate::ssa_ir::printer::Printer;
@@ -115,31 +117,31 @@ impl Printer {
                 };
                 let rhs_salt = match salt {
                     Some(salt) => format!("salt:{}", stringfy_rhs_operand!(self, salt)),
-                    None => format!(""),
+                    None => String::new(),
                 };
                 let rhs_value = match value {
                     Some(value) => format!("value:{}", stringfy_rhs_operand!(self, value)),
-                    None => format!(""),
+                    None => String::new(),
                 };
                 let rhs_gas = format!("gas:{}", stringfy_rhs_operand!(self, gas));
                 let rhs_address = match address {
                     Some(address) => format!("address:{}", stringfy_rhs_operand!(self, address)),
-                    None => format!(""),
+                    None => String::new(),
                 };
                 let rhs_seeds = match seeds {
                     Some(seeds) => format!("seeds:{}", stringfy_rhs_operand!(self, seeds)),
-                    None => format!(""),
+                    None => String::new(),
                 };
                 let rhs_encoded_args = format!(
                     "encoded-buffer:{}",
                     stringfy_rhs_operand!(self, encoded_args)
                 );
                 let rhs_accounts = match accounts {
-                    ast::ExternalCallAccounts::NoAccount => format!(""),
+                    ast::ExternalCallAccounts::NoAccount => String::new(),
                     ast::ExternalCallAccounts::Present(acc) => {
                         format!("accounts:{}", stringfy_rhs_operand!(self, acc))
                     }
-                    ast::ExternalCallAccounts::AbsentArgument => format!("accounts:_"),
+                    ast::ExternalCallAccounts::AbsentArgument => "accounts:_".to_string(),
                 };
                 write!(
                     f,
@@ -198,8 +200,8 @@ impl Printer {
                 ..
             } => {
                 let rhs = match value {
-                    Some(value) => format!("{}", stringfy_rhs_operand!(self, value)),
-                    None => format!("empty"),
+                    Some(value) => stringfy_rhs_operand!(self, value),
+                    None => "empty".to_string(),
                 };
                 let res_op = self.get_var_operand(res).unwrap();
                 write!(
@@ -210,21 +212,18 @@ impl Printer {
                 self.print_rhs_operand(f, storage)?;
                 write!(f, " {};", rhs)
             }
-            Insn::PopStorage { res, storage, .. } =>
-            {
-                match res {
-                    Some(res) => {
-                        let res_op = self.get_var_operand(res).unwrap();
-                        write!(
-                            f,
-                            "{} = pop_storage {};",
-                            stringfy_lhs_operand!(self, &res_op),
-                            stringfy_rhs_operand!(self, storage)
-                        )
-                    }
-                    None => write!(f, "pop_storage {};", stringfy_rhs_operand!(self, storage)),
+            Insn::PopStorage { res, storage, .. } => match res {
+                Some(res) => {
+                    let res_op = self.get_var_operand(res).unwrap();
+                    write!(
+                        f,
+                        "{} = pop_storage {};",
+                        stringfy_lhs_operand!(self, &res_op),
+                        stringfy_rhs_operand!(self, storage)
+                    )
                 }
-            }
+                None => write!(f, "pop_storage {};", stringfy_rhs_operand!(self, storage)),
+            },
             Insn::Call { res, call, args } => {
                 // lhs: %0, %1, ...
                 let lhs = res
@@ -284,20 +283,20 @@ impl Printer {
                 let lhs = match success {
                     Some(success) => {
                         let success_op = self.get_var_operand(success).unwrap();
-                        format!("{}", stringfy_lhs_operand!(self, &success_op))
+                        stringfy_lhs_operand!(self, &success_op)
                     }
-                    None => String::from(""),
+                    None => String::new(),
                 };
                 let rhs_address = match address {
                     Some(address) => format!(" address:{}", stringfy_rhs_operand!(self, address)),
                     None => String::from(" _"),
                 };
                 let rhs_accounts = match accounts {
-                    ast::ExternalCallAccounts::NoAccount => format!(""),
+                    ast::ExternalCallAccounts::NoAccount => String::new(),
                     ast::ExternalCallAccounts::Present(acc) => {
                         format!("accounts:{}", stringfy_rhs_operand!(self, acc))
                     }
-                    ast::ExternalCallAccounts::AbsentArgument => format!("accounts:_"),
+                    ast::ExternalCallAccounts::AbsentArgument => "accounts:_".to_string(),
                 };
                 let rhs_seeds = match seeds {
                     Some(seeds) => format!(" seeds:{}", stringfy_rhs_operand!(self, seeds)),
@@ -315,13 +314,13 @@ impl Printer {
                 };
                 write!(
                     f,
-                    "{}call_ext [{}]{}{}{}{}{}{}{}{};",
+                    "{}call_ext [{}]{}{} payload:{} value:{} gas:{}{}{}{};",
                     lhs,
                     callty,
                     rhs_address,
-                    format!(" payload:{}", stringfy_rhs_operand!(self, payload)),
-                    format!(" value:{}", stringfy_rhs_operand!(self, value)),
-                    format!(" gas:{}", stringfy_rhs_operand!(self, gas)),
+                    stringfy_rhs_operand!(self, payload),
+                    stringfy_rhs_operand!(self, value),
+                    stringfy_rhs_operand!(self, gas),
                     rhs_accounts,
                     rhs_seeds,
                     rhs_contract_function_no,
@@ -337,7 +336,7 @@ impl Printer {
                 let lhs = match success {
                     Some(success) => {
                         let success_op = self.get_var_operand(success).unwrap();
-                        format!("{}", stringfy_lhs_operand!(self, &success_op))
+                        stringfy_lhs_operand!(self, &success_op)
                     }
                     None => String::from("_"),
                 };
@@ -422,7 +421,7 @@ impl Printer {
                     .map(|value| stringfy_rhs_operand!(self, value))
                     .collect::<Vec<String>>()
                     .join(", ");
-                if rhs.len() > 0 {
+                if !rhs.is_empty() {
                     write!(f, "return {};", rhs)
                 } else {
                     write!(f, "return;")

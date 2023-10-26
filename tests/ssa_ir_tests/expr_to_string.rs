@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::num_literal;
 use crate::ssa_ir_tests::helpers::{binop_expr, bool_literal, identifier, num_literal, unop_expr};
 use indexmap::IndexMap;
@@ -735,7 +737,7 @@ fn test_stringfy_struct_member_expr() {
                 operand: Box::new(identifier(1)),
             }
         ),
-        "ptr<struct.0>(%temp.ssa_ir.1).3"
+        "access ptr<struct.0>(%temp.ssa_ir.1) member 3"
     );
 }
 

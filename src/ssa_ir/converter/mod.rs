@@ -11,7 +11,6 @@ use super::{
     expr::Operand,
     insn::Insn,
     ssa_type::{InternalCallTy, Type},
-    typechecker::TypeChecker,
     vartable::Vartable,
 };
 
@@ -70,18 +69,16 @@ impl<'input> Converter<'input> {
         match expr {
             codegen::Expression::NumberLiteral { ty, value, loc, .. } => {
                 let ssa_ty = self.from_ast_type(ty).unwrap();
-                Some(Operand::new_number_literal(value, ssa_ty, loc.clone()))
+                Some(Operand::new_number_literal(value, ssa_ty, *loc))
             }
             codegen::Expression::BoolLiteral { value, loc, .. } => {
-                Some(Operand::new_bool_literal(*value, loc.clone()))
+                Some(Operand::new_bool_literal(*value, *loc))
             }
-            codegen::Expression::Variable { loc, ty, var_no } => {
-                let var_ty = self.get_ast_type_by_id(var_no).unwrap();
-                TypeChecker::assert_ty_eq(&var_ty, ty).unwrap();
-                Some(Operand::new_id(var_no.clone(), loc.clone()))
+            codegen::Expression::Variable { loc, var_no, .. } => {
+                Some(Operand::new_id(*var_no, *loc))
             }
-            codegen::Expression::FunctionArg { loc, ty, arg_no } => {
-                vartable.get_function_arg(arg_no.clone(), loc.clone())
+            codegen::Expression::FunctionArg { loc, arg_no, .. } => {
+                vartable.get_function_arg(*arg_no, *loc)
             }
             _ => None,
         }
@@ -96,7 +93,7 @@ impl<'input> Converter<'input> {
             Some(op) => Ok((op, vec![])),
             None => {
                 let tmp = vartable.new_temp(&self.from_ast_type(&expr.ty())?);
-                let dest_insns = self.from_expression(&tmp, expr, vartable)?;
+                let dest_insns = self.convert_expression(&tmp, expr, vartable)?;
                 Ok((tmp, dest_insns))
             }
         }
@@ -140,7 +137,7 @@ impl<'input> Converter<'input> {
     ) -> Result<(ast::ExternalCallAccounts<Operand>, Vec<Insn>), String> {
         match accounts {
             ast::ExternalCallAccounts::Present(accounts) => {
-                let (tmp, expr_insns) = self.as_operand_and_insns(&accounts, vartable)?;
+                let (tmp, expr_insns) = self.as_operand_and_insns(accounts, vartable)?;
                 Ok((ast::ExternalCallAccounts::Present(tmp), expr_insns))
             }
             ast::ExternalCallAccounts::NoAccount => Ok((

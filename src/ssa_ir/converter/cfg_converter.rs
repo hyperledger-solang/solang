@@ -17,21 +17,21 @@ impl Converter<'_> {
             .cfg
             .blocks
             .iter()
-            .map(|block| self.from_basic_block(block, &mut vartable))
+            .map(|block| self.convert_basic_block(block, &mut vartable))
             .collect::<Result<Vec<Block>, String>>()?;
 
         let params = self
             .cfg
             .params
             .iter()
-            .map(|p| self.from_ast_parameter(p))
+            .map(|p| self.convert_ast_parameter(p))
             .collect::<Result<Vec<Parameter>, String>>()?;
 
         let returns = self
             .cfg
             .returns
             .iter()
-            .map(|p| self.from_ast_parameter(p))
+            .map(|p| self.convert_ast_parameter(p))
             .collect::<Result<Vec<Parameter>, String>>()?;
 
         let ssa_ir_cfg = Cfg {
@@ -50,14 +50,14 @@ impl Converter<'_> {
         Ok(ssa_ir_cfg)
     }
 
-    fn from_basic_block(
+    fn convert_basic_block(
         &self,
         basic_block: &BasicBlock,
         vartable: &mut Vartable,
     ) -> Result<Block, String> {
         let mut instructions = vec![];
         for insn in &basic_block.instr {
-            let insns = self.from_instr(insn, vartable)?;
+            let insns = self.convert_instr(insn, vartable)?;
             insns.into_iter().for_each(|i| instructions.push(i));
         }
 
@@ -69,7 +69,7 @@ impl Converter<'_> {
         Ok(block)
     }
 
-    fn from_ast_parameter(&self, param: &ast::Parameter) -> Result<Parameter, String> {
+    fn convert_ast_parameter(&self, param: &ast::Parameter) -> Result<Parameter, String> {
         let ty = self.from_ast_type(&param.ty)?;
         Ok(Parameter {
             loc: param.loc,

@@ -111,7 +111,7 @@ impl Vartable {
 impl From<&vartable::Storage> for Storage {
     fn from(value: &vartable::Storage) -> Self {
         match value {
-            vartable::Storage::Constant(id) => Storage::Constant(id.clone()),
+            vartable::Storage::Constant(id) => Storage::Constant(*id),
             vartable::Storage::Contract(addr) => Storage::Contract(addr.clone()),
             vartable::Storage::Local => Storage::Local,
         }

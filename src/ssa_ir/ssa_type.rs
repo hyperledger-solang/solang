@@ -103,7 +103,7 @@ impl From<&ast::StructType> for StructType {
             ast::StructType::AccountMeta => StructType::SolAccountMeta,
             ast::StructType::ExternalFunction => StructType::ExternalFunction,
             ast::StructType::SolParameters => StructType::SolParameters,
-            ast::StructType::UserDefined(i) => StructType::UserDefined(i.clone()),
+            ast::StructType::UserDefined(i) => StructType::UserDefined(*i),
         }
     }
 }

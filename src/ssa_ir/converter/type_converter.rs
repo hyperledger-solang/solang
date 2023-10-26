@@ -40,7 +40,7 @@ impl Converter<'_> {
                     .collect();
                 Ok(Type::Ptr(Box::new(Type::Array(Box::new(ty), len))))
             }
-            ast::Type::Enum(enum_no) => self.get_enum_type(enum_no.clone()),
+            ast::Type::Enum(enum_no) => self.get_enum_type(*enum_no),
             ast::Type::Struct(struct_ty) => Ok(Type::Ptr(Box::new(Type::Struct(
                 StructType::from(struct_ty),
             )))),

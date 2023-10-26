@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::ASTFunction;
 use crate::ssa_ir::cfg::Cfg;
 use crate::ssa_ir::printer::Printer;
@@ -18,7 +20,7 @@ impl Printer {
         let function_no = match cfg.function_no {
             ASTFunction::SolidityFunction(no) => format!("sol#{}", no),
             ASTFunction::YulFunction(no) => format!("yul#{}", no),
-            ASTFunction::None => format!("none"),
+            ASTFunction::None => "none".to_string(),
         };
 
         let access_ctl = if cfg.public { "public" } else { "private" };
@@ -44,7 +46,7 @@ impl Printer {
             }
             write!(f, ")")?;
         }
-        write!(f, ":\n")?;
+        writeln!(f, ":")?;
 
         for (i, block) in cfg.blocks.iter().enumerate() {
             writeln!(f, "block#{} {}:", i, block.name)?;

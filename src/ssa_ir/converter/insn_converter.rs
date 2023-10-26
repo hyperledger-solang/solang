@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::Instr;
-use crate::sema::ast::RetrieveType;
 use crate::ssa_ir::converter::Converter;
 use crate::ssa_ir::insn::Insn;
-use crate::ssa_ir::typechecker::TypeChecker;
 use crate::ssa_ir::vartable::Vartable;
 
 impl Converter<'_> {
-    pub(crate) fn from_instr(
+    pub(crate) fn convert_instr(
         &self,
         instr: &Instr,
         vartable: &mut Vartable,
@@ -16,14 +14,13 @@ impl Converter<'_> {
         match instr {
             Instr::Nop => Ok(vec![Insn::Nop]),
             Instr::Set { res, expr, loc, .. } => {
-                TypeChecker::check_assignment(&self.get_ast_type_by_id(res)?, &expr.ty())?;
                 // [t] a = b + c * d
                 // converts to:
                 //   1. [t1] tmp_1 = c * d;
                 //   2. [t2] tmp_2 = b + tmp_1
                 //   3. [t] a = tmp_2;
-                let dest_operand = vartable.get_operand(res, loc.clone())?;
-                self.from_expression(&dest_operand, &expr, vartable)
+                let dest_operand = vartable.get_operand(res, *loc)?;
+                self.convert_expression(&dest_operand, expr, vartable)
             }
             Instr::Store { dest, data } => {
                 // type checking the dest.ty() and data.ty()
@@ -45,8 +42,8 @@ impl Converter<'_> {
                 let mut insns = vec![];
                 insns.extend(value_insns);
                 insns.push(Insn::PushMemory {
-                    res: res.clone(),
-                    array: array.clone(),
+                    res: *res,
+                    array: *array,
                     value: value_op,
                 });
                 Ok(insns)
@@ -54,14 +51,12 @@ impl Converter<'_> {
             Instr::PopMemory {
                 res, array, loc, ..
             } => Ok(vec![Insn::PopMemory {
-                res: res.clone(),
-                array: array.clone(),
-                loc: loc.clone(),
+                res: *res,
+                array: *array,
+                loc: *loc,
             }]),
 
-            Instr::Branch { block } => Ok(vec![Insn::Branch {
-                block: block.clone(),
-            }]),
+            Instr::Branch { block } => Ok(vec![Insn::Branch { block: *block }]),
             Instr::BranchCond {
                 cond,
                 true_block,
@@ -72,8 +67,8 @@ impl Converter<'_> {
                 insns.extend(cond_insns);
                 insns.push(Insn::BranchCond {
                     cond: cond_op,
-                    true_block: true_block.clone(),
-                    false_block: false_block.clone(),
+                    true_block: *true_block,
+                    false_block: *false_block,
                 });
                 Ok(insns)
             }
@@ -138,7 +133,7 @@ impl Converter<'_> {
                 let mut insns = vec![];
                 insns.extend(storage_insns);
                 insns.push(Insn::LoadStorage {
-                    res: res.clone(),
+                    res: *res,
                     storage: storage_op,
                 });
                 Ok(insns)
@@ -202,7 +197,7 @@ impl Converter<'_> {
                 insns.extend(value_insns);
 
                 insns.push(Insn::PushStorage {
-                    res: res.clone(),
+                    res: *res,
                     value: value_op,
                     storage: storage_op,
                 });
@@ -213,7 +208,7 @@ impl Converter<'_> {
                 let mut insns = vec![];
                 insns.extend(storage_insns);
                 insns.push(Insn::PopStorage {
-                    res: res.clone(),
+                    res: *res,
                     storage: storage_op,
                 });
                 Ok(insns)
@@ -250,7 +245,7 @@ impl Converter<'_> {
                 insns.extend(gas_insns);
                 insns.extend(flags_insns);
                 insns.push(Insn::ExternalCall {
-                    loc: loc.clone(),
+                    loc: *loc,
                     success: *success,
                     address: address_op,
                     accounts: accounts_op,
@@ -357,13 +352,13 @@ impl Converter<'_> {
                 for (case, block_no) in cases {
                     let (case_op, case_insns) = self.as_operand_and_insns(case, vartable)?;
                     insns.extend(case_insns);
-                    case_ops.push((case_op, block_no.clone()));
+                    case_ops.push((case_op, *block_no));
                 }
 
                 insns.push(Insn::Switch {
                     cond: cond_op,
                     cases: case_ops,
-                    default: default.clone(),
+                    default: *default,
                 });
 
                 Ok(insns)
@@ -426,11 +421,11 @@ impl Converter<'_> {
                 insns.extend(accounts_insns);
 
                 let constructor_insn = Insn::Constructor {
-                    loc: loc.clone(),
-                    success: success.clone(),
-                    res: res.clone(),
-                    contract_no: contract_no.clone(),
-                    constructor_no: constructor_no.clone(),
+                    loc: *loc,
+                    success: *success,
+                    res: *res,
+                    contract_no: *contract_no,
+                    constructor_no: *constructor_no,
                     encoded_args: args_op,
                     value: value_op,
                     gas: gas_op,
