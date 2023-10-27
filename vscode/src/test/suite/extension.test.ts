@@ -428,13 +428,19 @@ async function testrefs(docUri: vscode.Uri) {
   assert.strictEqual(loc15.range.end.character, 17);
   assert.strictEqual(loc15.uri.path, docUri.path);
 
-  const pos2 = new vscode.Position(28, 12);
+  const pos2 = new vscode.Position(21, 6);
   const actualref2 = (await vscode.commands.executeCommand(
     'vscode.executeReferenceProvider',
     docUri,
     pos2,
   )) as vscode.Location[];
-  assert.strictEqual(actualref2.length, 0);
+  assert.strictEqual(actualref2.length, 1);
+  const loc20 = actualref2[0];
+  assert.strictEqual(loc20.range.start.line, 0);
+  assert.strictEqual(loc20.range.start.character, 0);
+  assert.strictEqual(loc20.range.end.line, 44);
+  assert.strictEqual(loc20.range.end.character, 1);
+  assert.strictEqual(loc20.uri.path, docUri.path);
 }
 
 async function testrename(docUri: vscode.Uri) {
@@ -560,7 +566,7 @@ async function testhover(docUri: vscode.Uri) {
 
   assert.strictEqual(contentarr3[0].value, 'Abort execution if argument evaulates to false\n\n```solidity\n[built-in] void require (bool)\n```');
 
-  const pos4 = new vscode.Position(53, 13);
+  const pos4 = new vscode.Position(32, 13);
 
   const actualhover4 = (await vscode.commands.executeCommand(
     'vscode.executeHoverProvider',
@@ -568,9 +574,7 @@ async function testhover(docUri: vscode.Uri) {
     pos4
   )) as vscode.Hover[];
 
-  const contentarr4 = actualhover4[0].contents as vscode.MarkdownString[];
-
-  assert.strictEqual(contentarr4[0].value, '');
+  assert.strictEqual(actualhover4.length, 0);
 }
 
 async function testdiagnos(docUri: vscode.Uri, expecteddiag: vscode.Diagnostic[]) {
