@@ -24,12 +24,10 @@ pub enum StructType {
 pub enum Type {
     // a UserType will be lower into a primitive type it is representing
     Bool,
-    // Solana a value 64bits, TODO: Polkadot value length is 16bits or 16bytes?
     // Value is a integer, but width is platform dependent.
     // FunctionSelector is an integer, 4bytes on Polkadot and 8bytes on Solana
     Int(u16),
     /// Enum can be represented by Uint here.
-    /// TODO: what is the width for Enum?
     Uint(u16),
     /// bytes and string are encoded identically. In general, the encoding is similar to bytes1[].
     Bytes(u8),

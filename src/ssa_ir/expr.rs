@@ -8,11 +8,7 @@ use solang_parser::pt::Loc;
 use std::fmt;
 use std::fmt::Formatter;
 
-/// Three-address code type, which is a subset of the Solidity AST
-// FIXME Be careful about the data types: pointers, primitives, and references.
-
-/// Three-address code identifier
-/// Variable and Literal
+/// Operand: including variables and literals
 #[derive(Clone, Debug)]
 pub enum Operand {
     Id { loc: Loc, id: usize },

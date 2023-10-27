@@ -120,12 +120,13 @@ pub enum Insn {
         // Polkadot specific
         // On Solana, charged by transaction
         gas: Operand,
-        // TODO: What is callty? delegate/regular/static
+        // delegate/regular/static
+        // CallTy is polkadot specific.
+        // It involves difference code generation in emit.
         callty: CallTy,
         // only used for analysis passes
         contract_function_no: Option<(usize, usize)>,
         // Polkadot specific
-        // TODO: ask on discord
         flags: Option<Operand>,
     },
     /// Value transfer; either address.send() or address.transfer()
@@ -178,7 +179,7 @@ pub enum Insn {
         reachable: bool,
     },
 
-    // TODO: AccountAccess should be replaced by Subscript
+    // AccountAccess should be replaced by Subscript
 
     /*************************** Phi Function ***************************/
     Phi {

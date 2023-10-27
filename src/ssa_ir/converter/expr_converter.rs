@@ -266,7 +266,7 @@ impl Converter<'_> {
             Expression::RationalNumberLiteral { .. } => {
                 panic!("RationalNumberLiteral shouldn't be here")
             }
-            Expression::ReturnData { .. } => todo!("Expression::ReturnData"),
+            Expression::ReturnData { loc, .. } => self.return_data(dest, loc),
             Expression::SignExt { loc, ty, expr, .. } => {
                 self.sign_ext(dest, loc, ty, expr, vartable)
             }
@@ -584,7 +584,6 @@ impl Converter<'_> {
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
         let (tmp, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
-        // TODO: type checking
         let sext = Expr::SignExt {
             loc: *loc,
             operand: Box::new(tmp),
@@ -912,10 +911,9 @@ impl Converter<'_> {
             ty: self.from_ast_type(ty)?,
             value: value.to_owned(),
         };
-        let res = dest.get_id()?;
         Ok(vec![Insn::Set {
             loc: *loc,
-            res,
+            res: dest.get_id()?,
             expr,
         }])
     }
@@ -925,10 +923,9 @@ impl Converter<'_> {
             loc: *loc,
             value: *value,
         };
-        let res = dest.get_id()?;
         Ok(vec![Insn::Set {
             loc: *loc,
-            res,
+            res: dest.get_id()?,
             expr,
         }])
     }
@@ -988,10 +985,9 @@ impl Converter<'_> {
 
     fn internal_function_cfg(&self, dest: &Operand, cfg_no: &usize) -> Result<Vec<Insn>, String> {
         let expr = Expr::InternalFunctionCfg { cfg_no: *cfg_no };
-        let res = dest.get_id()?;
         Ok(vec![Insn::Set {
             loc: Loc::Codegen,
-            res,
+            res: dest.get_id()?,
             expr,
         }])
     }
@@ -1001,11 +997,18 @@ impl Converter<'_> {
             loc: *loc,
             id: *var_no,
         };
-        let res = dest.get_id()?;
         Ok(vec![Insn::Set {
-            loc: Loc::Codegen,
-            res,
+            loc: *loc,
+            res: dest.get_id()?,
             expr,
+        }])
+    }
+
+    fn return_data(&self, dest: &Operand, loc: &Loc) -> Result<Vec<Insn>, String> {
+        Ok(vec![Insn::Set {
+            loc: *loc,
+            res: dest.get_id()?,
+            expr: Expr::ReturnData { loc: *loc },
         }])
     }
 }
