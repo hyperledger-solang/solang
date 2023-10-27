@@ -427,6 +427,14 @@ async function testrefs(docUri: vscode.Uri) {
   assert.strictEqual(loc15.range.end.line, 38);
   assert.strictEqual(loc15.range.end.character, 17);
   assert.strictEqual(loc15.uri.path, docUri.path);
+
+  const pos2 = new vscode.Position(28, 12);
+  const actualref2 = (await vscode.commands.executeCommand(
+    'vscode.executeReferenceProvider',
+    docUri,
+    pos2,
+  )) as vscode.Location[];
+  assert.strictEqual(actualref2.length, 0);
 }
 
 async function testrename(docUri: vscode.Uri) {
@@ -495,10 +503,10 @@ async function testformat(docUri: vscode.Uri) {
 
   try {
     const workedits = new vscode.WorkspaceEdit();
-    workedits.set(docUri, textedits); 
-    const done = await vscode.workspace.applyEdit(workedits); 
+    workedits.set(docUri, textedits);
+    const done = await vscode.workspace.applyEdit(workedits);
     assert(done);
-  
+
     const actualtext = doc.getText();
     const expectedtext = "contract deck {\n    enum suit {\n        club,\n        diamonds,\n        hearts,\n        spades\n    }\n    enum value {\n        two,\n        three,\n        four,\n        five,\n        six,\n        seven,\n        eight,\n        nine,\n        ten,\n        jack,\n        queen,\n        king,\n        ace\n    }\n\n    struct card {\n        value v;\n        suit s;\n    }\n\n    function score(card c) public returns (uint32 score) {\n        if (c.s == suit.hearts) {\n            if (c.v == value.ace) {\n                score = 14;\n            }\n            if (c.v == value.king) {\n                score = 13;\n            }\n            if (c.v == value.queen) {\n                score = 12;\n            }\n            if (c.v == value.jack) {\n                score = 11;\n            }\n        }\n        // all others score 0\n    }\n}\n";
     assert.strictEqual(actualtext, expectedtext);
@@ -551,6 +559,18 @@ async function testhover(docUri: vscode.Uri) {
   const contentarr3 = actualhover3[0].contents as vscode.MarkdownString[];
 
   assert.strictEqual(contentarr3[0].value, 'Abort execution if argument evaulates to false\n\n```solidity\n[built-in] void require (bool)\n```');
+
+  const pos4 = new vscode.Position(53, 13);
+
+  const actualhover4 = (await vscode.commands.executeCommand(
+    'vscode.executeHoverProvider',
+    docUri,
+    pos4
+  )) as vscode.Hover[];
+
+  const contentarr4 = actualhover4[0].contents as vscode.MarkdownString[];
+
+  assert.strictEqual(contentarr4[0].value, '');
 }
 
 async function testdiagnos(docUri: vscode.Uri, expecteddiag: vscode.Diagnostic[]) {
