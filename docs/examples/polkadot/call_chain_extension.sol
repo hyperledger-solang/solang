@@ -13,7 +13,7 @@ contract Foo {
         assert(ret == 0); // The fetch-random chain extension always returns 0
         bytes32 random = abi.decode(output, (bytes32));
 
-        print("psuedo random bytes: {}".format(random));
+        print("pseudo random bytes: {}".format(random));
         return random;
     }
 }

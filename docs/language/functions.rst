@@ -187,7 +187,7 @@ what the runtime program uses to determine what function was called. On Polkadot
 function selector is generated using a deterministic hash value of the function
 name and the arguments types. On Solana, the selector is known as discriminator.
 
-The selector value can be overriden with the annotation
+The selector value can be overridden with the annotation
 ``@selector([0xde, 0xad, 0xbe, 0xa1])``.
 
 .. include:: ../examples/polkadot/function_selector_override.sol
@@ -196,8 +196,8 @@ The selector value can be overriden with the annotation
 The given example only works for Polkadot, whose selectors are four bytes wide. On Solana, they are eight bytes wide.
 
 Only ``public`` and ``external`` functions have a selector, and can have their
-selector overriden. On Polkadot, constructors have selectors too, so they
-can also have their selector overriden. If a function overrides another one in a
+selector overridden. On Polkadot, constructors have selectors too, so they
+can also have their selector overridden. If a function overrides another one in a
 base contract, then the selector of both must match.
 
 .. warning::
@@ -284,7 +284,7 @@ reaches ``_;``.
 .. include:: ../examples/polkadot/function_multiple_modifiers.sol
   :code: solidity
 
-Modifiers can be inherited or declared ``virtual`` in a base contract and then overriden, exactly like
+Modifiers can be inherited or declared ``virtual`` in a base contract and then overridden, exactly like
 functions can be.
 
 .. include:: ../examples/polkadot/function_override_modifiers.sol

@@ -175,7 +175,7 @@ be specified here.
 
 In this case, contract ``a`` inherits from both ``b`` and ``c``. Both ``func1()`` and ``func2()``
 are visible in contract ``a``, and will be part of its public interface if they are declared ``public`` or
-``external``. In addition, the contract storage variables ``foo`` and ``bar`` are also availabe in ``a``.
+``external``. In addition, the contract storage variables ``foo`` and ``bar`` are also available in ``a``.
 
 Inheriting contracts is recursive; this means that if you inherit a contract, you also inherit everything
 that that contract inherits. In this example, contract ``a`` inherits ``b`` directly, and inherits ``c``
@@ -205,7 +205,7 @@ Calling function in base contract
 _________________________________
 
 When a virtual function is called, the dispatch is *virtual*. If the function being called is
-overriden in another contract, then the overriding function is called. For example:
+overridden in another contract, then the overriding function is called. For example:
 
 .. include:: ../examples/base_contract_function_call.sol
   :code: solidity
