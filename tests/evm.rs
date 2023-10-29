@@ -252,7 +252,7 @@ fn ethereum_solidity_tests() {
         })
         .sum();
 
-    assert_eq!(errors, 1003);
+    assert_eq!(errors, 997);
 }
 
 fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {
