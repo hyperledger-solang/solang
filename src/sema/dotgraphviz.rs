@@ -1452,6 +1452,26 @@ impl Dot {
                 );
                 self.add_expression(array, func, ns, node, format!("member: {}", name));
             }
+            Expression::EventSelector { event_no, .. } => {
+                let event = &ns.events[*event_no];
+
+                let mut labels = Vec::new();
+
+                if let Some(contract) = event.contract {
+                    labels.insert(
+                        1,
+                        format!("event {}.{}", ns.contracts[contract].id.name, event.name),
+                    );
+                } else {
+                    labels.insert(1, format!("event {}", event.name));
+                }
+
+                self.add_node(
+                    Node::new("event_selector", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+            }
         }
     }
 

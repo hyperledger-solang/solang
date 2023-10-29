@@ -1198,6 +1198,11 @@ pub enum Expression {
         function_no: usize,
         args: Vec<Expression>,
     },
+    EventSelector {
+        loc: pt::Loc,
+        ty: Type,
+        event_no: usize,
+    },
 }
 
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
@@ -1442,7 +1447,8 @@ impl Recurse for Expression {
                 | Expression::RationalNumberLiteral { .. }
                 | Expression::CodeLiteral { .. }
                 | Expression::BytesLiteral { .. }
-                | Expression::BoolLiteral { .. } => (),
+                | Expression::BoolLiteral { .. }
+                | Expression::EventSelector { .. } => (),
             }
         }
     }
@@ -1516,7 +1522,8 @@ impl CodeLocation for Expression {
             | Expression::InterfaceId { loc, .. }
             | Expression::And { loc, .. }
             | Expression::NamedMember { loc, .. }
-            | Expression::UserDefinedOperator { loc, .. } => *loc,
+            | Expression::UserDefinedOperator { loc, .. }
+            | Expression::EventSelector { loc, .. } => *loc,
         }
     }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
+use crate::{borsh_encoding::BorshToken, build_solidity};
 use borsh::BorshDeserialize;
 use borsh_derive::BorshDeserialize;
 use sha2::{Digest, Sha256};
@@ -20,6 +20,10 @@ fn simple_event() {
 
             function go() public {
                 emit myevent(1, -2);
+            }
+
+            function selector() public returns (bytes8) {
+                return myevent.selector;
             }
         }"#,
     );
@@ -43,6 +47,21 @@ fn simple_event() {
     let decoded = MyEvent::try_from_slice(&encoded[8..]).unwrap();
     assert_eq!(decoded.a, 1);
     assert_eq!(decoded.b, -2);
+
+    let returns = vm.function("selector").call().unwrap();
+
+    assert_eq!(
+        returns,
+        BorshToken::FixedArray(
+            discriminator
+                .into_iter()
+                .map(|v| BorshToken::Uint {
+                    width: 8,
+                    value: v.into()
+                })
+                .collect()
+        )
+    );
 }
 
 #[test]
@@ -78,6 +97,10 @@ fn less_simple_event() {
             function go() public {
                 emit MyOtherEvent(-102, "foobar", [55431, 7452], S({ f1: 102, f2: true}));
             }
+
+            function selector() public returns (bytes8) {
+                return MyOtherEvent.selector;
+            }
         }"#,
     );
 
@@ -102,6 +125,21 @@ fn less_simple_event() {
     assert_eq!(decoded.b, "foobar");
     assert_eq!(decoded.c, [55431, 7452]);
     assert_eq!(decoded.d, S { f1: 102, f2: true });
+
+    let returns = vm.function("selector").call().unwrap();
+
+    assert_eq!(
+        returns,
+        BorshToken::FixedArray(
+            discriminator
+                .into_iter()
+                .map(|v| BorshToken::Uint {
+                    width: 8,
+                    value: v.into()
+                })
+                .collect()
+        )
+    );
 }
 
 fn calculate_discriminator(event_name: &str) -> Vec<u8> {

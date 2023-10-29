@@ -9,7 +9,7 @@ you can emit events but you cannot access events on the chain.
 Once those events are added to the chain, an off-chain application can listen for events. For example, the Web3.js
 interface has a `subscribe()` function. Another is example is
 `Hyperledger Burrow <https://hyperledger.github.io/burrow/#/reference/vent>`_
-which has a vent command which listens to events and inserts them into a Postgres database.
+which has a vent command which listens to events and inserts them into a database.
 
 An event has two parts. First, there is a limited set of topics. Usually there are no more than 3 topics,
 and each of those has a fixed length of 32 bytes. They are there so that an application listening for events
@@ -21,6 +21,11 @@ not. ``indexed`` fields are stored as topics, so there can only be a limited num
 fields are stored in the data section of the event. The event name does not need to be unique; just like
 functions, they can be overloaded as long as the fields are of different types, or the event has
 a different number of arguments.
+
+The first topic is used to identify the event, this is a hash of the event signature, also known
+as the selector. If the event is declared ``anonymous`` then this is omitted, and an additional
+``indexed`` field is available. The selector is available in Solidity using the ``eventname.selector``
+syntax.
 
 .. warning::
     On Solana, the ``indexed`` event field attribute has no effect. All event attributes will be encoded as data to
