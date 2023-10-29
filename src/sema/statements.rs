@@ -3,7 +3,6 @@
 use super::ast::*;
 use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
-use super::eval::check_term_for_constant_overflow;
 use super::expression::{
     function_call::{available_functions, call_expr, named_call_expr},
     ExprContext, ResolveTo,
@@ -368,7 +367,8 @@ fn statement(
                     ResolveTo::Type(&var_ty),
                 )?;
 
-                expr.recurse(ns, check_term_for_constant_overflow);
+                expr.check_constant_overflow(diagnostics);
+
                 used_variable(ns, &expr, symtable);
 
                 Some(Arc::new(expr.cast(
@@ -761,7 +761,7 @@ fn statement(
         pt::Statement::Return(loc, Some(returns)) => {
             let expr = return_with_values(returns, loc, context, symtable, ns, diagnostics)?;
 
-            expr.recurse(ns, check_term_for_constant_overflow);
+            expr.check_constant_overflow(diagnostics);
 
             for offset in symtable.returns.iter() {
                 let elem = symtable.vars.get_mut(offset).unwrap();
@@ -821,7 +821,7 @@ fn statement(
                         ResolveTo::Discard,
                     )?;
 
-                    ret.recurse(ns, check_term_for_constant_overflow);
+                    ret.check_constant_overflow(diagnostics);
                     ret
                 }
                 pt::Expression::NamedFunctionCall(loc, ty, args) => {
@@ -836,7 +836,7 @@ fn statement(
                         diagnostics,
                         ResolveTo::Discard,
                     )?;
-                    ret.recurse(ns, check_term_for_constant_overflow);
+                    ret.check_constant_overflow(diagnostics);
                     ret
                 }
                 _ => {

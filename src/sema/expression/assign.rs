@@ -2,13 +2,11 @@
 
 use crate::sema::ast::{Expression, Namespace, RetrieveType, Type};
 use crate::sema::diagnostics::Diagnostics;
-use crate::sema::eval::check_term_for_constant_overflow;
 use crate::sema::expression::integers::type_bits_and_sign;
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::{assigned_variable, used_variable};
-use crate::sema::Recurse;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
@@ -46,7 +44,7 @@ pub(super) fn assign_single(
         ResolveTo::Type(var_ty.deref_any()),
     )?;
 
-    val.recurse(ns, check_term_for_constant_overflow);
+    val.check_constant_overflow(diagnostics);
 
     used_variable(ns, &val, symtable);
     match &var {

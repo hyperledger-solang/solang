@@ -365,7 +365,7 @@ impl Namespace {
 
     /// Resolve a free function name with namespace
     pub(super) fn resolve_function_with_namespace(
-        &mut self,
+        &self,
         file_no: usize,
         contract_no: Option<usize>,
         name: &pt::IdentifierPath,

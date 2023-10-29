@@ -21,11 +21,9 @@ use crate::sema::expression::{
 use crate::sema::{
     symtable::Symtable,
     unused_variable::{check_function_call, check_var_usage_expression, used_variable},
-    Recurse,
     {
         ast::{Expression, Namespace, RetrieveType, Type},
         diagnostics::Diagnostics,
-        eval::check_term_for_constant_overflow,
     },
 };
 use num_bigint::BigInt;
@@ -249,7 +247,7 @@ pub fn expression(
             };
             let expr = assign_expr(loc, var, expr, e, context, ns, symtable, diagnostics);
             if let Ok(expression) = &expr {
-                expression.recurse(ns, check_term_for_constant_overflow);
+                expression.check_constant_overflow(diagnostics);
             }
             expr
         }

@@ -125,7 +125,7 @@ pub(super) fn hex_literal(
 pub(crate) fn hex_number_literal(
     loc: &pt::Loc,
     n: &str,
-    ns: &mut Namespace,
+    ns: &Namespace,
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
@@ -200,7 +200,7 @@ pub(crate) fn hex_number_literal(
 pub(super) fn address_literal(
     loc: &pt::Loc,
     address: &str,
-    ns: &mut Namespace,
+    ns: &Namespace,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
     if ns.target.is_polkadot() {
@@ -516,7 +516,7 @@ pub(super) fn struct_literal(
 pub(crate) fn unit_literal(
     loc: &pt::Loc,
     unit: &Option<pt::Identifier>,
-    ns: &mut Namespace,
+    ns: &Namespace,
     diagnostics: &mut Diagnostics,
 ) -> BigInt {
     if let Some(unit) = unit {
