@@ -434,13 +434,7 @@ async function testrefs(docUri: vscode.Uri) {
     docUri,
     pos2,
   )) as vscode.Location[];
-  assert.strictEqual(actualref2.length, 1);
-  const loc20 = actualref2[0];
-  assert.strictEqual(loc20.range.start.line, 0);
-  assert.strictEqual(loc20.range.start.character, 0);
-  assert.strictEqual(loc20.range.end.line, 44);
-  assert.strictEqual(loc20.range.end.character, 1);
-  assert.strictEqual(loc20.uri.path, docUri.path);
+  assert.strictEqual(actualref2.length, 0);
 }
 
 async function testrename(docUri: vscode.Uri) {

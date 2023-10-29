@@ -181,7 +181,7 @@ pub struct EventDecl {
 impl EventDecl {
     pub fn symbol_name(&self, ns: &Namespace) -> String {
         match &self.contract {
-            Some(c) => format!("{}.{}", ns.contracts[*c].name, self.name),
+            Some(c) => format!("{}.{}", ns.contracts[*c].id, self.name),
             None => self.name.to_string(),
         }
     }
@@ -200,7 +200,7 @@ pub struct ErrorDecl {
 impl ErrorDecl {
     pub fn symbol_name(&self, ns: &Namespace) -> String {
         match &self.contract {
-            Some(c) => format!("{}.{}", ns.contracts[*c].name, self.name),
+            Some(c) => format!("{}.{}", ns.contracts[*c].id, self.name),
             None => self.name.to_string(),
         }
     }
@@ -536,7 +536,7 @@ impl Function {
         if let Some(contract_no) = &self.contract_no {
             format!(
                 "{} {}.{}",
-                self.ty, ns.contracts[*contract_no].name, self.name
+                self.ty, ns.contracts[*contract_no].id, self.name
             )
         } else {
             format!("{} {}", self.ty, self.name)
@@ -749,7 +749,7 @@ pub struct Contract {
     pub tags: Vec<Tag>,
     pub loc: pt::Loc,
     pub ty: pt::ContractTy,
-    pub name: String,
+    pub id: pt::Identifier,
     pub bases: Vec<Base>,
     pub using: Vec<Using>,
     pub layout: Vec<Layout>,

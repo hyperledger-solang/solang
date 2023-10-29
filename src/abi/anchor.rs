@@ -49,7 +49,7 @@ pub fn generate_anchor_idl(contract_no: usize, ns: &Namespace, contract_version:
 
     Idl {
         version: Version::parse(contract_version).unwrap().to_string(),
-        name: ns.contracts[contract_no].name.clone(),
+        name: ns.contracts[contract_no].id.name.clone(),
         docs,
         constants: vec![],
         instructions,
@@ -261,7 +261,8 @@ impl TypeManager<'_> {
         // If the existing type was declared outside a contract or if it is from the current contract,
         // we should change the name of the type we are adding now.
         if other_contract.is_none()
-            || other_contract.as_ref().unwrap() == &self.namespace.contracts[self.contract_no].name
+            || other_contract.as_ref().unwrap()
+                == &self.namespace.contracts[self.contract_no].id.name
         {
             let new_name = if let Some(this_name) = contract {
                 format!("{this_name}_{type_name}")

@@ -309,7 +309,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             }
         })
         .collect();
-    let contract_name = ns.contracts[contract_no].name.clone();
+    let contract_name = ns.contracts[contract_no].id.name.clone();
     let storage = Layout::Struct(StructLayout::new(contract_name, fields));
 
     let constructor_spec = |f: &Function| -> ConstructorSpec<PortableForm> {
@@ -384,7 +384,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
 
                 let t = TypeDefTuple::new_portable(fields);
 
-                let path = path!(&ns.contracts[contract_no].name, &f.name, "return_type");
+                let path = path!(&ns.contracts[contract_no].id.name, &f.name, "return_type");
 
                 let ty = registry.register_type(Type::new(
                     path,
@@ -562,7 +562,7 @@ pub fn metadata(
     );
 
     let mut builder = Contract::builder();
-    builder.name(&ns.contracts[contract_no].name);
+    builder.name(&ns.contracts[contract_no].id.name);
     let mut description = tags(contract_no, "title", ns);
     description.extend(tags(contract_no, "notice", ns));
     if !description.is_empty() {

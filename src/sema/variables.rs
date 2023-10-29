@@ -190,7 +190,7 @@ pub fn variable_decl<'a>(
                                     name.loc,
                                     format!(
                                         "override '{}' is not a base contract of '{}'",
-                                        name, ns.contracts[contract_no].name
+                                        name, ns.contracts[contract_no].id
                                     ),
                                 ));
                             } else {

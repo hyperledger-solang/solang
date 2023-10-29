@@ -167,7 +167,7 @@ pub fn resolve_tags(
                     .as_ref()
                     .unwrap()
                     .iter()
-                    .any(|contract_no| c.value == ns.contracts[*contract_no].name)
+                    .any(|contract_no| c.value == ns.contracts[*contract_no].id.name)
                 {
                     res.push(Tag {
                         loc,

@@ -125,7 +125,7 @@ fn process_instruction(
             let constructor_func = &functions[*func_no];
             for (name, account) in constructor_func.solana_accounts.borrow().iter() {
                 let name_to_index = if name == BuiltinAccounts::DataAccount {
-                    format!("{}_dataAccount", contracts[*contract_no].name)
+                    format!("{}_dataAccount", contracts[*contract_no].id)
                 } else {
                     name.clone()
                 };
@@ -160,7 +160,7 @@ fn process_instruction(
             accounts,
             ..
         } => {
-            let name_to_index = format!("{}_dataAccount", contracts[*contract_no].name);
+            let name_to_index = format!("{}_dataAccount", contracts[*contract_no].id);
             let account_index = functions[ast_no]
                 .solana_accounts
                 .borrow()

@@ -1283,7 +1283,7 @@ impl ControlFlowGraph {
                 } else {
                     String::new()
                 },
-                ns.contracts[*contract_no].name,
+                ns.contracts[*contract_no].id,
                 self.expr_to_string(contract, ns, encoded_args),
                 if let ExternalCallAccounts::Present(accounts) = accounts {
                     self.expr_to_string(contract, ns, accounts)
@@ -1615,9 +1615,9 @@ fn function_cfg(
     let contract_name = match func.contract_no {
         Some(base_contract_no) => format!(
             "{}::{}",
-            ns.contracts[contract_no].name, ns.contracts[base_contract_no].name
+            ns.contracts[contract_no].id, ns.contracts[base_contract_no].id
         ),
-        None => ns.contracts[contract_no].name.to_string(),
+        None => ns.contracts[contract_no].id.to_string(),
     };
 
     let name = match func.ty {
@@ -1889,8 +1889,8 @@ fn generate_modifier_dispatch(
     let modifier = &ns.functions[modifier_no];
     let name = format!(
         "{}::{}::{}::modifier{}::{}",
-        &ns.contracts[contract_no].name,
-        &ns.contracts[func.contract_no.unwrap()].name,
+        &ns.contracts[contract_no].id,
+        &ns.contracts[func.contract_no.unwrap()].id,
         func.llvm_symbol(ns),
         chain_no,
         modifier.llvm_symbol(ns)
@@ -2032,7 +2032,7 @@ fn generate_modifier_dispatch(
 impl Contract {
     /// Print the entire contract; storage initializers, constructors and functions and their CFGs
     pub fn print_cfg(&self, ns: &Namespace) -> String {
-        let mut out = format!("#\n# Contract: {}\n#\n\n", self.name);
+        let mut out = format!("#\n# Contract: {}\n#\n\n", self.id);
 
         for cfg in &self.cfg {
             if !cfg.is_placeholder() {

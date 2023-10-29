@@ -106,7 +106,7 @@ pub fn resolve_function_body(
                                 *loc,
                                 format!(
                                     "contract '{}' is not a base contract of '{}'",
-                                    base.name, ns.contracts[contract_no].name,
+                                    base.name, ns.contracts[contract_no].id,
                                 ),
                             ));
                             all_ok = false;
@@ -173,7 +173,7 @@ pub fn resolve_function_body(
                         def.loc,
                         format!(
                             "missing arguments to contract '{}' constructor",
-                            ns.contracts[base.contract_no].name
+                            ns.contracts[base.contract_no].id
                         ),
                     ));
                 }

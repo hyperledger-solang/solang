@@ -906,7 +906,7 @@ impl<'a> Builder<'a> {
             }
             ast::Expression::ConstantVariable { loc, ty, contract_no, var_no } => {
                 let (contract, name) = if let Some(contract_no) = contract_no {
-                    let contract = format!("{}.", self.ns.contracts[*contract_no].name);
+                    let contract = format!("{}.", self.ns.contracts[*contract_no].id);
                     let name = &self.ns.contracts[*contract_no].variables[*var_no].name;
                     (contract, name)
                 } else {
@@ -945,7 +945,7 @@ impl<'a> Builder<'a> {
             ast::Expression::StorageVariable { loc, ty, contract_no, var_no } => {
                 let contract = &self.ns.contracts[*contract_no];
                 let name = &contract.variables[*var_no].name;
-                let val = format!("{} {}.{}", ty.to_string(self.ns), contract.name, name);
+                let val = format!("{} {}.{}", ty.to_string(self.ns), contract.id, name);
                 self.hovers.push((
                     loc.file_no(),
                     HoverEntry {
@@ -1083,7 +1083,7 @@ impl<'a> Builder<'a> {
                         msg
                     }).join(", ");
 
-                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
+                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].id)).unwrap_or_default();
 
                 let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
 
@@ -1141,7 +1141,7 @@ impl<'a> Builder<'a> {
                         msg
                     }).join(", ");
 
-                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
+                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].id)).unwrap_or_default();
 
                 let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
 
@@ -1563,7 +1563,7 @@ impl<'a> Builder<'a> {
                         stop: base.loc.exclusive_end(),
                         val: make_code_block(format!(
                             "contract {}",
-                            self.ns.contracts[base.contract_no].name
+                            self.ns.contracts[base.contract_no].id
                         )),
                     },
                 ));
@@ -1590,8 +1590,8 @@ impl<'a> Builder<'a> {
             self.hovers.push((
                 file_no,
                 HoverEntry {
-                    start: contract.loc.start(),
-                    stop: contract.loc.start() + contract.name.len(),
+                    start: contract.id.loc.start(),
+                    stop: contract.id.loc.exclusive_end(),
                     val: render(&contract.tags[..]),
                 },
             ));
@@ -1602,7 +1602,7 @@ impl<'a> Builder<'a> {
             };
 
             self.definitions
-                .insert(cdi.clone(), loc_to_range(&contract.loc, file));
+                .insert(cdi.clone(), loc_to_range(&contract.id.loc, file));
 
             let impls = contract
                 .functions

@@ -134,7 +134,7 @@ impl Dot {
         ];
 
         if let Some(contract) = func.contract_no {
-            labels.insert(1, format!("contract: {}", ns.contracts[contract].name));
+            labels.insert(1, format!("contract: {}", ns.contracts[contract].id));
         }
 
         if func.ty == pt::FunctionTy::Constructor || func.ty == pt::FunctionTy::Function {
@@ -153,7 +153,7 @@ impl Dot {
                 labels.push(String::from("override"));
             } else {
                 for is_override in is_overrides {
-                    labels.push(format!("override {}", ns.contracts[*is_override].name));
+                    labels.push(format!("override {}", ns.contracts[*is_override].id));
                 }
             }
         }
@@ -244,8 +244,8 @@ impl Dot {
         for (base_no, (_, _, args)) in &func.bases {
             let node = self.add_node(
                 Node::new(
-                    &ns.contracts[*base_no].name,
-                    vec![ns.contracts[*base_no].name.to_string()],
+                    &ns.contracts[*base_no].id.name,
+                    vec![ns.contracts[*base_no].id.to_string()],
                 ),
                 Some(func_node),
                 Some(String::from("base")),
@@ -302,7 +302,7 @@ impl Dot {
                     format!(
                         "code {}literal contract {}",
                         if *runtime { "runtime " } else { "" },
-                        ns.contracts[*contract_no].name,
+                        ns.contracts[*contract_no].id,
                     ),
                     ns.loc_to_string(PathDisplay::FullPath, loc),
                 ];
@@ -1211,10 +1211,7 @@ impl Dot {
                 let func = &ns.functions[*function_no];
 
                 if let Some(contract_no) = func.contract_no {
-                    labels.insert(
-                        1,
-                        format!("{}.{}", ns.contracts[contract_no].name, func.name),
-                    )
+                    labels.insert(1, format!("{}.{}", ns.contracts[contract_no].id, func.name))
                 } else {
                     labels.insert(1, format!("free function {}", func.name))
                 }
@@ -1243,7 +1240,7 @@ impl Dot {
                 let f = &ns.functions[*function_no];
 
                 if let Some(contract_no) = f.contract_no {
-                    labels.insert(1, format!("{}.{}", ns.contracts[contract_no].name, f.name))
+                    labels.insert(1, format!("{}.{}", ns.contracts[contract_no].id, f.name))
                 }
 
                 let node = self.add_node(
@@ -1333,7 +1330,7 @@ impl Dot {
                 ..
             } => {
                 let labels = vec![
-                    format!("constructor contract {}", ns.contracts[*contract_no].name),
+                    format!("constructor contract {}", ns.contracts[*contract_no].id),
                     ns.loc_to_string(PathDisplay::FullPath, loc),
                 ];
 
@@ -1386,7 +1383,7 @@ impl Dot {
             }
             Expression::InterfaceId { loc, contract_no } => {
                 let labels = vec![
-                    format!("interfaceid contract {}", ns.contracts[*contract_no].name),
+                    format!("interfaceid contract {}", ns.contracts[*contract_no].id),
                     ns.loc_to_string(PathDisplay::FullPath, loc),
                 ];
 
@@ -2077,7 +2074,7 @@ impl Dot {
                 1,
                 format!(
                     "{}.{}",
-                    ns.contracts[*contract].name, ns.contracts[*contract].variables[var_no].name
+                    ns.contracts[*contract].id, ns.contracts[*contract].variables[var_no].name
                 ),
             );
         } else {
@@ -2105,7 +2102,7 @@ impl Dot {
             String::from("storage variable"),
             format!(
                 "{}.{}",
-                ns.contracts[contract].name, ns.contracts[contract].variables[var_no].name
+                ns.contracts[contract].id, ns.contracts[contract].variables[var_no].name
             ),
             ty.to_string(ns),
             ns.loc_to_string(PathDisplay::FullPath, loc),
@@ -2591,7 +2588,7 @@ impl Namespace {
                 Node::new(
                     "contract",
                     vec![
-                        format!("contract {}", c.name),
+                        format!("contract {}", c.id),
                         self.loc_to_string(PathDisplay::FullPath, &c.loc),
                     ],
                 ),
@@ -2606,7 +2603,7 @@ impl Namespace {
                     Node::new(
                         "base",
                         vec![
-                            format!("base {}", self.contracts[base.contract_no].name),
+                            format!("base {}", self.contracts[base.contract_no].id),
                             self.loc_to_string(PathDisplay::FullPath, &base.loc),
                         ],
                     ),
@@ -2672,7 +2669,7 @@ impl Namespace {
                     UsingList::Library(library_no) => {
                         let library = &self.contracts[*library_no];
 
-                        vec![format!("library {}", library.name)]
+                        vec![format!("library {}", library.id)]
                     }
                 };
 

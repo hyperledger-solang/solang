@@ -339,7 +339,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 // If it is not a literal, we assume users are fetching it from a declared account
                 // (@account(my_id) => tx.accounts.my_id.key)
                 if matches!(address, Expression::NumberLiteral { .. }) {
-                    data.add_program_id(&data.contracts[*contract_no].name);
+                    data.add_program_id(&data.contracts[*contract_no].id.name);
                 }
 
                 address.recurse(data, check_expression);
@@ -355,7 +355,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 transfer_accounts(loc, *contract_no, *constructor_no, data);
             } else {
                 data.add_account(
-                    format!("{}_dataAccount", data.contracts[*contract_no].name),
+                    format!("{}_dataAccount", data.contracts[*contract_no].id),
                     &SolanaAccount {
                         loc: *loc,
                         is_signer: false,
@@ -421,7 +421,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
 
             if let Some((contract_no, function_no)) = contract_function_no {
                 if should_add_program_id {
-                    data.add_program_id(&data.contracts[*contract_no].name);
+                    data.add_program_id(&data.contracts[*contract_no].id.name);
                 }
                 if accounts.is_absent() {
                     transfer_accounts(loc, *contract_no, *function_no, data);
@@ -506,7 +506,7 @@ fn transfer_accounts(
 
     for (name, mut account) in accounts_to_add {
         if name == BuiltinAccounts::DataAccount {
-            let idl_name = format!("{}_dataAccount", data.contracts[contract_no].name);
+            let idl_name = format!("{}_dataAccount", data.contracts[contract_no].id);
             if let Some(acc) = data.functions[data.ast_no]
                 .solana_accounts
                 .borrow()
@@ -517,7 +517,7 @@ fn transfer_accounts(
                         Diagnostic::error_with_note(
                             *loc,
                             format!("contract '{}' is called more than once in this function, so automatic account collection cannot happen. \
-                                         Please, provide the necessary accounts using the {{accounts:..}} call argument", data.contracts[contract_no].name),
+                                         Please, provide the necessary accounts using the {{accounts:..}} call argument", data.contracts[contract_no].id),
                             acc.loc,
                             "other call".to_string(),
                         )

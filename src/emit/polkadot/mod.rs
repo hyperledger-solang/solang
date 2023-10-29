@@ -34,7 +34,7 @@ impl PolkadotTarget {
         let mut binary = Binary::new(
             context,
             ns.target,
-            &contract.name,
+            &contract.id.name,
             filename.as_str(),
             opt,
             std_lib,
