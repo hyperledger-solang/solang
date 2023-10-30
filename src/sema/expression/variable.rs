@@ -118,6 +118,7 @@ pub(super) fn variable(
                 name_matches += 1;
                 expr = Some(Expression::InternalFunction {
                     loc: id.loc,
+                    id: id.clone(),
                     ty,
                     function_no,
                     signature: if func.is_virtual || func.is_override.is_some() {

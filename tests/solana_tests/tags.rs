@@ -200,7 +200,11 @@ fn functions() {
 
     assert_eq!(ns.diagnostics.len(), 5);
 
-    let func = ns.functions.iter().find(|func| func.name == "foo").unwrap();
+    let func = ns
+        .functions
+        .iter()
+        .find(|func| func.id.name == "foo")
+        .unwrap();
 
     assert_eq!(func.tags[0].tag, "param");
     assert_eq!(func.tags[0].value, "sadad");
@@ -237,7 +241,11 @@ fn functions() {
         "'@param' used in stead of '@return' for 'k'"
     );
 
-    let func = ns.functions.iter().find(|func| func.name == "foo").unwrap();
+    let func = ns
+        .functions
+        .iter()
+        .find(|func| func.id.name == "foo")
+        .unwrap();
 
     assert_eq!(func.tags[0].tag, "return");
     assert_eq!(func.tags[0].value, "is a boolean");

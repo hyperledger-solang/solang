@@ -368,7 +368,7 @@ trait LLVMName {
 impl LLVMName for Function {
     /// Return a unique string for this function which is a valid llvm symbol
     fn llvm_symbol(&self, ns: &Namespace) -> String {
-        let mut sig = self.name.to_owned();
+        let mut sig = self.id.name.to_owned();
 
         if !self.params.is_empty() {
             sig.push_str("__");

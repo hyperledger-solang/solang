@@ -684,8 +684,9 @@ impl<'a> Builder<'a> {
                     }
                 ));
             }
-            ast::Expression::StructLiteral { loc, ty, values } => {
+            ast::Expression::StructLiteral { id: id_path, ty, values, .. } => {
                 if let Type::Struct(StructType::UserDefined(id)) = ty {
+                    let loc = id_path.identifiers.last().unwrap().loc;
                     self.references.push((
                         loc.file_no(),
                         ReferenceEntry {
@@ -698,8 +699,23 @@ impl<'a> Builder<'a> {
                         },
                     ));
                 }
-                for expr in values {
+
+                for (i, (field_name_loc, expr)) in values.iter().enumerate() {
                     self.expression(expr, symtab);
+
+                    if let Some(field_name_loc) = field_name_loc {
+                        self.references.push((
+                            field_name_loc.file_no(),
+                            ReferenceEntry {
+                                start: field_name_loc.start(),
+                                stop: field_name_loc.exclusive_end(),
+                                val: DefinitionIndex {
+                                    def_path: Default::default(),
+                                    def_type: DefinitionType::Field(ty.clone(), i),
+                                },
+                            },
+                        ));
+                    }
                 }
             }
             ast::Expression::ArrayLiteral { values, .. }
@@ -1058,7 +1074,7 @@ impl<'a> Builder<'a> {
                 }
             }
 
-            ast::Expression::InternalFunction {loc, function_no, ..} => {
+            ast::Expression::InternalFunction {id, function_no, ..} => {
                 let fnc = &self.ns.functions[*function_no];
                 let mut msg_tg = render(&fnc.tags[..]);
                 if !msg_tg.is_empty() {
@@ -1077,7 +1093,9 @@ impl<'a> Builder<'a> {
 
                 let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].id)).unwrap_or_default();
 
-                let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
+                let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.id, params, rets);
+
+                let loc = id.loc;
 
                 self.hovers.push((
                     loc.file_no(),
@@ -1135,7 +1153,7 @@ impl<'a> Builder<'a> {
 
                 let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].id)).unwrap_or_default();
 
-                let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
+                let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.id, params, rets);
 
                 self.hovers.push((
                     loc.file_no(),
@@ -1314,14 +1332,14 @@ impl<'a> Builder<'a> {
                 ));
             }
         }
-
-        let file_no = field.loc.file_no();
+        let loc = field.id.as_ref().map(|id| &id.loc).unwrap_or(&field.loc);
+        let file_no = loc.file_no();
         let file = &self.ns.files[file_no];
         self.hovers.push((
             file_no,
             HoverEntry {
-                start: field.loc.start(),
-                stop: field.loc.exclusive_end(),
+                start: loc.start(),
+                stop: loc.exclusive_end(),
                 val: make_code_block(format!(
                     "{} {}",
                     field.ty.to_string(self.ns),
@@ -1337,8 +1355,7 @@ impl<'a> Builder<'a> {
                 field_id,
             ),
         };
-        self.definitions
-            .insert(di.clone(), loc_to_range(&field.loc, file));
+        self.definitions.insert(di.clone(), loc_to_range(loc, file));
         if let Some(dt) = get_type_definition(&field.ty) {
             self.types.insert(di, dt.into());
         }
@@ -1358,7 +1375,7 @@ impl<'a> Builder<'a> {
                         stop: loc.exclusive_end(),
                         val: make_code_block(format!(
                             "enum {}.{} {}",
-                            enum_decl.name, nam, discriminant
+                            enum_decl.id, nam, discriminant
                         )),
                     },
                 ));
@@ -1373,13 +1390,13 @@ impl<'a> Builder<'a> {
                 self.types.insert(di, dt.into());
             }
 
-            let file_no = enum_decl.loc.file_no();
+            let file_no = enum_decl.id.loc.file_no();
             let file = &self.ns.files[file_no];
             self.hovers.push((
                 file_no,
                 HoverEntry {
-                    start: enum_decl.loc.start(),
-                    stop: enum_decl.loc.start() + enum_decl.name.len(),
+                    start: enum_decl.id.loc.start(),
+                    stop: enum_decl.id.loc.exclusive_end(),
                     val: render(&enum_decl.tags[..]),
                 },
             ));
@@ -1388,23 +1405,23 @@ impl<'a> Builder<'a> {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Enum(ei),
                 },
-                loc_to_range(&enum_decl.loc, file),
+                loc_to_range(&enum_decl.id.loc, file),
             );
         }
 
         for (si, struct_decl) in self.ns.structs.iter().enumerate() {
-            if let pt::Loc::File(_, start, _) = &struct_decl.loc {
+            if matches!(struct_decl.loc, pt::Loc::File(_, _, _)) {
                 for (fi, field) in struct_decl.fields.iter().enumerate() {
                     self.field(si, fi, field);
                 }
 
-                let file_no = struct_decl.loc.file_no();
+                let file_no = struct_decl.id.loc.file_no();
                 let file = &self.ns.files[file_no];
                 self.hovers.push((
                     file_no,
                     HoverEntry {
-                        start: *start,
-                        stop: start + struct_decl.name.len(),
+                        start: struct_decl.id.loc.start(),
+                        stop: struct_decl.id.loc.exclusive_end(),
                         val: render(&struct_decl.tags[..]),
                     },
                 ));
@@ -1413,7 +1430,7 @@ impl<'a> Builder<'a> {
                         def_path: file.path.clone(),
                         def_type: DefinitionType::Struct(si),
                     },
-                    loc_to_range(&struct_decl.loc, file),
+                    loc_to_range(&struct_decl.id.loc, file),
                 );
             }
         }
@@ -1448,14 +1465,16 @@ impl<'a> Builder<'a> {
             }
 
             for (i, param) in func.params.iter().enumerate() {
+                let loc = param.id.as_ref().map(|id| &id.loc).unwrap_or(&param.loc);
                 self.hovers.push((
-                    param.loc.file_no(),
+                    loc.file_no(),
                     HoverEntry {
-                        start: param.loc.start(),
-                        stop: param.loc.exclusive_end(),
+                        start: loc.start(),
+                        stop: loc.exclusive_end(),
                         val: self.expanded_ty(&param.ty),
                     },
                 ));
+
                 if let Some(Some(var_no)) = func.symtable.arguments.get(i) {
                     if let Some(id) = &param.id {
                         let file_no = id.loc.file_no();
@@ -1471,13 +1490,14 @@ impl<'a> Builder<'a> {
                         }
                     }
                 }
-                if let Some(loc) = param.ty_loc {
+
+                if let Some(ty_loc) = param.ty_loc {
                     if let Some(dt) = get_type_definition(&param.ty) {
                         self.references.push((
-                            loc.file_no(),
+                            ty_loc.file_no(),
                             ReferenceEntry {
-                                start: loc.start(),
-                                stop: loc.exclusive_end(),
+                                start: ty_loc.start(),
+                                stop: ty_loc.exclusive_end(),
                                 val: dt.into(),
                             },
                         ));
@@ -1486,11 +1506,12 @@ impl<'a> Builder<'a> {
             }
 
             for (i, ret) in func.returns.iter().enumerate() {
+                let loc = ret.id.as_ref().map(|id| &id.loc).unwrap_or(&ret.loc);
                 self.hovers.push((
-                    ret.loc.file_no(),
+                    loc.file_no(),
                     HoverEntry {
-                        start: ret.loc.start(),
-                        stop: ret.loc.exclusive_end(),
+                        start: loc.start(),
+                        stop: loc.exclusive_end(),
                         val: self.expanded_ty(&ret.ty),
                     },
                 ));
@@ -1511,13 +1532,13 @@ impl<'a> Builder<'a> {
                     }
                 }
 
-                if let Some(loc) = ret.ty_loc {
+                if let Some(ty_loc) = ret.ty_loc {
                     if let Some(dt) = get_type_definition(&ret.ty) {
                         self.references.push((
-                            loc.file_no(),
+                            ty_loc.file_no(),
                             ReferenceEntry {
-                                start: loc.start(),
-                                stop: loc.exclusive_end(),
+                                start: ty_loc.start(),
+                                stop: ty_loc.exclusive_end(),
                                 val: dt.into(),
                             },
                         ));
@@ -1529,14 +1550,14 @@ impl<'a> Builder<'a> {
                 self.statement(stmt, &func.symtable);
             }
 
-            let file_no = func.loc.file_no();
+            let file_no = func.id.loc.file_no();
             let file = &self.ns.files[file_no];
             self.definitions.insert(
                 DefinitionIndex {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Function(i),
                 },
-                loc_to_range(&func.loc, file),
+                loc_to_range(&func.id.loc, file),
             );
         }
 
@@ -1663,7 +1684,7 @@ impl<'a> Builder<'a> {
                 self.field(ei, fi, field);
             }
 
-            let file_no = event.loc.file_no();
+            let file_no = event.id.loc.file_no();
             let file = &self.ns.files[file_no];
             self.hovers.push((
                 file_no,

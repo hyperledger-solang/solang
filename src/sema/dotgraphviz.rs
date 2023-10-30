@@ -129,7 +129,7 @@ impl Dot {
 
     fn add_function(&mut self, func: &Function, ns: &Namespace, parent: usize) {
         let mut labels = vec![
-            format!("{} {}", func.ty, func.name),
+            format!("{} {}", func.ty, func.id),
             ns.loc_to_string(PathDisplay::FullPath, &func.loc),
         ];
 
@@ -163,7 +163,7 @@ impl Dot {
         }
 
         let func_node = self.add_node(
-            Node::new(&func.name, labels),
+            Node::new(&func.id.name, labels),
             Some(parent),
             Some(format!("{}", func.ty)),
         );
@@ -337,7 +337,7 @@ impl Dot {
                     Some(parent_rel),
                 );
             }
-            Expression::StructLiteral { loc, ty, values } => {
+            Expression::StructLiteral { loc, ty, values , ..} => {
                 let labels = vec![
                     format!("struct literal: {}", ty.to_string(ns)),
                     ns.loc_to_string(PathDisplay::FullPath, loc),
@@ -349,7 +349,7 @@ impl Dot {
                     Some(parent_rel),
                 );
 
-                for (no, arg) in values.iter().enumerate() {
+                for (no, (_, arg)) in values.iter().enumerate() {
                     self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
             }
@@ -1180,6 +1180,7 @@ impl Dot {
                 ty,
                 function_no,
                 signature,
+                ..
             } => {
                 let mut labels = vec![
                     ty.to_string(ns),
@@ -1189,9 +1190,9 @@ impl Dot {
                 let func = &ns.functions[*function_no];
 
                 if let Some(contract_no) = func.contract_no {
-                    labels.insert(1, format!("{}.{}", ns.contracts[contract_no].id, func.name))
+                    labels.insert(1, format!("{}.{}", ns.contracts[contract_no].id, func.id))
                 } else {
-                    labels.insert(1, format!("free function {}", func.name))
+                    labels.insert(1, format!("free function {}", func.id))
                 }
 
                 if let Some(signature) = signature {
@@ -1218,7 +1219,7 @@ impl Dot {
                 let f = &ns.functions[*function_no];
 
                 if let Some(contract_no) = f.contract_no {
-                    labels.insert(1, format!("{}.{}", ns.contracts[contract_no].id, f.name))
+                    labels.insert(1, format!("{}.{}", ns.contracts[contract_no].id, f.id))
                 }
 
                 let node = self.add_node(
@@ -1388,7 +1389,7 @@ impl Dot {
                     ),
                     format!(
                         "function {} {}",
-                        user_func.name,
+                        user_func.id,
                         ns.loc_to_string(PathDisplay::FullPath, &user_func.loc)
                     ),
                 ];
@@ -2428,9 +2429,9 @@ impl Namespace {
                 if let Some(contract) = &decl.contract {
                     labels.insert(0, format!("contract: {contract}"));
                 }
-                labels.insert(0, format!("name: {}", decl.name));
+                labels.insert(0, format!("name: {}", decl.id));
 
-                let e = Node::new(&decl.name, labels);
+                let e = Node::new(&decl.id.name, labels);
 
                 let node = dot.add_node(e, Some(enums), None);
 
@@ -2445,7 +2446,7 @@ impl Namespace {
             for decl in &self.structs {
                 if let pt::Loc::File(..) = &decl.loc {
                     let mut labels = vec![
-                        format!("name:{}", decl.name),
+                        format!("name:{}", decl.id),
                         self.loc_to_string(PathDisplay::FullPath, &decl.loc),
                     ];
 
@@ -2461,7 +2462,7 @@ impl Namespace {
                         ));
                     }
 
-                    let e = Node::new(&decl.name, labels);
+                    let e = Node::new(&decl.id.name, labels);
 
                     let node = dot.add_node(e, Some(structs), None);
 
@@ -2648,7 +2649,7 @@ impl Namespace {
 
                             let mut label = format!(
                                 "function {} {}",
-                                func.name,
+                                func.id,
                                 self.loc_to_string(PathDisplay::FullPath, &func.loc)
                             );
 

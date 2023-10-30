@@ -229,7 +229,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                     _ => (),
                 }
             } else if let InternalCallTy::Builtin { ast_func_no } = call {
-                let name = &data.functions[*ast_func_no].name;
+                let name = &data.functions[*ast_func_no].id.name;
                 if name == "create_program_address" {
                     data.add_system_account();
                 }

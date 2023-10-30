@@ -12,7 +12,7 @@ use crate::sema::ast::ParameterAnnotation;
 use crate::sema::function_annotation::unexpected_parameter_annotation;
 use crate::sema::namespace::ResolveTypeContext;
 use crate::Target;
-use solang_parser::pt::FunctionTy;
+use solang_parser::pt::{FunctionTy, Identifier};
 use solang_parser::{
     doccomment::DocComment,
     pt,
@@ -428,18 +428,17 @@ pub fn contract_function(
         return None;
     }
 
-    let name = func
-        .name
-        .as_ref()
-        .map(|s| s.name.as_str())
-        .unwrap_or_else(|| {
-            if ns.target.is_polkadot() && func.ty == pt::FunctionTy::Constructor {
-                "new"
-            } else {
-                ""
-            }
-        })
-        .to_owned();
+    let name = func.name.clone().unwrap_or_else(|| {
+        let name = if ns.target.is_polkadot() && func.ty == pt::FunctionTy::Constructor {
+            "new"
+        } else {
+            ""
+        };
+        Identifier {
+            name: name.to_string(),
+            loc: func.name_loc,
+        }
+    });
 
     let bases = ns.contract_bases(contract_no);
 
@@ -773,7 +772,7 @@ pub fn function(
     }
 
     let name = match &func.name {
-        Some(s) => s.name.to_owned(),
+        Some(s) => s.to_owned(),
         None => {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
@@ -1123,7 +1122,10 @@ fn signatures() {
 
     let fdecl = Function::new(
         pt::Loc::Implicit,
-        "foo".to_owned(),
+        pt::Identifier {
+            name: "foo".to_owned(),
+            loc: pt::Loc::Implicit,
+        },
         None,
         vec![],
         pt::FunctionTy::Function,

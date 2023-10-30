@@ -14,7 +14,7 @@ use num_rational::BigRational;
 use once_cell::unsync::OnceCell;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
-use solang_parser::pt::{CodeLocation, FunctionTy, OptionalCodeLocation};
+use solang_parser::pt::{CodeLocation, FunctionTy, Identifier, OptionalCodeLocation};
 use std::cell::RefCell;
 use std::{
     collections::HashSet,
@@ -156,7 +156,7 @@ pub enum StructType {
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct StructDecl {
     pub tags: Vec<Tag>,
-    pub name: String,
+    pub id: Identifier,
     pub loc: pt::Loc,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
@@ -211,8 +211,8 @@ impl fmt::Display for StructDecl {
     /// inside or outside a contract.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.contract {
-            Some(c) => write!(f, "{}.{}", c, self.name),
-            None => write!(f, "{}", self.name),
+            Some(c) => write!(f, "{}.{}", c, self.id),
+            None => write!(f, "{}", self.id),
         }
     }
 }
@@ -220,7 +220,7 @@ impl fmt::Display for StructDecl {
 #[derive(Debug)]
 pub struct EnumDecl {
     pub tags: Vec<Tag>,
-    pub name: String,
+    pub id: Identifier,
     pub contract: Option<String>,
     pub loc: pt::Loc,
     pub ty: Type,
@@ -232,8 +232,8 @@ impl fmt::Display for EnumDecl {
     /// inside or outside a contract.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.contract {
-            Some(c) => write!(f, "{}.{}", c, self.name),
-            None => write!(f, "{}", self.name),
+            Some(c) => write!(f, "{}.{}", c, self.id),
+            None => write!(f, "{}", self.id),
         }
     }
 }
@@ -320,7 +320,7 @@ pub struct Function {
     pub tags: Vec<Tag>,
     /// The location of the prototype (not body)
     pub loc: pt::Loc,
-    pub name: String,
+    pub id: Identifier,
     pub contract_no: Option<usize>,
     pub ty: pt::FunctionTy,
     pub signature: String,
@@ -402,7 +402,7 @@ impl FunctionAttributes for Function {
 impl Function {
     pub fn new(
         loc: pt::Loc,
-        name: String,
+        name: Identifier,
         contract_no: Option<usize>,
         tags: Vec<Tag>,
         ty: pt::FunctionTy,
@@ -415,7 +415,7 @@ impl Function {
         let signature = match ty {
             pt::FunctionTy::Fallback => String::from("@fallback"),
             pt::FunctionTy::Receive => String::from("@receive"),
-            _ => ns.signature(&name, &params),
+            _ => ns.signature(&name.name, &params),
         };
 
         let mutability = match mutability {
@@ -437,7 +437,7 @@ impl Function {
         Function {
             tags,
             loc,
-            name,
+            id: name,
             contract_no,
             ty,
             signature,
@@ -473,7 +473,7 @@ impl Function {
                     let discriminator_image = if self.mangled_name_contracts.contains(contract_no) {
                         &self.mangled_name
                     } else {
-                        &self.name
+                        &self.id.name
                     };
                     function_discriminator(discriminator_image.as_str())
                 }
@@ -838,8 +838,9 @@ pub enum Expression {
     },
     StructLiteral {
         loc: pt::Loc,
+        id: pt::IdentifierPath,
         ty: Type,
-        values: Vec<Expression>,
+        values: Vec<(Option<pt::Loc>, Expression)>,
     },
     ArrayLiteral {
         loc: pt::Loc,
@@ -1130,6 +1131,7 @@ pub enum Expression {
     },
     InternalFunction {
         loc: pt::Loc,
+        id: pt::Identifier,
         ty: Type,
         function_no: usize,
         signature: Option<String>,
@@ -1293,8 +1295,13 @@ impl Recurse for Expression {
     fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Expression, ctx: &mut T) -> bool) {
         if f(self, cx) {
             match self {
-                Expression::StructLiteral { values, .. }
-                | Expression::ArrayLiteral { values, .. }
+                Expression::StructLiteral { values, .. } => {
+                    for (_, e) in values {
+                        e.recurse(cx, f);
+                    }
+                }
+
+                Expression::ArrayLiteral { values, .. }
                 | Expression::ConstArrayLiteral { values, .. } => {
                     for e in values {
                         e.recurse(cx, f);

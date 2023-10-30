@@ -1545,7 +1545,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     ) -> Option<BasicValueEnum<'a>> {
         emit_context!(binary);
 
-        match builtin_func.name.as_str() {
+        match builtin_func.id.name.as_str() {
             "chain_extension" => {
                 let input_ptr = binary.vector_bytes(args[1].into_pointer_value().into());
                 let input_len = binary.vector_len(args[1].into_pointer_value().into());

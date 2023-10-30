@@ -107,7 +107,7 @@ pub(super) fn member_access(
                 for function_no in ns.contracts[call_contract_no].all_functions.keys() {
                     let func = &ns.functions[*function_no];
 
-                    if func.name != id.name || func.ty != pt::FunctionTy::Function {
+                    if func.id.name != id.name || func.ty != pt::FunctionTy::Function {
                         continue;
                     }
 
@@ -115,6 +115,7 @@ pub(super) fn member_access(
 
                     expr = Ok(Expression::InternalFunction {
                         loc: e.loc(),
+                        id: id.clone(),
                         ty: function_type(func, false, resolve_to),
                         function_no: *function_no,
                         signature: None,
@@ -315,7 +316,7 @@ pub(super) fn member_access(
                         id.loc,
                         format!(
                             "struct '{}' does not have a field called '{}'",
-                            str_ty.definition(ns).name,
+                            str_ty.definition(ns).id,
                             id.name
                         ),
                     ));
@@ -422,7 +423,9 @@ pub(super) fn member_access(
             for function_no in ns.contracts[ref_contract_no].all_functions.keys() {
                 let func = &ns.functions[*function_no];
 
-                if func.name != id.name || func.ty != pt::FunctionTy::Function || !func.is_public()
+                if func.id.name != id.name
+                    || func.ty != pt::FunctionTy::Function
+                    || !func.is_public()
                 {
                     continue;
                 }

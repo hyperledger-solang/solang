@@ -197,7 +197,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                 })
                 .collect::<Vec<Field<PortableForm>>>();
             let c = TypeDefComposite::new(fields);
-            let path = path!(&def.name);
+            let path = path!(&def.id);
             let ty = Type::new(path, vec![], TypeDef::Composite(c), Default::default());
             registry.register_type(ty)
         }
@@ -215,7 +215,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                 })
                 .collect::<Vec<_>>();
             let variant = TypeDef::Variant(TypeDefVariant::new(variants));
-            let path = path!(&decl.name);
+            let path = path!(&decl.id);
             let ty = Type::new(path, vec![], variant, Default::default());
             registry.register_type(ty)
         }
@@ -329,13 +329,20 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
 
-        ConstructorSpec::from_label(if f.name.is_empty() { "new" } else { &f.name }.into())
-            .selector(f.selector(ns, &contract_no).try_into().unwrap())
-            .payable(payable)
-            .args(args)
-            .docs(vec![render(&f.tags).as_str()])
-            .returns(ReturnTypeSpec::new(None))
-            .done()
+        ConstructorSpec::from_label(
+            if f.id.name.is_empty() {
+                "new"
+            } else {
+                &f.id.name
+            }
+            .into(),
+        )
+        .selector(f.selector(ns, &contract_no).try_into().unwrap())
+        .payable(payable)
+        .args(args)
+        .docs(vec![render(&f.tags).as_str()])
+        .returns(ReturnTypeSpec::new(None))
+        .done()
     };
 
     let constructors = ns.contracts[contract_no]
@@ -384,7 +391,11 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
 
                 let t = TypeDefTuple::new_portable(fields);
 
-                let path = path!(&ns.contracts[contract_no].id.name, &f.name, "return_type");
+                let path = path!(
+                    &ns.contracts[contract_no].id.name,
+                    &f.id.name,
+                    "return_type"
+                );
 
                 let ty = registry.register_type(Type::new(
                     path,
@@ -413,7 +424,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         let label = if f.mangled_name_contracts.contains(&contract_no) {
             &f.mangled_name
         } else {
-            &f.name
+            &f.id.name
         };
         MessageSpec::from_label(label.into())
             .selector(f.selector(ns, &contract_no).try_into().unwrap())
