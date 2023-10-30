@@ -13,7 +13,7 @@ pub fn generate_abi(
     ns: &Namespace,
     code: &[u8],
     verbose: bool,
-    default_authors: &Vec<String>,
+    default_authors: &[String],
     version: &str,
 ) -> (String, &'static str) {
     match ns.target {

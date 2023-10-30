@@ -12,7 +12,6 @@ use solang::{
     file_resolver::FileResolver,
     sema::{ast::Namespace, file::PathDisplay},
     standard_json::{EwasmContract, JsonContract, JsonResult},
-    Target,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -243,8 +242,11 @@ fn compile(compile_args: &Compile) {
         let mut seen_contracts = HashMap::new();
 
         let authors = if let Some(authors) = &compile_args.package.authors {
-            if target == Target::Solana {
-                eprintln!("warning: the `authors` flag will be ignored for solana target")
+            if !target.is_polkadot() {
+                eprintln!(
+                    "warning: the `authors` flag will be ignored for {} target",
+                    target
+                )
             }
             authors.clone()
         } else {
@@ -348,7 +350,7 @@ fn contract_results(
     json_contracts: &mut HashMap<String, JsonContract>,
     seen_contracts: &mut HashMap<String, String>,
     opt: &Options,
-    default_authors: &Vec<String>,
+    default_authors: &[String],
     version: &str,
 ) {
     let verbose = compiler_output.verbose;
