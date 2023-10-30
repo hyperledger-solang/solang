@@ -62,7 +62,7 @@ fn yul_function_cfg(
 
     let func_name = format!(
         "{}::yul_function_{}::{}",
-        ns.contracts[contract_no].name, function_no, yul_func.name
+        ns.contracts[contract_no].id, function_no, yul_func.name
     );
     let mut cfg = ControlFlowGraph::new(func_name, ASTFunction::YulFunction(function_no));
 

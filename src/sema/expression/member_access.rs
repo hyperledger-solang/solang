@@ -114,7 +114,7 @@ pub(super) fn member_access(
                             e.loc(),
                             format!(
                                 "contract '{}' does not have a member called '{}'",
-                                ns.contracts[call_contract_no].name, id.name,
+                                ns.contracts[call_contract_no].id, id.name,
                             ),
                         ));
                         Err(())
@@ -125,7 +125,7 @@ pub(super) fn member_access(
                             e.loc(),
                             format!(
                                 "function '{}' of contract '{}' is overloaded",
-                                id.name, ns.contracts[call_contract_no].name,
+                                id.name, ns.contracts[call_contract_no].id,
                             ),
                         ));
                         Err(())
@@ -428,7 +428,7 @@ pub(super) fn member_access(
                         format!(
                             "{} '{}' has no public function '{}'",
                             ns.contracts[ref_contract_no].ty,
-                            ns.contracts[ref_contract_no].name,
+                            ns.contracts[ref_contract_no].id,
                             id.name
                         ),
                     ));
@@ -442,7 +442,7 @@ pub(super) fn member_access(
                             "function '{}' of {} '{}' is overloaded",
                             id.name,
                             ns.contracts[ref_contract_no].ty,
-                            ns.contracts[ref_contract_no].name
+                            ns.contracts[ref_contract_no].id
                         ),
                     ));
                     Err(())
@@ -534,7 +534,7 @@ fn contract_constant(
                         *loc,
                         format!(
                             "need instance of contract '{}' to get variable value '{}'",
-                            ns.contracts[contract_no].name,
+                            ns.contracts[contract_no].id,
                             ns.contracts[contract_no].variables[var_no].name,
                         ),
                     ));
@@ -688,7 +688,7 @@ fn type_name_expr(
         (Type::Contract(n), "name") => Ok(Expression::BytesLiteral {
             loc: *loc,
             ty: Type::String,
-            value: ns.contracts[*n].name.as_bytes().to_vec(),
+            value: ns.contracts[*n].id.name.as_bytes().to_vec(),
         }),
         (Type::Contract(n), "interfaceId") => {
             let contract = &ns.contracts[*n];
@@ -698,7 +698,7 @@ fn type_name_expr(
                     *loc,
                     format!(
                         "type(…).interfaceId is permitted on interface, not {} {}",
-                        contract.ty, contract.name
+                        contract.ty, contract.id
                     ),
                 ));
                 Err(())
@@ -723,7 +723,7 @@ fn type_name_expr(
                     *loc,
                     format!(
                         "{} '{}' has no declared program_id",
-                        contract.ty, contract.name
+                        contract.ty, contract.id
                     ),
                 ));
                 Err(())
@@ -750,7 +750,7 @@ fn type_name_expr(
                     *loc,
                     format!(
                         "containing our own contract code for '{}' would generate infinite size contract",
-                        ns.contracts[*no].name
+                        ns.contracts[*no].id
                     ),
                 ));
                 return Err(());
@@ -761,7 +761,7 @@ fn type_name_expr(
                     *loc,
                     format!(
                         "circular reference creating contract code for '{}'",
-                        ns.contracts[*no].name
+                        ns.contracts[*no].id
                     ),
                 ));
                 return Err(());

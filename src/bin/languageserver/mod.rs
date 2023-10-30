@@ -334,16 +334,17 @@ impl SolangServer {
         let files = self.files.lock().await;
         if let Some(cache) = files.caches.get(&path) {
             let f = &cache.file;
-            let offset = f.get_offset(
+            if let Some(offset) = f.get_offset(
                 params.text_document_position_params.position.line as _,
                 params.text_document_position_params.position.character as _,
-            );
-            if let Some(reference) = cache
-                .references
-                .find(offset, offset + 1)
-                .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
-            {
-                return Ok(Some(reference.val.clone()));
+            ) {
+                if let Some(reference) = cache
+                    .references
+                    .find(offset, offset + 1)
+                    .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+                {
+                    return Ok(Some(reference.val.clone()));
+                }
             }
         }
         Ok(None)
@@ -905,7 +906,7 @@ impl<'a> Builder<'a> {
             }
             ast::Expression::ConstantVariable { loc, ty, contract_no, var_no } => {
                 let (contract, name) = if let Some(contract_no) = contract_no {
-                    let contract = format!("{}.", self.ns.contracts[*contract_no].name);
+                    let contract = format!("{}.", self.ns.contracts[*contract_no].id);
                     let name = &self.ns.contracts[*contract_no].variables[*var_no].name;
                     (contract, name)
                 } else {
@@ -944,7 +945,7 @@ impl<'a> Builder<'a> {
             ast::Expression::StorageVariable { loc, ty, contract_no, var_no } => {
                 let contract = &self.ns.contracts[*contract_no];
                 let name = &contract.variables[*var_no].name;
-                let val = format!("{} {}.{}", ty.to_string(self.ns), contract.name, name);
+                let val = format!("{} {}.{}", ty.to_string(self.ns), contract.id, name);
                 self.hovers.push((
                     loc.file_no(),
                     HoverEntry {
@@ -1082,7 +1083,7 @@ impl<'a> Builder<'a> {
                         msg
                     }).join(", ");
 
-                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
+                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].id)).unwrap_or_default();
 
                 let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
 
@@ -1140,7 +1141,7 @@ impl<'a> Builder<'a> {
                         msg
                     }).join(", ");
 
-                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
+                let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].id)).unwrap_or_default();
 
                 let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
 
@@ -1562,7 +1563,7 @@ impl<'a> Builder<'a> {
                         stop: base.loc.exclusive_end(),
                         val: make_code_block(format!(
                             "contract {}",
-                            self.ns.contracts[base.contract_no].name
+                            self.ns.contracts[base.contract_no].id
                         )),
                     },
                 ));
@@ -1589,8 +1590,8 @@ impl<'a> Builder<'a> {
             self.hovers.push((
                 file_no,
                 HoverEntry {
-                    start: contract.loc.start(),
-                    stop: contract.loc.start() + contract.name.len(),
+                    start: contract.id.loc.start(),
+                    stop: contract.id.loc.exclusive_end(),
                     val: render(&contract.tags[..]),
                 },
             ));
@@ -1601,7 +1602,7 @@ impl<'a> Builder<'a> {
             };
 
             self.definitions
-                .insert(cdi.clone(), loc_to_range(&contract.loc, file));
+                .insert(cdi.clone(), loc_to_range(&contract.id.loc, file));
 
             let impls = contract
                 .functions
@@ -1719,7 +1720,9 @@ impl<'a> Builder<'a> {
             .collect::<HashMap<PathBuf, usize>>();
 
         for val in self.types.values_mut() {
-            val.def_path = defs_to_files[&val.def_type].clone();
+            if let Some(path) = defs_to_files.get(&val.def_type) {
+                val.def_path = path.clone();
+            }
         }
 
         for (di, range) in &self.definitions {
@@ -1729,10 +1732,13 @@ impl<'a> Builder<'a> {
                 file_no,
                 ReferenceEntry {
                     start: file
-                        .get_offset(range.start.line as usize, range.start.character as usize),
+                        .get_offset(range.start.line as usize, range.start.character as usize)
+                        .unwrap(),
                     // 1 is added to account for the fact that `Lapper` expects half open ranges of the type:  [`start`, `stop`)
                     // i.e, `start` included but `stop` excluded.
-                    stop: file.get_offset(range.end.line as usize, range.end.character as usize)
+                    stop: file
+                        .get_offset(range.end.line as usize, range.end.character as usize)
+                        .unwrap()
                         + 1,
                     val: di.clone(),
                 },
@@ -1761,7 +1767,9 @@ impl<'a> Builder<'a> {
                         .filter(|h| h.0 == i)
                         .map(|(_, i)| {
                             let mut i = i.clone();
-                            i.val.def_path = defs_to_files[&i.val.def_type].clone();
+                            if let Some(path) = defs_to_files.get(&i.val.def_type) {
+                                i.val.def_path = path.clone();
+                            }
                             i
                         })
                         .collect(),
@@ -1990,24 +1998,25 @@ impl LanguageServer for SolangServer {
         if let Ok(path) = uri.to_file_path() {
             let files = &self.files.lock().await;
             if let Some(cache) = files.caches.get(&path) {
-                let offset = cache
+                if let Some(offset) = cache
                     .file
-                    .get_offset(pos.line as usize, pos.character as usize);
-
-                // The shortest hover for the position will be most informative
-                if let Some(hover) = cache
-                    .hovers
-                    .find(offset, offset + 1)
-                    .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+                    .get_offset(pos.line as usize, pos.character as usize)
                 {
-                    let range = get_range_exclusive(hover.start, hover.stop, &cache.file);
+                    // The shortest hover for the position will be most informative
+                    if let Some(hover) = cache
+                        .hovers
+                        .find(offset, offset + 1)
+                        .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+                    {
+                        let range = get_range_exclusive(hover.start, hover.stop, &cache.file);
 
-                    return Ok(Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::from_markdown(
-                            hover.val.to_string(),
-                        )),
-                        range: Some(range),
-                    }));
+                        return Ok(Some(Hover {
+                            contents: HoverContents::Scalar(MarkedString::from_markdown(
+                                hover.val.to_string(),
+                            )),
+                            range: Some(range),
+                        }));
+                    }
                 }
             }
         }

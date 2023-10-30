@@ -24,11 +24,16 @@ use tiny_keccak::{Hasher, Keccak};
 
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library
-    pub fn new(name: &str, ty: pt::ContractTy, tags: Vec<ast::Tag>, loc: pt::Loc) -> Self {
+    pub fn new(
+        name: &pt::Identifier,
+        ty: pt::ContractTy,
+        tags: Vec<ast::Tag>,
+        loc: pt::Loc,
+    ) -> Self {
         let instantiable = matches!(ty, pt::ContractTy::Contract(_));
 
         ast::Contract {
-            name: name.to_owned(),
+            id: name.clone(),
             loc,
             ty,
             bases: Vec::new(),
@@ -56,7 +61,7 @@ impl ast::Contract {
     pub fn selector(&self) -> u32 {
         let mut hasher = Keccak::v256();
         let mut hash = [0u8; 32];
-        hasher.update(self.name.as_bytes());
+        hasher.update(self.id.name.as_bytes());
         hasher.finalize(&mut hash);
 
         u32::from_le_bytes(hash[0..4].try_into().unwrap())
@@ -119,7 +124,7 @@ pub fn resolve_base_contracts(
                     base.loc,
                     format!(
                         "library '{}' cannot have a base contract",
-                        ns.contracts[contract.contract_no].name
+                        ns.contracts[contract.contract_no].id
                     ),
                 ));
                 continue;
@@ -140,7 +145,7 @@ pub fn resolve_base_contracts(
                         name.loc,
                         format!(
                             "contract '{}' duplicate base '{}'",
-                            ns.contracts[contract.contract_no].name, name
+                            ns.contracts[contract.contract_no].id, name
                         ),
                     ));
                 } else if is_base(contract.contract_no, no, ns) {
@@ -148,7 +153,7 @@ pub fn resolve_base_contracts(
                         name.loc,
                         format!(
                             "base '{}' from contract '{}' is cyclic",
-                            name, ns.contracts[contract.contract_no].name
+                            name, ns.contracts[contract.contract_no].id
                         ),
                     ));
                 } else if ns.contracts[contract.contract_no].is_interface()
@@ -158,7 +163,7 @@ pub fn resolve_base_contracts(
                         name.loc,
                         format!(
                             "interface '{}' cannot have {} '{}' as a base",
-                            ns.contracts[contract.contract_no].name, ns.contracts[no].ty, name
+                            ns.contracts[contract.contract_no].id, ns.contracts[no].ty, name
                         ),
                     ));
                 } else if ns.contracts[no].is_library() {
@@ -168,7 +173,7 @@ pub fn resolve_base_contracts(
                         name.loc,
                         format!(
                             "library '{}' cannot be used as base contract for {} '{}'",
-                            name, contract.ty, contract.name,
+                            name, contract.ty, contract.id,
                         ),
                     ));
                 } else {
@@ -365,7 +370,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
 
                 let source_override = entry
                     .iter()
-                    .map(|(contract_no, _)| -> &str { &ns.contracts[*contract_no].name })
+                    .map(|(contract_no, _)| -> &str { &ns.contracts[*contract_no].id.name })
                     .collect::<Vec<&str>>()
                     .join(",");
 
@@ -387,7 +392,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         // List of contract which should have been specified
                         let missing: Vec<String> = override_needed
                             .difference(&override_specified)
-                            .map(|contract_no| ns.contracts[*contract_no].name.to_owned())
+                            .map(|contract_no| ns.contracts[*contract_no].id.name.to_owned())
                             .collect();
 
                         if !missing.is_empty() && override_needed.len() >= 2 {
@@ -405,7 +410,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         // List of contract which should not have been specified
                         let extra: Vec<String> = override_specified
                             .difference(&override_needed)
-                            .map(|contract_no| ns.contracts[*contract_no].name.to_owned())
+                            .map(|contract_no| ns.contracts[*contract_no].id.name.to_owned())
                             .collect();
 
                         if !extra.is_empty() {
@@ -576,7 +581,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                                 *loc,
                                 format!(
                                     "function '{}' override list does not contain '{}'",
-                                    cur.name, ns.contracts[prev_contract_no].name
+                                    cur.name, ns.contracts[prev_contract_no].id
                                 ),
                                 func_prev.loc,
                                 format!("previous definition of function '{}'", func_prev.name),
@@ -627,18 +632,18 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     diagnostics.push(ast::Diagnostic::error_with_note(
                         loc,
                         format!(
-                            "contract '{}' missing override for '{}' function",
-                            ns.contracts[contract_no].name, func.ty
+                            "contract '{}' missing override for {} function",
+                            ns.contracts[contract_no].id, func.ty
                         ),
                         func.loc,
-                        format!("declaration of '{}' function", func.ty),
+                        format!("declaration of {} function", func.ty),
                     ));
                 }
                 _ => diagnostics.push(ast::Diagnostic::error_with_note(
                     loc,
                     format!(
                         "contract '{}' missing override for function '{}'",
-                        ns.contracts[contract_no].name, func.name
+                        ns.contracts[contract_no].id, func.name
                     ),
                     func.loc,
                     format!("declaration of function '{}'", func.name),
@@ -729,7 +734,7 @@ fn polkadot_requires_public_functions(contract_no: usize, ns: &mut ast::Namespac
             }
         })
     {
-        let message = format!("contracts without public storage or functions are not allowed on Polkadot. Consider declaring this contract abstract: 'abstract contract {}'", contract.name);
+        let message = format!("contracts without public storage or functions are not allowed on Polkadot. Consider declaring this contract abstract: 'abstract contract {}'", contract.id);
         contract.instantiable = false;
 
         ns.diagnostics
@@ -1108,12 +1113,12 @@ pub fn collect_base_args<'a>(
                     *loc,
                     format!(
                         "duplicate argument for base contract '{}'",
-                        ns.contracts[*base_no].name
+                        ns.contracts[*base_no].id
                     ),
                     *prev_args.loc,
                     format!(
                         "previous argument for base contract '{}'",
-                        ns.contracts[*base_no].name
+                        ns.contracts[*base_no].id
                     ),
                 ));
             } else {
@@ -1139,12 +1144,12 @@ pub fn collect_base_args<'a>(
                     base.loc,
                     format!(
                         "duplicate argument for base contract '{}'",
-                        ns.contracts[base.contract_no].name
+                        ns.contracts[base.contract_no].id
                     ),
                     *prev_args.loc,
                     format!(
                         "previous argument for base contract '{}'",
-                        ns.contracts[base.contract_no].name
+                        ns.contracts[base.contract_no].id
                     ),
                 ));
             } else {
@@ -1218,7 +1223,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
                         contract.loc,
                         format!(
                             "missing arguments to base contract '{}' constructor",
-                            ns.contracts[*base_no].name
+                            ns.contracts[*base_no].id
                         ),
                     ));
                 }
@@ -1235,7 +1240,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
                     contract.loc,
                     format!(
                         "missing arguments to base contract '{}' constructor",
-                        ns.contracts[*base_no].name
+                        ns.contracts[*base_no].id
                     ),
                 ));
             }

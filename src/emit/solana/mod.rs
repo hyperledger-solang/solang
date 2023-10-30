@@ -37,7 +37,7 @@ impl SolanaTarget {
         let mut binary = Binary::new(
             context,
             Target::Solana,
-            &contract.name,
+            &contract.id.name,
             filename.as_str(),
             opt,
             std_lib,

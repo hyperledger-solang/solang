@@ -46,7 +46,7 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
         let loc = pt::Loc::Builtin;
         let event = &self.ns.events[self.event_no];
         // For freestanding events the name of the emitting contract is used
-        let contract_name = &self.ns.contracts[event.contract.unwrap_or(contract_no)].name;
+        let contract_name = &self.ns.contracts[event.contract.unwrap_or(contract_no)].id;
         let hash_len = Box::new(Expression::NumberLiteral {
             loc,
             ty: Type::Uint(32),

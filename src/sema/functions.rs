@@ -37,7 +37,7 @@ pub fn contract_function(
         pt::FunctionTy::Function => {
             // Function name cannot be the same as the contract name
             if let Some(n) = &func.name {
-                if n.name == ns.contracts[contract_no].name {
+                if n.name == ns.contracts[contract_no].id.name {
                     ns.diagnostics.push(Diagnostic::error(
                         func.loc,
                         "function cannot have same name as the contract".to_string(),
@@ -206,7 +206,7 @@ pub fn contract_function(
                                 name.loc,
                                 format!(
                                     "override '{}' is not a base contract of '{}'",
-                                    name, ns.contracts[contract_no].name
+                                    name, ns.contracts[contract_no].id
                                 ),
                             ));
                         } else {
@@ -1112,7 +1112,10 @@ fn signatures() {
     let mut ns = Namespace::new(Target::EVM);
 
     ns.contracts.push(ast::Contract::new(
-        "bar",
+        &pt::Identifier {
+            name: "bar".to_string(),
+            loc: pt::Loc::Implicit,
+        },
         pt::ContractTy::Contract(pt::Loc::Implicit),
         Vec::new(),
         pt::Loc::Implicit,

@@ -2692,7 +2692,7 @@ fn contract_call_named_args(
                 *loc,
                 format!(
                     "contract '{}' does not have function '{}'",
-                    ns.contracts[external_contract_no].name, func_name.name
+                    ns.contracts[external_contract_no].id, func_name.name
                 ),
             ));
         }
@@ -2936,7 +2936,7 @@ fn preprocess_contract_call<T>(
                 *loc,
                 format!(
                     "'{}' constructor takes no argument",
-                    ns.contracts[external_contract_no].name
+                    ns.contracts[external_contract_no].id
                 ),
             ));
             return PreProcessedCall::Error;

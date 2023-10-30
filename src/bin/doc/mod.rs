@@ -186,7 +186,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
                 name: &event_decl.name,
                 contract: event_decl
                     .contract
-                    .map(|contract_no| file.contracts[contract_no].name.as_str()),
+                    .map(|contract_no| file.contracts[contract_no].id.name.as_str()),
                 title: get_tag("title", &event_decl.tags),
                 notice: get_tag("notice", &event_decl.tags),
                 author: get_tag("author", &event_decl.tags),
@@ -356,7 +356,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
                 for var in base
                     .variables
                     .iter()
-                    .map(|var| map_var(file, Some(&base.name), var))
+                    .map(|var| map_var(file, Some(&base.id.name), var))
                 {
                     base_variables.push(var);
                 }
@@ -365,7 +365,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
                     let f = &file.functions[*function_no];
 
                     if f.has_body {
-                        Some(map_func(file, Some(&base.name), f))
+                        Some(map_func(file, Some(&base.id.name), f))
                     } else {
                         None
                     }
@@ -376,7 +376,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
 
             top.contracts.push(Contract {
                 loc: contract.loc,
-                name: &contract.name,
+                name: &contract.id.name,
                 ty: format!("{}", contract.ty),
                 title: get_tag("title", &contract.tags),
                 notice: get_tag("notice", &contract.tags),

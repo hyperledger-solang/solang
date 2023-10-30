@@ -851,7 +851,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         // code hash
         let codehash = binary.emit_global_string(
-            &format!("binary_{}_codehash", created_contract.name),
+            &format!("binary_{}_codehash", created_contract.id),
             blake2_rfc::blake2b::blake2b(32, &[], &code).as_bytes(),
             true,
         );

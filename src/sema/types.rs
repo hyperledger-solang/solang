@@ -263,7 +263,7 @@ fn type_decl(
         loc: def.loc,
         name: def.name.name.to_string(),
         ty,
-        contract: contract_no.map(|no| ns.contracts[no].name.to_string()),
+        contract: contract_no.map(|no| ns.contracts[no].id.to_string()),
     });
 }
 
@@ -449,7 +449,7 @@ fn resolve_contract<'a>(
     );
 
     ns.contracts
-        .push(Contract::new(&name.name, def.ty.clone(), doc, def.loc));
+        .push(Contract::new(name, def.ty.clone(), doc, def.loc));
 
     contract_annotations(contract_no, &def.annotations, ns);
 
@@ -627,7 +627,7 @@ fn contract_annotations(
                 note.loc,
                 format!(
                     "unknown annotation '{}' on contract {}",
-                    note.id.name, ns.contracts[contract_no].name,
+                    note.id.name, ns.contracts[contract_no].id,
                 ),
             ));
             continue;
@@ -1076,7 +1076,7 @@ fn enum_decl(
         name: enum_.name.as_ref().unwrap().name.to_string(),
         loc: enum_.loc,
         contract: match contract_no {
-            Some(c) => Some(ns.contracts[c].name.to_owned()),
+            Some(c) => Some(ns.contracts[c].id.name.to_owned()),
             None => None,
         },
         ty: Type::Uint(8),
@@ -1289,7 +1289,7 @@ impl Type {
 
                 s
             }
-            Type::Contract(n) => format!("contract {}", ns.contracts[*n].name),
+            Type::Contract(n) => format!("contract {}", ns.contracts[*n].id),
             Type::UserType(n) => format!("usertype {}", ns.user_types[*n]),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(_, ty) => {
@@ -2104,7 +2104,7 @@ impl Type {
                     value.to_llvm_string(ns)
                 )
             }
-            Type::Contract(i) => ns.contracts[*i].name.to_owned(),
+            Type::Contract(i) => ns.contracts[*i].id.name.to_owned(),
             Type::InternalFunction { .. } => "function".to_owned(),
             Type::ExternalFunction { .. } => "function".to_owned(),
             Type::Ref(r) => r.to_llvm_string(ns),

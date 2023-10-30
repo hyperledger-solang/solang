@@ -336,7 +336,15 @@ fn resolve_variable_contract() {
     let mut function_table = FunctionsTable::new(0);
     let mut ns = Namespace::new(Target::EVM);
     let loc = Loc::File(0, 2, 3);
-    let mut contract = ast::Contract::new("test", ContractTy::Contract(loc), vec![], loc);
+    let mut contract = ast::Contract::new(
+        &pt::Identifier {
+            name: "test".to_string(),
+            loc: pt::Loc::Codegen,
+        },
+        ContractTy::Contract(loc),
+        vec![],
+        loc,
+    );
     contract.variables.push(Variable {
         tags: vec![],
         name: "var1".to_string(),
@@ -785,7 +793,15 @@ fn test_member_access() {
     let mut ns = Namespace::new(Target::EVM);
     let loc = Loc::File(0, 2, 3);
 
-    let mut contract = ast::Contract::new("test", ContractTy::Contract(loc), vec![], loc);
+    let mut contract = ast::Contract::new(
+        &pt::Identifier {
+            name: "test".into(),
+            loc: pt::Loc::Builtin,
+        },
+        ContractTy::Contract(loc),
+        vec![],
+        loc,
+    );
     contract.variables.push(Variable {
         tags: vec![],
         name: "var1".to_string(),
@@ -880,7 +896,15 @@ fn test_check_types() {
     let context = ExprContext::default();
 
     let mut ns = Namespace::new(Target::EVM);
-    let mut contract = ast::Contract::new("test", ContractTy::Contract(loc), vec![], loc);
+    let mut contract = ast::Contract::new(
+        &pt::Identifier {
+            name: "test".into(),
+            loc: pt::Loc::Builtin,
+        },
+        ContractTy::Contract(loc),
+        vec![],
+        loc,
+    );
     contract.variables.push(Variable {
         tags: vec![],
         name: "var1".to_string(),
