@@ -632,11 +632,11 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     diagnostics.push(ast::Diagnostic::error_with_note(
                         loc,
                         format!(
-                            "contract '{}' missing override for '{}' function",
+                            "contract '{}' missing override for {} function",
                             ns.contracts[contract_no].id, func.ty
                         ),
                         func.loc,
-                        format!("declaration of '{}' function", func.ty),
+                        format!("declaration of {} function", func.ty),
                     ));
                 }
                 _ => diagnostics.push(ast::Diagnostic::error_with_note(

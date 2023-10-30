@@ -530,18 +530,6 @@ impl Function {
     pub fn is_private(&self) -> bool {
         matches!(self.visibility, pt::Visibility::Private(_))
     }
-
-    /// Print the function type, contract name, and name
-    pub fn print_name(&self, ns: &Namespace) -> String {
-        if let Some(contract_no) = &self.contract_no {
-            format!(
-                "{} {}.{}",
-                self.ty, ns.contracts[*contract_no].id, self.name
-            )
-        } else {
-            format!("{} {}", self.ty, self.name)
-        }
-    }
 }
 
 impl From<&pt::Type> for Type {
