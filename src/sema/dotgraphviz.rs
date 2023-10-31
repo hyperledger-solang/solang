@@ -1452,19 +1452,13 @@ impl Dot {
                 );
                 self.add_expression(array, func, ns, node, format!("member: {}", name));
             }
-            Expression::EventSelector { event_no, .. } => {
+            Expression::EventSelector { loc, event_no, .. } => {
                 let event = &ns.events[*event_no];
 
-                let mut labels = Vec::new();
-
-                if let Some(contract) = event.contract {
-                    labels.insert(
-                        1,
-                        format!("event {}.{}", ns.contracts[contract].id.name, event.name),
-                    );
-                } else {
-                    labels.insert(1, format!("event {}", event.name));
-                }
+                let labels = vec![
+                    format!("event selector {}", event.symbol_name(ns)),
+                    ns.loc_to_string(PathDisplay::FullPath, loc),
+                ];
 
                 self.add_node(
                     Node::new("event_selector", labels),
@@ -2504,7 +2498,7 @@ impl Namespace {
 
             for decl in &self.events {
                 let mut labels = vec![
-                    format!("name:{}", decl.name),
+                    format!("name:{}", decl.id),
                     self.loc_to_string(PathDisplay::FullPath, &decl.loc),
                 ];
 
@@ -2525,7 +2519,7 @@ impl Namespace {
                     ));
                 }
 
-                let e = Node::new(&decl.name, labels);
+                let e = Node::new(&decl.id.name, labels);
 
                 let node = dot.add_node(e, Some(events), None);
 

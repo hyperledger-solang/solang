@@ -169,7 +169,7 @@ pub struct StructDecl {
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct EventDecl {
     pub tags: Vec<Tag>,
-    pub name: String,
+    pub id: pt::Identifier,
     pub loc: pt::Loc,
     pub contract: Option<usize>,
     pub fields: Vec<Parameter>,
@@ -181,8 +181,8 @@ pub struct EventDecl {
 impl EventDecl {
     pub fn symbol_name(&self, ns: &Namespace) -> String {
         match &self.contract {
-            Some(c) => format!("{}.{}", ns.contracts[*c].id, self.name),
-            None => self.name.to_string(),
+            Some(c) => format!("{}.{}", ns.contracts[*c].id, self.id),
+            None => self.id.to_string(),
         }
     }
 }

@@ -22,7 +22,7 @@ pub(super) struct SolanaEventEmitter<'a> {
 
 impl EventEmitter for SolanaEventEmitter<'_> {
     fn selector(&self, _: usize) -> Vec<u8> {
-        let discriminator_image = format!("event:{}", self.ns.events[self.event_no].name);
+        let discriminator_image = format!("event:{}", self.ns.events[self.event_no].id);
         let mut hasher = Sha256::new();
         hasher.update(discriminator_image);
         let result = hasher.finalize();

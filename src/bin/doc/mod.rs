@@ -183,7 +183,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
             }
 
             top.events.push(EventDecl {
-                name: &event_decl.name,
+                name: &event_decl.id.name,
                 contract: event_decl
                     .contract
                     .map(|contract_no| file.contracts[contract_no].id.name.as_str()),
@@ -192,7 +192,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
                 author: get_tag("author", &event_decl.tags),
                 dev: get_tag("dev", &event_decl.tags),
                 anonymous: event_decl.anonymous,
-                loc: event_decl.loc,
+                loc: event_decl.id.loc,
                 field,
             });
         }

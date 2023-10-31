@@ -699,8 +699,8 @@ fn event_selector(
                     .map(|ev_no| {
                         let ev = &ns.events[ev_no];
                         Note {
-                            loc: ev.loc,
-                            message: format!("possible definition of '{}'", ev.name),
+                            loc: ev.id.loc,
+                            message: format!("possible definition of '{}'", ev.id),
                         }
                     })
                     .collect();

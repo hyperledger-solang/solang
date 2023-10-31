@@ -1302,7 +1302,7 @@ fn emit_event(
                         *loc,
                         format!(
                             "event type '{}' has {} fields, {} provided",
-                            event.name,
+                            event.id,
                             event.fields.len(),
                             args.len()
                         ),
@@ -1417,10 +1417,10 @@ fn emit_event(
                     temp_diagnostics.push(Diagnostic::cast_error_with_note(
                         *loc,
                         format!(
-                            "event cannot be emmited with named fields as {unnamed_fields} of its fields do not have names"
+                            "event cannot be emitted with named fields as {unnamed_fields} of its fields do not have names"
                         ),
-                        event.loc,
-                        format!("definition of {}", event.name),
+                        event.id.loc,
+                        format!("definition of {}", event.id),
                     ));
                     matches = false;
                 } else if params_len != arguments.len() {
@@ -1454,7 +1454,7 @@ fn emit_event(
                                 format!(
                                     "missing argument '{}' to event '{}'",
                                     param.name_as_str(),
-                                    ns.events[*event_no].name,
+                                    ns.events[*event_no].id,
                                 ),
                             ));
                             continue;

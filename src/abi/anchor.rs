@@ -85,7 +85,7 @@ fn idl_events(
             }
 
             events.push(IdlEvent {
-                name: def.name.clone(),
+                name: def.id.name.clone(),
                 fields,
             });
         }

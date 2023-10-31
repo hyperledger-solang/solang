@@ -1676,8 +1676,8 @@ impl<'a> Builder<'a> {
             self.hovers.push((
                 file_no,
                 HoverEntry {
-                    start: event.loc.start(),
-                    stop: event.loc.start() + event.name.len(),
+                    start: event.id.loc.start(),
+                    stop: event.id.loc.exclusive_end(),
                     val: render(&event.tags[..]),
                 },
             ));
@@ -1687,7 +1687,7 @@ impl<'a> Builder<'a> {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Event(ei),
                 },
-                loc_to_range(&event.loc, file),
+                loc_to_range(&event.id.loc, file),
             );
         }
 

@@ -449,7 +449,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     .done()
             })
             .collect::<Vec<_>>();
-        EventSpec::new(e.name.clone())
+        EventSpec::new(e.id.name.clone())
             .args(args)
             .docs(vec![render(&e.tags).as_str()])
             .done()
