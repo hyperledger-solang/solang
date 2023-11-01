@@ -670,47 +670,44 @@ fn event_selector(
     }
 
     if let Ok(events) = ns.resolve_event(file_no, contract_no, expr, &mut Diagnostics::default()) {
-        match events.len() {
-            0 => Ok(None),
-            1 => {
-                let event_no = events[0];
+        if events.len() == 1 {
+            let event_no = events[0];
 
-                if ns.events[event_no].anonymous {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        "anonymous event has no selector".into(),
-                    ));
-                    Err(())
-                } else {
-                    Ok(Some(Expression::EventSelector {
-                        loc: *loc,
-                        event_no,
-                        ty: if ns.target == Target::Solana {
-                            Type::Bytes(8)
-                        } else {
-                            Type::Bytes(32)
-                        },
-                    }))
-                }
-            }
-            _ => {
-                let notes = events
-                    .into_iter()
-                    .map(|ev_no| {
-                        let ev = &ns.events[ev_no];
-                        Note {
-                            loc: ev.id.loc,
-                            message: format!("possible definition of '{}'", ev.id),
-                        }
-                    })
-                    .collect();
-                diagnostics.push(Diagnostic::error_with_notes(
+            if ns.events[event_no].anonymous {
+                diagnostics.push(Diagnostic::error(
                     *loc,
-                    "multiple definitions of event".into(),
-                    notes,
+                    "anonymous event has no selector".into(),
                 ));
                 Err(())
+            } else {
+                Ok(Some(Expression::EventSelector {
+                    loc: *loc,
+                    event_no,
+                    ty: if ns.target == Target::Solana {
+                        Type::Bytes(8)
+                    } else {
+                        Type::Bytes(32)
+                    },
+                }))
             }
+        } else {
+            let notes = events
+                .into_iter()
+                .map(|ev_no| {
+                    let ev = &ns.events[ev_no];
+                    Note {
+                        loc: ev.id.loc,
+                        message: format!("possible definition of '{}'", ev.id),
+                    }
+                })
+                .collect();
+
+            diagnostics.push(Diagnostic::error_with_notes(
+                *loc,
+                "multiple definitions of event".into(),
+                notes,
+            ));
+            Err(())
         }
     } else {
         Ok(None)
