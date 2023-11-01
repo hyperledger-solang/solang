@@ -3,6 +3,7 @@
 use path_slash::PathExt;
 use rayon::prelude::*;
 use solang::{
+    abi::generate_abi,
     codegen,
     file_resolver::FileResolver,
     parse_and_resolve,
@@ -92,16 +93,18 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
 
     if !ns.diagnostics.any_errors() {
         // let's try and emit
-        match ns.target {
-            Target::Solana | Target::Polkadot { .. } => {
-                for contract in &ns.contracts {
-                    if contract.instantiable {
-                        let _ = contract.emit(&ns, &Default::default());
+        for contract_no in 0..ns.contracts.len() {
+            let contract = &ns.contracts[contract_no];
+
+            if contract.instantiable {
+                let code = match ns.target {
+                    Target::Solana | Target::Polkadot { .. } => {
+                        contract.emit(&ns, &Default::default())
                     }
-                }
-            }
-            Target::EVM => {
-                // not implemented yet
+                    Target::EVM => b"beep".to_vec(),
+                };
+
+                let _ = generate_abi(contract_no, &ns, &code, false, &["unknown".into()], "0.1.0");
             }
         }
     }

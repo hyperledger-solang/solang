@@ -31,23 +31,33 @@ fn create_output_dir() {
     let test2 = tmp.path().join("test2");
     let test2_meta = tmp.path().join("test2_meta");
 
-    cmd.args([
-        "compile",
-        "examples/solana/flipper.sol",
-        "--target",
-        "solana",
-        "--contract",
-        "flipper",
-        "--output",
-    ])
-    .arg(test2.clone())
-    .arg("--output-meta")
-    .arg(test2_meta.clone())
-    .assert()
-    .success();
+    let assert = cmd
+        .args([
+            "compile",
+            "examples/solana/flipper.sol",
+            "--target",
+            "solana",
+            "--contract",
+            "flipper",
+            "--contract-authors",
+            "itchy and cratchy",
+            "--output",
+        ])
+        .arg(test2.clone())
+        .arg("--output-meta")
+        .arg(test2_meta.clone())
+        .assert()
+        .success();
 
     File::open(test2.join("flipper.so")).expect("should exist");
     File::open(test2_meta.join("flipper.json")).expect("should exist");
+
+    let output = assert.get_output();
+
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "warning: the `authors` flag will be ignored for Solana target\n"
+    );
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
 

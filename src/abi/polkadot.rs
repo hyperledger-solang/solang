@@ -544,7 +544,7 @@ pub fn metadata(
     contract_no: usize,
     code: &[u8],
     ns: &ast::Namespace,
-    default_authors: &Vec<String>,
+    default_authors: &[String],
     contract_version: &str,
 ) -> Value {
     let hash = blake2_rfc::blake2b::blake2b(32, &[], code);

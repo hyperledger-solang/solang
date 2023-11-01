@@ -904,7 +904,7 @@ pub fn resolve_params(
                             "parameter of type '{}' not alowed in public or external functions",
                             ty.to_string(ns)
                         );
-                        ns.diagnostics.push(Diagnostic::error(p.ty.loc(), message));
+                        diagnostics.push(Diagnostic::error(p.ty.loc(), message));
                         success = false
                     }
                 }
@@ -1032,7 +1032,7 @@ pub fn resolve_returns(
                             "return type '{}' not allowed in public or external functions",
                             ty.to_string(ns)
                         );
-                        ns.diagnostics.push(Diagnostic::error(r.ty.loc(), message));
+                        diagnostics.push(Diagnostic::error(r.ty.loc(), message));
                         success = false
                     }
                 }
