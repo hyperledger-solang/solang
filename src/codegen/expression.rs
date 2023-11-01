@@ -1626,14 +1626,10 @@ fn payable_send(
         },
     );
 
-    if ns.target.is_polkadot() {
+    if ns.target != Target::Solana {
         polkadot::check_transfer_ret(loc, success, cfg, ns, opt, vartab, false).unwrap()
     } else {
-        Expression::Variable {
-            loc: *loc,
-            ty: Type::Bool,
-            var_no: success,
-        }
+        unreachable!("Value transfer does not exist on Solana");
     }
 }
 
