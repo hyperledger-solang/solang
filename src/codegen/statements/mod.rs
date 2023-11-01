@@ -52,6 +52,10 @@ pub(crate) fn statement(
                     return_override,
                     opt,
                 );
+
+                if !stmt.reachable() {
+                    break;
+                }
             }
         }
         Statement::VariableDecl(loc, pos, _, Some(init)) => {

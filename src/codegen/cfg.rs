@@ -1793,6 +1793,10 @@ fn function_cfg(
             None,
             opt,
         );
+
+        if !stmt.reachable() {
+            break;
+        }
     }
 
     if func.body.last().map(Statement::reachable).unwrap_or(true) {

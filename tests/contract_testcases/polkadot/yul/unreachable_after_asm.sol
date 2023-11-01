@@ -14,6 +14,7 @@ contract testTypes {
 } 
 
 // ---- Expect: diagnostics ----
-// error: 5:19-32: flag 'memory-safe' not supported
-// error: 5:34-39: flag 'meh' not supported
-// error: 10:9-12:10: unreachable statement
+// warning: 2:5-14: storage variable 'b' has been assigned, but never read
+// warning: 5:19-32: flag 'memory-safe' not supported
+// warning: 5:34-39: flag 'meh' not supported
+// warning: 10:9-12:10: unreachable statement
