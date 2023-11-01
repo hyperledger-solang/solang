@@ -1,13 +1,14 @@
 contract balances {
-	function get_balance(address addr) public view returns (uint64) {
-		return addr.balance;
+    @account(acc1)
+	function get_balance() external view returns (uint64) {
+		return tx.accounts.acc1.lamports;
 	}
 
-	function transfer(address payable addr, uint64 amount) public {
-		addr.transfer(amount);
+    @mutableAccount(acc1)
+    @mutableAccount(acc2)
+	function transfer(uint64 amount) external {
+		tx.accounts.acc1.lamports -= amount;
+        tx.accounts.acc2.lamports += amount;
 	}
 
-	function send(address payable addr, uint64 amount) public returns (bool) {
-		return addr.send(amount);
-	}
 }

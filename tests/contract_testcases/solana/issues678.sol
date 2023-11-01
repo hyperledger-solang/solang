@@ -56,3 +56,4 @@ contract Shares {
 }
 
 // ---- Expect: diagnostics ----
+// error: 43:29-42: balance is not available on Solana. Use tx.accounts.account_name.lamports to fetch the balance.

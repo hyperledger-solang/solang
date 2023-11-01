@@ -5,6 +5,6 @@ contract DTron {
     function moneyDeposit(address[] memory thanksCash, uint256[] memory amount) public payable {
         // CHECK: ty:address payable %receiver = address payable(address((sext uint256 (trunc uint160 uint256((load (subscript address[] (arg #0)[uint32 2])))))))
         address payable receiver = payable(address(uint160(thanksCash[2])));
-        receiver.transfer(amount[2]);
+        assert(receiver == address(this));
     }
 }

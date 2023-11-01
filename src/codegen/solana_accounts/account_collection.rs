@@ -263,12 +263,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
             }
         }
 
-        Instr::ValueTransfer {
-            address: expr1,
-            value: expr2,
-            ..
-        }
-        | Instr::ReturnData {
+        Instr::ReturnData {
             data: expr1,
             data_len: expr2,
         }
@@ -445,6 +440,8 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 expr.recurse(data, check_expression);
             }
         }
+
+        Instr::ValueTransfer { .. } => unreachable!("Value transfer does not exist on Solana"),
         Instr::AccountAccess { .. } => (),
     }
 }
