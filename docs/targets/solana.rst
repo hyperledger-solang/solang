@@ -52,6 +52,8 @@ Runtime
 - Contracts :ref:`cannot be types <contracts_not_types>` on Solana and :ref:`calls to contracts <solana_contract_call>`
   follow a different syntax.
 - Accounts can be declared on functions using :ref:`annotations <account_management>`.
+- :ref:`Retrieving the balance <balance>` and :ref:`transferring values <send_transfer>`
+  utilize the ``AccountInfo`` struct.
 
 
 Compute budget

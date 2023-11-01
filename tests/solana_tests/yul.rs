@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{build_solidity, AccountMeta, BorshToken, Pubkey};
+use crate::{build_solidity, BorshToken};
 use num_bigint::{BigInt, Sign};
 use num_traits::{One, Zero};
 
@@ -506,20 +506,6 @@ contract testing  {
             ret := a
         }
     }
-
-    function test_balance() public view returns (uint256 ret) {
-        assembly {
-            let a := address()
-            ret := balance(a)
-        }
-    }
-
-    function test_selfbalance() public view returns (uint256 ret) {
-        assembly {
-            let a := selfbalance()
-            ret := a
-        }
-    }
 }"#,
     );
 
@@ -539,42 +525,6 @@ contract testing  {
         b_vec.insert(0, 0);
     }
     assert_eq!(&b_vec, program_id.as_ref());
-
-    runtime.account_data.get_mut(&program_id).unwrap().lamports = 102;
-    let returns = runtime
-        .function("test_balance")
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(program_id),
-            is_writable: false,
-            is_signer: false,
-        }])
-        .call()
-        .unwrap();
-    assert_eq!(
-        returns,
-        BorshToken::Uint {
-            width: 256,
-            value: BigInt::from(102u8),
-        }
-    );
-
-    let returns = runtime
-        .function("test_selfbalance")
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(program_id),
-            is_signer: false,
-            is_writable: false,
-        }])
-        .call()
-        .unwrap();
-
-    assert_eq!(
-        returns,
-        BorshToken::Uint {
-            width: 256,
-            value: BigInt::from(102u8),
-        },
-    );
 }
 
 #[test]

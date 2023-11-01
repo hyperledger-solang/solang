@@ -46,3 +46,4 @@ contract MyContract {
 
 
 // ---- Expect: diagnostics ----
+// error: 34:13-57: method 'transfer' not available on Solana. Use the lamports field from the AccountInfo struct directly to operate on balances.
