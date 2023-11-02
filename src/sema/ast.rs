@@ -160,7 +160,7 @@ pub struct StructDecl {
     pub id: pt::Identifier,
     pub loc: pt::Loc,
     pub contract: Option<String>,
-    pub fields: Vec<Parameter>,
+    pub fields: Vec<Parameter<Type>>,
     // List of offsets of the fields, last entry is the offset for the struct overall size
     pub offsets: Vec<BigInt>,
     // Same, but now in storage
@@ -173,7 +173,7 @@ pub struct EventDecl {
     pub id: pt::Identifier,
     pub loc: pt::Loc,
     pub contract: Option<usize>,
-    pub fields: Vec<Parameter>,
+    pub fields: Vec<Parameter<Type>>,
     pub signature: String,
     pub anonymous: bool,
     pub used: bool,
@@ -194,7 +194,7 @@ pub struct ErrorDecl {
     pub name: String,
     pub loc: pt::Loc,
     pub contract: Option<usize>,
-    pub fields: Vec<Parameter>,
+    pub fields: Vec<Parameter<Type>>,
     pub used: bool,
 }
 
@@ -240,7 +240,7 @@ impl fmt::Display for EnumDecl {
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub struct Parameter {
+pub struct Parameter<Type> {
     pub loc: pt::Loc,
     /// The name can empty (e.g. in an event field or unnamed parameter/return)
     pub id: Option<pt::Identifier>,
@@ -266,7 +266,7 @@ pub struct ParameterAnnotation {
     pub id: pt::Identifier,
 }
 
-impl Parameter {
+impl Parameter<Type> {
     /// Create a new instance of the given `Type`, with all other values set to their default.
     pub fn new_default(ty: Type) -> Self {
         Self {
@@ -328,8 +328,8 @@ pub struct Function {
     pub signature: String,
     pub mutability: Mutability,
     pub visibility: pt::Visibility,
-    pub params: Arc<Vec<Parameter>>,
-    pub returns: Arc<Vec<Parameter>>,
+    pub params: Arc<Vec<Parameter<Type>>>,
+    pub returns: Arc<Vec<Parameter<Type>>>,
     /// Constructor arguments for base contracts, only present on constructors
     pub bases: BTreeMap<usize, (pt::Loc, usize, Vec<Expression>)>,
     /// Modifiers for functions
@@ -385,8 +385,8 @@ pub struct ConstructorAnnotations {
 /// for both yul and solidity functions
 pub trait FunctionAttributes {
     fn get_symbol_table(&self) -> &Symtable;
-    fn get_parameters(&self) -> &Vec<Parameter>;
-    fn get_returns(&self) -> &Vec<Parameter>;
+    fn get_parameters(&self) -> &Vec<Parameter<Type>>;
+    fn get_returns(&self) -> &Vec<Parameter<Type>>;
 }
 
 impl FunctionAttributes for Function {
@@ -394,11 +394,11 @@ impl FunctionAttributes for Function {
         &self.symtable
     }
 
-    fn get_parameters(&self) -> &Vec<Parameter> {
+    fn get_parameters(&self) -> &Vec<Parameter<Type>> {
         &self.params
     }
 
-    fn get_returns(&self) -> &Vec<Parameter> {
+    fn get_returns(&self) -> &Vec<Parameter<Type>> {
         &self.returns
     }
 }
@@ -413,8 +413,8 @@ impl Function {
         ty: pt::FunctionTy,
         mutability: Option<pt::Mutability>,
         visibility: pt::Visibility,
-        params: Vec<Parameter>,
-        returns: Vec<Parameter>,
+        params: Vec<Parameter<Type>>,
+        returns: Vec<Parameter<Type>>,
         ns: &Namespace,
     ) -> Self {
         let signature = match ty {
@@ -1805,7 +1805,7 @@ pub enum Statement {
         unchecked: bool,
         statements: Vec<Statement>,
     },
-    VariableDecl(pt::Loc, usize, Parameter, Option<Arc<Expression>>),
+    VariableDecl(pt::Loc, usize, Parameter<Type>, Option<Arc<Expression>>),
     If(pt::Loc, bool, Expression, Vec<Statement>, Vec<Statement>),
     While(pt::Loc, bool, Expression, Vec<Statement>),
     For {
@@ -1842,7 +1842,7 @@ pub enum Statement {
 #[derive(Clone, Debug)]
 pub struct TryCatch {
     pub expr: Expression,
-    pub returns: Vec<(Option<usize>, Parameter)>,
+    pub returns: Vec<(Option<usize>, Parameter<Type>)>,
     pub ok_stmt: Vec<Statement>,
     pub errors: Vec<CatchClause>,
     pub catch_all: Option<CatchClause>,
@@ -1850,7 +1850,7 @@ pub struct TryCatch {
 
 #[derive(Clone, Debug)]
 pub struct CatchClause {
-    pub param: Option<Parameter>,
+    pub param: Option<Parameter<Type>>,
     pub param_pos: Option<usize>,
     pub stmt: Vec<Statement>,
 }
@@ -1860,7 +1860,7 @@ pub struct CatchClause {
 pub enum DestructureField {
     None,
     Expression(Expression),
-    VariableDecl(usize, Parameter),
+    VariableDecl(usize, Parameter<Type>),
 }
 
 impl OptionalCodeLocation for DestructureField {

@@ -4,12 +4,13 @@ use crate::num_literal;
 use crate::ssa_ir_tests::helpers::{identifier, num_literal};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
+use solang::sema::ast::Parameter;
 use solang::ssa_ir::printer::Printer;
 use solang::ssa_ir::vartable::{Storage, Var};
 use solang::ssa_ir::{
     cfg::{Block, Cfg},
     insn::Insn,
-    ssa_type::{Parameter, Type},
+    ssa_type::Type,
     vartable::Vartable,
 };
 use solang::stringfy_cfg;
@@ -134,7 +135,7 @@ fn new_cfg(blocks: Vec<Block>) -> Cfg {
     }
 }
 
-fn new_parameter(name: String, ty: Type) -> Parameter {
+fn new_parameter(name: String, ty: Type) -> Parameter<Type> {
     Parameter {
         loc: Loc::Codegen,
         id: Some(Identifier::new(name)),

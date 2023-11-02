@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::BasicBlock;
-use crate::sema::ast;
+use crate::sema::ast::{self, Parameter};
 use crate::ssa_ir::cfg::{Block, Cfg};
 use crate::ssa_ir::converter::Converter;
-use crate::ssa_ir::ssa_type::Parameter;
+use crate::ssa_ir::ssa_type;
 use crate::ssa_ir::vartable::Vartable;
 
 impl Converter<'_> {
@@ -23,20 +23,20 @@ impl Converter<'_> {
             .params
             .iter()
             .map(|p| self.convert_ast_parameter(p))
-            .collect::<Result<Vec<Parameter>, String>>()?;
+            .collect::<Result<Vec<Parameter<ssa_type::Type>>, String>>()?;
 
         let returns = self
             .cfg
             .returns
             .iter()
             .map(|p| self.convert_ast_parameter(p))
-            .collect::<Result<Vec<Parameter>, String>>()?;
+            .collect::<Result<Vec<Parameter<ssa_type::Type>>, String>>()?;
 
         let ssa_ir_cfg = Cfg {
             name: self.cfg.name.clone(),
             function_no: self.cfg.function_no,
-            params: params,
-            returns: returns,
+            params,
+            returns,
             vartable,
             blocks,
             nonpayable: self.cfg.nonpayable,
@@ -67,7 +67,10 @@ impl Converter<'_> {
         Ok(block)
     }
 
-    fn convert_ast_parameter(&self, param: &ast::Parameter) -> Result<Parameter, String> {
+    fn convert_ast_parameter(
+        &self,
+        param: &Parameter<ast::Type>,
+    ) -> Result<Parameter<ssa_type::Type>, String> {
         let ty = self.from_ast_type(&param.ty)?;
         Ok(Parameter {
             loc: param.loc,

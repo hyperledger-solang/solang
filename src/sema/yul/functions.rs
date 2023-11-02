@@ -18,8 +18,8 @@ use std::sync::Arc;
 /// resolving the function's body
 pub struct FunctionHeader {
     pub id: pt::Identifier,
-    pub params: Arc<Vec<Parameter>>,
-    pub returns: Arc<Vec<Parameter>>,
+    pub params: Arc<Vec<Parameter<Type>>>,
+    pub returns: Arc<Vec<Parameter<Type>>>,
     pub function_no: usize,
     called: bool,
 }
@@ -72,18 +72,6 @@ impl FunctionsTable {
         None
     }
 
-    pub fn get_params_returns_func_no(
-        &self,
-        name: &str,
-    ) -> (Arc<Vec<Parameter>>, Arc<Vec<Parameter>>, usize) {
-        let header = self.find(name).unwrap();
-        (
-            header.params.clone(),
-            header.returns.clone(),
-            header.function_no,
-        )
-    }
-
     pub fn get(&self, index: usize) -> Option<&FunctionHeader> {
         if let Some(func_data) = self.lookup.get_index(index - self.offset) {
             Some(func_data.1)
@@ -95,8 +83,8 @@ impl FunctionsTable {
     pub fn add_function_header(
         &mut self,
         id: &pt::Identifier,
-        params: Vec<Parameter>,
-        returns: Vec<Parameter>,
+        params: Vec<Parameter<Type>>,
+        returns: Vec<Parameter<Type>>,
     ) -> Option<Diagnostic> {
         if let Some(func) = self.find(&id.name) {
             return Some(Diagnostic {
@@ -152,8 +140,11 @@ impl FunctionsTable {
 }
 
 /// Resolve the parameters of a function declaration
-fn process_parameters(parameters: &[pt::YulTypedIdentifier], ns: &mut Namespace) -> Vec<Parameter> {
-    let mut params: Vec<Parameter> = Vec::with_capacity(parameters.len());
+fn process_parameters(
+    parameters: &[pt::YulTypedIdentifier],
+    ns: &mut Namespace,
+) -> Vec<Parameter<Type>> {
+    let mut params: Vec<Parameter<Type>> = Vec::with_capacity(parameters.len());
     for item in parameters {
         let ty = match &item.ty {
             Some(identifier) => {
@@ -249,7 +240,10 @@ pub(crate) fn resolve_function_definition(
         context.yul_function = prev_yul_function;
     });
 
-    let (params, returns, func_no) = functions_table.get_params_returns_func_no(&func_def.id.name);
+    let function_header = functions_table.find(&func_def.id.name).unwrap();
+    let params = function_header.params.clone();
+    let returns = function_header.returns.clone();
+    let func_no = function_header.function_no;
 
     for item in &*params {
         let pos = symtable.exclusive_add(

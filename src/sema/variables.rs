@@ -523,10 +523,10 @@ fn collect_parameters(
     name: &Option<pt::Identifier>,
     symtable: &mut Symtable,
     context: &mut ExprContext,
-    params: &mut Vec<Parameter>,
+    params: &mut Vec<Parameter<Type>>,
     expr: &mut Expression,
     ns: &mut Namespace,
-) -> Option<Parameter> {
+) -> Option<Parameter<Type>> {
     match ty {
         Type::Mapping(Mapping {
             key,
@@ -659,12 +659,12 @@ fn collect_parameters(
 /// Build up an ast for the implict accessor function for public state variables.
 fn accessor_body(
     expr: Expression,
-    param: Parameter,
+    param: Parameter<Type>,
     constant: bool,
     symtable: &mut Symtable,
     context: &mut ExprContext,
     ns: &mut Namespace,
-) -> (Vec<Statement>, Vec<Parameter>) {
+) -> (Vec<Statement>, Vec<Parameter<Type>>) {
     // This could be done in codegen rather than sema, however I am not sure how we would implement
     // that. After building up the parameter/returns list for the implicit function, we have done almost
     // all the work already for building the body (see `expr` and `param` above). So, we would need to

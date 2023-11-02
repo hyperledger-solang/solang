@@ -478,7 +478,7 @@ pub(crate) fn resolve_function_call(
 
 /// Check if the provided argument is compatible with the declared parameters of a function.
 fn check_function_argument(
-    parameter: &Parameter,
+    parameter: &Parameter<Type>,
     argument: &YulExpression,
     function_table: &FunctionsTable,
     ns: &mut Namespace,

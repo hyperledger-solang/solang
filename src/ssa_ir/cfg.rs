@@ -2,16 +2,18 @@
 
 use crate::codegen::cfg::ASTFunction;
 use crate::pt::FunctionTy;
+use crate::sema::ast::Parameter;
 use crate::ssa_ir::insn::Insn;
-use crate::ssa_ir::ssa_type::Parameter;
 use crate::ssa_ir::vartable::Vartable;
+
+use super::ssa_type::Type;
 
 #[derive(Debug)]
 pub struct Cfg {
     pub name: String,
     pub function_no: ASTFunction,
-    pub params: Vec<Parameter>,
-    pub returns: Vec<Parameter>,
+    pub params: Vec<Parameter<Type>>,
+    pub returns: Vec<Parameter<Type>>,
     pub vartable: Vartable,
     pub blocks: Vec<Block>,
     pub nonpayable: bool,

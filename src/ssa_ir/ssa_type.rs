@@ -2,12 +2,8 @@
 
 use std::fmt;
 
-use solang_parser::pt::Identifier;
-
-use crate::pt::Loc;
 use crate::sema::ast;
 use crate::sema::ast::ArrayLength;
-use crate::sema::ast::ParameterAnnotation;
 use crate::ssa_ir::expr::Operand;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -71,27 +67,6 @@ pub enum InternalCallTy {
 pub struct PhiInput {
     pub operand: Operand,
     pub block_no: usize,
-}
-
-#[derive(Clone, Debug)]
-pub struct Parameter {
-    pub loc: Loc,
-    /// The name can empty (e.g. in an event field or unnamed parameter/return)
-    pub id: Option<Identifier>,
-    pub ty: Type,
-    /// Yul function parameters may not have a type identifier
-    pub ty_loc: Option<Loc>,
-    /// Event fields may indexed, which means they are sent to the log
-    pub indexed: bool,
-    /// Some builtin structs have readonly fields
-    pub readonly: bool,
-    /// A recursive struct may contain itself which make the struct infinite size in memory.
-    pub infinite_size: bool,
-    /// Is this struct field recursive. Recursive does not mean infinite size in all cases:
-    /// `struct S { S[] s }` is recursive but not of infinite size.
-    pub recursive: bool,
-
-    pub annotation: Option<ParameterAnnotation>,
 }
 
 impl From<&ast::StructType> for StructType {
