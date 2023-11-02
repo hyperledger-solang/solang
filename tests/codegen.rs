@@ -34,11 +34,11 @@ fn run_test_for_path(path: &str) {
 
 #[derive(Debug)]
 enum Test {
-    Check(String),
-    CheckAbsent(String),
-    NotCheck(String),
-    Fail(String),
-    Rewind,
+    Check(usize, String),
+    CheckAbsent(usize, String),
+    NotCheck(usize, String),
+    Fail(usize, String),
+    Rewind(usize),
 }
 
 fn testcase(path: PathBuf) {
@@ -52,7 +52,7 @@ fn testcase(path: PathBuf) {
     let mut fails = Vec::new();
     let mut read_from = None;
 
-    for line in reader.lines() {
+    for (line_no, line) in reader.lines().enumerate() {
         let mut line = line.unwrap();
         line = line.trim().parse().unwrap();
         // The first line should be a command line (excluding "solang compile") after // RUN:
@@ -67,21 +67,21 @@ fn testcase(path: PathBuf) {
             read_from = Some(check.trim().to_string());
         // Read more input until you find a line that contains the needle // CHECK: needle
         } else if let Some(check) = line.strip_prefix("// CHECK:") {
-            checks.push(Test::Check(check.trim().to_string()));
+            checks.push(Test::Check(line_no, check.trim().to_string()));
         //
         } else if let Some(fail) = line.strip_prefix("// FAIL:") {
-            fails.push(Test::Fail(fail.trim().to_string()));
+            fails.push(Test::Fail(line_no, fail.trim().to_string()));
         // Ensure that the following line in the input does not match
         } else if let Some(not_check) = line.strip_prefix("// NOT-CHECK:") {
-            checks.push(Test::NotCheck(not_check.trim().to_string()));
+            checks.push(Test::NotCheck(line_no, not_check.trim().to_string()));
         // Check the output from here until the end of the file does not contain the needle
         } else if let Some(check_absent) = line.strip_prefix("// CHECK-ABSENT:") {
-            checks.push(Test::CheckAbsent(check_absent.trim().to_string()));
+            checks.push(Test::CheckAbsent(line_no, check_absent.trim().to_string()));
         // Go back to the beginning and find the needle from there, like // CHECK: but from
         // the beginning of the file.
         } else if let Some(check) = line.strip_prefix("// BEGIN-CHECK:") {
-            checks.push(Test::Rewind);
-            checks.push(Test::Check(check.trim().to_string()));
+            checks.push(Test::Rewind(line_no));
+            checks.push(Test::Check(line_no, check.trim().to_string()));
         }
     }
 
@@ -114,19 +114,19 @@ fn testcase(path: PathBuf) {
         let line = lines[current_line];
 
         match checks.get(current_check) {
-            Some(Test::Check(needle)) => {
+            Some(Test::Check(_, needle)) => {
                 if line.contains(needle) {
                     current_check += 1;
                 }
             }
-            Some(Test::NotCheck(needle)) => {
+            Some(Test::NotCheck(_, needle)) => {
                 if !line.contains(needle) {
                     current_check += 1;
                     // We should not advance line during a not check
                     current_line -= 1;
                 }
             }
-            Some(Test::CheckAbsent(needle)) => {
+            Some(Test::CheckAbsent(_, needle)) => {
                 for line in lines.iter().skip(current_line) {
                     if line.contains(needle) {
                         panic!(
@@ -138,7 +138,7 @@ fn testcase(path: PathBuf) {
                 }
                 current_check += 1;
             }
-            Some(Test::Rewind) => {
+            Some(Test::Rewind(_)) => {
                 current_line = 0;
                 current_check += 1;
                 continue;
@@ -146,7 +146,7 @@ fn testcase(path: PathBuf) {
             _ => (),
         }
 
-        if let Some(Test::Fail(needle)) = fails.get(current_fail) {
+        if let Some(Test::Fail(_, needle)) = fails.get(current_fail) {
             if line.contains(needle) {
                 current_fail += 1;
             }

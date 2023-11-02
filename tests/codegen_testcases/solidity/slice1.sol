@@ -41,7 +41,7 @@ contract c {
 			bool y = true;
 		}
 
-		string y = x + "if";
+		string y = string.concat(x, "if");
 
 		print(x);
 // CHECK: alloc slice bytes1 uint32 4 "foo4"

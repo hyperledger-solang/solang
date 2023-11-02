@@ -24,7 +24,7 @@ fn simple_create_contract_no_seed() {
         contract bar1 {
             @payer(payer)
             constructor(string v) {
-                print("bar1 says: " + v);
+                print(string.concat("bar1 says: ", v));
             }
 
             function say_hello(string v) public {
@@ -105,7 +105,7 @@ fn simple_create_contract() {
         contract bar1 {
             @payer(pay)
             constructor(string v) {
-                print("bar1 says: " + v);
+                print(string.concat("bar1 says: ", v));
             }
 
             function say_hello(string v) public {
@@ -277,7 +277,7 @@ fn missing_contract() {
         @program_id("7vJKRaKLGCNUPuHWdeHCTknkYf3dHXXEZ6ri7dc6ngeV")
         contract bar1 {
             constructor(string v) {
-                print("bar1 says: " + v);
+                print(string.concat("bar1 says: ", v));
             }
 
             function say_hello(string v) public {
@@ -342,7 +342,7 @@ fn two_contracts() {
         contract bar1 {
             @payer(payer_account)
             constructor(string v) {
-                print("bar1 says: " + v);
+                print(string.concat("bar1 says: ", v));
             }
         }"#,
     );

@@ -1,6 +1,6 @@
 contract example {
     function test1(string s) public returns (bool) {
-        string str = "Hello, " + s + "!";
+        string str = string.concat("Hello, ", s, "!");
 
         return (str == "Hello, World!");
     }

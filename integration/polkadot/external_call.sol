@@ -55,6 +55,6 @@ contract callee2 {
     }
 
     function do_stuff2(string x) public pure returns (string) {
-        return "x:" + x;
+        return string.concat("x:", x);
     }
 }

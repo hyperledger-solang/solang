@@ -609,12 +609,6 @@ pub enum Expression {
         left: StringLocation<Expression>,
         right: StringLocation<Expression>,
     },
-    StringConcat {
-        loc: pt::Loc,
-        ty: Type,
-        left: StringLocation<Expression>,
-        right: StringLocation<Expression>,
-    },
     StructLiteral {
         loc: pt::Loc,
         ty: Type,
@@ -712,7 +706,6 @@ impl CodeLocation for Expression {
             | Expression::ConstArrayLiteral { loc, .. }
             | Expression::StructMember { loc, .. }
             | Expression::StringCompare { loc, .. }
-            | Expression::StringConcat { loc, .. }
             | Expression::FunctionArg { loc, .. }
             | Expression::ShiftRight { loc, .. }
             | Expression::ShiftLeft { loc, .. }
@@ -804,8 +797,7 @@ impl Recurse for Expression {
                 }
             }
 
-            Expression::StringCompare { left, right, .. }
-            | Expression::StringConcat { left, right, .. } => {
+            Expression::StringCompare { left, right, .. } => {
                 if let StringLocation::RunTime(exp) = left {
                     exp.recurse(cx, f);
                 }
@@ -859,7 +851,6 @@ impl RetrieveType for Expression {
             | Expression::ArrayLiteral { ty, .. }
             | Expression::ConstArrayLiteral { ty, .. }
             | Expression::StructMember { ty, .. }
-            | Expression::StringConcat { ty, .. }
             | Expression::FunctionArg { ty, .. }
             | Expression::AllocDynamicBytes { ty, .. }
             | Expression::BytesCast { ty, .. }
@@ -1655,27 +1646,6 @@ impl Expression {
                         }
                     },
                 },
-                Expression::StringConcat {
-                    loc,
-                    ty,
-                    left,
-                    right,
-                } => Expression::StringConcat {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    left: match left {
-                        StringLocation::CompileTime(_) => left.clone(),
-                        StringLocation::RunTime(expr) => {
-                            StringLocation::RunTime(Box::new(filter(expr, ctx)))
-                        }
-                    },
-                    right: match right {
-                        StringLocation::CompileTime(_) => right.clone(),
-                        StringLocation::RunTime(expr) => {
-                            StringLocation::RunTime(Box::new(filter(expr, ctx)))
-                        }
-                    },
-                },
                 Expression::FormatString { loc, args } => {
                     let args = args.iter().map(|(f, e)| (*f, filter(e, ctx))).collect();
 
@@ -1792,6 +1762,7 @@ pub enum Builtin {
     WriteUint128LE,
     WriteUint256LE,
     WriteBytes,
+    Concat,
 }
 
 impl From<&ast::Builtin> for Builtin {
@@ -1853,6 +1824,7 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::BaseFee => Builtin::BaseFee,
             ast::Builtin::PrevRandao => Builtin::PrevRandao,
             ast::Builtin::ContractCode => Builtin::ContractCode,
+            ast::Builtin::StringConcat | ast::Builtin::BytesConcat => Builtin::Concat,
             _ => panic!("Builtin should not be in the cfg"),
         }
     }

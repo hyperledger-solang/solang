@@ -731,17 +731,6 @@ pub fn expression(
             left: string_location(left, cfg, contract_no, func, ns, vartab, opt),
             right: string_location(right, cfg, contract_no, func, ns, vartab, opt),
         },
-        ast::Expression::StringConcat {
-            loc,
-            ty,
-            left,
-            right,
-        } => Expression::StringConcat {
-            loc: *loc,
-            ty: ty.clone(),
-            left: string_location(left, cfg, contract_no, func, ns, vartab, opt),
-            right: string_location(right, cfg, contract_no, func, ns, vartab, opt),
-        },
         ast::Expression::Or { loc, left, right } => {
             expr_or(left, cfg, contract_no, func, ns, vartab, loc, right, opt)
         }

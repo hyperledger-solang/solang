@@ -747,63 +747,8 @@ pub(super) fn addition(
         return Ok(expr);
     }
 
-    // Concatenate stringliteral with stringliteral
-    if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
-        (&left, &right)
-    {
-        let mut c = Vec::with_capacity(l.len() + r.len());
-        c.extend_from_slice(l);
-        c.extend_from_slice(r);
-        let length = c.len();
-        return Ok(Expression::BytesLiteral {
-            loc: *loc,
-            ty: Type::Bytes(length as u8),
-            value: c,
-        });
-    }
-
     let left_type = left.ty();
     let right_type = right.ty();
-
-    // compare string against literal
-    match (&left, &right_type) {
-        (Expression::BytesLiteral { value, .. }, Type::String)
-        | (Expression::BytesLiteral { value, .. }, Type::DynamicBytes) => {
-            return Ok(Expression::StringConcat {
-                loc: *loc,
-                ty: right_type,
-                left: StringLocation::CompileTime(value.clone()),
-                right: StringLocation::RunTime(Box::new(right)),
-            });
-        }
-        _ => {}
-    }
-
-    match (&right, &left_type) {
-        (Expression::BytesLiteral { value, .. }, Type::String)
-        | (Expression::BytesLiteral { value, .. }, Type::DynamicBytes) => {
-            return Ok(Expression::StringConcat {
-                loc: *loc,
-                ty: left_type,
-                left: StringLocation::RunTime(Box::new(left)),
-                right: StringLocation::CompileTime(value.clone()),
-            });
-        }
-        _ => {}
-    }
-
-    // compare string
-    match (&left_type, &right_type) {
-        (Type::String, Type::String) | (Type::DynamicBytes, Type::DynamicBytes) => {
-            return Ok(Expression::StringConcat {
-                loc: *loc,
-                ty: right_type,
-                left: StringLocation::RunTime(Box::new(left)),
-                right: StringLocation::RunTime(Box::new(right)),
-            });
-        }
-        _ => {}
-    }
 
     let ty = coerce_number(
         &left_type,

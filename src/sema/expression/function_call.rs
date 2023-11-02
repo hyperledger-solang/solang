@@ -516,7 +516,20 @@ fn try_namespace(
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Option<Expression>, ()> {
-    if let pt::Expression::Variable(namespace) = var {
+    let namespace = match var {
+        pt::Expression::Variable(namespace) => Some(namespace.clone()),
+        pt::Expression::Type(loc, pt::Type::String) => Some(pt::Identifier {
+            name: "string".to_owned(),
+            loc: *loc,
+        }),
+        pt::Expression::Type(loc, pt::Type::DynamicBytes) => Some(pt::Identifier {
+            name: "bytes".to_owned(),
+            loc: *loc,
+        }),
+        _ => None,
+    };
+
+    if let Some(namespace) = &namespace {
         if builtin::is_builtin_call(Some(&namespace.name), &func.name, ns) {
             if let Some(loc) = call_args_loc {
                 diagnostics.push(Diagnostic::error(

@@ -1057,14 +1057,6 @@ impl<'a> Builder<'a> {
                     self.expression(expr, symtab);
                 }
             }
-            ast::Expression::StringConcat { left, right, .. } => {
-                if let ast::StringLocation::RunTime(expr) = left {
-                    self.expression(expr, symtab);
-                }
-                if let ast::StringLocation::RunTime(expr) = right {
-                    self.expression(expr, symtab);
-                }
-            }
 
             ast::Expression::InternalFunction {loc, function_no, ..} => {
                 let fnc = &self.ns.functions[*function_no];

@@ -9,7 +9,7 @@ use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression, Options};
-use crate::sema::ast::{self, Function, Namespace, RetrieveType, StringLocation, Type};
+use crate::sema::ast::{self, Function, Namespace, RetrieveType, Type};
 use ink_env::hash::{Blake2x256, CryptoHash};
 use parity_scale_codec::Encode;
 use solang_parser::pt;
@@ -124,13 +124,23 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
             }
 
             let encoded = abi_encode(&loc, vec![value], self.ns, vartab, cfg, false).0;
-            let prefix = StringLocation::CompileTime(topic_prefixes.pop_front().unwrap());
-            let value = StringLocation::RunTime(encoded.into());
-            let concatenated = Expression::StringConcat {
+            let first_prefix = topic_prefixes.pop_front().unwrap();
+            let prefix = Expression::AllocDynamicBytes {
                 loc,
-                ty: Type::DynamicBytes,
-                left: prefix,
-                right: value,
+                ty: Type::Slice(Type::Bytes(1).into()),
+                size: Expression::NumberLiteral {
+                    loc,
+                    ty: Type::Uint(32),
+                    value: first_prefix.len().into(),
+                }
+                .into(),
+                initializer: Some(first_prefix),
+            };
+            let concatenated = Expression::Builtin {
+                loc,
+                kind: Builtin::Concat,
+                tys: vec![Type::DynamicBytes],
+                args: vec![prefix, encoded],
             };
 
             vartab.new_dirty_tracker();
