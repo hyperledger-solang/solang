@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::sync::Arc;
-
 use crate::num_literal;
 use crate::ssa_ir_tests::helpers::{identifier, num_literal};
 use indexmap::IndexMap;
@@ -126,11 +124,11 @@ fn new_cfg(blocks: Vec<Block>) -> Cfg {
         public: true,
         nonpayable: false,
         vartable: new_vartable(),
-        params: Arc::new(vec![
+        params: vec![
             new_parameter(String::from("a"), Type::Int(32)),
             new_parameter(String::from("b"), Type::Int(32)),
-        ]),
-        returns: Arc::new(vec![new_parameter(String::from("c"), Type::Int(32))]),
+        ],
+        returns: vec![new_parameter(String::from("c"), Type::Int(32))],
         blocks,
         selector: vec![],
     }

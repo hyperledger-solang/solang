@@ -5,14 +5,13 @@ use crate::pt::FunctionTy;
 use crate::ssa_ir::insn::Insn;
 use crate::ssa_ir::ssa_type::Parameter;
 use crate::ssa_ir::vartable::Vartable;
-use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct Cfg {
     pub name: String,
     pub function_no: ASTFunction,
-    pub params: Arc<Vec<Parameter>>,
-    pub returns: Arc<Vec<Parameter>>,
+    pub params: Vec<Parameter>,
+    pub returns: Vec<Parameter>,
     pub vartable: Vartable,
     pub blocks: Vec<Block>,
     pub nonpayable: bool,

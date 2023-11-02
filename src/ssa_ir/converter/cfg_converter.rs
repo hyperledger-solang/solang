@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::sync::Arc;
-
 use crate::codegen::cfg::BasicBlock;
 use crate::sema::ast;
 use crate::ssa_ir::cfg::{Block, Cfg};
@@ -37,8 +35,8 @@ impl Converter<'_> {
         let ssa_ir_cfg = Cfg {
             name: self.cfg.name.clone(),
             function_no: self.cfg.function_no,
-            params: Arc::new(params),
-            returns: Arc::new(returns),
+            params: params,
+            returns: returns,
             vartable,
             blocks,
             nonpayable: self.cfg.nonpayable,
