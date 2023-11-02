@@ -3,7 +3,7 @@
 use crate::{borsh_encoding::BorshToken, build_solidity};
 use borsh::BorshDeserialize;
 use borsh_derive::BorshDeserialize;
-use sha2::{Digest, Sha256};
+use solang::abi::anchor::event_discriminator;
 
 #[test]
 fn simple_event() {
@@ -40,7 +40,7 @@ fn simple_event() {
 
     let encoded = &vm.events[0][0];
 
-    let discriminator = calculate_discriminator("myevent");
+    let discriminator = event_discriminator("myevent");
 
     assert_eq!(&encoded[..8], &discriminator[..]);
 
@@ -116,7 +116,7 @@ fn less_simple_event() {
 
     let encoded = &vm.events[0][0];
 
-    let discriminator = calculate_discriminator("MyOtherEvent");
+    let discriminator = event_discriminator("MyOtherEvent");
     assert_eq!(&encoded[..8], &discriminator[..]);
 
     let decoded = MyOtherEvent::try_from_slice(&encoded[8..]).unwrap();
@@ -140,12 +140,4 @@ fn less_simple_event() {
                 .collect()
         )
     );
-}
-
-fn calculate_discriminator(event_name: &str) -> Vec<u8> {
-    let image = format!("event:{event_name}");
-    let mut hasher = Sha256::new();
-    hasher.update(image.as_bytes());
-    let finalized = hasher.finalize();
-    finalized[..8].to_vec()
 }

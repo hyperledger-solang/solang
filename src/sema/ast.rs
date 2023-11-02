@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::symtable::Symtable;
-use crate::abi::anchor::discriminator;
+use crate::abi::anchor::function_discriminator;
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::diagnostics::Diagnostics;
 use crate::sema::ast::ExternalCallAccounts::{AbsentArgument, NoAccount};
@@ -468,14 +468,14 @@ impl Function {
             selector.clone()
         } else if ns.target == Target::Solana {
             match self.ty {
-                FunctionTy::Constructor => discriminator("global", "new"),
+                FunctionTy::Constructor => function_discriminator("new"),
                 _ => {
                     let discriminator_image = if self.mangled_name_contracts.contains(contract_no) {
                         &self.mangled_name
                     } else {
                         &self.name
                     };
-                    discriminator("global", discriminator_image.as_str())
+                    function_discriminator(discriminator_image.as_str())
                 }
             }
         } else {

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::abi::anchor::event_discriminator;
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::abi_encode;
 use crate::codegen::events::EventEmitter;
@@ -8,7 +9,6 @@ use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, Type};
-use sha2::{Digest, Sha256};
 use solang_parser::pt::Loc;
 
 /// This struct implements the trait 'EventEmitter' to handle the emission of events for Solana.
@@ -22,12 +22,7 @@ pub(super) struct SolanaEventEmitter<'a> {
 
 impl EventEmitter for SolanaEventEmitter<'_> {
     fn selector(&self, _: usize) -> Vec<u8> {
-        let discriminator_image = format!("event:{}", self.ns.events[self.event_no].id);
-        let mut hasher = Sha256::new();
-        hasher.update(discriminator_image);
-        let result = hasher.finalize();
-
-        result[..8].to_vec()
+        event_discriminator(&self.ns.events[self.event_no].id.name)
     }
 
     fn emit(

@@ -18,7 +18,7 @@ use solana_rbpf::{
     verifier::{RequisiteVerifier, TautologyVerifier},
     vm::{BuiltinProgram, Config, ContextObject, EbpfVm, ProgramResult, StableResult},
 };
-use solang::abi::anchor::discriminator;
+use solang::abi::anchor::function_discriminator;
 use solang::{
     abi::anchor::generate_anchor_idl,
     codegen::{OptimizationLevel, Options},
@@ -1712,7 +1712,7 @@ impl<'a, 'b> VmFunction<'a, 'b> {
     fn call_with_error_code(&mut self) -> Result<Option<BorshToken>, u64> {
         self.vm.return_data = None;
         let idl_instr = self.vm.stack[0].idl.as_ref().unwrap().instructions[self.idx].clone();
-        let mut calldata = discriminator("global", &idl_instr.name);
+        let mut calldata = function_discriminator(&idl_instr.name);
 
         if !self.has_remaining {
             assert_eq!(
@@ -1781,7 +1781,7 @@ impl<'a, 'b> VmFunction<'a, 'b> {
             );
         }
 
-        let mut calldata = discriminator("global", &idl_instr.name);
+        let mut calldata = function_discriminator(&idl_instr.name);
         if let Some(args) = self.arguments {
             let mut encoded_data = encode_arguments(args);
             calldata.append(&mut encoded_data);
