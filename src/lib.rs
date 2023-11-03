@@ -73,17 +73,6 @@ impl Target {
         }
     }
 
-    /// Returns how many bytes an address is on this target:
-    /// - Solana and Polkadot have an address length of 32 bytes.
-    /// - EVM has an address length of 20 bytes.
-    pub const fn address_length(&self) -> usize {
-        match self {
-            Target::Solana => 32,
-            Target::Polkadot { address_length, .. } => *address_length,
-            Target::EVM => 20,
-        }
-    }
-
     /// Creates a target from a string
     pub fn from(name: &str) -> Option<Self> {
         match name {
