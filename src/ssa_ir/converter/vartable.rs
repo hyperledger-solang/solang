@@ -3,7 +3,7 @@ use indexmap::IndexMap;
 
 use crate::{
     codegen::vartable::Vars,
-    ssa_ir::vartable::{Storage, Var, Vartable},
+    ssa_ir::vartable::{Var, Vartable},
 };
 
 use super::Converter;
@@ -19,7 +19,6 @@ impl Converter<'_> {
                     *id,
                     self.from_ast_type(&var.ty)?,
                     var.id.name.clone(),
-                    Storage::from(&var.storage),
                 ),
             );
             max_id = max_id.max(*id);

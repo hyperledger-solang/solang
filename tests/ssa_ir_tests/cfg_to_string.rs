@@ -3,10 +3,9 @@
 use crate::ssa_ir_tests::helpers::{identifier, num_literal};
 use crate::{num_literal, stringfy_cfg};
 use indexmap::IndexMap;
-use num_bigint::BigInt;
 use solang::sema::ast::Parameter;
 use solang::ssa_ir::printer::Printer;
-use solang::ssa_ir::vartable::{Storage, Var};
+use solang::ssa_ir::vartable::Var;
 use solang::ssa_ir::{
     cfg::{Block, Cfg},
     instructions::Instruction,
@@ -72,7 +71,6 @@ fn test_stringfy_cfg() {
             id: 0,
             ty: Type::Int(32),
             name: String::from("x"),
-            storage: Storage::Local,
         },
     );
     var_table.vars.insert(
@@ -81,7 +79,6 @@ fn test_stringfy_cfg() {
             id: 1,
             ty: Type::StoragePtr(false, Box::new(Type::Int(32))),
             name: String::from("st"),
-            storage: Storage::Contract(BigInt::from(0)),
         },
     );
     let printer = Printer {

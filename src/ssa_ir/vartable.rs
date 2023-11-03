@@ -1,28 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::vartable;
 use crate::ssa_ir::expressions::Operand;
 use crate::ssa_ir::ssa_type::Type;
 use indexmap::IndexMap;
-use num_bigint::BigInt;
 use solang_parser::pt::Loc;
 
 /// define a constant prefix for temporary variables
 pub const TEMP_PREFIX: &str = "temp.ssa_ir.";
 
 #[derive(Debug, Clone)]
-pub enum Storage {
-    Constant(usize),
-    Contract(BigInt),
-    Local,
-}
-
-#[derive(Debug, Clone)]
 pub struct Var {
     pub id: usize,
     pub ty: Type,
     pub name: String,
-    pub storage: Storage,
 }
 
 #[derive(Debug, Clone)]
@@ -33,12 +23,11 @@ pub struct Vartable {
 }
 
 impl Var {
-    pub(crate) fn new(id: usize, ty: Type, name: String, storage: Storage) -> Self {
+    pub(crate) fn new(id: usize, ty: Type, name: String) -> Self {
         Self {
             id,
             ty,
             name,
-            storage,
         }
     }
 }
@@ -70,7 +59,6 @@ impl Vartable {
             id,
             ty: ty.clone(),
             name: format!("{}{}", TEMP_PREFIX, id),
-            storage: Storage::Local,
         };
         self.next_id = self.next_id.max(id + 1);
         self.vars.insert(id, var);
@@ -82,7 +70,6 @@ impl Vartable {
             id: self.next_id,
             ty: ty.clone(),
             name: name.clone(),
-            storage: Storage::Local,
         };
         self.vars.insert(self.next_id, var);
         let op = Operand::Id {
@@ -105,15 +92,5 @@ impl Vartable {
 
     pub fn add_function_arg(&mut self, arg_no: usize, var_id: usize) {
         self.args.insert(arg_no, var_id);
-    }
-}
-
-impl From<&vartable::Storage> for Storage {
-    fn from(value: &vartable::Storage) -> Self {
-        match value {
-            vartable::Storage::Constant(id) => Storage::Constant(*id),
-            vartable::Storage::Contract(addr) => Storage::Contract(addr.clone()),
-            vartable::Storage::Local => Storage::Local,
-        }
     }
 }
