@@ -2,7 +2,7 @@
 
 use crate::codegen;
 use crate::sema::ast::{CallTy, ExternalCallAccounts};
-use crate::ssa_ir::expr::{Expr, Operand};
+use crate::ssa_ir::expressions::{Expr, Operand};
 use crate::ssa_ir::ssa_type::InternalCallTy;
 use solang_parser::pt::Loc;
 

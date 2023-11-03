@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::vartable;
-use crate::ssa_ir::expr::Operand;
+use crate::ssa_ir::expressions::Operand;
 use crate::ssa_ir::ssa_type::Type;
 use indexmap::IndexMap;
 use num_bigint::BigInt;

@@ -2,11 +2,11 @@
 
 use crate::ssa_ir::vartable::Vartable;
 
-use super::{expr::Operand, ssa_type::Type};
+use super::{expressions::Operand, ssa_type::Type};
 
-pub mod cfg_printer;
-pub mod expr_printer;
-pub mod insn_printer;
+pub mod printer;
+pub mod expression;
+pub mod instruction;
 
 pub struct Printer {
     pub vartable: Box<Vartable>,

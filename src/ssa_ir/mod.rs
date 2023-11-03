@@ -2,8 +2,8 @@
 
 pub mod cfg;
 pub mod converter;
-pub mod expr;
-pub mod insn;
+pub mod expressions;
+pub mod instructions;
 pub mod printer;
 pub mod ssa_type;
 pub mod vartable;

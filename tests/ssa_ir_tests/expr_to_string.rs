@@ -6,11 +6,11 @@ use indexmap::IndexMap;
 use num_bigint::BigInt;
 use solang::codegen::Builtin;
 use solang::sema::ast::{self, ArrayLength, FormatArg, StringLocation};
-use solang::ssa_ir::expr::{BinaryOperator, Expr, UnaryOperator};
+use solang::ssa_ir::expressions::{BinaryOperator, Expr, UnaryOperator};
 use solang::ssa_ir::printer::Printer;
 use solang::ssa_ir::ssa_type::{StructType, Type};
 use solang::ssa_ir::vartable::Vartable;
-use solang::stringfy_expr;
+use crate::stringfy_expr;
 use solang_parser::pt::Loc;
 
 fn new_printer() -> Printer {

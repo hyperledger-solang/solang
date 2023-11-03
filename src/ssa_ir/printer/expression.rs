@@ -1,36 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast::StringLocation;
-use crate::ssa_ir::expr::{Expr, Operand};
+use crate::ssa_ir::expressions::{Expr, Operand};
 use crate::ssa_ir::printer::Printer;
 use std::io::Write;
-
-#[macro_export]
-macro_rules! stringfy_expr {
-    ($printer:expr, $expr:expr) => {{
-        let mut buffer = Vec::new();
-        $printer.print_expr(&mut buffer, $expr).unwrap();
-        String::from_utf8(buffer).expect("Failed to convert to string")
-    }};
-}
-
-#[macro_export]
-macro_rules! stringfy_rhs_operand {
-    ($printer:expr, $operand:expr) => {{
-        let mut buffer = Vec::new();
-        $printer.print_rhs_operand(&mut buffer, $operand).unwrap();
-        String::from_utf8(buffer).expect("Failed to convert to string")
-    }};
-}
-
-#[macro_export]
-macro_rules! stringfy_lhs_operand {
-    ($printer:expr, $operand:expr) => {{
-        let mut buffer = Vec::new();
-        $printer.print_lhs_operand(&mut buffer, $operand).unwrap();
-        String::from_utf8(buffer).expect("Failed to convert to string")
-    }};
-}
 
 impl Printer {
     pub fn print_lhs_operand(&self, f: &mut dyn Write, operand: &Operand) -> std::io::Result<()> {
@@ -241,28 +214,34 @@ impl Printer {
                 write!(f, ")")
             }
             Expr::StringCompare { left, right, .. } => {
-                let left_str = match left {
-                    StringLocation::CompileTime(s) => format!("\"{:?}\"", s),
-                    StringLocation::RunTime(op) => {
-                        stringfy_rhs_operand!(self, op)
-                    }
+                write!(f, "strcmp(")?;
+                match left {
+                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s)?,
+                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op)?,
                 };
-                let right_str = match right {
-                    StringLocation::CompileTime(s) => format!("\"{:?}\"", s),
-                    StringLocation::RunTime(op) => stringfy_rhs_operand!(self, op),
+
+                write!(f, ", ")?;
+
+                match right {
+                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s)?,
+                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op)?,
                 };
-                write!(f, "strcmp({}, {})", left_str, right_str)
+                write!(f, ")")
             }
             Expr::StringConcat { left, right, .. } => {
-                let left_str = match left {
-                    StringLocation::CompileTime(s) => format!("\"{:?}\"", s),
-                    StringLocation::RunTime(op) => stringfy_rhs_operand!(self, op),
+                write!(f, "strcat(")?;
+                match left {
+                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s)?,
+                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op)?,
                 };
-                let right_str = match right {
-                    StringLocation::CompileTime(s) => format!("\"{:?}\"", s),
-                    StringLocation::RunTime(op) => stringfy_rhs_operand!(self, op),
+
+                write!(f, ", ")?;
+
+                match right {
+                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s)?,
+                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op)?,
                 };
-                write!(f, "strcat({}, {})", left_str, right_str)
+                write!(f, ")")
             }
             Expr::StorageArrayLength { array, .. } => {
                 write!(f, "storage_arr_len(")?;

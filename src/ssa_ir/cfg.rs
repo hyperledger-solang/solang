@@ -3,7 +3,7 @@
 use crate::codegen::cfg::ASTFunction;
 use crate::pt::FunctionTy;
 use crate::sema::ast::Parameter;
-use crate::ssa_ir::insn::Insn;
+use crate::ssa_ir::instructions::Insn;
 use crate::ssa_ir::vartable::Vartable;
 
 use super::ssa_type::Type;

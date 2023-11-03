@@ -7,8 +7,8 @@ use solang_parser::pt::Loc;
 use crate::codegen::Expression;
 use crate::sema::ast;
 use crate::ssa_ir::converter::Converter;
-use crate::ssa_ir::expr::{BinaryOperator, Expr, Operand, UnaryOperator};
-use crate::ssa_ir::insn::Insn;
+use crate::ssa_ir::expressions::{BinaryOperator, Expr, Operand, UnaryOperator};
+use crate::ssa_ir::instructions::Insn;
 use crate::ssa_ir::vartable::Vartable;
 
 impl Converter<'_> {
@@ -358,9 +358,9 @@ impl Converter<'_> {
         bytes_offset: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (pointer_op, pointer_insns) = self.as_operand_and_insns(pointer, vartable)?;
+        let (pointer_op, pointer_insns) = self.to_operand_and_insns(pointer, vartable)?;
         let (bytes_offset_op, bytes_offset_insns) =
-            self.as_operand_and_insns(bytes_offset, vartable)?;
+            self.to_operand_and_insns(bytes_offset, vartable)?;
         let mut insns = vec![];
         insns.extend(pointer_insns);
         insns.extend(bytes_offset_insns);
@@ -383,7 +383,7 @@ impl Converter<'_> {
         expr: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (from_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
+        let (from_op, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
         let mut insns = vec![];
         insns.extend(expr_insns);
         insns.push(Insn::Set {
@@ -406,7 +406,7 @@ impl Converter<'_> {
         expr: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (from_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
+        let (from_op, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
         let mut insns = vec![];
         insns.extend(expr_insns);
         insns.push(Insn::Set {
@@ -429,8 +429,8 @@ impl Converter<'_> {
         index: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (array_op, array_insns) = self.as_operand_and_insns(expr, vartable)?;
-        let (index_op, index_insns) = self.as_operand_and_insns(index, vartable)?;
+        let (array_op, array_insns) = self.to_operand_and_insns(expr, vartable)?;
+        let (index_op, index_insns) = self.to_operand_and_insns(index, vartable)?;
         let mut insns = vec![];
         insns.extend(array_insns);
         insns.extend(index_insns);
@@ -454,7 +454,7 @@ impl Converter<'_> {
         member: &usize,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (struct_op, struct_insns) = self.as_operand_and_insns(expr, vartable)?;
+        let (struct_op, struct_insns) = self.to_operand_and_insns(expr, vartable)?;
         let mut insns = vec![];
         insns.extend(struct_insns);
         insns.push(Insn::Set {
@@ -481,7 +481,7 @@ impl Converter<'_> {
         let value_ops = values
             .iter()
             .map(|value| {
-                let (op, insn) = self.as_operand_and_insns(value, vartable)?;
+                let (op, insn) = self.to_operand_and_insns(value, vartable)?;
                 insns.extend(insn);
                 Ok(op)
             })
@@ -510,8 +510,8 @@ impl Converter<'_> {
     ) -> Result<Vec<Insn>, String> {
         let mut insns = vec![];
 
-        let (left_string_loc, left_insns) = self.as_string_location_and_insns(left, vartable)?;
-        let (right_string_loc, right_insns) = self.as_string_location_and_insns(right, vartable)?;
+        let (left_string_loc, left_insns) = self.to_string_location_and_insns(left, vartable)?;
+        let (right_string_loc, right_insns) = self.to_string_location_and_insns(right, vartable)?;
         insns.extend(left_insns);
         insns.extend(right_insns);
 
@@ -537,8 +537,8 @@ impl Converter<'_> {
     ) -> Result<Vec<Insn>, String> {
         let mut insns = vec![];
 
-        let (left_string_loc, left_insns) = self.as_string_location_and_insns(left, vartable)?;
-        let (right_string_loc, right_insns) = self.as_string_location_and_insns(right, vartable)?;
+        let (left_string_loc, left_insns) = self.to_string_location_and_insns(left, vartable)?;
+        let (right_string_loc, right_insns) = self.to_string_location_and_insns(right, vartable)?;
         insns.extend(left_insns);
         insns.extend(right_insns);
 
@@ -561,7 +561,7 @@ impl Converter<'_> {
         array: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (array_op, array_insns) = self.as_operand_and_insns(array, vartable)?;
+        let (array_op, array_insns) = self.to_operand_and_insns(array, vartable)?;
         let mut insns = vec![];
         insns.extend(array_insns);
         insns.push(Insn::Set {
@@ -583,7 +583,7 @@ impl Converter<'_> {
         expr: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (tmp, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
+        let (tmp, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
         let sext = Expr::SignExt {
             loc: *loc,
             operand: Box::new(tmp),
@@ -606,7 +606,7 @@ impl Converter<'_> {
         expr: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (from_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
+        let (from_op, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
         let mut insns = vec![];
         insns.extend(expr_insns);
         insns.push(Insn::Set {
@@ -630,7 +630,7 @@ impl Converter<'_> {
         let mut insns = vec![];
         let mut expr_ops = vec![];
         for expr in exprs {
-            let (op, insn) = self.as_operand_and_insns(expr, vartable)?;
+            let (op, insn) = self.to_operand_and_insns(expr, vartable)?;
             insns.extend(insn);
             expr_ops.push(op);
         }
@@ -652,7 +652,7 @@ impl Converter<'_> {
         expr: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (from_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
+        let (from_op, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
         let mut insns = vec![];
         insns.extend(expr_insns);
         insns.push(Insn::Set {
@@ -699,7 +699,7 @@ impl Converter<'_> {
         let mut insns = vec![];
         let mut arg_ops = vec![];
         for (format, arg) in args {
-            let (op, insn) = self.as_operand_and_insns(arg, vartable)?;
+            let (op, insn) = self.to_operand_and_insns(arg, vartable)?;
             insns.extend(insn);
             arg_ops.push((*format, op));
         }
@@ -728,7 +728,7 @@ impl Converter<'_> {
         let value_ops = values
             .iter()
             .map(|value| {
-                let (op, insn) = self.as_operand_and_insns(value, vartable)?;
+                let (op, insn) = self.to_operand_and_insns(value, vartable)?;
                 insns.extend(insn);
                 Ok(op)
             })
@@ -756,7 +756,7 @@ impl Converter<'_> {
         expr: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (from_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
+        let (from_op, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
         let mut insns = vec![];
         insns.extend(expr_insns);
         insns.push(Insn::Set {
@@ -779,7 +779,7 @@ impl Converter<'_> {
         ty: &ast::Type,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (from_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
+        let (from_op, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
         let mut insns = vec![];
         insns.extend(expr_insns);
         insns.push(Insn::Set {
@@ -805,7 +805,7 @@ impl Converter<'_> {
         let mut insns = vec![];
         let mut arg_ops = vec![];
         for arg in args {
-            let (op, insn) = self.as_operand_and_insns(arg, vartable)?;
+            let (op, insn) = self.to_operand_and_insns(arg, vartable)?;
             insns.extend(insn);
             arg_ops.push(op);
         }
@@ -831,8 +831,8 @@ impl Converter<'_> {
         right: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (left_op, left_insns) = self.as_operand_and_insns(left, vartable)?;
-        let (right_op, right_insns) = self.as_operand_and_insns(right, vartable)?;
+        let (left_op, left_insns) = self.to_operand_and_insns(left, vartable)?;
+        let (right_op, right_insns) = self.to_operand_and_insns(right, vartable)?;
         let mut insns = vec![];
         insns.extend(left_insns);
         insns.extend(right_insns);
@@ -857,7 +857,7 @@ impl Converter<'_> {
         expr: &Expression,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (expr_op, expr_insns) = self.as_operand_and_insns(expr, vartable)?;
+        let (expr_op, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
         let mut insns = vec![];
         insns.extend(expr_insns);
         insns.push(Insn::Set {
@@ -882,7 +882,7 @@ impl Converter<'_> {
         initializer: &Option<Vec<u8>>,
         vartable: &mut Vartable,
     ) -> Result<Vec<Insn>, String> {
-        let (size_op, left_insns) = self.as_operand_and_insns(size, vartable)?;
+        let (size_op, left_insns) = self.to_operand_and_insns(size, vartable)?;
         let mut insns = vec![];
         insns.extend(left_insns);
         insns.push(Insn::Set {
@@ -963,7 +963,7 @@ impl Converter<'_> {
         let value_ops = values
             .iter()
             .map(|value| {
-                let (op, insn) = self.as_operand_and_insns(value, vartable)?;
+                let (op, insn) = self.to_operand_and_insns(value, vartable)?;
                 insns.extend(insn);
                 Ok(op)
             })

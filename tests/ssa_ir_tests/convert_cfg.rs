@@ -8,8 +8,10 @@ use solang::{
     parse_and_resolve,
     sema::ast::Namespace,
     ssa_ir::{converter::Converter, printer::Printer},
-    stringfy_cfg, Target,
+    Target,
 };
+
+use crate::stringfy_cfg;
 
 fn new_file_resolver(src: &str) -> FileResolver {
     let mut cache = FileResolver::default();
@@ -42,7 +44,7 @@ fn assert_cfg_str_eq(src: &str, cfg_no: usize, expected: &str) {
         vartable: Box::new(new_cfg.vartable.clone()),
     };
 
-    // printer.print_cfg(&mut stdout(), &new_cfg).unwrap();
+    // printer.print_cfg(&mut std::io::stdout(), &new_cfg).unwrap();
     let result = stringfy_cfg!(printer, &new_cfg);
     assert_eq!(result.trim(), expected);
 

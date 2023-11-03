@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::num_literal;
 use crate::ssa_ir_tests::helpers::{identifier, num_literal};
+use crate::{num_literal, stringfy_insn};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use solang::codegen::cfg;
-use solang::sema::ast::ArrayLength;
-use solang::ssa_ir::expr::{BinaryOperator, Expr};
-use solang::ssa_ir::insn::Insn;
+use solang::sema::ast::{ArrayLength, CallTy};
+use solang::ssa_ir::expressions::{BinaryOperator, Expr};
+use solang::ssa_ir::instructions::Insn;
 use solang::ssa_ir::printer::Printer;
 use solang::ssa_ir::ssa_type::{InternalCallTy, PhiInput, StructType, Type};
 use solang::ssa_ir::vartable::Vartable;
-use solang::stringfy_insn;
 use solang_parser::pt::Loc;
 
 fn new_printer() -> Printer {
@@ -178,29 +177,6 @@ fn test_stringfy_pop_memory_insn() {
         "uint32 %temp.ssa_ir.101 = pop_mem ptr<uint32[3]>(%temp.ssa_ir.3);"
     );
 }
-
-// Constructor
-// #[test]
-// fn test_stringfy_constructor_insn() {
-//     assert_eq!(
-//         stringfy_insn!(&new_printer(), &Insn::Constructor {
-//             success: Some(1),
-//             res: 13,
-//             contract_no: 0,
-//             constructor_no: Some(2),
-//             encoded_args: identifier(4),
-//             value: Some(num_literal!(5)),
-//             gas: num_literal!(300),
-//             salt: Some(num_literal!(22)),
-//             address: Some(identifier(6)),
-//             seeds: Some(identifier(7)),
-//             accounts: Some(identifier(8)),
-//             loc: Loc::Codegen
-//         }
-//         ),
-//         "%13, %1 = constructor(no: 2, contract_no:0) salt:uint8(22) value:uint8(5) gas:uint8(300) address:%6 seeds:%7 encoded-buffer:%4 accounts:%8;"
-//     );
-// }
 
 // LoadStorage
 #[test]
@@ -399,6 +375,55 @@ fn test_stringfy_call_insn() {
     );
 }
 
+//  ExternalCall
+#[test]
+fn test_stringfy_external_call_insn() {
+    // Insn::ExternalCall {
+    //     success,
+    //     address,
+    //     payload,
+    //     value,
+    //     accounts,
+    //     seeds,
+    //     gas,
+    //     callty,
+    //     contract_function_no,
+    //     flags,
+    // }
+
+    // {} = call_ext ty:{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{} contract_no:{}, function_no:{} flags:{};
+
+    let mut printer = new_printer();
+    // success
+    printer.set_tmp_var(1, &Type::Bool);
+    // payload
+    printer.set_tmp_var(3, &Type::Bytes(32));
+    // value
+    printer.set_tmp_var(4, &Type::Uint(64));
+    // gas
+    printer.set_tmp_var(7, &Type::Uint(64));
+
+    assert_eq!(
+        stringfy_insn!(
+            &printer,
+            &Insn::ExternalCall {
+                success: Some(1),
+                address: None,
+                payload: identifier(3),
+                value: identifier(4),
+                accounts: solang::sema::ast::ExternalCallAccounts::AbsentArgument,
+                seeds: None,
+                gas: identifier(7),
+                callty: CallTy::Regular,
+                contract_function_no: None,
+                flags: None,
+                loc: Loc::Codegen,
+            }
+        ),
+        "bool %temp.ssa_ir.1 = call_ext [regular] address:_ payload:bytes32(%temp.ssa_ir.3) value:uint64(%temp.ssa_ir.4) gas:uint64(%temp.ssa_ir.7) accounts:absent seeds:_ contract_no:_, function_no:_ flags:_;"
+    );
+}
+
 #[test]
 fn test_stringfy_print_insn() {
     let mut printer = new_printer();
@@ -434,65 +459,6 @@ fn test_stringfy_memcopy_insn() {
         "memcopy bytes32(%temp.ssa_ir.3) to bytes16(%temp.ssa_ir.4) for uint8(16) bytes;"
     )
 }
-
-// #[test]
-// fn test_stringfy_external_call_insn() {
-//     assert_eq!(
-//         stringfy_insn!(&new_printer(), &Insn::ExternalCall {
-//             loc: Loc::Codegen,
-//             success: Some(1),
-//             address: Some(identifier(2)),
-//             accounts: Some(identifier(3)),
-//             seeds: Some(identifier(4)),
-//             payload: identifier(5),
-//             value: identifier(6),
-//             gas: num_literal!(120),
-//             callty: CallTy::Regular,
-//             contract_function_no: None,
-//             flags: Some(identifier(7)),
-//         }
-//         ),
-//         "%1 = call_ext [regular] address:%2 payload:%5 value:%6 gas:uint8(120) accounts:%3 seeds:%4 _ flags:%7;"
-//     );
-
-//     assert_eq!(
-//         stringfy_insn!(&new_printer(), &Insn::ExternalCall {
-//             loc: Loc::Codegen,
-//             success: None,
-//             address: Some(identifier(2)),
-//             accounts: Some(identifier(3)),
-//             seeds: Some(identifier(4)),
-//             payload: identifier(5),
-//             value: identifier(6),
-//             gas: num_literal!(120),
-//             callty: CallTy::Delegate,
-//             contract_function_no: None,
-//             flags: Some(identifier(7)),
-//         }
-//         ),
-//         "call_ext [delegate] address:%2 payload:%5 value:%6 gas:uint8(120) accounts:%3 seeds:%4 _ flags:%7;"
-//     );
-
-//     assert_eq!(
-//         stringfy_insn!(
-//             &new_printer(),
-//             &Insn::ExternalCall {
-//                 loc: Loc::Codegen,
-//                 success: None,
-//                 address: Some(identifier(2)),
-//                 accounts: Some(identifier(3)),
-//                 seeds: None,
-//                 payload: identifier(5),
-//                 value: identifier(6),
-//                 gas: num_literal!(120),
-//                 callty: CallTy::Static,
-//                 contract_function_no: None,
-//                 flags: Some(identifier(7)),
-//             }
-//         ),
-//         "call_ext [static] address:%2 payload:%5 value:%6 gas:uint8(120) accounts:%3 _ _ flags:%7;"
-//     );
-// }
 
 #[test]
 fn test_stringfy_value_transfer_insn() {
@@ -559,22 +525,6 @@ fn test_stringfy_emit_event_insn() {
         "emit event#13 to topics[bytes32(%temp.ssa_ir.1), bytes32(%temp.ssa_ir.2)], data: bytes32(%temp.ssa_ir.3);"
     )
 }
-
-// #[test]
-// fn test_stringfy_write_buffer_insn() {
-
-//     assert_eq!(
-//         stringfy_insn!(
-//             &new_printer(),
-//             &Insn::WriteBuffer {
-//                 buf: identifier(1),
-//                 offset: num_literal!(11),
-//                 value: identifier(2)
-//             }
-//         ),
-//         "write_buf %1 offset:uint8(11) value:%2;"
-//     )
-// }
 
 #[test]
 fn test_stringfy_branch_insn() {

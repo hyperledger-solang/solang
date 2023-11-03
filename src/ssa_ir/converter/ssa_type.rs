@@ -8,7 +8,6 @@ use crate::ssa_ir::ssa_type::{StructType, Type};
 impl Converter<'_> {
     pub fn from_ast_type(&self, ty: &ast::Type) -> Result<Type, String> {
         match ty {
-            // ast::Type::Rational => {},
             ast::Type::Bool => Ok(Type::Bool),
             ast::Type::Int(width) => Ok(Type::Int(*width)),
             ast::Type::Uint(width) => Ok(Type::Uint(*width)),
@@ -40,15 +39,11 @@ impl Converter<'_> {
                     .collect();
                 Ok(Type::Ptr(Box::new(Type::Array(Box::new(ty), len))))
             }
-            ast::Type::Enum(enum_no) => self.get_enum_type(*enum_no),
+            ast::Type::Enum(enum_no) => self.convert_enum_type(*enum_no),
             ast::Type::Struct(struct_ty) => Ok(Type::Ptr(Box::new(Type::Struct(
                 StructType::from(struct_ty),
             )))),
             ast::Type::Mapping(mapping) => {
-                // let value = self.from_ast_type(&mapping.value)?;
-                // Ok(Type::StoragePtr(false, Box::new(value)))
-                // Instead of converting mapping to storage pointer, we convert it to a struct
-                // to prevent key type information loss
                 let key = self.from_ast_type(&mapping.key)?;
                 let value = self.from_ast_type(&mapping.value)?;
                 Ok(Type::Mapping {
@@ -82,13 +77,10 @@ impl Converter<'_> {
                 Ok(Type::Ptr(Box::new(Type::Function { params, returns })))
             }
             ast::Type::UserType(_) => self.unwrap_user_type(ty),
-            // ast::Type::Void => {}
-            // ast::Type::Unreachable => {}
             ast::Type::Slice(ty) => {
                 let ty = self.from_ast_type(ty.as_ref())?;
                 Ok(Type::Ptr(Box::new(Type::Slice(Box::new(ty)))))
             }
-            // ast::Type::Unresolved => {}
             ast::Type::FunctionSelector => Ok(Type::Uint(self.fn_selector_length() as u16 * 8)),
             _ => unreachable!(),
         }

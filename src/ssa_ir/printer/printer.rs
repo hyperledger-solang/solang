@@ -6,26 +6,6 @@ use crate::ssa_ir::cfg::Cfg;
 use crate::ssa_ir::printer::Printer;
 use std::io::Write;
 
-#[macro_export]
-macro_rules! stringfy_cfg {
-    ($printer:expr, $cfg:expr) => {{
-        use solang::ssa_ir::printer::Printer;
-        let mut buf = Vec::new();
-        $printer.print_cfg(&mut buf, $cfg).unwrap();
-        String::from_utf8(buf).unwrap()
-    }};
-}
-
-#[macro_export]
-macro_rules! stringfy_block {
-    ($printer:expr, $block:expr) => {{
-        use solang::ssa_ir::printer::Printer;
-        let mut buf = Vec::new();
-        $printer.print_block(&mut buf, $block).unwrap();
-        String::from_utf8(buf).unwrap()
-    }};
-}
-
 impl Printer {
     pub fn print_cfg(&self, f: &mut dyn Write, cfg: &Cfg) -> std::io::Result<()> {
         let function_no = match cfg.function_no {

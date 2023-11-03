@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::num_literal;
 use crate::ssa_ir_tests::helpers::{identifier, num_literal};
+use crate::{num_literal, stringfy_cfg};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use solang::sema::ast::Parameter;
@@ -9,11 +9,10 @@ use solang::ssa_ir::printer::Printer;
 use solang::ssa_ir::vartable::{Storage, Var};
 use solang::ssa_ir::{
     cfg::{Block, Cfg},
-    insn::Insn,
+    instructions::Insn,
     ssa_type::Type,
     vartable::Vartable,
 };
-use solang::stringfy_cfg;
 use solang_parser::pt::{Identifier, Loc};
 
 #[test]
@@ -91,7 +90,7 @@ fn test_stringfy_cfg() {
 
     assert_eq!(
         format!(
-            "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
+            "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}",
             "public function sol#0 test_cfg (int32, int32) returns (int32):",
             "block#0 entry:",
             "    int32 %x = load_storage storage_ptr<int32>(%st);",
@@ -106,10 +105,9 @@ fn test_stringfy_cfg() {
             "    br block#3;",
             "",
             "block#3 exit:",
-            "    return_data int32(%x) of length uint8(1);",
-            ""
+            "    return_data int32(%x) of length uint8(1);"
         ),
-        stringfy_cfg!(&printer, &cfg)
+        stringfy_cfg!(&printer, &cfg).trim()
     )
 }
 
