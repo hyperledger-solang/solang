@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast::StringLocation;
-use crate::ssa_ir::expressions::{Expr, Operand};
+use crate::ssa_ir::expressions::{Expression, Operand};
 use crate::ssa_ir::printer::Printer;
 use std::io::Write;
 
@@ -29,9 +29,9 @@ impl Printer {
         }
     }
 
-    pub fn print_expr(&self, f: &mut dyn Write, expr: &Expr) -> std::io::Result<()> {
+    pub fn print_expr(&self, f: &mut dyn Write, expr: &Expression) -> std::io::Result<()> {
         match expr {
-            Expr::BinaryExpr {
+            Expression::BinaryExpr {
                 operator: op,
                 left,
                 right,
@@ -41,7 +41,7 @@ impl Printer {
                 write!(f, " {} ", op)?;
                 self.print_rhs_operand(f, right)
             }
-            Expr::UnaryExpr {
+            Expression::UnaryExpr {
                 operator: op,
                 right,
                 ..
@@ -49,12 +49,12 @@ impl Printer {
                 write!(f, "{}", op)?;
                 self.print_rhs_operand(f, right)
             }
-            Expr::Id { id, .. } => {
+            Expression::Id { id, .. } => {
                 let ty = self.get_var_type(id).unwrap();
                 let name = self.get_var_name(id).unwrap();
                 write!(f, "{}(%{})", ty, name)
             }
-            Expr::ArrayLiteral { ty, values, .. } => {
+            Expression::ArrayLiteral { ty, values, .. } => {
                 write!(f, "{}", ty)?;
                 write!(f, " [")?;
                 values.iter().enumerate().for_each(|(i, val)| {
@@ -65,7 +65,7 @@ impl Printer {
                 });
                 write!(f, "]")
             }
-            Expr::ConstArrayLiteral { ty, values, .. } => {
+            Expression::ConstArrayLiteral { ty, values, .. } => {
                 write!(f, "const {}", ty)?;
                 write!(f, " [")?;
                 values.iter().enumerate().for_each(|(i, val)| {
@@ -76,7 +76,7 @@ impl Printer {
                 });
                 write!(f, "]")
             }
-            Expr::BytesLiteral { ty, value, .. } => {
+            Expression::BytesLiteral { ty, value, .. } => {
                 write!(f, "{} hex\"", ty)?;
                 value.iter().enumerate().for_each(|(i, byte)| {
                     if i != 0 {
@@ -86,7 +86,7 @@ impl Printer {
                 });
                 write!(f, "\"")
             }
-            Expr::StructLiteral { values, .. } => {
+            Expression::StructLiteral { values, .. } => {
                 write!(f, "struct {{ ")?;
                 values.iter().enumerate().for_each(|(i, val)| {
                     if i != 0 {
@@ -96,34 +96,34 @@ impl Printer {
                 });
                 write!(f, " }}")
             }
-            Expr::Cast {
+            Expression::Cast {
                 operand: op, to_ty, ..
             } => {
                 write!(f, "(cast ")?;
                 self.print_rhs_operand(f, op)?;
                 write!(f, " to {})", to_ty)
             }
-            Expr::BytesCast { operand, to_ty, .. } => {
+            Expression::BytesCast { operand, to_ty, .. } => {
                 write!(f, "(cast ")?;
                 self.print_rhs_operand(f, operand)?;
                 write!(f, " to {})", to_ty)
             }
-            Expr::SignExt { to_ty, operand, .. } => {
+            Expression::SignExt { to_ty, operand, .. } => {
                 write!(f, "(sext ")?;
                 self.print_rhs_operand(f, operand)?;
                 write!(f, " to {})", to_ty)
             }
-            Expr::ZeroExt { to_ty, operand, .. } => {
+            Expression::ZeroExt { to_ty, operand, .. } => {
                 write!(f, "(zext ")?;
                 self.print_rhs_operand(f, operand)?;
                 write!(f, " to {})", to_ty)
             }
-            Expr::Trunc { operand, to_ty, .. } => {
+            Expression::Trunc { operand, to_ty, .. } => {
                 write!(f, "(trunc ")?;
                 self.print_rhs_operand(f, operand)?;
                 write!(f, " to {})", to_ty)
             }
-            Expr::AllocDynamicBytes {
+            Expression::AllocDynamicBytes {
                 ty,
                 size,
                 initializer,
@@ -151,28 +151,28 @@ impl Printer {
                     });
                 write!(f, "}}")
             }
-            Expr::GetRef { operand, .. } => {
+            Expression::GetRef { operand, .. } => {
                 write!(f, "&")?;
                 self.print_rhs_operand(f, operand)
             }
-            Expr::Load { operand, .. } => {
+            Expression::Load { operand, .. } => {
                 write!(f, "*")?;
                 self.print_rhs_operand(f, operand)
             }
-            Expr::StructMember {
+            Expression::StructMember {
                 operand, member, ..
             } => {
                 write!(f, "access ")?;
                 self.print_rhs_operand(f, operand)?;
                 write!(f, " member {}", member)
             }
-            Expr::Subscript { arr, index, .. } => {
+            Expression::Subscript { arr, index, .. } => {
                 self.print_rhs_operand(f, arr)?;
                 write!(f, "[")?;
                 self.print_rhs_operand(f, index)?;
                 write!(f, "]")
             }
-            Expr::AdvancePointer {
+            Expression::AdvancePointer {
                 pointer,
                 bytes_offset,
                 ..
@@ -183,10 +183,10 @@ impl Printer {
                 self.print_rhs_operand(f, bytes_offset)?;
                 write!(f, ")")
             }
-            Expr::FunctionArg { arg_no, ty, .. } => {
+            Expression::FunctionArg { arg_no, ty, .. } => {
                 write!(f, "{}(arg#{})", ty, arg_no)
             }
-            Expr::FormatString { args, .. } => {
+            Expression::FormatString { args, .. } => {
                 write!(f, "fmt_str(")?;
                 args.iter().enumerate().for_each(|(i, (spec, arg))| {
                     if i != 0 {
@@ -202,8 +202,8 @@ impl Printer {
                 });
                 write!(f, ")")
             }
-            Expr::InternalFunctionCfg { cfg_no, .. } => write!(f, "function#{}", cfg_no),
-            Expr::Keccak256 { args, .. } => {
+            Expression::InternalFunctionCfg { cfg_no, .. } => write!(f, "function#{}", cfg_no),
+            Expression::Keccak256 { args, .. } => {
                 write!(f, "keccak256(")?;
                 args.iter().enumerate().for_each(|(i, arg)| {
                     if i != 0 {
@@ -213,7 +213,7 @@ impl Printer {
                 });
                 write!(f, ")")
             }
-            Expr::StringCompare { left, right, .. } => {
+            Expression::StringCompare { left, right, .. } => {
                 write!(f, "strcmp(")?;
                 match left {
                     StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s)?,
@@ -228,7 +228,7 @@ impl Printer {
                 };
                 write!(f, ")")
             }
-            Expr::StringConcat { left, right, .. } => {
+            Expression::StringConcat { left, right, .. } => {
                 write!(f, "strcat(")?;
                 match left {
                     StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s)?,
@@ -243,17 +243,17 @@ impl Printer {
                 };
                 write!(f, ")")
             }
-            Expr::StorageArrayLength { array, .. } => {
+            Expression::StorageArrayLength { array, .. } => {
                 write!(f, "storage_arr_len(")?;
                 self.print_rhs_operand(f, array)?;
                 write!(f, ")")
             }
-            Expr::ReturnData { .. } => write!(f, "(extern_call_ret_data)"),
-            Expr::NumberLiteral { value, .. } => {
+            Expression::ReturnData { .. } => write!(f, "(extern_call_ret_data)"),
+            Expression::NumberLiteral { value, .. } => {
                 write!(f, "{}", value)
             }
-            Expr::BoolLiteral { value, .. } => write!(f, "{}", value),
-            Expr::Builtin { kind, args, .. } => {
+            Expression::BoolLiteral { value, .. } => write!(f, "{}", value),
+            Expression::Builtin { kind, args, .. } => {
                 write!(f, "builtin: {:?}(", kind)?;
                 args.iter().enumerate().for_each(|(i, arg)| {
                     if i != 0 {

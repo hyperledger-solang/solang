@@ -2,7 +2,7 @@
 
 use crate::codegen;
 use crate::sema::ast::{CallTy, ExternalCallAccounts};
-use crate::ssa_ir::expressions::{Expr, Operand};
+use crate::ssa_ir::expressions::{Expression, Operand};
 use crate::ssa_ir::ssa_type::InternalCallTy;
 use solang_parser::pt::Loc;
 
@@ -10,7 +10,7 @@ use super::ssa_type::PhiInput;
 
 /// Statements using three-address code format
 #[derive(Debug)]
-pub enum Insn {
+pub enum Instruction {
     Nop,
 
     /*************************** Contract As Callee ***************************/
@@ -28,7 +28,7 @@ pub enum Insn {
     Set {
         loc: Loc,
         res: usize,
-        expr: Expr,
+        expr: Expression,
     },
     Store {
         dest: Operand,

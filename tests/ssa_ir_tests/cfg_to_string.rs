@@ -9,7 +9,7 @@ use solang::ssa_ir::printer::Printer;
 use solang::ssa_ir::vartable::{Storage, Var};
 use solang::ssa_ir::{
     cfg::{Block, Cfg},
-    instructions::Insn,
+    instructions::Instruction,
     ssa_type::Type,
     vartable::Vartable,
 };
@@ -21,11 +21,11 @@ fn test_stringfy_cfg() {
         new_block(
             String::from("entry"),
             vec![
-                Insn::LoadStorage {
+                Instruction::LoadStorage {
                     res: 0,
                     storage: identifier(3),
                 },
-                Insn::BranchCond {
+                Instruction::BranchCond {
                     cond: identifier(0),
                     true_block: 1,
                     false_block: 2,
@@ -35,24 +35,24 @@ fn test_stringfy_cfg() {
         new_block(
             String::from("blk1"),
             vec![
-                Insn::Print {
+                Instruction::Print {
                     operand: num_literal!(1),
                 },
-                Insn::Branch { block: 3 },
+                Instruction::Branch { block: 3 },
             ],
         ),
         new_block(
             String::from("blk2"),
             vec![
-                Insn::Print {
+                Instruction::Print {
                     operand: num_literal!(2),
                 },
-                Insn::Branch { block: 3 },
+                Instruction::Branch { block: 3 },
             ],
         ),
         new_block(
             String::from("exit"),
-            vec![Insn::ReturnData {
+            vec![Instruction::ReturnData {
                 data: identifier(0),
                 data_len: num_literal!(1),
             }],
@@ -111,7 +111,7 @@ fn test_stringfy_cfg() {
     )
 }
 
-fn new_block(name: String, instructions: Vec<Insn>) -> Block {
+fn new_block(name: String, instructions: Vec<Instruction>) -> Block {
     Block { name, instructions }
 }
 

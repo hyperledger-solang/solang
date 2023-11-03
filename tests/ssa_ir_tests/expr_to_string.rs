@@ -2,15 +2,15 @@
 
 use crate::num_literal;
 use crate::ssa_ir_tests::helpers::{binop_expr, bool_literal, identifier, num_literal, unop_expr};
+use crate::stringfy_expr;
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use solang::codegen::Builtin;
 use solang::sema::ast::{self, ArrayLength, FormatArg, StringLocation};
-use solang::ssa_ir::expressions::{BinaryOperator, Expr, UnaryOperator};
+use solang::ssa_ir::expressions::{BinaryOperator, Expression, UnaryOperator};
 use solang::ssa_ir::printer::Printer;
 use solang::ssa_ir::ssa_type::{StructType, Type};
 use solang::ssa_ir::vartable::Vartable;
-use crate::stringfy_expr;
 use solang_parser::pt::Loc;
 
 fn new_printer() -> Printer {
@@ -346,7 +346,7 @@ fn test_stringfy_id_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::Id {
+            &Expression::Id {
                 loc: Loc::Codegen,
                 id: 1,
             }
@@ -361,7 +361,7 @@ fn test_stringfy_array_literal_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::ArrayLiteral {
+            &Expression::ArrayLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Array(
                     Box::new(Type::Bool),
@@ -378,7 +378,7 @@ fn test_stringfy_array_literal_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::ArrayLiteral {
+            &Expression::ArrayLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Array(
                     Box::new(Type::Int(8)),
@@ -395,7 +395,7 @@ fn test_stringfy_array_literal_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::ArrayLiteral {
+            &Expression::ArrayLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Array(
                     Box::new(Type::Uint(8)),
@@ -412,7 +412,7 @@ fn test_stringfy_array_literal_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::ArrayLiteral {
+            &Expression::ArrayLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Array(
                     Box::new(Type::Int(8)),
@@ -438,7 +438,7 @@ fn test_stringfy_array_literal_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::ArrayLiteral {
+            &Expression::ArrayLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Array(
                     Box::new(Type::Int(8)),
@@ -465,7 +465,7 @@ fn test_stringfy_array_literal_expr() {
     );
 
     assert_eq!(
-        stringfy_expr!(&printer, &Expr::ConstArrayLiteral {
+        stringfy_expr!(&printer, &Expression::ConstArrayLiteral {
             loc: Loc::Codegen,
             ty: Type::Array(
                 Box::new(Type::Int(8)),
@@ -498,7 +498,7 @@ fn test_stringfy_bytes_literal_expr() {
     assert_eq!(
         stringfy_expr!(
             &new_printer(),
-            &Expr::BytesLiteral {
+            &Expression::BytesLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Bytes(4),
                 value: vec![0x41, 0x42, 0x43, 0x44],
@@ -524,7 +524,7 @@ fn test_stringfy_struct_literal_expr() {
     assert_eq!(
         stringfy_expr!(
             &new_printer(),
-            &Expr::StructLiteral {
+            &Expression::StructLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Struct(StructType::UserDefined(0)),
                 values: vec![num_literal!(1, 8), num_literal!(2, 8)],
@@ -536,7 +536,7 @@ fn test_stringfy_struct_literal_expr() {
     assert_eq!(
         stringfy_expr!(
             &new_printer(),
-            &Expr::StructLiteral {
+            &Expression::StructLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Struct(StructType::UserDefined(0)),
                 values: vec![num_literal!(1, 8), bool_literal(false)],
@@ -555,7 +555,7 @@ fn test_stringfy_cast_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::Cast {
+            &Expression::Cast {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
                 to_ty: Type::Uint(16),
@@ -573,7 +573,7 @@ fn test_stringfy_bytes_cast_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::BytesCast {
+            &Expression::BytesCast {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
                 to_ty: Type::Bytes(4),
@@ -594,7 +594,7 @@ fn test_stringfy_sext_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::SignExt {
+            &Expression::SignExt {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
                 to_ty: Type::Int(16),
@@ -614,7 +614,7 @@ fn test_stringfy_zext_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::ZeroExt {
+            &Expression::ZeroExt {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
                 to_ty: Type::Uint(16),
@@ -635,7 +635,7 @@ fn test_stringfy_trunc_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::Trunc {
+            &Expression::Trunc {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
                 to_ty: Type::Uint(8),
@@ -653,7 +653,7 @@ fn test_stringfy_alloc_dyn_bytes() {
     assert_eq!(
         stringfy_expr!(
             &new_printer(),
-            &Expr::AllocDynamicBytes {
+            &Expression::AllocDynamicBytes {
                 loc: Loc::Codegen,
                 ty: Type::Bytes(1),
                 size: Box::new(num_literal!(10)),
@@ -669,7 +669,7 @@ fn test_stringfy_alloc_dyn_bytes() {
     assert_eq!(
         stringfy_expr!(
             &new_printer(),
-            &Expr::AllocDynamicBytes {
+            &Expression::AllocDynamicBytes {
                 loc: Loc::Codegen,
                 ty: Type::Bytes(1),
                 size: Box::new(num_literal!(3)),
@@ -690,7 +690,7 @@ fn test_stringfy_get_ref_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::GetRef {
+            &Expression::GetRef {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
             }
@@ -709,7 +709,7 @@ fn test_stringfy_load_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::Load {
+            &Expression::Load {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
             }
@@ -731,7 +731,7 @@ fn test_stringfy_struct_member_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::StructMember {
+            &Expression::StructMember {
                 loc: Loc::Codegen,
                 member: 3,
                 operand: Box::new(identifier(1)),
@@ -757,7 +757,7 @@ fn test_stringfy_subscript_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::Subscript {
+            &Expression::Subscript {
                 loc: Loc::Codegen,
                 arr: Box::new(identifier(1)),
                 index: Box::new(num_literal!(0)),
@@ -777,7 +777,7 @@ fn test_stringfy_subscript_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::Subscript {
+            &Expression::Subscript {
                 loc: Loc::Codegen,
                 arr: Box::new(identifier(1)),
                 index: Box::new(num_literal!(0)),
@@ -797,7 +797,7 @@ fn test_stringfy_subscript_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::Subscript {
+            &Expression::Subscript {
                 loc: Loc::Codegen,
                 arr: Box::new(identifier(1)),
                 index: Box::new(num_literal!(0)),
@@ -821,7 +821,7 @@ fn test_stringfy_advance_pointer_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::AdvancePointer {
+            &Expression::AdvancePointer {
                 pointer: Box::new(identifier(1)),
                 bytes_offset: Box::new(identifier(2)),
             }
@@ -833,7 +833,7 @@ fn test_stringfy_advance_pointer_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::AdvancePointer {
+            &Expression::AdvancePointer {
                 pointer: Box::new(identifier(1)),
                 bytes_offset: Box::new(num_literal!(1)),
             }
@@ -850,7 +850,7 @@ fn test_stringfy_function_arg_expr() {
     assert_eq!(
         stringfy_expr!(
             &new_printer(),
-            &Expr::FunctionArg {
+            &Expression::FunctionArg {
                 loc: Loc::Codegen,
                 ty: Type::Uint(8),
                 arg_no: 2,
@@ -874,7 +874,7 @@ fn test_stringfy_format_string_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::FormatString {
+            &Expression::FormatString {
                 loc: Loc::Codegen,
                 args: vec![(FormatArg::StringLiteral, identifier(1))]
             }
@@ -884,7 +884,7 @@ fn test_stringfy_format_string_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::FormatString {
+            &Expression::FormatString {
                 loc: Loc::Codegen,
                 args: vec![(FormatArg::Default, identifier(2))]
             }
@@ -897,7 +897,7 @@ fn test_stringfy_format_string_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::FormatString {
+            &Expression::FormatString {
                 loc: Loc::Codegen,
                 args: vec![(FormatArg::Binary, identifier(2))]
             }
@@ -910,7 +910,7 @@ fn test_stringfy_format_string_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::FormatString {
+            &Expression::FormatString {
                 loc: Loc::Codegen,
                 args: vec![(FormatArg::Hex, identifier(2))]
             }
@@ -923,7 +923,7 @@ fn test_stringfy_format_string_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::FormatString {
+            &Expression::FormatString {
                 loc: Loc::Codegen,
                 args: vec![
                     (FormatArg::StringLiteral, identifier(1)),
@@ -941,7 +941,10 @@ fn test_stringfy_format_string_expr() {
 #[test]
 fn test_stringfy_internal_function_cfg_expr() {
     assert_eq!(
-        stringfy_expr!(&new_printer(), &Expr::InternalFunctionCfg { cfg_no: 123 }),
+        stringfy_expr!(
+            &new_printer(),
+            &Expression::InternalFunctionCfg { cfg_no: 123 }
+        ),
         "function#123"
     );
 }
@@ -957,7 +960,7 @@ fn test_stringfy_keccak256_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::Keccak256 {
+            &Expression::Keccak256 {
                 loc: Loc::Codegen,
                 args: vec![identifier(1), identifier(2)],
             }
@@ -978,7 +981,7 @@ fn test_stringfy_string_compare_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::StringCompare {
+            &Expression::StringCompare {
                 loc: Loc::Codegen,
                 left: StringLocation::RunTime(Box::new(identifier(1))),
                 right: StringLocation::RunTime(Box::new(identifier(2))),
@@ -991,7 +994,7 @@ fn test_stringfy_string_compare_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::StringCompare {
+            &Expression::StringCompare {
                 loc: Loc::Codegen,
                 left: StringLocation::CompileTime(vec![b'a', b'b', b'c']),
                 right: StringLocation::RunTime(Box::new(identifier(3))),
@@ -1004,7 +1007,7 @@ fn test_stringfy_string_compare_expr() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::StringCompare {
+            &Expression::StringCompare {
                 loc: Loc::Codegen,
                 left: StringLocation::RunTime(Box::new(identifier(3))),
                 right: StringLocation::CompileTime(vec![b'a', b'b', b'c']),
@@ -1025,7 +1028,7 @@ fn test_stringfy_string_concat() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::StringConcat {
+            &Expression::StringConcat {
                 loc: Loc::Codegen,
                 left: StringLocation::RunTime(Box::new(identifier(1))),
                 right: StringLocation::RunTime(Box::new(identifier(2))),
@@ -1037,7 +1040,7 @@ fn test_stringfy_string_concat() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::StringConcat {
+            &Expression::StringConcat {
                 loc: Loc::Codegen,
                 left: StringLocation::CompileTime(vec![b'a', b'b', b'c']),
                 right: StringLocation::RunTime(Box::new(identifier(1))),
@@ -1049,7 +1052,7 @@ fn test_stringfy_string_concat() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::StringConcat {
+            &Expression::StringConcat {
                 loc: Loc::Codegen,
                 left: StringLocation::RunTime(Box::new(identifier(1))),
                 right: StringLocation::CompileTime(vec![b'a', b'b', b'c']),
@@ -1078,7 +1081,7 @@ fn test_stringfy_storage_array_length() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::StorageArrayLength {
+            &Expression::StorageArrayLength {
                 loc: Loc::Codegen,
                 array: Box::new(identifier(1)),
             }
@@ -1092,7 +1095,10 @@ fn test_stringfy_storage_array_length() {
 fn test_stringfy_return_data() {
     // example: ret_data
     assert_eq!(
-        stringfy_expr!(&new_printer(), &Expr::ReturnData { loc: Loc::Codegen }),
+        stringfy_expr!(
+            &new_printer(),
+            &Expression::ReturnData { loc: Loc::Codegen }
+        ),
         "(extern_call_ret_data)"
     );
 }
@@ -1107,7 +1113,7 @@ fn test_stringfy_builtin() {
     assert_eq!(
         stringfy_expr!(
             &printer,
-            &Expr::Builtin {
+            &Expression::Builtin {
                 loc: Loc::Codegen,
                 kind: Builtin::AddMod,
                 args: vec![identifier(1), identifier(2), num_literal!(0x100, 16)],

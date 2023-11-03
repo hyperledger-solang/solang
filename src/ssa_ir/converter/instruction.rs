@@ -2,7 +2,7 @@
 
 use crate::codegen::cfg::Instr;
 use crate::ssa_ir::converter::Converter;
-use crate::ssa_ir::instructions::Insn;
+use crate::ssa_ir::instructions::Instruction;
 use crate::ssa_ir::vartable::Vartable;
 
 impl Converter<'_> {
@@ -10,9 +10,9 @@ impl Converter<'_> {
         &self,
         instr: &Instr,
         vartable: &mut Vartable,
-    ) -> Result<Vec<Insn>, String> {
+    ) -> Result<Vec<Instruction>, String> {
         match instr {
-            Instr::Nop => Ok(vec![Insn::Nop]),
+            Instr::Nop => Ok(vec![Instruction::Nop]),
             Instr::Set { res, expr, loc, .. } => {
                 // [t] a = b + c * d
                 // converts to:
@@ -29,7 +29,7 @@ impl Converter<'_> {
                 let mut insns = vec![];
                 insns.extend(dest_insns);
                 insns.extend(data_insns);
-                insns.push(Insn::Store {
+                insns.push(Instruction::Store {
                     dest: dest_op,
                     data: data_op,
                 });
@@ -41,7 +41,7 @@ impl Converter<'_> {
                 let (value_op, value_insns) = self.to_operand_and_insns(value, vartable)?;
                 let mut insns = vec![];
                 insns.extend(value_insns);
-                insns.push(Insn::PushMemory {
+                insns.push(Instruction::PushMemory {
                     res: *res,
                     array: *array,
                     value: value_op,
@@ -50,13 +50,13 @@ impl Converter<'_> {
             }
             Instr::PopMemory {
                 res, array, loc, ..
-            } => Ok(vec![Insn::PopMemory {
+            } => Ok(vec![Instruction::PopMemory {
                 res: *res,
                 array: *array,
                 loc: *loc,
             }]),
 
-            Instr::Branch { block } => Ok(vec![Insn::Branch { block: *block }]),
+            Instr::Branch { block } => Ok(vec![Instruction::Branch { block: *block }]),
             Instr::BranchCond {
                 cond,
                 true_block,
@@ -65,7 +65,7 @@ impl Converter<'_> {
                 let (cond_op, cond_insns) = self.to_operand_and_insns(cond, vartable)?;
                 let mut insns = Vec::new();
                 insns.extend(cond_insns);
-                insns.push(Insn::BranchCond {
+                insns.push(Instruction::BranchCond {
                     cond: cond_op,
                     true_block: *true_block,
                     false_block: *false_block,
@@ -80,7 +80,7 @@ impl Converter<'_> {
                     insns.extend(expr_insns);
                     operands.push(tmp);
                 }
-                insns.push(Insn::Return { value: operands });
+                insns.push(Instruction::Return { value: operands });
                 Ok(insns)
             }
             Instr::AssertFailure { encoded_args } => match encoded_args {
@@ -88,12 +88,12 @@ impl Converter<'_> {
                     let (tmp, expr_insns) = self.to_operand_and_insns(args, vartable)?;
                     let mut insns = vec![];
                     insns.extend(expr_insns);
-                    insns.push(Insn::AssertFailure {
+                    insns.push(Instruction::AssertFailure {
                         encoded_args: Some(tmp),
                     });
                     Ok(insns)
                 }
-                None => Ok(vec![Insn::AssertFailure { encoded_args: None }]),
+                None => Ok(vec![Instruction::AssertFailure { encoded_args: None }]),
             },
             Instr::Call {
                 res, call, args, ..
@@ -112,7 +112,7 @@ impl Converter<'_> {
                     arg_ops.push(tmp);
                 }
 
-                let call_insn = Insn::Call {
+                let call_insn = Instruction::Call {
                     res: res.clone(),
                     call: callty,
                     args: arg_ops,
@@ -125,14 +125,14 @@ impl Converter<'_> {
                 let (tmp, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
                 let mut insns = vec![];
                 insns.extend(expr_insns);
-                insns.push(Insn::Print { operand: tmp });
+                insns.push(Instruction::Print { operand: tmp });
                 Ok(insns)
             }
             Instr::LoadStorage { res, storage, .. } => {
                 let (storage_op, storage_insns) = self.to_operand_and_insns(storage, vartable)?;
                 let mut insns = vec![];
                 insns.extend(storage_insns);
-                insns.push(Insn::LoadStorage {
+                insns.push(Instruction::LoadStorage {
                     res: *res,
                     storage: storage_op,
                 });
@@ -142,7 +142,7 @@ impl Converter<'_> {
                 let (storage_op, storage_insns) = self.to_operand_and_insns(storage, vartable)?;
                 let mut insns = vec![];
                 insns.extend(storage_insns);
-                insns.push(Insn::ClearStorage {
+                insns.push(Instruction::ClearStorage {
                     storage: storage_op,
                 });
                 Ok(insns)
@@ -156,7 +156,7 @@ impl Converter<'_> {
                 let (value_op, value_insns) = self.to_operand_and_insns(value, vartable)?;
                 insns.extend(value_insns);
 
-                insns.push(Insn::SetStorage {
+                insns.push(Instruction::SetStorage {
                     value: value_op,
                     storage: storage_op,
                 });
@@ -176,7 +176,7 @@ impl Converter<'_> {
                 insns.extend(storage_insns);
                 insns.extend(offset_insns);
 
-                insns.push(Insn::SetStorageBytes {
+                insns.push(Instruction::SetStorageBytes {
                     value: value_op,
                     storage: storage_op,
                     offset: offset_op,
@@ -196,7 +196,7 @@ impl Converter<'_> {
                 insns.extend(storage_insns);
                 insns.extend(value_insns);
 
-                insns.push(Insn::PushStorage {
+                insns.push(Instruction::PushStorage {
                     res: *res,
                     value: value_op,
                     storage: storage_op,
@@ -207,7 +207,7 @@ impl Converter<'_> {
                 let (storage_op, storage_insns) = self.to_operand_and_insns(storage, vartable)?;
                 let mut insns = vec![];
                 insns.extend(storage_insns);
-                insns.push(Insn::PopStorage {
+                insns.push(Instruction::PopStorage {
                     res: *res,
                     storage: storage_op,
                 });
@@ -244,7 +244,7 @@ impl Converter<'_> {
                 insns.extend(value_insns);
                 insns.extend(gas_insns);
                 insns.extend(flags_insns);
-                insns.push(Insn::ExternalCall {
+                insns.push(Instruction::ExternalCall {
                     loc: *loc,
                     success: *success,
                     address: address_op,
@@ -269,7 +269,7 @@ impl Converter<'_> {
                 let mut insns = vec![];
                 insns.extend(address_insns);
                 insns.extend(value_insns);
-                insns.push(Insn::ValueTransfer {
+                insns.push(Instruction::ValueTransfer {
                     success: *success,
                     address: address_op,
                     value: value_op,
@@ -280,7 +280,7 @@ impl Converter<'_> {
                 let (tmp, expr_insns) = self.to_operand_and_insns(recipient, vartable)?;
                 let mut insns = vec![];
                 insns.extend(expr_insns);
-                insns.push(Insn::SelfDestruct { recipient: tmp });
+                insns.push(Instruction::SelfDestruct { recipient: tmp });
                 Ok(insns)
             }
             Instr::EmitEvent {
@@ -297,7 +297,7 @@ impl Converter<'_> {
                     insns.extend(topic_insns);
                     topic_ops.push(topic_op);
                 }
-                insns.push(Insn::EmitEvent {
+                insns.push(Instruction::EmitEvent {
                     event_no: *event_no,
                     data: data_op,
                     topics: topic_ops,
@@ -312,7 +312,7 @@ impl Converter<'_> {
                 insns.extend(buf_insns);
                 insns.extend(offset_insns);
                 insns.extend(value_insns);
-                insns.push(Insn::WriteBuffer {
+                insns.push(Instruction::WriteBuffer {
                     buf: buf_op,
                     offset: offset_op,
                     value: value_op,
@@ -331,7 +331,7 @@ impl Converter<'_> {
                 insns.extend(source_insns);
                 insns.extend(dest_insns);
                 insns.extend(bytes_insns);
-                insns.push(Insn::MemCopy {
+                insns.push(Instruction::MemCopy {
                     src: source_op,
                     dest: dest_op,
                     bytes: bytes_op,
@@ -355,7 +355,7 @@ impl Converter<'_> {
                     case_ops.push((case_op, *block_no));
                 }
 
-                insns.push(Insn::Switch {
+                insns.push(Instruction::Switch {
                     cond: cond_op,
                     cases: case_ops,
                     default: *default,
@@ -370,14 +370,14 @@ impl Converter<'_> {
                 let mut insns = vec![];
                 insns.extend(data_insns);
                 insns.extend(data_len_insns);
-                insns.push(Insn::ReturnData {
+                insns.push(Instruction::ReturnData {
                     data: data_op,
                     data_len: data_len_op,
                 });
                 Ok(insns)
             }
-            Instr::ReturnCode { code } => Ok(vec![Insn::ReturnCode { code: code.clone() }]),
-            Instr::Unimplemented { reachable } => Ok(vec![Insn::Unimplemented {
+            Instr::ReturnCode { code } => Ok(vec![Instruction::ReturnCode { code: code.clone() }]),
+            Instr::Unimplemented { reachable } => Ok(vec![Instruction::Unimplemented {
                 reachable: *reachable,
             }]),
             Instr::AccountAccess { .. } => panic!("AccountAccess should be replaced by Subscript"),
@@ -420,7 +420,7 @@ impl Converter<'_> {
                     self.to_external_call_accounts_and_insns(accounts, vartable)?;
                 insns.extend(accounts_insns);
 
-                let constructor_insn = Insn::Constructor {
+                let constructor_insn = Instruction::Constructor {
                     loc: *loc,
                     success: *success,
                     res: *res,

@@ -6,8 +6,8 @@ use indexmap::IndexMap;
 use num_bigint::BigInt;
 use solang::codegen::cfg;
 use solang::sema::ast::{ArrayLength, CallTy};
-use solang::ssa_ir::expressions::{BinaryOperator, Expr};
-use solang::ssa_ir::instructions::Insn;
+use solang::ssa_ir::expressions::{BinaryOperator, Expression};
+use solang::ssa_ir::instructions::Instruction;
 use solang::ssa_ir::printer::Printer;
 use solang::ssa_ir::ssa_type::{InternalCallTy, PhiInput, StructType, Type};
 use solang::ssa_ir::vartable::Vartable;
@@ -26,7 +26,7 @@ fn new_printer() -> Printer {
 
 #[test]
 fn test_stringfy_nop_insn() {
-    assert_eq!(stringfy_insn!(&new_printer(), &Insn::Nop), "nop;");
+    assert_eq!(stringfy_insn!(&new_printer(), &Instruction::Nop), "nop;");
 }
 
 // ReturnData
@@ -38,7 +38,7 @@ fn test_stringfy_returndata_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::ReturnData {
+            &Instruction::ReturnData {
                 data: identifier(0),
                 data_len: num_literal!(1),
             }
@@ -53,7 +53,7 @@ fn test_stringfy_returncode_insn() {
     assert_eq!(
         stringfy_insn!(
             &new_printer(),
-            &Insn::ReturnCode {
+            &Instruction::ReturnCode {
                 code: cfg::ReturnCode::AbiEncodingInvalid,
             }
         ),
@@ -63,7 +63,7 @@ fn test_stringfy_returncode_insn() {
     assert_eq!(
         stringfy_insn!(
             &new_printer(),
-            &Insn::ReturnCode {
+            &Instruction::ReturnCode {
                 code: cfg::ReturnCode::AccountDataTooSmall,
             }
         ),
@@ -81,10 +81,10 @@ fn test_stringfy_set_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::Set {
+            &Instruction::Set {
                 loc: Loc::Codegen,
                 res: 122,
-                expr: Expr::BinaryExpr {
+                expr: Expression::BinaryExpr {
                     loc: Loc::Codegen,
                     operator: BinaryOperator::Mul { overflowing: true },
                     left: Box::new(num_literal!(1)),
@@ -106,7 +106,7 @@ fn test_stringfy_store_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::Store {
+            &Instruction::Store {
                 dest: identifier(0),
                 data: identifier(1),
             }
@@ -118,7 +118,7 @@ fn test_stringfy_store_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::Store {
+            &Instruction::Store {
                 dest: identifier(0),
                 data: num_literal!(1),
             }
@@ -143,7 +143,7 @@ fn test_stringfy_push_memory_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::PushMemory {
+            &Instruction::PushMemory {
                 res: 101,
                 array: 3,
                 value: num_literal!(1, 32),
@@ -168,7 +168,7 @@ fn test_stringfy_pop_memory_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::PopMemory {
+            &Instruction::PopMemory {
                 res: 101,
                 array: 3,
                 loc: Loc::Codegen,
@@ -189,7 +189,7 @@ fn test_stringfy_load_storage_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::LoadStorage {
+            &Instruction::LoadStorage {
                 res: 101,
                 storage: identifier(3)
             }
@@ -206,7 +206,7 @@ fn test_stringfy_clear_storage_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::ClearStorage {
+            &Instruction::ClearStorage {
                 storage: identifier(3)
             }
         ),
@@ -222,7 +222,7 @@ fn test_stringfy_set_storage_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::SetStorage {
+            &Instruction::SetStorage {
                 value: num_literal(13445566, false, 256),
                 storage: identifier(1)
             }
@@ -241,7 +241,7 @@ fn test_stringfy_set_storage_bytes_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::SetStorageBytes {
+            &Instruction::SetStorageBytes {
                 value: identifier(1),
                 storage: identifier(2),
                 offset: num_literal!(3)
@@ -269,7 +269,7 @@ fn test_stringfy_push_storage_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::PushStorage {
+            &Instruction::PushStorage {
                 res: 101,
                 value: Some(num_literal!(1, 32)),
                 storage: identifier(3)
@@ -298,7 +298,7 @@ fn test_stringfy_pop_storage_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::PopStorage {
+            &Instruction::PopStorage {
                 res: Some(123),
                 storage: identifier(3)
             }
@@ -310,7 +310,7 @@ fn test_stringfy_pop_storage_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::PopStorage {
+            &Instruction::PopStorage {
                 res: None,
                 storage: identifier(3)
             }
@@ -338,7 +338,7 @@ fn test_stringfy_call_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::Call {
+            &Instruction::Call {
                 res: vec![1, 2, 3],
                 call: InternalCallTy::Builtin { ast_func_no: 123 },
                 args: vec![num_literal!(3), identifier(133), num_literal!(6, 64)],
@@ -351,7 +351,7 @@ fn test_stringfy_call_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::Call {
+            &Instruction::Call {
                 res: vec![1, 2, 3],
                 call: InternalCallTy::Dynamic(identifier(123)),
                 args: vec![num_literal!(3), identifier(133), num_literal!(6, 64)],
@@ -364,7 +364,7 @@ fn test_stringfy_call_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::Call {
+            &Instruction::Call {
                 res: vec![1, 2, 3],
                 call: InternalCallTy::Static { cfg_no: 123 },
                 args: vec![num_literal!(3), identifier(133), num_literal!(6, 64)],
@@ -406,7 +406,7 @@ fn test_stringfy_external_call_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::ExternalCall {
+            &Instruction::ExternalCall {
                 success: Some(1),
                 address: None,
                 payload: identifier(3),
@@ -432,7 +432,7 @@ fn test_stringfy_print_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::Print {
+            &Instruction::Print {
                 operand: identifier(3)
             }
         ),
@@ -449,7 +449,7 @@ fn test_stringfy_memcopy_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::MemCopy {
+            &Instruction::MemCopy {
                 src: identifier(3),
                 dest: identifier(4),
                 bytes: num_literal!(16)
@@ -476,7 +476,7 @@ fn test_stringfy_value_transfer_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::ValueTransfer {
+            &Instruction::ValueTransfer {
                 success: Some(1),
                 address: identifier(2),
                 value: identifier(3),
@@ -497,7 +497,7 @@ fn test_stringfy_selfdestruct_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::SelfDestruct {
+            &Instruction::SelfDestruct {
                 recipient: identifier(3)
             }
         ),
@@ -516,7 +516,7 @@ fn test_stringfy_emit_event_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::EmitEvent {
+            &Instruction::EmitEvent {
                 event_no: 13,
                 topics: vec![identifier(1), identifier(2)],
                 data: identifier(3)
@@ -529,7 +529,7 @@ fn test_stringfy_emit_event_insn() {
 #[test]
 fn test_stringfy_branch_insn() {
     assert_eq!(
-        stringfy_insn!(&new_printer(), &Insn::Branch { block: 3 }),
+        stringfy_insn!(&new_printer(), &Instruction::Branch { block: 3 }),
         "br block#3;"
     )
 }
@@ -543,7 +543,7 @@ fn test_stringfy_branch_cond_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::BranchCond {
+            &Instruction::BranchCond {
                 cond: identifier(3),
                 true_block: 5,
                 false_block: 6
@@ -564,7 +564,7 @@ fn test_stringfy_switch_insn() {
 
     let s = stringfy_insn!(
         &printer,
-        &Insn::Switch {
+        &Instruction::Switch {
             cond: identifier(1),
             cases: vec![
                 (identifier(4), 11),
@@ -595,7 +595,7 @@ fn test_stringfy_return_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::Return {
+            &Instruction::Return {
                 value: vec![identifier(1), identifier(2)]
             }
         ),
@@ -611,7 +611,7 @@ fn test_stringfy_assert_failure_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::AssertFailure {
+            &Instruction::AssertFailure {
                 encoded_args: Some(identifier(3))
             }
         ),
@@ -619,7 +619,10 @@ fn test_stringfy_assert_failure_insn() {
     );
 
     assert_eq!(
-        stringfy_insn!(&new_printer(), &Insn::AssertFailure { encoded_args: None }),
+        stringfy_insn!(
+            &new_printer(),
+            &Instruction::AssertFailure { encoded_args: None }
+        ),
         "assert_failure;"
     )
 }
@@ -627,12 +630,18 @@ fn test_stringfy_assert_failure_insn() {
 #[test]
 fn test_stringfy_unimplemented_insn() {
     assert_eq!(
-        stringfy_insn!(&new_printer(), &Insn::Unimplemented { reachable: true }),
+        stringfy_insn!(
+            &new_printer(),
+            &Instruction::Unimplemented { reachable: true }
+        ),
         "unimplemented: reachable;"
     );
 
     assert_eq!(
-        stringfy_insn!(&new_printer(), &Insn::Unimplemented { reachable: false }),
+        stringfy_insn!(
+            &new_printer(),
+            &Instruction::Unimplemented { reachable: false }
+        ),
         "unimplemented: unreachable;"
     )
 }
@@ -647,7 +656,7 @@ fn test_stringfy_phi_insn() {
     assert_eq!(
         stringfy_insn!(
             &printer,
-            &Insn::Phi {
+            &Instruction::Phi {
                 res: 12,
                 vars: vec![
                     PhiInput::new(identifier(1), 13),

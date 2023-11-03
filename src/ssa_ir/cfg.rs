@@ -3,7 +3,7 @@
 use crate::codegen::cfg::ASTFunction;
 use crate::pt::FunctionTy;
 use crate::sema::ast::Parameter;
-use crate::ssa_ir::instructions::Insn;
+use crate::ssa_ir::instructions::Instruction;
 use crate::ssa_ir::vartable::Vartable;
 
 use super::ssa_type::Type;
@@ -26,5 +26,5 @@ pub struct Cfg {
 #[derive(Debug)]
 pub struct Block {
     pub name: String,
-    pub instructions: Vec<Insn>,
+    pub instructions: Vec<Instruction>,
 }

@@ -64,7 +64,7 @@ pub enum UnaryOperator {
 }
 
 #[derive(Debug, Clone)]
-pub enum Expr {
+pub enum Expression {
     BinaryExpr {
         loc: Loc,
         operator: BinaryOperator,

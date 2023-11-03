@@ -2,13 +2,13 @@
 
 use num_bigint::BigInt;
 use solang::ssa_ir::{
-    expressions::{BinaryOperator, Expr, Operand, UnaryOperator},
+    expressions::{BinaryOperator, Expression, Operand, UnaryOperator},
     ssa_type::Type,
 };
 use solang_parser::pt::Loc;
 
-pub(crate) fn binop_expr(left: Operand, op: BinaryOperator, right: Operand) -> Expr {
-    Expr::BinaryExpr {
+pub(crate) fn binop_expr(left: Operand, op: BinaryOperator, right: Operand) -> Expression {
+    Expression::BinaryExpr {
         loc: Loc::Codegen,
         operator: op,
         left: Box::new(left),
@@ -16,8 +16,8 @@ pub(crate) fn binop_expr(left: Operand, op: BinaryOperator, right: Operand) -> E
     }
 }
 
-pub(crate) fn unop_expr(op: UnaryOperator, right: Operand) -> Expr {
-    Expr::UnaryExpr {
+pub(crate) fn unop_expr(op: UnaryOperator, right: Operand) -> Expression {
+    Expression::UnaryExpr {
         loc: Loc::Codegen,
         operator: op,
         right: Box::new(right),

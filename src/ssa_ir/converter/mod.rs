@@ -9,7 +9,7 @@ use crate::{
 
 use super::{
     expressions::Operand,
-    instructions::Insn,
+    instructions::Instruction,
     ssa_type::{InternalCallTy, Type},
     vartable::Vartable,
 };
@@ -88,7 +88,7 @@ impl<'input> Converter<'input> {
         &self,
         expr: &codegen::Expression,
         vartable: &mut Vartable,
-    ) -> Result<(Operand, Vec<Insn>), String> {
+    ) -> Result<(Operand, Vec<Instruction>), String> {
         match self.to_operand(expr, vartable) {
             Some(op) => Ok((op, vec![])),
             None => {
@@ -103,7 +103,7 @@ impl<'input> Converter<'input> {
         &self,
         expr: &Option<codegen::Expression>,
         vartable: &mut Vartable,
-    ) -> Result<(Option<Operand>, Vec<Insn>), String> {
+    ) -> Result<(Option<Operand>, Vec<Instruction>), String> {
         match expr {
             Some(address) => {
                 let (tmp, expr_insns) = self.to_operand_and_insns(address, vartable)?;
@@ -117,7 +117,7 @@ impl<'input> Converter<'input> {
         &self,
         location: &ast::StringLocation<codegen::Expression>,
         vartable: &mut Vartable,
-    ) -> Result<(ast::StringLocation<Operand>, Vec<Insn>), String> {
+    ) -> Result<(ast::StringLocation<Operand>, Vec<Instruction>), String> {
         match location {
             ast::StringLocation::CompileTime(str) => Ok((
                 ast::StringLocation::CompileTime(str.clone()) as ast::StringLocation<Operand>,
@@ -134,7 +134,7 @@ impl<'input> Converter<'input> {
         &self,
         accounts: &ast::ExternalCallAccounts<codegen::Expression>,
         vartable: &mut Vartable,
-    ) -> Result<(ast::ExternalCallAccounts<Operand>, Vec<Insn>), String> {
+    ) -> Result<(ast::ExternalCallAccounts<Operand>, Vec<Instruction>), String> {
         match accounts {
             ast::ExternalCallAccounts::Present(accounts) => {
                 let (tmp, expr_insns) = self.to_operand_and_insns(accounts, vartable)?;
@@ -155,7 +155,7 @@ impl<'input> Converter<'input> {
         &self,
         call: &cfg::InternalCallTy,
         vartable: &mut Vartable,
-    ) -> Result<(InternalCallTy, Vec<Insn>), String> {
+    ) -> Result<(InternalCallTy, Vec<Instruction>), String> {
         match call {
             cfg::InternalCallTy::Builtin { ast_func_no } => Ok((
                 InternalCallTy::Builtin {

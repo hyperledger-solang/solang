@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast;
-use crate::ssa_ir::instructions::Insn;
+use crate::ssa_ir::instructions::Instruction;
 use crate::ssa_ir::printer::Printer;
 use crate::ssa_ir::ssa_type::{InternalCallTy, PhiInput};
 use std::io::Write;
@@ -13,32 +13,32 @@ impl Printer {
         write!(f, ", block#{}]", phi.block_no)
     }
 
-    pub fn print_insn(&self, f: &mut dyn Write, insn: &Insn) -> std::io::Result<()> {
+    pub fn print_insn(&self, f: &mut dyn Write, insn: &Instruction) -> std::io::Result<()> {
         match insn {
-            Insn::Nop => write!(f, "nop;"),
-            Insn::ReturnData { data, data_len } => {
+            Instruction::Nop => write!(f, "nop;"),
+            Instruction::ReturnData { data, data_len } => {
                 write!(f, "return_data ")?;
                 self.print_rhs_operand(f, data)?;
                 write!(f, " of length ",)?;
                 self.print_rhs_operand(f, data_len)?;
                 write!(f, ";")
             }
-            Insn::ReturnCode { code, .. } => write!(f, "return_code \"{}\";", code),
-            Insn::Set { res, expr, .. } => {
+            Instruction::ReturnCode { code, .. } => write!(f, "return_code \"{}\";", code),
+            Instruction::Set { res, expr, .. } => {
                 let res_op = self.get_var_operand(res).unwrap();
                 self.print_lhs_operand(f, &res_op)?;
                 write!(f, " = ")?;
                 self.print_expr(f, expr)?;
                 write!(f, ";")
             }
-            Insn::Store { dest, data, .. } => {
+            Instruction::Store { dest, data, .. } => {
                 write!(f, "store ")?;
                 self.print_rhs_operand(f, data)?;
                 write!(f, " to ")?;
                 self.print_rhs_operand(f, dest)?;
                 write!(f, ";")
             }
-            Insn::PushMemory {
+            Instruction::PushMemory {
                 res, array, value, ..
             } => {
                 let res_op = self.get_var_operand(res).unwrap();
@@ -50,7 +50,7 @@ impl Printer {
                 self.print_rhs_operand(f, value)?;
                 write!(f, ";")
             }
-            Insn::PopMemory { res, array, .. } => {
+            Instruction::PopMemory { res, array, .. } => {
                 let res_op = self.get_var_operand(res).unwrap();
                 let array_op = self.get_var_operand(array).unwrap();
                 self.print_lhs_operand(f, &res_op)?;
@@ -58,7 +58,7 @@ impl Printer {
                 self.print_rhs_operand(f, &array_op)?;
                 write!(f, ";")
             }
-            Insn::Constructor {
+            Instruction::Constructor {
                 success,
                 res,
                 contract_no,
@@ -160,26 +160,26 @@ impl Printer {
                     ast::ExternalCallAccounts::AbsentArgument => write!(f, "accounts:absent"),
                 }
             }
-            Insn::LoadStorage { res, storage, .. } => {
+            Instruction::LoadStorage { res, storage, .. } => {
                 let res_op = self.get_var_operand(res).unwrap();
                 self.print_lhs_operand(f, &res_op)?;
                 write!(f, " = load_storage ")?;
                 self.print_rhs_operand(f, storage)?;
                 write!(f, ";")
             }
-            Insn::ClearStorage { storage, .. } => {
+            Instruction::ClearStorage { storage, .. } => {
                 write!(f, "clear_storage ")?;
                 self.print_rhs_operand(f, storage)?;
                 write!(f, ";")
             }
-            Insn::SetStorage { value, storage, .. } => {
+            Instruction::SetStorage { value, storage, .. } => {
                 write!(f, "set_storage ")?;
                 self.print_rhs_operand(f, storage)?;
                 write!(f, " ")?;
                 self.print_rhs_operand(f, value)?;
                 write!(f, ";")
             }
-            Insn::SetStorageBytes {
+            Instruction::SetStorageBytes {
                 value,
                 storage,
                 offset,
@@ -193,7 +193,7 @@ impl Printer {
                 self.print_rhs_operand(f, value)?;
                 write!(f, ";")
             }
-            Insn::PushStorage {
+            Instruction::PushStorage {
                 res,
                 value,
                 storage,
@@ -210,7 +210,7 @@ impl Printer {
                 };
                 write!(f, ";")
             }
-            Insn::PopStorage { res, storage, .. } => match res {
+            Instruction::PopStorage { res, storage, .. } => match res {
                 Some(res) => {
                     let res_op = self.get_var_operand(res).unwrap();
                     self.print_lhs_operand(f, &res_op)?;
@@ -224,7 +224,7 @@ impl Printer {
                     write!(f, ";")
                 }
             },
-            Insn::Call { res, call, args } => {
+            Instruction::Call { res, call, args } => {
                 // lhs: %0, %1, ...
                 for (i, id) in res.iter().enumerate() {
                     let res_op = self.get_var_operand(id).unwrap();
@@ -255,12 +255,12 @@ impl Printer {
 
                 write!(f, ");")
             }
-            Insn::Print { operand, .. } => {
+            Instruction::Print { operand, .. } => {
                 write!(f, "print ")?;
                 self.print_rhs_operand(f, operand)?;
                 write!(f, ";")
             }
-            Insn::MemCopy {
+            Instruction::MemCopy {
                 src, dest, bytes, ..
             } => {
                 write!(f, "memcopy ")?;
@@ -271,7 +271,7 @@ impl Printer {
                 self.print_rhs_operand(f, bytes)?;
                 write!(f, " bytes;")
             }
-            Insn::ExternalCall {
+            Instruction::ExternalCall {
                 success,
                 address,
                 payload,
@@ -364,7 +364,7 @@ impl Printer {
 
                 write!(f, ";")
             }
-            Insn::ValueTransfer {
+            Instruction::ValueTransfer {
                 success,
                 address,
                 value,
@@ -383,12 +383,12 @@ impl Printer {
                 self.print_rhs_operand(f, address)?;
                 write!(f, ";")
             }
-            Insn::SelfDestruct { recipient, .. } => {
+            Instruction::SelfDestruct { recipient, .. } => {
                 write!(f, "self_destruct ")?;
                 self.print_rhs_operand(f, recipient)?;
                 write!(f, ";")
             }
-            Insn::EmitEvent {
+            Instruction::EmitEvent {
                 data,
                 topics,
                 event_no,
@@ -405,7 +405,7 @@ impl Printer {
                 self.print_rhs_operand(f, data)?;
                 write!(f, ";")
             }
-            Insn::WriteBuffer {
+            Instruction::WriteBuffer {
                 buf, offset, value, ..
             } => {
                 write!(f, "write_buf ")?;
@@ -416,8 +416,8 @@ impl Printer {
                 self.print_rhs_operand(f, value)?;
                 write!(f, ";")
             }
-            Insn::Branch { block, .. } => write!(f, "br block#{};", block),
-            Insn::BranchCond {
+            Instruction::Branch { block, .. } => write!(f, "br block#{};", block),
+            Instruction::BranchCond {
                 cond,
                 true_block,
                 false_block,
@@ -427,7 +427,7 @@ impl Printer {
                 self.print_rhs_operand(f, cond)?;
                 write!(f, " block#{} else block#{};", true_block, false_block)
             }
-            Insn::Switch {
+            Instruction::Switch {
                 cond,
                 cases,
                 default,
@@ -446,7 +446,7 @@ impl Printer {
                 }
                 write!(f, "\n    default: block#{};", default)
             }
-            Insn::Return { value, .. } => {
+            Instruction::Return { value, .. } => {
                 write!(f, "return")?;
                 for (i, value) in value.iter().enumerate() {
                     if i == 0 {
@@ -458,7 +458,7 @@ impl Printer {
                 }
                 write!(f, ";")
             }
-            Insn::AssertFailure { encoded_args, .. } => match encoded_args {
+            Instruction::AssertFailure { encoded_args, .. } => match encoded_args {
                 Some(encoded_args) => {
                     write!(f, "assert_failure ")?;
                     self.print_rhs_operand(f, encoded_args)?;
@@ -466,7 +466,7 @@ impl Printer {
                 }
                 None => write!(f, "assert_failure;"),
             },
-            Insn::Unimplemented { reachable, .. } => {
+            Instruction::Unimplemented { reachable, .. } => {
                 write!(
                     f,
                     "unimplemented: {};",
@@ -477,7 +477,7 @@ impl Printer {
                     }
                 )
             }
-            Insn::Phi { res, vars, .. } => {
+            Instruction::Phi { res, vars, .. } => {
                 let res_op = self.get_var_operand(res).unwrap();
                 self.print_lhs_operand(f, &res_op)?;
                 write!(f, " = phi ")?;
