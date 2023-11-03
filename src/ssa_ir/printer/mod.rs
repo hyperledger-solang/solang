@@ -9,13 +9,15 @@ pub mod expression;
 pub mod instruction;
 
 pub struct Printer {
-    pub vartable: Box<Vartable>,
+    vartable: Box<Vartable>,
 }
 
 impl Printer {
-    /// For testing purpose
-    pub fn set_tmp_var(&mut self, id: usize, ty: &Type) {
-        self.vartable.set_tmp(id, ty)
+
+    pub fn new(vartable: Box<Vartable>) -> Self {
+        Self {
+            vartable,
+        }
     }
 
     pub(crate) fn get_var_name(&self, id: &usize) -> Result<&str, String> {

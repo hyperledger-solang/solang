@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use indexmap::IndexMap;
 use num_bigint::BigInt;
 use solang::ssa_ir::{
     expressions::{BinaryOperator, Expression, Operand, UnaryOperator},
+    printer::Printer,
     ssa_type::Type,
+    vartable::Vartable,
 };
 use solang_parser::pt::Loc;
 
@@ -77,6 +80,13 @@ macro_rules! num_literal {
     };
 }
 
+#[macro_export]
+macro_rules! new_printer {
+    () => {
+        new_printer(new_vartable())
+    };
+}
+
 pub(crate) fn bool_literal(value: bool) -> Operand {
     Operand::BoolLiteral {
         value,
@@ -88,5 +98,17 @@ pub(crate) fn identifier(id: usize) -> Operand {
     Operand::Id {
         id,
         loc: Loc::Codegen,
+    }
+}
+
+pub fn new_printer(v: Vartable) -> Printer {
+    Printer::new(Box::new(v))
+}
+
+pub fn new_vartable() -> Vartable {
+    Vartable {
+        vars: IndexMap::new(),
+        args: IndexMap::new(),
+        next_id: 0,
     }
 }

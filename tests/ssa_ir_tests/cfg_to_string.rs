@@ -81,9 +81,10 @@ fn test_stringfy_cfg() {
             name: String::from("st"),
         },
     );
-    let printer = Printer {
-        vartable: Box::new(var_table),
-    };
+    // let printer = Printer {
+    //     vartable: Box::new(var_table),
+    // };
+    let printer = Printer::new(Box::new(var_table));
 
     assert_eq!(
         format!(

@@ -40,9 +40,10 @@ fn assert_cfg_str_eq(src: &str, cfg_no: usize, expected: &str) {
     let converter = Converter::new(&ns, cfg);
     let new_cfg = converter.get_three_address_code_cfg().unwrap();
 
-    let printer = Printer {
-        vartable: Box::new(new_cfg.vartable.clone()),
-    };
+    // let printer = Printer {
+    //     vartable: Box::new(new_cfg.vartable.clone()),
+    // };
+    let printer = Printer::new(Box::new(new_cfg.vartable.clone()));
 
     // printer.print_cfg(&mut std::io::stdout(), &new_cfg).unwrap();
     let result = stringfy_cfg!(printer, &new_cfg);

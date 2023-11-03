@@ -1,35 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::num_literal;
-use crate::ssa_ir_tests::helpers::{binop_expr, bool_literal, identifier, num_literal, unop_expr};
+use crate::ssa_ir_tests::helpers::{
+    binop_expr, bool_literal, identifier, new_printer, new_vartable, num_literal, unop_expr,
+};
 use crate::stringfy_expr;
-use indexmap::IndexMap;
+use crate::{new_printer, num_literal};
 use num_bigint::BigInt;
 use solang::codegen::Builtin;
 use solang::sema::ast::{self, ArrayLength, FormatArg, StringLocation};
 use solang::ssa_ir::expressions::{BinaryOperator, Expression, UnaryOperator};
-use solang::ssa_ir::printer::Printer;
 use solang::ssa_ir::ssa_type::{StructType, Type};
-use solang::ssa_ir::vartable::Vartable;
 use solang_parser::pt::Loc;
-
-fn new_printer() -> Printer {
-    let v = Vartable {
-        vars: IndexMap::new(),
-        args: IndexMap::new(),
-        next_id: 0,
-    };
-    Printer {
-        vartable: Box::new(v),
-    }
-}
 
 #[test]
 fn test_stringfy_binary_expr() {
-    let mut printer = new_printer();
+    let mut v = new_vartable();
     for i in 0..100 {
-        printer.set_tmp_var(i, &Type::Int(16));
+        v.set_tmp(i, &Type::Int(16));
     }
+    let printer = new_printer(v);
 
     assert_eq!(
         stringfy_expr!(
@@ -302,19 +291,23 @@ fn test_stringfy_binary_expr() {
 
 #[test]
 fn test_stringfy_unary_expr() {
-    let mut printer = new_printer();
+    let mut v = new_vartable();
+    v.set_tmp(1, &Type::Int(16));
+    v.set_tmp(2, &Type::Int(16));
+    v.set_tmp(4, &Type::Int(16));
+    let printer = new_printer(v);
 
     // Not,
     assert_eq!(
         stringfy_expr!(
-            &new_printer(),
+            &new_printer!(),
             &unop_expr(UnaryOperator::Not, bool_literal(true))
         ),
         "!true"
     );
 
     // Neg { overflowing: bool },
-    printer.set_tmp_var(1, &Type::Int(16));
+
     assert_eq!(
         stringfy_expr!(
             &printer,
@@ -322,7 +315,7 @@ fn test_stringfy_unary_expr() {
         ),
         "-int16(%temp.ssa_ir.1)"
     );
-    printer.set_tmp_var(2, &Type::Int(16));
+
     assert_eq!(
         stringfy_expr!(
             &printer,
@@ -332,7 +325,6 @@ fn test_stringfy_unary_expr() {
     );
 
     // BitNot,
-    printer.set_tmp_var(4, &Type::Int(16));
     assert_eq!(
         stringfy_expr!(&printer, &unop_expr(UnaryOperator::BitNot, identifier(4))),
         "~int16(%temp.ssa_ir.4)"
@@ -341,8 +333,12 @@ fn test_stringfy_unary_expr() {
 
 #[test]
 fn test_stringfy_id_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Int(16));
+    let mut v = new_vartable();
+
+    v.set_tmp(1, &Type::Int(16));
+
+    let printer = new_printer(v);
+
     assert_eq!(
         stringfy_expr!(
             &printer,
@@ -357,7 +353,8 @@ fn test_stringfy_id_expr() {
 
 #[test]
 fn test_stringfy_array_literal_expr() {
-    let printer = new_printer();
+    // let printer = new_printer();
+    let printer = new_printer!();
     assert_eq!(
         stringfy_expr!(
             &printer,
@@ -497,7 +494,7 @@ fn test_stringfy_bytes_literal_expr() {
     // example: bytes4 hex"41_42_43_44";
     assert_eq!(
         stringfy_expr!(
-            &new_printer(),
+            &new_printer!(),
             &Expression::BytesLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Bytes(4),
@@ -523,7 +520,7 @@ fn test_stringfy_struct_literal_expr() {
     */
     assert_eq!(
         stringfy_expr!(
-            &new_printer(),
+            &new_printer!(),
             &Expression::StructLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Struct(StructType::UserDefined(0)),
@@ -535,7 +532,7 @@ fn test_stringfy_struct_literal_expr() {
 
     assert_eq!(
         stringfy_expr!(
-            &new_printer(),
+            &new_printer!(),
             &Expression::StructLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Struct(StructType::UserDefined(0)),
@@ -548,8 +545,9 @@ fn test_stringfy_struct_literal_expr() {
 
 #[test]
 fn test_stringfy_cast_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Uint(8));
+    let mut v = new_vartable();
+    v.set_tmp(1, &Type::Uint(8));
+    let printer = new_printer(v);
 
     // example: uint8(1)
     assert_eq!(
@@ -567,8 +565,9 @@ fn test_stringfy_cast_expr() {
 
 #[test]
 fn test_stringfy_bytes_cast_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Bytes(2));
+    let mut v = new_vartable();
+    v.set_tmp(1, &Type::Bytes(2));
+    let printer = new_printer(v);
 
     assert_eq!(
         stringfy_expr!(
@@ -585,8 +584,9 @@ fn test_stringfy_bytes_cast_expr() {
 
 #[test]
 fn test_stringfy_sext_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Int(8));
+    let mut v = new_vartable();
+    v.set_tmp(1, &Type::Int(8));
+    let printer = new_printer(v);
 
     // example: sign extending a int8 to int16:
     //          %1 of int8 to int16
@@ -606,8 +606,10 @@ fn test_stringfy_sext_expr() {
 
 #[test]
 fn test_stringfy_zext_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Uint(8));
+    let mut v = new_vartable();
+    v.set_tmp(1, &Type::Uint(8));
+    let printer = new_printer(v);
+
     // example: zero extending a uint8 to uint16:
     //          %1 of uint8 to uint16
     //          can be written as: (zext %1 to int16)
@@ -626,8 +628,9 @@ fn test_stringfy_zext_expr() {
 
 #[test]
 fn test_stringfy_trunc_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Uint(16));
+    let mut v = new_vartable();
+    v.set_tmp(1, &Type::Uint(16));
+    let printer = new_printer(v);
 
     // example: truncating a uint16 to uint8:
     //          %1 of uint16 to uint8
@@ -652,7 +655,7 @@ fn test_stringfy_alloc_dyn_bytes() {
     //        rhs print: alloc bytes1[10]
     assert_eq!(
         stringfy_expr!(
-            &new_printer(),
+            &new_printer!(),
             &Expression::AllocDynamicBytes {
                 loc: Loc::Codegen,
                 ty: Type::Bytes(1),
@@ -668,7 +671,7 @@ fn test_stringfy_alloc_dyn_bytes() {
     //        rhs print: alloc bytes1[] {0x01, 0x02, 0x03}
     assert_eq!(
         stringfy_expr!(
-            &new_printer(),
+            &new_printer!(),
             &Expression::AllocDynamicBytes {
                 loc: Loc::Codegen,
                 ty: Type::Bytes(1),
@@ -683,8 +686,9 @@ fn test_stringfy_alloc_dyn_bytes() {
 // GetRef
 #[test]
 fn test_stringfy_get_ref_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Uint(8));
+    let mut v = new_vartable();
+    v.set_tmp(1, &Type::Uint(8));
+    let printer = new_printer(v);
 
     // example: &ptr<uint8>(%temp.ssa_ir.1)
     assert_eq!(
@@ -702,8 +706,9 @@ fn test_stringfy_get_ref_expr() {
 // Load
 #[test]
 fn test_stringfy_load_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Ptr(Box::new(Type::Bytes(1))));
+    let mut v = new_vartable();
+    v.set_tmp(1, &Type::Ptr(Box::new(Type::Bytes(1))));
+    let printer = new_printer(v);
 
     // example: *%1
     assert_eq!(
@@ -721,11 +726,12 @@ fn test_stringfy_load_expr() {
 // StructMember
 #[test]
 fn test_stringfy_struct_member_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(
+    let mut v = new_vartable();
+    v.set_tmp(
         1,
         &Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
     );
+    let printer = new_printer(v);
 
     // example: uint8 %1->1
     assert_eq!(
@@ -744,14 +750,30 @@ fn test_stringfy_struct_member_expr() {
 // Subscript
 #[test]
 fn test_stringfy_subscript_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(
+    let mut v = new_vartable();
+
+    v.set_tmp(
         1,
         &Type::Ptr(Box::new(Type::Array(
             Box::new(Type::Uint(8)),
             vec![ArrayLength::Fixed(BigInt::from(2))],
         ))),
     );
+    v.set_tmp(
+        2,
+        &Type::Ptr(Box::new(Type::Array(
+            Box::new(Type::Uint(8)),
+            vec![ArrayLength::Dynamic],
+        ))),
+    );
+    v.set_tmp(
+        3,
+        &Type::Ptr(Box::new(Type::Array(
+            Box::new(Type::Uint(8)),
+            vec![ArrayLength::AnyFixed],
+        ))),
+    );
+    let printer = new_printer(v);
 
     // example: ptr<uint8[2]> %1[uint8(0)]
     assert_eq!(
@@ -766,56 +788,43 @@ fn test_stringfy_subscript_expr() {
         "ptr<uint8[2]>(%temp.ssa_ir.1)[uint8(0)]"
     );
 
-    printer.set_tmp_var(
-        1,
-        &Type::Ptr(Box::new(Type::Array(
-            Box::new(Type::Uint(8)),
-            vec![ArrayLength::Dynamic],
-        ))),
-    );
     // example: ptr<uint8[]> %1[uint8(0)]
     assert_eq!(
         stringfy_expr!(
             &printer,
             &Expression::Subscript {
                 loc: Loc::Codegen,
-                arr: Box::new(identifier(1)),
+                arr: Box::new(identifier(2)),
                 index: Box::new(num_literal!(0)),
             }
         ),
-        "ptr<uint8[]>(%temp.ssa_ir.1)[uint8(0)]"
+        "ptr<uint8[]>(%temp.ssa_ir.2)[uint8(0)]"
     );
 
-    printer.set_tmp_var(
-        1,
-        &Type::Ptr(Box::new(Type::Array(
-            Box::new(Type::Uint(8)),
-            vec![ArrayLength::AnyFixed],
-        ))),
-    );
     // example: ptr<uint8[?]> %1[uint8(0)]
     assert_eq!(
         stringfy_expr!(
             &printer,
             &Expression::Subscript {
                 loc: Loc::Codegen,
-                arr: Box::new(identifier(1)),
+                arr: Box::new(identifier(3)),
                 index: Box::new(num_literal!(0)),
             }
         ),
-        "ptr<uint8[?]>(%temp.ssa_ir.1)[uint8(0)]"
+        "ptr<uint8[?]>(%temp.ssa_ir.3)[uint8(0)]"
     );
 }
 
 // AdvancePointer
 #[test]
 fn test_stringfy_advance_pointer_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(
+    let mut v = new_vartable();
+    v.set_tmp(
         1,
         &Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
     );
-    printer.set_tmp_var(2, &Type::Uint(8));
+    v.set_tmp(2, &Type::Uint(8));
+    let printer = new_printer(v);
 
     // example: ptr_add(%1, %2)
     assert_eq!(
@@ -849,7 +858,7 @@ fn test_stringfy_function_arg_expr() {
     //          (uint8 arg#2)
     assert_eq!(
         stringfy_expr!(
-            &new_printer(),
+            &new_printer!(),
             &Expression::FunctionArg {
                 loc: Loc::Codegen,
                 ty: Type::Uint(8),
@@ -863,12 +872,14 @@ fn test_stringfy_function_arg_expr() {
 // FormatString
 #[test]
 fn test_stringfy_format_string_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Bytes(4));
-    printer.set_tmp_var(2, &Type::Int(16));
-    printer.set_tmp_var(3, &Type::Uint(8));
-    printer.set_tmp_var(4, &Type::Uint(32));
+    let mut v = new_vartable();
 
+    v.set_tmp(1, &Type::Bytes(4));
+    v.set_tmp(2, &Type::Int(16));
+    v.set_tmp(3, &Type::Uint(8));
+    v.set_tmp(4, &Type::Uint(32));
+
+    let printer = new_printer(v);
     // case1: spec is empty:
     //        fmt_str(%1)
     assert_eq!(
@@ -942,7 +953,7 @@ fn test_stringfy_format_string_expr() {
 fn test_stringfy_internal_function_cfg_expr() {
     assert_eq!(
         stringfy_expr!(
-            &new_printer(),
+            &new_printer!(),
             &Expression::InternalFunctionCfg { cfg_no: 123 }
         ),
         "function#123"
@@ -952,10 +963,12 @@ fn test_stringfy_internal_function_cfg_expr() {
 // Keccak256
 #[test]
 fn test_stringfy_keccak256_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Bytes(4));
-    printer.set_tmp_var(2, &Type::Bytes(4));
+    let mut v = new_vartable();
 
+    v.set_tmp(1, &Type::Bytes(4));
+    v.set_tmp(2, &Type::Bytes(4));
+
+    let printer = new_printer(v);
     // example: keccak256(%1, %2)
     assert_eq!(
         stringfy_expr!(
@@ -972,11 +985,13 @@ fn test_stringfy_keccak256_expr() {
 // StringCompare
 #[test]
 fn test_stringfy_string_compare_expr() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Bytes(4));
-    printer.set_tmp_var(2, &Type::Bytes(4));
-    printer.set_tmp_var(3, &Type::Bytes(3));
+    let mut v = new_vartable();
 
+    v.set_tmp(1, &Type::Bytes(4));
+    v.set_tmp(2, &Type::Bytes(4));
+    v.set_tmp(3, &Type::Bytes(3));
+
+    let printer = new_printer(v);
     // case1: strcmp(%1, %2)
     assert_eq!(
         stringfy_expr!(
@@ -1020,10 +1035,12 @@ fn test_stringfy_string_compare_expr() {
 // StringConcat
 #[test]
 fn test_stringfy_string_concat() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Bytes(4));
-    printer.set_tmp_var(2, &Type::Bytes(2));
+    let mut v = new_vartable();
 
+    v.set_tmp(1, &Type::Bytes(4));
+    v.set_tmp(2, &Type::Bytes(2));
+
+    let printer = new_printer(v);
     // case1: strcat(%1, %2)
     assert_eq!(
         stringfy_expr!(
@@ -1065,8 +1082,9 @@ fn test_stringfy_string_concat() {
 // StorageArrayLength
 #[test]
 fn test_stringfy_storage_array_length() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(
+    let mut v = new_vartable();
+
+    v.set_tmp(
         1,
         &Type::StoragePtr(
             false,
@@ -1076,6 +1094,8 @@ fn test_stringfy_storage_array_length() {
             )),
         ),
     );
+
+    let printer = new_printer(v);
 
     // example: storage_arr_len(uint8[] %1)
     assert_eq!(
@@ -1096,7 +1116,7 @@ fn test_stringfy_return_data() {
     // example: ret_data
     assert_eq!(
         stringfy_expr!(
-            &new_printer(),
+            &new_printer!(),
             &Expression::ReturnData { loc: Loc::Codegen }
         ),
         "(extern_call_ret_data)"
@@ -1105,10 +1125,12 @@ fn test_stringfy_return_data() {
 
 #[test]
 fn test_stringfy_builtin() {
-    let mut printer = new_printer();
-    printer.set_tmp_var(1, &Type::Int(16));
-    printer.set_tmp_var(2, &Type::Int(16));
+    let mut v = new_vartable();
 
+    v.set_tmp(1, &Type::Int(16));
+    v.set_tmp(2, &Type::Int(16));
+
+    let printer = new_printer(v);
     // example: builtin "addmod"(%1, %2, 0x100)
     assert_eq!(
         stringfy_expr!(

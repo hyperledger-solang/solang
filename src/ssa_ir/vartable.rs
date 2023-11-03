@@ -54,7 +54,7 @@ impl Vartable {
             .ok_or(format!("Variable {} not found.", id))
     }
 
-    pub(crate) fn set_tmp(&mut self, id: usize, ty: &Type) {
+    pub fn set_tmp(&mut self, id: usize, ty: &Type) {
         let var = Var {
             id,
             ty: ty.clone(),
@@ -80,7 +80,7 @@ impl Vartable {
         op
     }
 
-    pub fn get_function_arg(&self, arg_no: usize, loc: Loc) -> Option<Operand> {
+    pub(crate) fn get_function_arg(&self, arg_no: usize, loc: Loc) -> Option<Operand> {
         match self.args.get(&arg_no) {
             Some(id) => {
                 let op = self.get_operand(id, loc).unwrap();
@@ -90,7 +90,7 @@ impl Vartable {
         }
     }
 
-    pub fn add_function_arg(&mut self, arg_no: usize, var_id: usize) {
+    pub(crate) fn add_function_arg(&mut self, arg_no: usize, var_id: usize) {
         self.args.insert(arg_no, var_id);
     }
 }
