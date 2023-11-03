@@ -38,7 +38,7 @@ fn assert_cfg_str_eq(src: &str, cfg_no: usize, expected: &str) {
     // println!("=====================cfg no: {}", cfg_no);
 
     let converter = Converter::new(&ns, cfg);
-    let new_cfg = converter.get_ssa_ir_cfg().unwrap();
+    let new_cfg = converter.get_three_address_code_cfg().unwrap();
 
     let printer = Printer {
         vartable: Box::new(new_cfg.vartable.clone()),

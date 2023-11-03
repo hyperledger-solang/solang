@@ -6,7 +6,7 @@ use crate::ssa_ir::instructions::Instruction;
 use crate::ssa_ir::vartable::Vartable;
 
 impl Converter<'_> {
-    pub(crate) fn convert_instr(
+    pub(crate) fn lowering_instr(
         &self,
         instr: &Instr,
         vartable: &mut Vartable,
@@ -20,7 +20,7 @@ impl Converter<'_> {
                 //   2. [t2] tmp_2 = b + tmp_1
                 //   3. [t] a = tmp_2;
                 let dest_operand = vartable.get_operand(res, *loc)?;
-                self.convert_expression(&dest_operand, expr, vartable)
+                self.lowering_expression(&dest_operand, expr, vartable)
             }
             Instr::Store { dest, data } => {
                 // type checking the dest.ty() and data.ty()

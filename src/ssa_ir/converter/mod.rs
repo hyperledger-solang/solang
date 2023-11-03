@@ -93,7 +93,7 @@ impl<'input> Converter<'input> {
             Some(op) => Ok((op, vec![])),
             None => {
                 let tmp = vartable.new_temp(&self.from_ast_type(&expr.ty())?);
-                let dest_insns = self.convert_expression(&tmp, expr, vartable)?;
+                let dest_insns = self.lowering_expression(&tmp, expr, vartable)?;
                 Ok((tmp, dest_insns))
             }
         }
