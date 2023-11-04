@@ -32,7 +32,7 @@ pub fn function_discriminator(name: &str) -> Vec<u8> {
 
 /// Generate discriminator based on the name of the event. This is the 8 byte
 /// value anchor uses for events. This should match anchor's behaviour,
-///  we need to match the discriminator exactly
+///  generating the same discriminator
 pub fn event_discriminator(name: &str) -> Vec<u8> {
     discriminator("event", name)
 }
