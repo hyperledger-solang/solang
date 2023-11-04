@@ -1138,7 +1138,6 @@ impl Namespace {
                                     name.loc,
                                     "function type parameters cannot be named".to_string(),
                                 ));
-                                success = false;
                             }
                             p.ty
                         })
@@ -1152,7 +1151,6 @@ impl Namespace {
                                     name.loc,
                                     "function type returns cannot be named".to_string(),
                                 ));
-                                success = false;
                             }
                             p.ty
                         })
