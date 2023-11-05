@@ -119,7 +119,7 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
                     let event = &ns.events[*event_no];
 
                     ABI {
-                        name: event.name.to_owned(),
+                        name: event.id.name.to_owned(),
                         mutability: String::new(),
                         inputs: Some(
                             event

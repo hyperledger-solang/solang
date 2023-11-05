@@ -20,15 +20,26 @@ use solang_parser::pt::FunctionTy;
 /// Generate discriminator based on the name of the function. This is the 8 byte
 /// value anchor uses to dispatch function calls on. This should match
 /// anchor's behaviour - we need to match the discriminator exactly
-pub fn discriminator(namespace: &'static str, name: &str) -> Vec<u8> {
-    let mut hasher = Sha256::new();
+pub fn function_discriminator(name: &str) -> Vec<u8> {
     // must match snake-case npm library, see
     // https://github.com/coral-xyz/anchor/blob/master/ts/packages/anchor/src/coder/borsh/instruction.ts#L389
     let normalized = name
         .from_case(Case::Camel)
         .without_boundaries(&[Boundary::LowerDigit])
         .to_case(Case::Snake);
-    hasher.update(format!("{namespace}:{normalized}"));
+    discriminator("global", &normalized)
+}
+
+/// Generate discriminator based on the name of the event. This is the 8 byte
+/// value anchor uses for events. This should match anchor's behaviour,
+///  generating the same discriminator
+pub fn event_discriminator(name: &str) -> Vec<u8> {
+    discriminator("event", name)
+}
+
+fn discriminator(namespace: &'static str, name: &str) -> Vec<u8> {
+    let mut hasher = Sha256::new();
+    hasher.update(format!("{namespace}:{name}"));
     hasher.finalize()[..8].to_vec()
 }
 
@@ -85,7 +96,7 @@ fn idl_events(
             }
 
             events.push(IdlEvent {
-                name: def.name.clone(),
+                name: def.id.name.clone(),
                 fields,
             });
         }

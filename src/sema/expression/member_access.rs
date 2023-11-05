@@ -17,7 +17,7 @@ use crate::sema::unused_variable::{assigned_variable, used_variable};
 use crate::Target;
 use num_bigint::{BigInt, Sign};
 use num_traits::{FromPrimitive, One, Zero};
-use solang_parser::diagnostics::Diagnostic;
+use solang_parser::diagnostics::{Diagnostic, Note};
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 use std::ops::{Shl, Sub};
@@ -58,6 +58,19 @@ pub(super) fn member_access(
 
     // is it an enum value
     if let Some(expr) = enum_value(
+        loc,
+        e,
+        id,
+        context.file_no,
+        context.contract_no,
+        ns,
+        diagnostics,
+    )? {
+        return Ok(expr);
+    }
+
+    // is it an event selector
+    if let Some(expr) = event_selector(
         loc,
         e,
         id,
@@ -637,6 +650,64 @@ fn enum_value(
                 ));
                 Err(())
             }
+        }
+    } else {
+        Ok(None)
+    }
+}
+
+fn event_selector(
+    loc: &pt::Loc,
+    expr: &pt::Expression,
+    id: &pt::Identifier,
+    file_no: usize,
+    contract_no: Option<usize>,
+    ns: &mut Namespace,
+    diagnostics: &mut Diagnostics,
+) -> Result<Option<Expression>, ()> {
+    if id.name != "selector" {
+        return Ok(None);
+    }
+
+    if let Ok(events) = ns.resolve_event(file_no, contract_no, expr, &mut Diagnostics::default()) {
+        if events.len() == 1 {
+            let event_no = events[0];
+
+            if ns.events[event_no].anonymous {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "anonymous event has no selector".into(),
+                ));
+                Err(())
+            } else {
+                Ok(Some(Expression::EventSelector {
+                    loc: *loc,
+                    event_no,
+                    ty: if ns.target == Target::Solana {
+                        Type::Bytes(8)
+                    } else {
+                        Type::Bytes(32)
+                    },
+                }))
+            }
+        } else {
+            let notes = events
+                .into_iter()
+                .map(|ev_no| {
+                    let ev = &ns.events[ev_no];
+                    Note {
+                        loc: ev.id.loc,
+                        message: format!("possible definition of '{}'", ev.id),
+                    }
+                })
+                .collect();
+
+            diagnostics.push(Diagnostic::error_with_notes(
+                *loc,
+                "multiple definitions of event".into(),
+                notes,
+            ));
+            Err(())
         }
     } else {
         Ok(None)

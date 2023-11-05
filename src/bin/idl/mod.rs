@@ -4,7 +4,7 @@ use crate::cli::IdlCommand;
 use anchor_syn::idl::types::{Idl, IdlAccountItem, IdlInstruction, IdlType, IdlTypeDefinitionTy};
 use itertools::Itertools;
 use serde_json::Value as JsonValue;
-use solang::abi::anchor::discriminator;
+use solang::abi::anchor::function_discriminator;
 use solang_parser::lexer::is_keyword;
 use std::{ffi::OsStr, fs::File, io::Write, path::PathBuf, process::exit};
 
@@ -254,7 +254,7 @@ fn instruction(
             .1;
 
         // The anchor discriminator is what Solidity calls a selector
-        let selector = discriminator("global", &instr.name);
+        let selector = function_discriminator(&instr.name);
 
         write!(
             f,
