@@ -4,4 +4,6 @@ contract test {
             }
         }
 // ---- Expect: diagnostics ----
-// error: 3:42-43: function type returns cannot be named
+// warning: 2:13-34: function can be declared 'pure'
+// warning: 3:42-43: function type returns cannot be named
+// warning: 3:45-46: local variable 'a' is unused

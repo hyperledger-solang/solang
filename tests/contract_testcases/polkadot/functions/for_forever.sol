@@ -8,4 +8,5 @@
         }
     }
 // ---- Expect: diagnostics ----
-// error: 7:13-19: unreachable statement
+// warning: 3:9-49: function can be declared 'pure'
+// warning: 7:13-19: unreachable statement

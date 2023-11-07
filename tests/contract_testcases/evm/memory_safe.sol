@@ -9,6 +9,6 @@ library Issue1526 {
 }
 
 // ---- Expect: diagnostics ----
-// error: 5:34-39: flag 'foo' not supported
-// error: 5:41-54: flag 'memory-safe' already specified
+// warning: 5:34-39: flag 'foo' not supported
+// warning: 5:41-54: flag 'memory-safe' already specified
 // 	note 5:19-32: previous location

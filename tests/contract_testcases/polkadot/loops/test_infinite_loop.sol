@@ -9,4 +9,5 @@ contract test3 {
             }
         }
 // ---- Expect: diagnostics ----
-// error: 8:17-25: unreachable statement
+// warning: 5:13-63: function can be declared 'pure'
+// warning: 8:17-25: unreachable statement

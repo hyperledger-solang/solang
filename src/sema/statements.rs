@@ -423,6 +423,7 @@ fn statement(
         } => {
             symtable.enter_scope();
             let mut reachable = true;
+            let mut already_unreachable = false;
 
             let mut context = context.clone();
             context.unchecked |= *unchecked;
@@ -430,12 +431,12 @@ fn statement(
             let mut resolved_stmts = Vec::new();
 
             for stmt in statements {
-                if !reachable {
-                    ns.diagnostics.push(Diagnostic::error(
+                if !reachable && !already_unreachable {
+                    ns.diagnostics.push(Diagnostic::warning(
                         stmt.loc(),
                         "unreachable statement".to_string(),
                     ));
-                    return Err(());
+                    already_unreachable = true;
                 }
                 reachable = statement(
                     stmt,
@@ -911,7 +912,7 @@ fn statement(
                 for flag in flags {
                     if flag.string == "memory-safe" && ns.target == Target::EVM {
                         if let Some(prev) = &memory_safe {
-                            ns.diagnostics.push(Diagnostic::error_with_note(
+                            ns.diagnostics.push(Diagnostic::warning_with_note(
                                 flag.loc,
                                 format!("flag '{}' already specified", flag.string),
                                 *prev,
@@ -921,7 +922,7 @@ fn statement(
                             memory_safe = Some(flag.loc);
                         }
                     } else {
-                        ns.diagnostics.push(Diagnostic::error(
+                        ns.diagnostics.push(Diagnostic::warning(
                             flag.loc,
                             format!("flag '{}' not supported", flag.string),
                         ));
