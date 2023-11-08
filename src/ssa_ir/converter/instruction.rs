@@ -10,9 +10,13 @@ impl Converter<'_> {
         &self,
         instr: &Instr,
         vartable: &mut Vartable,
-    ) -> Result<Vec<Instruction>, String> {
+        mut results: &mut Vec<Instruction>,
+    ) -> Result<(), String> {
         match instr {
-            Instr::Nop => Ok(vec![Instruction::Nop]),
+            Instr::Nop => {
+                results.push(Instruction::Nop);
+                Ok(())
+            }
             Instr::Set { res, expr, loc, .. } => {
                 // [t] a = b + c * d
                 // converts to:
@@ -20,168 +24,142 @@ impl Converter<'_> {
                 //   2. [t2] tmp_2 = b + tmp_1
                 //   3. [t] a = tmp_2;
                 let dest_operand = vartable.get_operand(res, *loc)?;
-                self.lowering_expression(&dest_operand, expr, vartable)
+                self.lowering_expression(&dest_operand, expr, vartable, results)
             }
             Instr::Store { dest, data } => {
                 // type checking the dest.ty() and data.ty()
-                let (dest_op, dest_insns) = self.to_operand_and_insns(dest, vartable)?;
-                let (data_op, data_insns) = self.to_operand_and_insns(data, vartable)?;
-                let mut insns = vec![];
-                insns.extend(dest_insns);
-                insns.extend(data_insns);
-                insns.push(Instruction::Store {
+                let dest_op = self.to_operand_and_insns(dest, vartable, &mut results)?;
+                let data_op = self.to_operand_and_insns(data, vartable, &mut results)?;
+                results.push(Instruction::Store {
                     dest: dest_op,
                     data: data_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::PushMemory {
                 res, array, value, ..
             } => {
-                let (value_op, value_insns) = self.to_operand_and_insns(value, vartable)?;
-                let mut insns = vec![];
-                insns.extend(value_insns);
-                insns.push(Instruction::PushMemory {
+                let value_op = self.to_operand_and_insns(value, vartable, &mut results)?;
+                results.push(Instruction::PushMemory {
                     res: *res,
                     array: *array,
                     value: value_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::PopMemory {
                 res, array, loc, ..
-            } => Ok(vec![Instruction::PopMemory {
-                res: *res,
-                array: *array,
-                loc: *loc,
-            }]),
+            } => {
+                results.push(Instruction::PopMemory {
+                    res: *res,
+                    array: *array,
+                    loc: *loc,
+                });
+                Ok(())
+            }
 
-            Instr::Branch { block } => Ok(vec![Instruction::Branch { block: *block }]),
+            Instr::Branch { block } => {
+                results.push(Instruction::Branch { block: *block });
+                Ok(())
+            }
             Instr::BranchCond {
                 cond,
                 true_block,
                 false_block,
             } => {
-                let (cond_op, cond_insns) = self.to_operand_and_insns(cond, vartable)?;
-                let mut insns = Vec::new();
-                insns.extend(cond_insns);
-                insns.push(Instruction::BranchCond {
+                let cond_op = self.to_operand_and_insns(cond, vartable, &mut results)?;
+                results.push(Instruction::BranchCond {
                     cond: cond_op,
                     true_block: *true_block,
                     false_block: *false_block,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::Return { value } => {
                 let mut operands = vec![];
-                let mut insns = vec![];
                 for v in value {
-                    let (tmp, expr_insns) = self.to_operand_and_insns(v, vartable)?;
-                    insns.extend(expr_insns);
+                    let tmp = self.to_operand_and_insns(v, vartable, &mut results)?;
                     operands.push(tmp);
                 }
-                insns.push(Instruction::Return { value: operands });
-                Ok(insns)
+                results.push(Instruction::Return { value: operands });
+                Ok(())
             }
             Instr::AssertFailure { encoded_args } => match encoded_args {
                 Some(args) => {
-                    let (tmp, expr_insns) = self.to_operand_and_insns(args, vartable)?;
-                    let mut insns = vec![];
-                    insns.extend(expr_insns);
-                    insns.push(Instruction::AssertFailure {
+                    let tmp = self.to_operand_and_insns(args, vartable, &mut results)?;
+                    results.push(Instruction::AssertFailure {
                         encoded_args: Some(tmp),
                     });
-                    Ok(insns)
+                    Ok(())
                 }
-                None => Ok(vec![Instruction::AssertFailure { encoded_args: None }]),
+                None => {
+                    results.push(Instruction::AssertFailure { encoded_args: None });
+                    Ok(())
+                }
             },
             Instr::Call {
                 res, call, args, ..
             } => {
-                let mut insns = vec![];
-
                 // resolve the function
-                let (callty, callty_insns) = self.to_internal_call_ty_and_insns(call, vartable)?;
-                insns.extend(callty_insns);
+                let callty = self.to_internal_call_ty_and_insns(call, vartable, &mut results)?;
 
                 // resolve the arguments
                 let mut arg_ops = vec![];
                 for arg in args {
-                    let (tmp, expr_insns) = self.to_operand_and_insns(arg, vartable)?;
-                    insns.extend(expr_insns);
+                    let tmp = self.to_operand_and_insns(arg, vartable, &mut results)?;
                     arg_ops.push(tmp);
                 }
 
-                let call_insn = Instruction::Call {
+                results.push(Instruction::Call {
                     res: res.clone(),
                     call: callty,
                     args: arg_ops,
-                };
-
-                insns.push(call_insn);
-                Ok(insns)
+                });
+                Ok(())
             }
             Instr::Print { expr } => {
-                let (tmp, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
-                let mut insns = vec![];
-                insns.extend(expr_insns);
-                insns.push(Instruction::Print { operand: tmp });
-                Ok(insns)
+                let tmp = self.to_operand_and_insns(expr, vartable, &mut results)?;
+                results.push(Instruction::Print { operand: tmp });
+                Ok(())
             }
             Instr::LoadStorage { res, storage, .. } => {
-                let (storage_op, storage_insns) = self.to_operand_and_insns(storage, vartable)?;
-                let mut insns = vec![];
-                insns.extend(storage_insns);
-                insns.push(Instruction::LoadStorage {
+                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results)?;
+                results.push(Instruction::LoadStorage {
                     res: *res,
                     storage: storage_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::ClearStorage { storage, .. } => {
-                let (storage_op, storage_insns) = self.to_operand_and_insns(storage, vartable)?;
-                let mut insns = vec![];
-                insns.extend(storage_insns);
-                insns.push(Instruction::ClearStorage {
+                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results)?;
+                results.push(Instruction::ClearStorage {
                     storage: storage_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::SetStorage { value, storage, .. } => {
-                let mut insns = vec![];
-
-                let (storage_op, storage_insns) = self.to_operand_and_insns(storage, vartable)?;
-                insns.extend(storage_insns);
-
-                let (value_op, value_insns) = self.to_operand_and_insns(value, vartable)?;
-                insns.extend(value_insns);
-
-                insns.push(Instruction::SetStorage {
+                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results)?;
+                let value_op = self.to_operand_and_insns(value, vartable, &mut results)?;
+                results.push(Instruction::SetStorage {
                     value: value_op,
                     storage: storage_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::SetStorageBytes {
                 value,
                 storage,
                 offset,
             } => {
-                let (value_op, value_insns) = self.to_operand_and_insns(value, vartable)?;
-                let (storage_op, storage_insns) = self.to_operand_and_insns(storage, vartable)?;
-                let (offset_op, offset_insns) = self.to_operand_and_insns(offset, vartable)?;
-
-                let mut insns = vec![];
-                insns.extend(value_insns);
-                insns.extend(storage_insns);
-                insns.extend(offset_insns);
-
-                insns.push(Instruction::SetStorageBytes {
+                let value_op = self.to_operand_and_insns(value, vartable, &mut results)?;
+                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results)?;
+                let offset_op = self.to_operand_and_insns(offset, vartable, &mut results)?;
+                results.push(Instruction::SetStorageBytes {
                     value: value_op,
                     storage: storage_op,
                     offset: offset_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::PushStorage {
                 res,
@@ -189,29 +167,22 @@ impl Converter<'_> {
                 storage,
                 ..
             } => {
-                let (value_op, value_insns) = self.to_operand_option_and_insns(value, vartable)?;
-                let (storage_op, storage_insns) = self.to_operand_and_insns(storage, vartable)?;
-
-                let mut insns = vec![];
-                insns.extend(storage_insns);
-                insns.extend(value_insns);
-
-                insns.push(Instruction::PushStorage {
+                let value_op = self.to_operand_option_and_insns(value, vartable, &mut results)?;
+                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results)?;
+                results.push(Instruction::PushStorage {
                     res: *res,
                     value: value_op,
                     storage: storage_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::PopStorage { res, storage, .. } => {
-                let (storage_op, storage_insns) = self.to_operand_and_insns(storage, vartable)?;
-                let mut insns = vec![];
-                insns.extend(storage_insns);
-                insns.push(Instruction::PopStorage {
+                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results)?;
+                results.push(Instruction::PopStorage {
                     res: *res,
                     storage: storage_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::ExternalCall {
                 loc,
@@ -226,25 +197,17 @@ impl Converter<'_> {
                 contract_function_no,
                 flags,
             } => {
-                let (address_op, address_insns) =
-                    self.to_operand_option_and_insns(address, vartable)?;
-                let (accounts_op, accounts_insns) =
-                    self.to_external_call_accounts_and_insns(accounts, vartable)?;
-                let (seeds_op, seeds_insns) = self.to_operand_option_and_insns(seeds, vartable)?;
-                let (payload_op, payload_insns) = self.to_operand_and_insns(payload, vartable)?;
-                let (value_op, value_insns) = self.to_operand_and_insns(value, vartable)?;
-                let (gas_op, gas_insns) = self.to_operand_and_insns(gas, vartable)?;
-                let (flags_op, flags_insns) = self.to_operand_option_and_insns(flags, vartable)?;
+                let address_op =
+                    self.to_operand_option_and_insns(address, vartable, &mut results)?;
+                let accounts_op =
+                    self.to_external_call_accounts_and_insns(accounts, vartable, &mut results)?;
+                let seeds_op = self.to_operand_option_and_insns(seeds, vartable, &mut results)?;
+                let payload_op = self.to_operand_and_insns(payload, vartable, &mut results)?;
+                let value_op = self.to_operand_and_insns(value, vartable, &mut results)?;
+                let gas_op = self.to_operand_and_insns(gas, vartable, &mut results)?;
+                let flags_op = self.to_operand_option_and_insns(flags, vartable, &mut results)?;
 
-                let mut insns = vec![];
-                insns.extend(address_insns);
-                insns.extend(accounts_insns);
-                insns.extend(seeds_insns);
-                insns.extend(payload_insns);
-                insns.extend(value_insns);
-                insns.extend(gas_insns);
-                insns.extend(flags_insns);
-                insns.push(Instruction::ExternalCall {
+                results.push(Instruction::ExternalCall {
                     loc: *loc,
                     success: *success,
                     address: address_op,
@@ -257,129 +220,111 @@ impl Converter<'_> {
                     contract_function_no: *contract_function_no,
                     flags: flags_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::ValueTransfer {
                 success,
                 address,
                 value,
             } => {
-                let (address_op, address_insns) = self.to_operand_and_insns(address, vartable)?;
-                let (value_op, value_insns) = self.to_operand_and_insns(value, vartable)?;
-                let mut insns = vec![];
-                insns.extend(address_insns);
-                insns.extend(value_insns);
-                insns.push(Instruction::ValueTransfer {
+                let address_op = self.to_operand_and_insns(address, vartable, &mut results)?;
+                let value_op = self.to_operand_and_insns(value, vartable, &mut results)?;
+                results.push(Instruction::ValueTransfer {
                     success: *success,
                     address: address_op,
                     value: value_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::SelfDestruct { recipient } => {
-                let (tmp, expr_insns) = self.to_operand_and_insns(recipient, vartable)?;
-                let mut insns = vec![];
-                insns.extend(expr_insns);
-                insns.push(Instruction::SelfDestruct { recipient: tmp });
-                Ok(insns)
+                let tmp = self.to_operand_and_insns(recipient, vartable, &mut results)?;
+                results.push(Instruction::SelfDestruct { recipient: tmp });
+                Ok(())
             }
             Instr::EmitEvent {
                 event_no,
                 data,
                 topics,
             } => {
-                let (data_op, data_insns) = self.to_operand_and_insns(data, vartable)?;
-                let mut insns = vec![];
-                insns.extend(data_insns);
+                let data_op = self.to_operand_and_insns(data, vartable, &mut results)?;
                 let mut topic_ops = vec![];
                 for topic in topics {
-                    let (topic_op, topic_insns) = self.to_operand_and_insns(topic, vartable)?;
-                    insns.extend(topic_insns);
+                    let topic_op = self.to_operand_and_insns(topic, vartable, &mut results)?;
                     topic_ops.push(topic_op);
                 }
-                insns.push(Instruction::EmitEvent {
+                results.push(Instruction::EmitEvent {
                     event_no: *event_no,
                     data: data_op,
                     topics: topic_ops,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::WriteBuffer { buf, offset, value } => {
-                let (buf_op, buf_insns) = self.to_operand_and_insns(buf, vartable)?;
-                let (offset_op, offset_insns) = self.to_operand_and_insns(offset, vartable)?;
-                let (value_op, value_insns) = self.to_operand_and_insns(value, vartable)?;
-                let mut insns = vec![];
-                insns.extend(buf_insns);
-                insns.extend(offset_insns);
-                insns.extend(value_insns);
-                insns.push(Instruction::WriteBuffer {
+                let buf_op = self.to_operand_and_insns(buf, vartable, &mut results)?;
+                let offset_op = self.to_operand_and_insns(offset, vartable, &mut results)?;
+                let value_op = self.to_operand_and_insns(value, vartable, &mut results)?;
+                results.push(Instruction::WriteBuffer {
                     buf: buf_op,
                     offset: offset_op,
                     value: value_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::MemCopy {
                 source,
                 destination,
                 bytes,
             } => {
-                let (source_op, source_insns) = self.to_operand_and_insns(source, vartable)?;
-                let (dest_op, dest_insns) = self.to_operand_and_insns(destination, vartable)?;
-                let (bytes_op, bytes_insns) = self.to_operand_and_insns(bytes, vartable)?;
-                let mut insns = vec![];
-                insns.extend(source_insns);
-                insns.extend(dest_insns);
-                insns.extend(bytes_insns);
-                insns.push(Instruction::MemCopy {
+                let source_op = self.to_operand_and_insns(source, vartable, &mut results)?;
+                let dest_op = self.to_operand_and_insns(destination, vartable, &mut results)?;
+                let bytes_op = self.to_operand_and_insns(bytes, vartable, &mut results)?;
+                results.push(Instruction::MemCopy {
                     src: source_op,
                     dest: dest_op,
                     bytes: bytes_op,
                 });
-                Ok(insns)
+                Ok(())
             }
             Instr::Switch {
                 cond,
                 cases,
                 default,
             } => {
-                let mut insns = vec![];
-
-                let (cond_op, cond_insns) = self.to_operand_and_insns(cond, vartable)?;
-                insns.extend(cond_insns);
+                let cond_op = self.to_operand_and_insns(cond, vartable, &mut results)?;
 
                 let mut case_ops = vec![];
                 for (case, block_no) in cases {
-                    let (case_op, case_insns) = self.to_operand_and_insns(case, vartable)?;
-                    insns.extend(case_insns);
+                    let case_op = self.to_operand_and_insns(case, vartable, &mut results)?;
                     case_ops.push((case_op, *block_no));
                 }
 
-                insns.push(Instruction::Switch {
+                results.push(Instruction::Switch {
                     cond: cond_op,
                     cases: case_ops,
                     default: *default,
                 });
 
-                Ok(insns)
+                Ok(())
             }
             Instr::ReturnData { data, data_len } => {
-                let (data_op, data_insns) = self.to_operand_and_insns(data, vartable)?;
-                let (data_len_op, data_len_insns) =
-                    self.to_operand_and_insns(data_len, vartable)?;
-                let mut insns = vec![];
-                insns.extend(data_insns);
-                insns.extend(data_len_insns);
-                insns.push(Instruction::ReturnData {
+                let data_op = self.to_operand_and_insns(data, vartable, &mut results)?;
+                let data_len_op = self.to_operand_and_insns(data_len, vartable, &mut results)?;
+                results.push(Instruction::ReturnData {
                     data: data_op,
                     data_len: data_len_op,
                 });
-                Ok(insns)
+                Ok(())
             }
-            Instr::ReturnCode { code } => Ok(vec![Instruction::ReturnCode { code: code.clone() }]),
-            Instr::Unimplemented { reachable } => Ok(vec![Instruction::Unimplemented {
-                reachable: *reachable,
-            }]),
+            Instr::ReturnCode { code } => {
+                results.push(Instruction::ReturnCode { code: code.clone() });
+                Ok(())
+            }
+            Instr::Unimplemented { reachable } => {
+                results.push(Instruction::Unimplemented {
+                    reachable: *reachable,
+                });
+                Ok(())
+            }
             Instr::AccountAccess { .. } => panic!("AccountAccess should be replaced by Subscript"),
             Instr::Constructor {
                 success,
@@ -395,32 +340,17 @@ impl Converter<'_> {
                 accounts,
                 loc,
             } => {
-                let mut insns = vec![];
+                let args_op = self.to_operand_and_insns(encoded_args, vartable, &mut results)?;
+                let value_op = self.to_operand_option_and_insns(value, vartable, &mut results)?;
+                let gas_op = self.to_operand_and_insns(gas, vartable, &mut results)?;
+                let salt_op = self.to_operand_option_and_insns(salt, vartable, &mut results)?;
+                let address_op =
+                    self.to_operand_option_and_insns(address, vartable, &mut results)?;
+                let seeds_op = self.to_operand_option_and_insns(seeds, vartable, &mut results)?;
+                let accounts =
+                    self.to_external_call_accounts_and_insns(accounts, vartable, &mut results)?;
 
-                let (args_op, args_insns) = self.to_operand_and_insns(encoded_args, vartable)?;
-                insns.extend(args_insns);
-
-                let (value_op, value_insns) = self.to_operand_option_and_insns(value, vartable)?;
-                insns.extend(value_insns);
-
-                let (gas_op, gas_insns) = self.to_operand_and_insns(gas, vartable)?;
-                insns.extend(gas_insns);
-
-                let (salt_op, salt_insns) = self.to_operand_option_and_insns(salt, vartable)?;
-                insns.extend(salt_insns);
-
-                let (address_op, address_insns) =
-                    self.to_operand_option_and_insns(address, vartable)?;
-                insns.extend(address_insns);
-
-                let (seeds_op, seeds_insns) = self.to_operand_option_and_insns(seeds, vartable)?;
-                insns.extend(seeds_insns);
-
-                let (accounts, accounts_insns) =
-                    self.to_external_call_accounts_and_insns(accounts, vartable)?;
-                insns.extend(accounts_insns);
-
-                let constructor_insn = Instruction::Constructor {
+                results.push(Instruction::Constructor {
                     loc: *loc,
                     success: *success,
                     res: *res,
@@ -433,10 +363,9 @@ impl Converter<'_> {
                     address: address_op,
                     seeds: seeds_op,
                     accounts,
-                };
-                insns.push(constructor_insn);
+                });
 
-                Ok(insns)
+                Ok(())
             }
         }
     }

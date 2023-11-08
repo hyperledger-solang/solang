@@ -55,8 +55,7 @@ impl Converter<'_> {
     ) -> Result<Block, String> {
         let mut instructions = vec![];
         for insn in &basic_block.instr {
-            let insns = self.lowering_instr(insn, vartable)?;
-            insns.into_iter().for_each(|i| instructions.push(i));
+            self.lowering_instr(insn, vartable, &mut instructions)?;
         }
 
         let block = Block {

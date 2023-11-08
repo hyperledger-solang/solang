@@ -88,13 +88,14 @@ impl<'input> Converter<'input> {
         &self,
         expr: &codegen::Expression,
         vartable: &mut Vartable,
-    ) -> Result<(Operand, Vec<Instruction>), String> {
+        mut result: &mut Vec<Instruction>,
+    ) -> Result<Operand, String> {
         match self.to_operand(expr, vartable) {
-            Some(op) => Ok((op, vec![])),
+            Some(op) => Ok(op),
             None => {
                 let tmp = vartable.new_temp(&self.from_ast_type(&expr.ty())?);
-                let dest_insns = self.lowering_expression(&tmp, expr, vartable)?;
-                Ok((tmp, dest_insns))
+                self.lowering_expression(&tmp, expr, vartable, &mut result)?;
+                Ok(tmp)
             }
         }
     }
@@ -103,13 +104,14 @@ impl<'input> Converter<'input> {
         &self,
         expr: &Option<codegen::Expression>,
         vartable: &mut Vartable,
-    ) -> Result<(Option<Operand>, Vec<Instruction>), String> {
+        result: &mut Vec<Instruction>,
+    ) -> Result<Option<Operand>, String> {
         match expr {
             Some(address) => {
-                let (tmp, expr_insns) = self.to_operand_and_insns(address, vartable)?;
-                Ok((Some(tmp), expr_insns))
+                let tmp = self.to_operand_and_insns(address, vartable, result)?;
+                Ok(Some(tmp))
             }
-            None => Ok((None, vec![])),
+            None => Ok(None),
         }
     }
 
@@ -117,15 +119,15 @@ impl<'input> Converter<'input> {
         &self,
         location: &ast::StringLocation<codegen::Expression>,
         vartable: &mut Vartable,
-    ) -> Result<(ast::StringLocation<Operand>, Vec<Instruction>), String> {
+        result: &mut Vec<Instruction>,
+    ) -> Result<ast::StringLocation<Operand>, String> {
         match location {
-            ast::StringLocation::CompileTime(str) => Ok((
-                ast::StringLocation::CompileTime(str.clone()) as ast::StringLocation<Operand>,
-                vec![],
-            )),
+            ast::StringLocation::CompileTime(str) => {
+                Ok(ast::StringLocation::CompileTime(str.clone()) as ast::StringLocation<Operand>)
+            }
             ast::StringLocation::RunTime(expr) => {
-                let (op, insns) = self.to_operand_and_insns(expr, vartable)?;
-                Ok((ast::StringLocation::RunTime(Box::new(op)), insns))
+                let op = self.to_operand_and_insns(expr, vartable, result)?;
+                Ok(ast::StringLocation::RunTime(Box::new(op)))
             }
         }
     }
@@ -134,20 +136,19 @@ impl<'input> Converter<'input> {
         &self,
         accounts: &ast::ExternalCallAccounts<codegen::Expression>,
         vartable: &mut Vartable,
-    ) -> Result<(ast::ExternalCallAccounts<Operand>, Vec<Instruction>), String> {
+        result: &mut Vec<Instruction>,
+    ) -> Result<ast::ExternalCallAccounts<Operand>, String> {
         match accounts {
             ast::ExternalCallAccounts::Present(accounts) => {
-                let (tmp, expr_insns) = self.to_operand_and_insns(accounts, vartable)?;
-                Ok((ast::ExternalCallAccounts::Present(tmp), expr_insns))
+                let tmp = self.to_operand_and_insns(accounts, vartable, result)?;
+                Ok(ast::ExternalCallAccounts::Present(tmp))
             }
-            ast::ExternalCallAccounts::NoAccount => Ok((
-                ast::ExternalCallAccounts::NoAccount as ast::ExternalCallAccounts<Operand>,
-                vec![],
-            )),
-            ast::ExternalCallAccounts::AbsentArgument => Ok((
-                ast::ExternalCallAccounts::AbsentArgument as ast::ExternalCallAccounts<Operand>,
-                vec![],
-            )),
+            ast::ExternalCallAccounts::NoAccount => {
+                Ok(ast::ExternalCallAccounts::NoAccount as ast::ExternalCallAccounts<Operand>)
+            }
+            ast::ExternalCallAccounts::AbsentArgument => {
+                Ok(ast::ExternalCallAccounts::AbsentArgument as ast::ExternalCallAccounts<Operand>)
+            }
         }
     }
 
@@ -155,20 +156,18 @@ impl<'input> Converter<'input> {
         &self,
         call: &cfg::InternalCallTy,
         vartable: &mut Vartable,
-    ) -> Result<(InternalCallTy, Vec<Instruction>), String> {
+        result: &mut Vec<Instruction>,
+    ) -> Result<InternalCallTy, String> {
         match call {
-            cfg::InternalCallTy::Builtin { ast_func_no } => Ok((
-                InternalCallTy::Builtin {
-                    ast_func_no: *ast_func_no,
-                },
-                vec![],
-            )),
+            cfg::InternalCallTy::Builtin { ast_func_no } => Ok(InternalCallTy::Builtin {
+                ast_func_no: *ast_func_no,
+            }),
             cfg::InternalCallTy::Static { cfg_no } => {
-                Ok((InternalCallTy::Static { cfg_no: *cfg_no }, vec![]))
+                Ok(InternalCallTy::Static { cfg_no: *cfg_no })
             }
             cfg::InternalCallTy::Dynamic(expr) => {
-                let (tmp, expr_insns) = self.to_operand_and_insns(expr, vartable)?;
-                Ok((InternalCallTy::Dynamic(tmp), expr_insns))
+                let tmp = self.to_operand_and_insns(expr, vartable, result)?;
+                Ok(InternalCallTy::Dynamic(tmp))
             }
         }
     }
