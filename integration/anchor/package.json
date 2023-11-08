@@ -6,7 +6,7 @@
         "build": "solang compile tests/*.sol --importpath tests --target solana -v -o tests/"
     },
     "dependencies": {
-        "@coral-xyz/anchor": "^0.28.0",
+        "@coral-xyz/anchor": "^0.29.0",
         "ts-node": "^10.9.1",
         "tsc-node": "^0.0.3"
     },
