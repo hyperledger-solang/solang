@@ -39,7 +39,7 @@ impl<'input> Converter<'input> {
         self.ns.address_length
     }
 
-    pub fn unwrap_user_type(&self, user_ty: &ast::Type) -> Result<Type, String> {
+    pub fn convert_user_type(&self, user_ty: &ast::Type) -> Result<Type, String> {
         // clone happens here because function unwrap_user_type takes ownership
         let real_ty = user_ty.clone().unwrap_user_type(self.ns);
         self.from_ast_type(&real_ty)

@@ -76,7 +76,7 @@ impl Converter<'_> {
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(Type::Ptr(Box::new(Type::Function { params, returns })))
             }
-            ast::Type::UserType(_) => self.unwrap_user_type(ty),
+            ast::Type::UserType(_) => self.convert_user_type(ty),
             ast::Type::Slice(ty) => {
                 let ty = self.from_ast_type(ty.as_ref())?;
                 Ok(Type::Ptr(Box::new(Type::Slice(Box::new(ty)))))
