@@ -82,7 +82,6 @@ pub enum Expression {
         id: usize,
     },
 
-    /*************************** Constants ***************************/
     BoolLiteral {
         loc: Loc,
         value: bool,
@@ -115,7 +114,6 @@ pub enum Expression {
         values: Vec<Operand>,
     },
 
-    /*************************** Casts ***************************/
     Cast {
         loc: Loc,
         operand: Box<Operand>,
@@ -146,7 +144,6 @@ pub enum Expression {
         to_ty: Type,
     },
 
-    /*************************** Memory Alloc ***************************/
     AllocDynamicBytes {
         loc: Loc,
         ty: Type,
@@ -154,7 +151,6 @@ pub enum Expression {
         initializer: Option<Vec<u8>>,
     },
 
-    /*************************** Memory Access ***************************/
     // address-of
     GetRef {
         loc: Loc,
@@ -189,7 +185,6 @@ pub enum Expression {
         arg_no: usize,
     },
 
-    /*************************** Function Calls ***************************/
     FormatString {
         loc: Loc,
         args: Vec<(FormatArg, Operand)>,
@@ -218,7 +213,6 @@ pub enum Expression {
         args: Vec<Operand>,
     },
 
-    /*************************** RPC Calls ***************************/
     // a storage array is in the account
     // this func is a len() function
     StorageArrayLength {
