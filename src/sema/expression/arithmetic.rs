@@ -750,6 +750,26 @@ pub(super) fn addition(
     let left_type = left.ty();
     let right_type = right.ty();
 
+    // Solang 0.3.3 and earlier supported + for concatenating strings/bytes. Give a specific error
+    // saying this must be done using string.concat() and bytes.concat() builtin.
+    match (&left_type, &right_type) {
+        (Type::DynamicBytes | Type::Bytes(_), Type::DynamicBytes | Type::Bytes(_)) => {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "concatenate bytes using the builtin bytes.concat(a, b)".into(),
+            ));
+            return Err(());
+        }
+        (Type::String, Type::String) => {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "concatenate string using the builtin string.concat(a, b)".into(),
+            ));
+            return Err(());
+        }
+        _ => (),
+    }
+
     let ty = coerce_number(
         &left_type,
         &l.loc(),

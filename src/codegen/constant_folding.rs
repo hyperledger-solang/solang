@@ -1982,9 +1982,10 @@ fn bytes_concat(
             {
                 let Expression::NumberLiteral { value, .. } = size.as_mut() else {
                     unreachable!();
-                 }
-                 *value += bs.len();
-                }
+                };
+
+                *value += bs.len();
+
                 init.extend_from_slice(bs);
             } else {
                 last = Some(expr);
