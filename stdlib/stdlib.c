@@ -43,7 +43,7 @@ void __memcpy8(void *_dest, void *_src, uint32_t length)
     } while (--length);
 }
 
-void __memcpy(void *_dest, const void *_src, uint32_t length)
+void *__memcpy(void *_dest, const void *_src, uint32_t length)
 {
     uint8_t *dest = _dest;
     const uint8_t *src = _src;
@@ -52,6 +52,8 @@ void __memcpy(void *_dest, const void *_src, uint32_t length)
     {
         *dest++ = *src++;
     }
+
+    return dest;
 }
 
 /*
@@ -186,28 +188,6 @@ struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
         {
             *data++ = 0;
         }
-    }
-
-    return v;
-}
-
-struct vector *concat(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
-{
-    uint32_t size_array = left_len + right_len;
-    struct vector *v = __malloc(sizeof(*v) + size_array);
-    v->len = size_array;
-    v->size = size_array;
-
-    uint8_t *data = v->data;
-
-    while (left_len--)
-    {
-        *data++ = *left++;
-    }
-
-    while (right_len--)
-    {
-        *data++ = *right++;
     }
 
     return v;

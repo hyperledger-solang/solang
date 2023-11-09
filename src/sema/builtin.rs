@@ -33,7 +33,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: Lazy<[Prototype; 25]> = Lazy::new(|| {
+static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::Assert,
@@ -321,6 +321,28 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 25]> = Lazy::new(|| {
             target: vec![Target::EVM],
             doc: "Recover the address associated with the public key from elliptic curve signature",
             constant: false,
+        },
+        Prototype {
+            builtin: Builtin::StringConcat,
+            namespace: Some("string"),
+            method: vec![],
+            name: "concat",
+            params: vec![Type::String, Type::String],
+            ret: vec![Type::String],
+            target: vec![],
+            doc: "Concatenate string",
+            constant: true,
+        },
+        Prototype {
+            builtin: Builtin::BytesConcat,
+            namespace: Some("bytes"),
+            method: vec![],
+            name: "concat",
+            params: vec![Type::DynamicBytes, Type::DynamicBytes],
+            ret: vec![Type::DynamicBytes],
+            target: vec![],
+            doc: "Concatenate bytes",
+            constant: true,
         },
     ]
 });
@@ -1044,8 +1066,38 @@ pub(super) fn resolve_namespace_call(
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
+    if name == "concat" {
+        let (kind, ty) = match namespace {
+            "string" => (Builtin::StringConcat, Type::String),
+            "bytes" => (Builtin::BytesConcat, Type::DynamicBytes),
+            _ => unreachable!(),
+        };
+
+        let mut resolved_args = Vec::new();
+
+        for arg in args {
+            let expr = expression(
+                arg,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Type(&ty),
+            )?;
+
+            resolved_args.push(expr.cast(loc, &ty, true, ns, diagnostics)?);
+        }
+
+        return Ok(Expression::Builtin {
+            loc: *loc,
+            tys: vec![ty],
+            kind,
+            args: resolved_args,
+        });
+    }
+
     // The abi.* functions need special handling, others do not
-    if namespace != "abi" {
+    if namespace != "abi" && namespace != "string" {
         return resolve_call(
             loc,
             Some(namespace),

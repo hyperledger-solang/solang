@@ -14,7 +14,7 @@ fn simple_external_call() {
         r#"
         contract bar0 {
             function test_bar(string v) public {
-                print("bar0 says: " + v);
+                print(string.concat("bar0", " ", "says: ", v, ""));
             }
 
             @account(pid)
@@ -25,7 +25,7 @@ fn simple_external_call() {
 
         contract bar1 {
             function test_bar(string v) public {
-                print("bar1 says: " + v);
+                print(string.concat("bar1 says: ", v));
             }
         }"#,
     );

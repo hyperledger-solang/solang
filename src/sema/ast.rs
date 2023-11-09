@@ -1117,12 +1117,6 @@ pub enum Expression {
         left: StringLocation<Expression>,
         right: StringLocation<Expression>,
     },
-    StringConcat {
-        loc: pt::Loc,
-        ty: Type,
-        left: StringLocation<Expression>,
-        right: StringLocation<Expression>,
-    },
 
     Or {
         loc: pt::Loc,
@@ -1375,8 +1369,7 @@ impl Recurse for Expression {
 
                 Expression::AllocDynamicBytes { length, .. } => length.recurse(cx, f),
                 Expression::StorageArrayLength { array, .. } => array.recurse(cx, f),
-                Expression::StringCompare { left, right, .. }
-                | Expression::StringConcat { left, right, .. } => {
+                Expression::StringCompare { left, right, .. } => {
                     if let StringLocation::RunTime(expr) = left {
                         expr.recurse(cx, f);
                     }
@@ -1504,7 +1497,6 @@ impl CodeLocation for Expression {
             | Expression::AllocDynamicBytes { loc, .. }
             | Expression::StorageArrayLength { loc, .. }
             | Expression::StringCompare { loc, .. }
-            | Expression::StringConcat { loc, .. }
             | Expression::InternalFunction { loc, .. }
             | Expression::ExternalFunction { loc, .. }
             | Expression::InternalFunctionCall { loc, .. }
@@ -1707,6 +1699,8 @@ pub enum Builtin {
     UserTypeWrap,
     UserTypeUnwrap,
     ECRecover,
+    StringConcat,
+    BytesConcat,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]

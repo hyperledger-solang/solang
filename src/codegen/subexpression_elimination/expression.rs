@@ -209,27 +209,6 @@ impl Expression {
                 }
             }
 
-            Expression::StringConcat {
-                loc,
-                ty: expr_type,
-                left: left_exp,
-                right: right_exp,
-            } => {
-                if !matches!(
-                    (left_exp, right_exp),
-                    (StringLocation::RunTime(_), StringLocation::RunTime(_))
-                ) {
-                    unreachable!("String concat operation does not contain runtime argumetns")
-                }
-
-                Expression::StringConcat {
-                    loc: *loc,
-                    ty: expr_type.clone(),
-                    left: StringLocation::RunTime(Box::new(left.clone())),
-                    right: StringLocation::RunTime(Box::new(right.clone())),
-                }
-            }
-
             _ => unreachable!("Cannot rebuild this expression"),
         }
     }

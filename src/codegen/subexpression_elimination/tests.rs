@@ -397,24 +397,12 @@ fn string() {
 
     let op3 = StringLocation::CompileTime(vec![0, 1]);
 
-    let concat = Expression::StringConcat {
-        loc: Loc::Codegen,
-        ty: Type::String,
-        left: op1.clone(),
-        right: op2.clone(),
-    };
     let compare = Expression::StringCompare {
         loc: Loc::Codegen,
         left: op2.clone(),
         right: op1.clone(),
     };
 
-    let concat2 = Expression::StringConcat {
-        loc: Loc::Codegen,
-        ty: Type::String,
-        left: op2.clone(),
-        right: op1,
-    };
     let compare2 = Expression::StringCompare {
         loc: Loc::Codegen,
         left: op2,
@@ -426,10 +414,10 @@ fn string() {
         res: 0,
         contract_no: 0,
         constructor_no: None,
-        encoded_args: concat.clone(),
-        value: Some(compare.clone()),
-        gas: concat2.clone(),
-        salt: Some(compare2.clone()),
+        encoded_args: compare.clone(),
+        value: None,
+        gas: compare2.clone(),
+        salt: None,
         address: None,
         seeds: None,
         loc: Loc::Codegen,
@@ -442,9 +430,7 @@ fn string() {
 
     set.process_instruction(&instr, &mut ave, &mut Some(&mut cst));
 
-    assert!(set.find_expression(&concat).is_some());
     assert!(set.find_expression(&compare).is_some());
-    assert!(set.find_expression(&concat2).is_some());
     assert!(set.find_expression(&compare2).is_none());
 
     assert!(set.find_expression(&var1).is_some());
