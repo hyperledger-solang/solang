@@ -19,10 +19,10 @@ use crate::sema::unused_variable::check_function_call;
 use crate::sema::{builtin, using};
 use crate::Target;
 use num_bigint::{BigInt, Sign};
-use solang_parser::diagnostics::Diagnostic;
+use solang_parser::diagnostics::{Diagnostic, Note};
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, Loc, Visibility};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Resolve a function call via function type
 /// Function types do not have names so call cannot be using named parameters
@@ -190,14 +190,6 @@ pub fn available_functions(
 ) -> Vec<usize> {
     let mut list = Vec::new();
 
-    if global {
-        if let Some(Symbol::Function(v)) =
-            ns.function_symbols.get(&(file_no, None, name.to_owned()))
-        {
-            list.extend(v.iter().map(|(_, func_no)| *func_no));
-        }
-    }
-
     if let Some(contract_no) = contract_no {
         list.extend(
             ns.contracts[contract_no]
@@ -205,14 +197,33 @@ pub fn available_functions(
                 .keys()
                 .filter(|func_no| ns.functions[**func_no].id.name == name)
                 .filter_map(|func_no| {
-                    let is_abstract = ns.functions[*func_no].is_virtual
-                        && !ns.contracts[contract_no].is_concrete();
-                    if ns.functions[*func_no].has_body || is_abstract {
+                    let func = &ns.functions[*func_no];
+
+                    // For a virtual function, only the most-overriden is available
+                    if func.is_virtual
+                        && ns.contracts[contract_no].virtual_functions[&func.signature].last()
+                            != Some(func_no)
+                    {
+                        return None;
+                    }
+
+                    let is_abstract = func.is_virtual && !ns.contracts[contract_no].is_concrete();
+
+                    if func.has_body || is_abstract {
                         return Some(*func_no);
                     }
                     None
                 }),
         );
+    }
+
+    // global functions may shadowed by contract-defined functions
+    if list.is_empty() && global {
+        if let Some(Symbol::Function(v)) =
+            ns.function_symbols.get(&(file_no, None, name.to_owned()))
+        {
+            list.extend(v.iter().map(|(_, func_no)| *func_no));
+        }
     }
 
     list
@@ -221,6 +232,7 @@ pub fn available_functions(
 /// Create a list of functions that can be called via super
 pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace) -> Vec<usize> {
     let mut list = Vec::new();
+    let mut signatures = HashSet::new();
 
     for base_contract_no in ns.contract_bases(contract_no).into_iter().rev() {
         if base_contract_no == contract_no {
@@ -235,7 +247,11 @@ pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace)
                     let func = &ns.functions[*func_no];
 
                     if func.id.name == name && func.has_body {
-                        Some(*func_no)
+                        if func.is_virtual && !signatures.insert(&func.signature) {
+                            None
+                        } else {
+                            Some(*func_no)
+                        }
                     } else {
                         None
                     }
@@ -252,7 +268,7 @@ pub fn function_call_pos_args(
     id: &pt::IdentifierPath,
     func_ty: pt::FunctionTy,
     args: &[pt::Expression],
-    function_nos: Vec<usize>,
+    mut function_nos: Vec<usize>,
     virtual_call: bool,
     context: &mut ExprContext,
     ns: &mut Namespace,
@@ -260,9 +276,6 @@ pub fn function_call_pos_args(
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    let mut name_matches = 0;
-    let mut errors = Diagnostics::default();
-
     if context.constant {
         diagnostics.push(Diagnostic::error(
             *loc,
@@ -271,51 +284,70 @@ pub fn function_call_pos_args(
         return Err(());
     }
 
+    // try to resolve the arguments, give up if there are any errors
+    if args.iter().fold(false, |acc, arg| {
+        acc | expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown).is_err()
+    }) {
+        return Err(());
+    }
+
+    function_nos.retain(|function_no| ns.functions[*function_no].ty == func_ty);
+
+    let mut call_diagnostics = Diagnostics::default();
+    let mut resolved_calls = Vec::new();
+
     // Try to resolve as a function call
     for function_no in &function_nos {
         let func = &ns.functions[*function_no];
 
-        if func.ty != func_ty {
-            continue;
-        }
+        let mut candidate_diagnostics = Diagnostics::default();
+        let mut cast_args = Vec::new();
 
-        name_matches += 1;
-
-        let params_len = func.params.len();
-
-        if params_len != args.len() {
-            errors.push(Diagnostic::error(
+        if func.params.len() != args.len() {
+            candidate_diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "{} expects {} arguments, {} provided",
                     func.ty,
-                    params_len,
+                    func.params.len(),
                     args.len()
                 ),
             ));
-            continue;
-        }
+        } else {
+            // check if arguments can be implicitly casted
+            for (i, arg) in args.iter().enumerate() {
+                let ty = ns.functions[*function_no].params[i].ty.clone();
 
-        let mut matches = true;
-        let mut cast_args = Vec::new();
-
-        // check if arguments can be implicitly casted
-        for (i, arg) in args.iter().enumerate() {
-            let ty = ns.functions[*function_no].params[i].ty.clone();
-
-            matches &=
-                evaluate_argument(arg, context, ns, symtable, &ty, &mut errors, &mut cast_args);
-        }
-
-        if !matches {
-            if function_nos.len() > 1 && diagnostics.extend_non_casting(&errors) {
-                return Err(());
+                evaluate_argument(
+                    arg,
+                    context,
+                    ns,
+                    symtable,
+                    &ty,
+                    &mut candidate_diagnostics,
+                    &mut cast_args,
+                );
             }
-
-            continue;
         }
 
-        match resolve_internal_call(
+        if candidate_diagnostics.any_errors() {
+            if function_nos.len() != 1 {
+                // will be de-duped
+                candidate_diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!("cannot find overloaded {func_ty} which matches signature"),
+                ));
+
+                let func = &ns.functions[*function_no];
+
+                candidate_diagnostics.iter_mut().for_each(|diagnostic| {
+                    diagnostic.notes.push(Note {
+                        loc: func.loc,
+                        message: "candidate function".into(),
+                    })
+                });
+            }
+        } else if let Some(resolved_call) = resolve_internal_call(
             loc,
             id,
             *function_no,
@@ -324,38 +356,56 @@ pub fn function_call_pos_args(
             virtual_call,
             cast_args,
             ns,
-            &mut errors,
+            &mut candidate_diagnostics,
         ) {
-            Some(resolved_call) => return Ok(resolved_call),
-            None => continue,
+            resolved_calls.push((*function_no, resolved_call));
+            continue;
         }
+
+        call_diagnostics.extend(candidate_diagnostics);
     }
 
     let id = id.identifiers.last().unwrap();
-    match name_matches {
+    match resolved_calls.len() {
         0 => {
-            if func_ty == pt::FunctionTy::Modifier {
-                diagnostics.push(Diagnostic::error(
-                    id.loc,
-                    format!("unknown modifier '{}'", id.name),
-                ));
-            } else {
-                diagnostics.push(Diagnostic::error(
-                    id.loc,
-                    format!("unknown {} or type '{}'", func_ty, id.name),
-                ));
+            diagnostics.extend(call_diagnostics);
+
+            if function_nos.is_empty() {
+                if func_ty == pt::FunctionTy::Modifier {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        format!("unknown modifier '{}'", id.name),
+                    ));
+                } else {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        format!("unknown {} or type '{}'", func_ty, id.name),
+                    ));
+                }
             }
+
+            Err(())
         }
-        1 => diagnostics.extend(errors),
+        1 => Ok(resolved_calls[0].1.clone()),
         _ => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error_with_notes(
                 *loc,
-                format!("cannot find overloaded {func_ty} which matches signature"),
+                "function call can be resolved to multiple functions".into(),
+                resolved_calls
+                    .iter()
+                    .map(|(func_no, _)| {
+                        let func = &ns.functions[*func_no];
+
+                        Note {
+                            loc: func.loc,
+                            message: "candidate function".into(),
+                        }
+                    })
+                    .collect(),
             ));
+            Err(())
         }
     }
-
-    Err(())
 }
 
 /// Resolve a function call with named arguments

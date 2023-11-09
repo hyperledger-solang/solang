@@ -1,13 +1,3 @@
-contract b is a {
-    function baz() public pure returns (uint64) {
-        return foo();
-    }
-
-    function foo() internal pure override returns (uint64) {
-        return 2;
-    }
-}
-
 abstract contract a {
     function foo() internal virtual returns (uint64) {
         return 1;
@@ -25,5 +15,15 @@ abstract contract a {
         // however, if the call is written as a.foo{program_id: id_var}(), this represents
         // an external call to contract 'a' on Solana.
         return a.foo();
+    }
+}
+
+contract b is a {
+    function baz() public pure returns (uint64) {
+        return foo();
+    }
+
+    function foo() internal pure override returns (uint64) {
+        return 2;
     }
 }

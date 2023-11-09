@@ -796,15 +796,14 @@ pub(super) fn array_literal(
     } else {
         first.ty()
     };
-
     used_variable(ns, &first, symtable);
     let mut exprs = vec![first];
 
     for e in flattened {
-        let mut other = expression(e, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+        let mut other = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
         used_variable(ns, &other, symtable);
 
-        if other.ty() != ty {
+        if resolve_to != ResolveTo::Unknown && other.ty() != ty {
             other = other.cast(&e.loc(), &ty, true, ns, diagnostics)?;
         }
 

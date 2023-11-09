@@ -8,7 +8,7 @@ use itertools::Itertools;
 use solang_parser::pt::Loc;
 use std::{
     collections::HashMap,
-    slice::Iter,
+    slice::{Iter, IterMut},
     {io, sync::Arc},
 };
 
@@ -29,6 +29,10 @@ impl Diagnostics {
 
     pub fn iter(&self) -> Iter<Diagnostic> {
         self.contents.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<Diagnostic> {
+        self.contents.iter_mut()
     }
 
     pub fn is_empty(&self) -> bool {

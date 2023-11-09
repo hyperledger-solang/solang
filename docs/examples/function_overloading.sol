@@ -1,23 +1,21 @@
 contract shape {
     int64 bar;
 
-    function abs(int256 val) public returns (int256) {
-        if (val >= 0) {
-            return val;
+    function max(int64 val1, int64 val2, int64 val3) public pure returns (int64) {
+	int64 val = max(val1, val2);
+
+	return max(val, val3);
+    }
+
+    function max(int64 val1, int64 val2) public pure returns (int64) {
+        if (val1 >= val2) {
+            return val2;
         } else {
-            return -val;
+            return val1;
         }
     }
 
-    function abs(int64 val) public returns (int64) {
-        if (val >= 0) {
-            return val;
-        } else {
-            return -val;
-        }
-    }
-
-    function foo(int64 x) public {
-        bar = int64(abs(x));
+    function foo(int64 x, int64 y) public {
+        bar = max(bar, x, y);
     }
 }
