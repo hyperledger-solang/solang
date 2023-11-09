@@ -2,6 +2,15 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## Unreleased
+
+### Added
+- The `string.concat()` and `bytes.concat()` builtin functions are supported. [seanyoung](https://github.com/seanyoung)
+
+### Changed
+- **BREAKING** The non-standard extension of concatenating strings using the `+` operator
+  has been removed, use `string.concat()` instead. [seanyoung](https://github.com/seanyoung)
+
 ## v0.3.3 Atlantis
 
 This release improves the Solana developer experience, since now required

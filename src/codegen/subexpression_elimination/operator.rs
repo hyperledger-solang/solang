@@ -117,7 +117,6 @@ impl Expression {
             Expression::NotEqual { .. } => Operator::NotEqual,
             Expression::BitwiseNot { .. } => Operator::BitwiseNot,
             Expression::StringCompare { .. } => Operator::StringCompare,
-            Expression::StringConcat { .. } => Operator::StringConcat,
             Expression::AdvancePointer { .. } => Operator::AdvancePointer,
             _ => {
                 unreachable!("Expression does not represent an operator.")

@@ -17,8 +17,7 @@ impl RetrieveType for Expression {
             | Expression::Not { .. }
             | Expression::StringCompare { .. } => Type::Bool,
             Expression::CodeLiteral { .. } => Type::DynamicBytes,
-            Expression::StringConcat { ty, .. }
-            | Expression::BytesLiteral { ty, .. }
+            Expression::BytesLiteral { ty, .. }
             | Expression::NumberLiteral { ty, .. }
             | Expression::RationalNumberLiteral { ty, .. }
             | Expression::StructLiteral { ty, .. }

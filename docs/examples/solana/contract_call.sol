@@ -16,6 +16,6 @@ contract Math {
 
 contract English {
     function concatenate(string a, string b) external returns (string) {
-        return a + b;
+        return string.concat(a, b);
     }
 }
