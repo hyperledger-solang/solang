@@ -1384,6 +1384,7 @@ pub(super) fn method_call_pos_args(
     }
 
     if let Some(mut path) = ns.expr_to_identifier_path(var) {
+        // `path.loc` needs to be modified `func.loc`
         path.identifiers.push(func.clone());
 
         if let Ok(list) = ns.resolve_function_with_namespace(
@@ -1678,6 +1679,7 @@ pub(super) fn method_call_named_args(
     }
 
     if let Some(mut path) = ns.expr_to_identifier_path(var) {
+        // `path.loc` needs to be modified to include `func_name.loc`
         path.identifiers.push(func_name.clone());
 
         if let Ok(list) = ns.resolve_function_with_namespace(
