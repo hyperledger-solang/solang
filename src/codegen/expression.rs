@@ -336,7 +336,9 @@ pub fn expression(
             overflowing: *unchecked,
             expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         },
-        ast::Expression::StructLiteral { loc, ty, values , ..} => Expression::StructLiteral {
+        ast::Expression::StructLiteral {
+            loc, ty, values, ..
+        } => Expression::StructLiteral {
             loc: *loc,
             ty: ty.clone(),
             values: values

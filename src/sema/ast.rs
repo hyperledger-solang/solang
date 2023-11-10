@@ -1131,7 +1131,7 @@ pub enum Expression {
     },
     InternalFunction {
         loc: pt::Loc,
-        id: pt::Identifier,
+        id: pt::IdentifierPath,
         ty: Type,
         function_no: usize,
         signature: Option<String>,

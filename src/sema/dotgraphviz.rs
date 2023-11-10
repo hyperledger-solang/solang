@@ -337,7 +337,9 @@ impl Dot {
                     Some(parent_rel),
                 );
             }
-            Expression::StructLiteral { loc, ty, values , ..} => {
+            Expression::StructLiteral {
+                loc, ty, values, ..
+            } => {
                 let labels = vec![
                     format!("struct literal: {}", ty.to_string(ns)),
                     ns.loc_to_string(PathDisplay::FullPath, loc),

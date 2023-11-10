@@ -116,9 +116,15 @@ pub(super) fn variable(
                 };
 
                 name_matches += 1;
+
+                let id_path = pt::IdentifierPath {
+                    loc: id.loc,
+                    identifiers: vec![id.clone()],
+                };
+
                 expr = Some(Expression::InternalFunction {
                     loc: id.loc,
-                    id: id.clone(),
+                    id: id_path,
                     ty,
                     function_no,
                     signature: if func.is_virtual || func.is_override.is_some() {

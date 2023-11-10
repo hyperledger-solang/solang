@@ -113,9 +113,13 @@ pub(super) fn member_access(
 
                     name_matches += 1;
 
+                    let mut id_path = ns.expr_to_identifier_path(e).unwrap();
+                    id_path.identifiers.push(id.clone());
+                    id_path.loc = *loc;
+
                     expr = Ok(Expression::InternalFunction {
                         loc: e.loc(),
-                        id: id.clone(),
+                        id: id_path,
                         ty: function_type(func, false, resolve_to),
                         function_no: *function_no,
                         signature: None,

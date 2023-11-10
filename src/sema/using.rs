@@ -529,12 +529,17 @@ pub(super) fn try_resolve_using_call(
         let returns = function_returns(libfunc, resolve_to);
         let ty = function_type(libfunc, false, resolve_to);
 
+        let id_path = pt::IdentifierPath {
+            loc: func.loc,
+            identifiers: vec![func.clone()],
+        };
+
         return Ok(Some(Expression::InternalFunctionCall {
             loc: *loc,
             returns,
             function: Box::new(Expression::InternalFunction {
                 loc: *loc,
-                id: func.clone(),
+                id: id_path,
                 ty,
                 function_no,
                 signature: None,

@@ -1095,21 +1095,21 @@ impl<'a> Builder<'a> {
 
                 let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.id, params, rets);
 
-                let loc = id.loc;
+                let func_loc = id.identifiers.last().unwrap().loc;
 
                 self.hovers.push((
-                    loc.file_no(),
+                    func_loc.file_no(),
                     HoverEntry {
-                        start: loc.start(),
-                        stop: loc.exclusive_end(),
+                        start: func_loc.start(),
+                        stop: func_loc.exclusive_end(),
                         val: format!("{}{}", msg_tg, make_code_block(val)),
                     },
                 ));
                 self.references.push((
-                    loc.file_no(),
+                    func_loc.file_no(),
                     ReferenceEntry {
-                        start: loc.start(),
-                        stop: loc.exclusive_end(),
+                        start: func_loc.start(),
+                        stop: func_loc.exclusive_end(),
                         val: DefinitionIndex {
                             def_path: Default::default(),
                             def_type: DefinitionType::Function(*function_no),
