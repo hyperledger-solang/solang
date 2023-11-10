@@ -1202,8 +1202,6 @@ fn emit_event(
         pt::Expression::FunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
 
-            let mut errors = Diagnostics::default();
-
             let event_nos =
                 match ns.resolve_event(context.file_no, context.contract_no, ty, diagnostics) {
                     Ok(nos) => nos,
@@ -1224,14 +1222,17 @@ fn emit_event(
                     }
                 };
 
-            for event_no in &event_nos {
-                let event = &mut ns.events[*event_no];
-                event.used = true;
+            let mut emit_diagnostics = Diagnostics::default();
+            let mut resolved_events = Vec::new();
 
-                let mut matches = true;
+            for event_no in &event_nos {
+                let mut candidate_diagnostics = Diagnostics::default();
+
+                let event = &ns.events[*event_no];
+                let mut cast_args = Vec::new();
 
                 if args.len() != event.fields.len() {
-                    errors.push(Diagnostic::cast_error(
+                    candidate_diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "event type '{}' has {} fields, {} provided",
@@ -1240,9 +1241,7 @@ fn emit_event(
                             args.len()
                         ),
                     ));
-                    matches = false;
                 }
-                let mut cast_args = Vec::new();
 
                 // check if arguments can be implicitly casted
                 for (i, arg) in args.iter().enumerate() {
@@ -1256,41 +1255,81 @@ fn emit_event(
                         .map(ResolveTo::Type)
                         .unwrap_or(ResolveTo::Unknown);
 
-                    let arg = match expression(arg, context, ns, symtable, &mut errors, resolve_to)
-                    {
-                        Ok(e) => e,
-                        Err(()) => {
-                            matches = false;
-                            break;
+                    let _ = expression(
+                        arg,
+                        context,
+                        ns,
+                        symtable,
+                        &mut candidate_diagnostics,
+                        resolve_to,
+                    )
+                    .and_then(|arg| {
+                        if let Some(arg_ty) = &ty {
+                            arg.cast(&arg.loc(), arg_ty, true, ns, &mut candidate_diagnostics)
+                        } else {
+                            Err(())
                         }
-                    };
-                    used_variable(ns, &arg, symtable);
+                    })
+                    .map(|expr| {
+                        used_variable(ns, &expr, symtable);
+                        cast_args.push(expr);
+                    });
+                }
 
-                    if let Some(ty) = &ty {
-                        match arg.cast(&arg.loc(), ty, true, ns, &mut errors) {
-                            Ok(expr) => cast_args.push(expr),
-                            Err(_) => {
-                                matches = false;
-                            }
-                        }
+                if candidate_diagnostics.any_errors() {
+                    if event_nos.len() != 1 {
+                        // will be de-duped
+                        candidate_diagnostics.push(Diagnostic::error(
+                            *loc,
+                            "cannot find event with matching signature".into(),
+                        ));
+
+                        let event = &ns.events[*event_no];
+
+                        candidate_diagnostics.iter_mut().for_each(|diagnostic| {
+                            diagnostic.notes.push(Note {
+                                loc: event.loc,
+                                message: "candidate event".into(),
+                            })
+                        });
                     }
+                } else {
+                    resolved_events.push((*event_no, to_stmt(ns, *event_no, event_loc, cast_args)));
                 }
 
-                if matches {
-                    return Ok(to_stmt(ns, *event_no, event_loc, cast_args));
-                } else if event_nos.len() > 1 && diagnostics.extend_non_casting(&errors) {
-                    return Err(());
-                }
+                emit_diagnostics.extend(candidate_diagnostics);
             }
 
-            if event_nos.len() == 1 {
-                diagnostics.extend(errors);
-            } else {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot find event which matches signature".to_string(),
-                ));
-            }
+            match resolved_events.len() {
+                0 => {
+                    diagnostics.extend(emit_diagnostics);
+                }
+                1 => {
+                    let (event_no, stmt) = resolved_events.remove(0);
+
+                    let event = &mut ns.events[event_no];
+                    event.used = true;
+
+                    return Ok(stmt);
+                }
+                _ => {
+                    diagnostics.push(Diagnostic::error_with_notes(
+                        *loc,
+                        "emit can be resolved to multiple events".into(),
+                        resolved_events
+                            .into_iter()
+                            .map(|(event_no, _)| {
+                                let event = &ns.events[event_no];
+
+                                Note {
+                                    loc: event.id.loc,
+                                    message: "candidate event".into(),
+                                }
+                            })
+                            .collect(),
+                    ));
+                }
+            };
         }
         pt::Expression::NamedFunctionCall(_, ty, args) => {
             let event_loc = ty.loc();

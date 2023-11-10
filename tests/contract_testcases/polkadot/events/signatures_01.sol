@@ -10,4 +10,6 @@
             }
         }
 // ---- Expect: diagnostics ----
-// warning: 3:15-18: event 'foo' has never been emitted
+// error: 9:17-34: emit can be resolved to multiple events
+// 	note 2:15-18: candidate event
+// 	note 3:15-18: candidate event

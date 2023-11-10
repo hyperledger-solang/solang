@@ -39,7 +39,7 @@ fn emit_event() {
     let case_2 = r#"
     event Hey(uint8 n);
     contract usedEvent {
-        event Hey(uint8 n);
+        event Hey(bool);
         event Hello(uint8 n);
         function emitEvent(uint8 n) public {
             emit Hey(n);
@@ -48,16 +48,15 @@ fn emit_event() {
     "#;
 
     let ns = parse(case_2);
-    assert_eq!(ns.diagnostics.count_warnings(), 1);
-    assert_eq!(
-        ns.diagnostics.first_warning().message,
-        "event 'Hello' has never been emitted"
-    );
+    let warnings = ns.diagnostics.warnings();
+    assert_eq!(warnings.len(), 2);
+    assert_eq!(warnings[0].message, "event 'Hey' has never been emitted");
+    assert_eq!(warnings[1].message, "event 'Hello' has never been emitted");
 
     // Unused event
     let case_2 = r#"
     contract F {
-        event Hey(uint8 n);
+        event Hey(bool);
         event Hello(uint8 n);
     }
     contract usedEvent is F {
@@ -69,11 +68,10 @@ fn emit_event() {
     "#;
 
     let ns = parse(case_2);
-    assert_eq!(ns.diagnostics.count_warnings(), 1);
-    assert_eq!(
-        ns.diagnostics.first_warning().message,
-        "event 'Hello' has never been emitted"
-    );
+    let warnings = ns.diagnostics.warnings();
+    assert_eq!(warnings.len(), 2);
+    assert_eq!(warnings[0].message, "event 'Hey' has never been emitted");
+    assert_eq!(warnings[1].message, "event 'Hello' has never been emitted");
 
     // Unused event
     let case_2 = r#"

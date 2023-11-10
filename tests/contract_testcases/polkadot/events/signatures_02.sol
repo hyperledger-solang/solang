@@ -9,4 +9,7 @@
                 emit foo(true, 1);
             }
         }
+
 // ---- Expect: diagnostics ----
+// warning: 5:19-22: event 'foo' has never been emitted
+// warning: 6:19-22: event 'foo' has never been emitted

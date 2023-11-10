@@ -9,8 +9,10 @@ contract c {
         emit Foo2({ no: a, name: b, no: c});
     }
 }
+
 // ---- Expect: diagnostics ----
 // error: 7:18-19: 'a' not found
+// error: 7:21-22: 'b' not found
 // error: 8:24-25: 'a' not found
 // error: 8:33-34: 'b' not found
 // error: 8:36-38: duplicate argument with name 'no'

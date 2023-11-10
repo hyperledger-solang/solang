@@ -9,3 +9,6 @@
             }
         }
 // ---- Expect: diagnostics ----
+// error: 8:17-34: emit can be resolved to multiple events
+// 	note 5:19-22: candidate event
+// 	note 2:15-18: candidate event
