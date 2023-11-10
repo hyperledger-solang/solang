@@ -413,7 +413,7 @@ pub(super) fn function_call_named_args(
     loc: &pt::Loc,
     id: &pt::IdentifierPath,
     args: &[pt::NamedArgument],
-    function_nos: Vec<usize>,
+    mut function_nos: Vec<usize>,
     virtual_call: bool,
     context: &mut ExprContext,
     resolve_to: ResolveTo,
@@ -423,7 +423,7 @@ pub(super) fn function_call_named_args(
 ) -> Result<Expression, ()> {
     let mut arguments = HashMap::new();
 
-    for arg in args {
+    if args.iter().fold(false, |mut acc, arg| {
         if arguments.contains_key(arg.name.name.as_str()) {
             diagnostics.push(Diagnostic::error(
                 arg.name.loc,
@@ -438,27 +438,43 @@ pub(super) fn function_call_named_args(
                 diagnostics,
                 ResolveTo::Unknown,
             );
+        } else {
+            acc |= expression(
+                &arg.expr,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            )
+            .is_err()
         }
 
         arguments.insert(arg.name.name.as_str(), &arg.expr);
+
+        acc
+    }) {
+        return Err(());
     }
+
+    function_nos.retain(|function_no| ns.functions[*function_no].ty == pt::FunctionTy::Function);
+
     // Try to resolve as a function call
-    let mut errors = Diagnostics::default();
+    let mut call_diagnostics = Diagnostics::default();
+    let mut resolved_calls = Vec::new();
 
     // Try to resolve as a function call
     for function_no in &function_nos {
         let func = &ns.functions[*function_no];
 
-        if func.ty != pt::FunctionTy::Function {
-            continue;
-        }
+        let mut candidate_diagnostics = Diagnostics::default();
 
         let unnamed_params = func.params.iter().filter(|p| p.id.is_none()).count();
         let params_len = func.params.len();
-        let mut matches = true;
+        let mut cast_args = Vec::new();
 
         if unnamed_params > 0 {
-            errors.push(Diagnostic::cast_error_with_note(
+            candidate_diagnostics.push(Diagnostic::cast_error_with_note(
                 *loc,
                 format!(
                     "function cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
@@ -466,57 +482,71 @@ pub(super) fn function_call_named_args(
                 func.loc_prototype,
                 format!("definition of {}", func.id),
             ));
-            matches = false;
-        } else if params_len != args.len() {
-            errors.push(Diagnostic::cast_error(
-                *loc,
-                format!(
-                    "function expects {} arguments, {} provided",
-                    params_len,
-                    args.len()
-                ),
-            ));
-            matches = false;
-        }
-
-        let mut cast_args = Vec::new();
-
-        // check if arguments can be implicitly casted
-        for i in 0..params_len {
-            let param = &ns.functions[*function_no].params[i];
-            if param.id.is_none() {
-                continue;
+        } else {
+            if params_len != args.len() {
+                candidate_diagnostics.push(Diagnostic::cast_error(
+                    *loc,
+                    format!(
+                        "function expects {} arguments, {} provided",
+                        params_len,
+                        args.len()
+                    ),
+                ));
             }
-            let arg = match arguments.get(param.name_as_str()) {
-                Some(a) => a,
-                None => {
-                    matches = false;
-                    diagnostics.push(Diagnostic::cast_error(
-                        *loc,
-                        format!(
-                            "missing argument '{}' to function '{}'",
-                            param.name_as_str(),
-                            id.identifiers.last().unwrap().name,
-                        ),
-                    ));
+
+            // check if arguments can be implicitly casted
+            for i in 0..params_len {
+                let param = &ns.functions[*function_no].params[i];
+                if param.id.is_none() {
                     continue;
                 }
-            };
+                let arg = match arguments.get(param.name_as_str()) {
+                    Some(a) => a,
+                    None => {
+                        candidate_diagnostics.push(Diagnostic::cast_error(
+                            *loc,
+                            format!(
+                                "missing argument '{}' to function '{}'",
+                                param.name_as_str(),
+                                id,
+                            ),
+                        ));
+                        continue;
+                    }
+                };
 
-            let ty = param.ty.clone();
+                let ty = param.ty.clone();
 
-            matches &=
-                evaluate_argument(arg, context, ns, symtable, &ty, &mut errors, &mut cast_args);
-        }
-
-        if !matches {
-            if diagnostics.extend_non_casting(&errors) {
-                return Err(());
+                evaluate_argument(
+                    arg,
+                    context,
+                    ns,
+                    symtable,
+                    &ty,
+                    &mut candidate_diagnostics,
+                    &mut cast_args,
+                );
             }
-            continue;
         }
 
-        match resolve_internal_call(
+        if candidate_diagnostics.any_errors() {
+            if function_nos.len() != 1 {
+                // will be de-duped
+                candidate_diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find overloaded function which matches signature".into(),
+                ));
+
+                let func = &ns.functions[*function_no];
+
+                candidate_diagnostics.iter_mut().for_each(|diagnostic| {
+                    diagnostic.notes.push(Note {
+                        loc: func.loc,
+                        message: "candidate function".into(),
+                    })
+                });
+            }
+        } else if let Some(resolved_call) = resolve_internal_call(
             loc,
             id,
             *function_no,
@@ -525,31 +555,49 @@ pub(super) fn function_call_named_args(
             virtual_call,
             cast_args,
             ns,
-            &mut errors,
+            &mut candidate_diagnostics,
         ) {
-            Some(resolved_call) => return Ok(resolved_call),
-            None => continue,
+            resolved_calls.push((*function_no, resolved_call));
+            continue;
         }
+
+        call_diagnostics.extend(candidate_diagnostics);
     }
 
-    match function_nos.len() {
+    match resolved_calls.len() {
         0 => {
-            let id = id.identifiers.last().unwrap();
-            diagnostics.push(Diagnostic::error(
-                id.loc,
-                format!("unknown function or type '{}'", id.name),
-            ));
+            diagnostics.extend(call_diagnostics);
+
+            if function_nos.is_empty() {
+                let id = id.identifiers.last().unwrap();
+                diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    format!("unknown function or type '{}'", id.name),
+                ));
+            }
+
+            Err(())
         }
-        1 => diagnostics.extend(errors),
+        1 => Ok(resolved_calls[0].1.clone()),
         _ => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error_with_notes(
                 *loc,
-                "cannot find overloaded function which matches signature".to_string(),
+                "function call can be resolved to multiple functions".into(),
+                resolved_calls
+                    .iter()
+                    .map(|(func_no, _)| {
+                        let func = &ns.functions[*func_no];
+
+                        Note {
+                            loc: func.loc,
+                            message: "candidate function".into(),
+                        }
+                    })
+                    .collect(),
             ));
+            Err(())
         }
     }
-
-    Err(())
 }
 
 /// Check if the function is a method of a variable
