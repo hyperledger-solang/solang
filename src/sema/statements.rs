@@ -417,9 +417,9 @@ fn statement(
             Ok(true)
         }
         pt::Statement::Block {
-            loc,
             statements,
             unchecked,
+            loc,
         } => {
             symtable.enter_scope();
             let mut reachable = true;
