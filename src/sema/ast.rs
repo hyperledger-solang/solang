@@ -402,7 +402,7 @@ impl FunctionAttributes for Function {
 impl Function {
     pub fn new(
         loc: pt::Loc,
-        name: pt::Identifier,
+        id: pt::Identifier,
         contract_no: Option<usize>,
         tags: Vec<Tag>,
         ty: pt::FunctionTy,
@@ -415,7 +415,7 @@ impl Function {
         let signature = match ty {
             pt::FunctionTy::Fallback => String::from("@fallback"),
             pt::FunctionTy::Receive => String::from("@receive"),
-            _ => ns.signature(&name.name, &params),
+            _ => ns.signature(&id.name, &params),
         };
 
         let mutability = match mutability {
@@ -437,7 +437,7 @@ impl Function {
         Function {
             tags,
             loc,
-            id: name,
+            id,
             contract_no,
             ty,
             signature,
