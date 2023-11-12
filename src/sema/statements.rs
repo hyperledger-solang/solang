@@ -1260,34 +1260,25 @@ fn emit_event(
                         .get(i)
                         .map(|field| field.ty.clone())
                     {
-                        let resolve_to = ResolveTo::Type(&ty);
-
-                        let _ = expression(
+                        if let Ok(expr) = expression(
                             arg,
                             context,
                             ns,
                             symtable,
                             &mut candidate_diagnostics,
-                            resolve_to,
+                            ResolveTo::Type(&ty),
                         )
                         .and_then(|arg| {
                             arg.cast(&arg.loc(), &ty, true, ns, &mut candidate_diagnostics)
-                        })
-                        .map(|expr| {
+                        }) {
                             used_variable(ns, &expr, symtable);
                             cast_args.push(expr);
-                        });
+                        }
                     }
                 }
 
                 if candidate_diagnostics.any_errors() {
                     if event_nos.len() != 1 {
-                        // will be de-duped
-                        candidate_diagnostics.push(Diagnostic::error(
-                            *loc,
-                            "cannot find event with matching signature".into(),
-                        ));
-
                         let event = &ns.events[*event_no];
 
                         candidate_diagnostics.iter_mut().for_each(|diagnostic| {
@@ -1296,6 +1287,12 @@ fn emit_event(
                                 message: "candidate event".into(),
                             })
                         });
+
+                        // will be de-duped
+                        candidate_diagnostics.push(Diagnostic::error(
+                            *loc,
+                            "cannot find event with matching signature".into(),
+                        ));
                     }
 
                     emit_diagnostics.extend(candidate_diagnostics);
@@ -1440,7 +1437,7 @@ fn emit_event(
                         }
                     };
 
-                    let _ = expression(
+                    if let Ok(expr) = expression(
                         arg,
                         context,
                         ns,
@@ -1450,21 +1447,14 @@ fn emit_event(
                     )
                     .and_then(|arg| {
                         arg.cast(&arg.loc(), &param.ty, true, ns, &mut candidate_diagnostics)
-                    })
-                    .map(|expr| {
+                    }) {
                         used_variable(ns, &expr, symtable);
                         cast_args.push(expr);
-                    });
+                    }
                 }
 
                 if candidate_diagnostics.any_errors() {
                     if event_nos.len() != 1 {
-                        // will be de-duped
-                        candidate_diagnostics.push(Diagnostic::error(
-                            *loc,
-                            "cannot find event with matching signature".into(),
-                        ));
-
                         let event = &ns.events[*event_no];
 
                         candidate_diagnostics.iter_mut().for_each(|diagnostic| {
@@ -1473,6 +1463,12 @@ fn emit_event(
                                 message: "candidate event".into(),
                             })
                         });
+
+                        // will be de-duped
+                        candidate_diagnostics.push(Diagnostic::error(
+                            *loc,
+                            "cannot find event with matching signature".into(),
+                        ));
                     }
 
                     emit_diagnostics.extend(candidate_diagnostics);
