@@ -1240,7 +1240,7 @@ fn emit_event(
                 let mut cast_args = Vec::new();
 
                 if args.len() != event.fields.len() {
-                    candidate_diagnostics.push(Diagnostic::cast_error(
+                    candidate_diagnostics.push(Diagnostic::error_with_note(
                         *loc,
                         format!(
                             "event type '{}' has {} fields, {} provided",
@@ -1248,40 +1248,36 @@ fn emit_event(
                             event.fields.len(),
                             args.len()
                         ),
+                        event.id.loc,
+                        format!("definition of {}", event.id),
                     ));
                 }
 
                 // check if arguments can be implicitly casted
                 for (i, arg) in args.iter().enumerate() {
-                    let ty = ns.events[*event_no]
+                    if let Some(ty) = ns.events[*event_no]
                         .fields
                         .get(i)
-                        .map(|field| field.ty.clone());
+                        .map(|field| field.ty.clone())
+                    {
+                        let resolve_to = ResolveTo::Type(&ty);
 
-                    let resolve_to = ty
-                        .as_ref()
-                        .map(ResolveTo::Type)
-                        .unwrap_or(ResolveTo::Unknown);
-
-                    let _ = expression(
-                        arg,
-                        context,
-                        ns,
-                        symtable,
-                        &mut candidate_diagnostics,
-                        resolve_to,
-                    )
-                    .and_then(|arg| {
-                        if let Some(arg_ty) = &ty {
-                            arg.cast(&arg.loc(), arg_ty, true, ns, &mut candidate_diagnostics)
-                        } else {
-                            Err(())
-                        }
-                    })
-                    .map(|expr| {
-                        used_variable(ns, &expr, symtable);
-                        cast_args.push(expr);
-                    });
+                        let _ = expression(
+                            arg,
+                            context,
+                            ns,
+                            symtable,
+                            &mut candidate_diagnostics,
+                            resolve_to,
+                        )
+                        .and_then(|arg| {
+                            arg.cast(&arg.loc(), &ty, true, ns, &mut candidate_diagnostics)
+                        })
+                        .map(|expr| {
+                            used_variable(ns, &expr, symtable);
+                            cast_args.push(expr);
+                        });
+                    }
                 }
 
                 if candidate_diagnostics.any_errors() {
@@ -1301,11 +1297,15 @@ fn emit_event(
                             })
                         });
                     }
-                } else {
-                    resolved_events.push((*event_no, to_stmt(ns, *event_no, event_loc, cast_args)));
-                }
 
-                emit_diagnostics.extend(candidate_diagnostics);
+                    emit_diagnostics.extend(candidate_diagnostics);
+                } else {
+                    resolved_events.push((
+                        *event_no,
+                        candidate_diagnostics,
+                        to_stmt(ns, *event_no, event_loc, cast_args),
+                    ));
+                }
             }
 
             match resolved_events.len() {
@@ -1313,10 +1313,12 @@ fn emit_event(
                     diagnostics.extend(emit_diagnostics);
                 }
                 1 => {
-                    let (event_no, stmt) = resolved_events.remove(0);
+                    let (event_no, candidate_diagnostics, stmt) = resolved_events.remove(0);
 
                     let event = &mut ns.events[event_no];
                     event.used = true;
+
+                    diagnostics.extend(candidate_diagnostics);
 
                     return Ok(stmt);
                 }
@@ -1326,7 +1328,7 @@ fn emit_event(
                         "emit can be resolved to multiple events".into(),
                         resolved_events
                             .into_iter()
-                            .map(|(event_no, _)| {
+                            .map(|(event_no, _, _)| {
                                 let event = &ns.events[event_no];
 
                                 Note {
@@ -1394,7 +1396,7 @@ fn emit_event(
                 let mut cast_args = Vec::new();
 
                 if unnamed_fields > 0 {
-                    candidate_diagnostics.push(Diagnostic::cast_error_with_note(
+                    candidate_diagnostics.push(Diagnostic::error_with_note(
                         *loc,
                         format!(
                             "event cannot be emitted with named fields as {unnamed_fields} of its fields do not have names"
@@ -1403,13 +1405,15 @@ fn emit_event(
                         format!("definition of {}", event.id),
                     ));
                 } else if params_len != arguments.len() {
-                    candidate_diagnostics.push(Diagnostic::error(
+                    candidate_diagnostics.push(Diagnostic::error_with_note(
                         *loc,
                         format!(
                             "event expects {} arguments, {} provided",
                             params_len,
                             arguments.len()
                         ),
+                        event.id.loc,
+                        format!("definition of {}", event.id),
                     ));
                 }
 
@@ -1424,7 +1428,7 @@ fn emit_event(
                     let arg = match arguments.get(param.name_as_str()) {
                         Some(a) => a,
                         None => {
-                            candidate_diagnostics.push(Diagnostic::cast_error(
+                            candidate_diagnostics.push(Diagnostic::error(
                                 *loc,
                                 format!(
                                     "missing argument '{}' to event '{}'",
@@ -1470,11 +1474,15 @@ fn emit_event(
                             })
                         });
                     }
-                } else {
-                    resolved_events.push((*event_no, to_stmt(ns, *event_no, event_loc, cast_args)));
-                }
 
-                emit_diagnostics.extend(candidate_diagnostics);
+                    emit_diagnostics.extend(candidate_diagnostics);
+                } else {
+                    resolved_events.push((
+                        *event_no,
+                        candidate_diagnostics,
+                        to_stmt(ns, *event_no, event_loc, cast_args),
+                    ));
+                }
             }
 
             match resolved_events.len() {
@@ -1482,7 +1490,9 @@ fn emit_event(
                     diagnostics.extend(emit_diagnostics);
                 }
                 1 => {
-                    let (event_no, stmt) = resolved_events.remove(0);
+                    let (event_no, candidate_diagnostics, stmt) = resolved_events.remove(0);
+
+                    diagnostics.extend(candidate_diagnostics);
 
                     let event = &mut ns.events[event_no];
                     event.used = true;
@@ -1495,7 +1505,7 @@ fn emit_event(
                         "emit can be resolved to multiple events".into(),
                         resolved_events
                             .into_iter()
-                            .map(|(event_no, _)| {
+                            .map(|(event_no, _, _)| {
                                 let event = &ns.events[event_no];
 
                                 Note {
