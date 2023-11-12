@@ -626,7 +626,7 @@ pub(super) fn named_struct_literal(
                     )?;
                     used_variable(ns, &expr, symtable);
                     fields[i] = (
-                        Some(a.name.loc),
+                        Some(a.name.clone()),
                         expr.cast(loc, &f.ty, true, ns, diagnostics)?,
                     );
                 }

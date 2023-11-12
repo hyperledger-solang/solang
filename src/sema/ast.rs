@@ -14,7 +14,7 @@ use num_rational::BigRational;
 use once_cell::unsync::OnceCell;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
-use solang_parser::pt::{CodeLocation, FunctionTy, Identifier, OptionalCodeLocation};
+use solang_parser::pt::{CodeLocation, FunctionTy, OptionalCodeLocation};
 use std::cell::RefCell;
 use std::{
     collections::HashSet,
@@ -156,7 +156,7 @@ pub enum StructType {
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct StructDecl {
     pub tags: Vec<Tag>,
-    pub id: Identifier,
+    pub id: pt::Identifier,
     pub loc: pt::Loc,
     pub contract: Option<String>,
     pub fields: Vec<Parameter>,
@@ -220,7 +220,7 @@ impl fmt::Display for StructDecl {
 #[derive(Debug)]
 pub struct EnumDecl {
     pub tags: Vec<Tag>,
-    pub id: Identifier,
+    pub id: pt::Identifier,
     pub contract: Option<String>,
     pub loc: pt::Loc,
     pub ty: Type,
@@ -320,7 +320,7 @@ pub struct Function {
     pub tags: Vec<Tag>,
     /// The location of the prototype (not body)
     pub loc: pt::Loc,
-    pub id: Identifier,
+    pub id: pt::Identifier,
     pub contract_no: Option<usize>,
     pub ty: pt::FunctionTy,
     pub signature: String,
@@ -402,7 +402,7 @@ impl FunctionAttributes for Function {
 impl Function {
     pub fn new(
         loc: pt::Loc,
-        name: Identifier,
+        name: pt::Identifier,
         contract_no: Option<usize>,
         tags: Vec<Tag>,
         ty: pt::FunctionTy,
@@ -840,7 +840,8 @@ pub enum Expression {
         loc: pt::Loc,
         id: pt::IdentifierPath,
         ty: Type,
-        values: Vec<(Option<pt::Loc>, Expression)>,
+        // pt::Identifier represents the field name
+        values: Vec<(Option<pt::Identifier>, Expression)>,
     },
     ArrayLiteral {
         loc: pt::Loc,

@@ -700,10 +700,10 @@ impl<'a> Builder<'a> {
                     ));
                 }
 
-                for (i, (field_name_loc, expr)) in values.iter().enumerate() {
+                for (i, (field_name, expr)) in values.iter().enumerate() {
                     self.expression(expr, symtab);
 
-                    if let Some(field_name_loc) = field_name_loc {
+                    if let Some(pt::Identifier { loc: field_name_loc, ..}) = field_name {
                         self.references.push((
                             field_name_loc.file_no(),
                             ReferenceEntry {
