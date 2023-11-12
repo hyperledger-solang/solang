@@ -2266,8 +2266,14 @@ impl LanguageServer for SolangServer {
             )
             .unwrap();
 
-        let builtin_functions = BUILTIN_FUNCTIONS.iter().map(|f| (f.name.to_string(), None));
-        let builtin_variables = BUILTIN_VARIABLE.iter().map(|v| (v.name.to_string(), None));
+        let builtin_functions = BUILTIN_FUNCTIONS
+            .iter()
+            .filter(|f| f.target.is_empty() || f.target.contains(&self.target))
+            .map(|f| (f.name.to_string(), None));
+        let builtin_variables = BUILTIN_VARIABLE
+            .iter()
+            .filter(|f| f.target.is_empty() || f.target.contains(&self.target))
+            .map(|v| (v.name.to_string(), None));
 
         // Get all the code objects available from the lexical scope from which the request was raised.
         let code_objects_in_scope = cache
@@ -2295,7 +2301,10 @@ impl LanguageServer for SolangServer {
 
                 let mut builtin_methods =
                     HashMap::<DefinitionType, HashMap<String, Option<DefinitionIndex>>>::new();
-                for method in BUILTIN_METHODS.iter() {
+                for method in BUILTIN_METHODS
+                    .iter()
+                    .filter(|f| f.target.is_empty() || f.target.contains(&self.target))
+                {
                     if let Some(dt) = get_type_definition(&method.method[0]) {
                         builtin_methods
                             .entry(dt)
