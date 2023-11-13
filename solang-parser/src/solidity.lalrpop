@@ -10,7 +10,7 @@ pub SourceUnit: SourceUnit = {
 
 SourceUnitPart: SourceUnitPart = {
     ContractDefinition => SourceUnitPart::ContractDefinition(<>),
-    PragmaDirective => <>,
+    PragmaDirective => SourceUnitPart::PragmaDirective(<>.into()),
     ImportDirective => <>,
     EnumDefinition => SourceUnitPart::EnumDefinition(<>),
     StructDefinition => SourceUnitPart::StructDefinition(<>),
@@ -63,13 +63,67 @@ ImportRename: (Identifier, Option<Identifier>) = {
     <from:SolIdentifier> "as" <to:SolIdentifier> => (from, Some(to)),
 }
 
-PragmaDirective: SourceUnitPart = {
-    // The lexer does special parsing for String literal; it isn't really a string literal
-    <l:@L> "pragma" <i:SolIdentifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc::File(file_no, l, r), Some(i), Some(s)) ,
+PragmaDirective: PragmaDirective = {
+    <l:@L> "pragma" <i:SolIdentifier> <s:Identifier> <r:@R> ";" => {
+        PragmaDirective::Identifier(Loc::File(file_no, l, r), Some(i), Some(s))
+    },
+    <l:@L> "pragma" <i:SolIdentifier> <s:StringLiteral> <r:@R> ";" => {
+        PragmaDirective::StringLiteral(Loc::File(file_no, l, r), i, s)
+    },
+    <l:@L> "pragma" <i:SolIdentifier> <comp:VersionComparator1+> <r:@R> ";" => {
+        PragmaDirective::Version(Loc::File(file_no, l, r), i, comp)
+    },
     <l:@L> "pragma" <false_token:!> <r:@R> ";" => {
         parser_errors.push(false_token);
-        SourceUnitPart::PragmaDirective(Loc::File(file_no, l, r), None, None)
+        PragmaDirective::Identifier(Loc::File(file_no, l, r), None, None)
+    }
+}
+
+VersionComparator1: VersionComparator = {
+    <l:@L> <left:VersionComparator1> "||" <right:VersionComparator> <r:@R> => VersionComparator::Or {
+        loc: Loc::File(file_no, l, r),
+        left: left.into(),
+        right: right.into()
     },
+    VersionComparator
+}
+
+VersionComparator: VersionComparator = {
+    <l:@L> <version:Version> <r:@R> => VersionComparator::Plain {
+        loc: Loc::File(file_no, l, r),
+        version
+    },
+    <l:@L> <op:VersionOp> <version:Version> <r:@R> => VersionComparator::Operator {
+        loc: Loc::File(file_no, l, r),
+        op,
+        version
+    },
+    <l:@L> <from:Version> "-" <to:Version> <r:@R> => VersionComparator::Range {
+        loc: Loc::File(file_no, l, r),
+        from,
+        to
+    },
+}
+
+Version: Vec<String> = {
+    <major:number> <minors:("." <number>)*> => {
+        let mut v = minors;
+
+        v.insert(0, major);
+
+        v.into_iter().map(|(b,_)| b.to_string()).collect()
+    }
+}
+
+VersionOp: VersionOp = {
+    "=" => VersionOp::Exact,
+    ">" => VersionOp::Greater,
+    ">=" => VersionOp::GreaterEq,
+    "<" => VersionOp::Less,
+    "<=" => VersionOp::LessEq,
+    "~" => VersionOp::Tilde,
+    "^" => VersionOp::Caret,
+    "*" => VersionOp::Wildcard,
 }
 
 Type: Type = {

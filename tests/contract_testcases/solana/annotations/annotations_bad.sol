@@ -67,7 +67,7 @@ abstract contract c {
 // ---- Expect: diagnostics ----
 // error: 2:1-19: annotations not allowed on pragma
 // error: 3:1-10: annotations not allowed on pragma
-// warning: 4:1-19: unknown pragma 'version' with value '1.1' ignored
+// error: 4:8-15: unknown pragma 'version'
 // error: 6:1-8: annotations not allowed on struct
 // error: 9:1-15: annotations not allowed on event
 // error: 12:1-14: annotations not allowed on enum
