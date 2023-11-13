@@ -840,7 +840,7 @@ pub enum Expression {
         loc: pt::Loc,
         id: pt::IdentifierPath,
         ty: Type,
-        // pt::Identifier represents the field name
+        /// pt::Identifier represents the field name
         values: Vec<(Option<pt::Identifier>, Expression)>,
     },
     ArrayLiteral {

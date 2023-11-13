@@ -569,6 +569,18 @@ async function testhover(docUri: vscode.Uri) {
   )) as vscode.Hover[];
 
   assert.strictEqual(actualhover4.length, 0);
+
+  const pos5 = new vscode.Position(134, 73);
+
+  const actualhover5 = (await vscode.commands.executeCommand(
+    'vscode.executeHoverProvider',
+    docUri,
+    pos5
+  )) as vscode.Hover[];
+
+  const contentarr5 = actualhover5[0].contents as vscode.MarkdownString[];
+
+  assert.strictEqual(contentarr5[0].value, '```solidity\nfunction foo.sum(uint64 a, uint64 b) returns (uint64)\n\n```');
 }
 
 async function testdiagnos(docUri: vscode.Uri, expecteddiag: vscode.Diagnostic[]) {
