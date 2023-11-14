@@ -30,6 +30,7 @@ use crate::cli::{
 mod cli;
 mod doc;
 mod idl;
+#[cfg(feature = "language_server")]
 mod languageserver;
 
 fn main() {
@@ -58,6 +59,7 @@ fn main() {
             compile(&config)
         }
         Commands::ShellComplete(shell_args) => shell_complete(Cli::command(), shell_args),
+        #[cfg(feature = "language_server")]
         Commands::LanguageServer(server_args) => languageserver::start_server(&server_args),
         Commands::Idl(idl_args) => idl::idl(&idl_args),
         Commands::New(new_arg) => new_command(new_arg),
