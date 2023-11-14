@@ -37,6 +37,7 @@ pub enum Commands {
     #[command(about = "Print shell completion for various shells to STDOUT")]
     ShellComplete(ShellComplete),
 
+    #[cfg(feature = "language_server")]
     #[command(about = "Start LSP language server on stdin/stdout")]
     LanguageServer(LanguageServerCommand),
 
