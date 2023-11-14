@@ -20,15 +20,15 @@ impl Printer {
         }
     }
 
-    pub(crate) fn get_var_name(&self, id: &usize) -> Result<&str, String> {
+    pub(crate) fn get_var_name(&self, id: &usize) -> &str {
         self.vartable.get_name(id)
     }
 
-    pub(crate) fn get_var_type(&self, id: &usize) -> Result<&Type, String> {
+    pub(crate) fn get_var_type(&self, id: &usize) -> &Type {
         self.vartable.get_type(id)
     }
 
-    pub(crate) fn get_var_operand(&self, id: &usize) -> Result<Operand, String> {
+    pub(crate) fn get_var_operand(&self, id: &usize) -> Operand {
         self.vartable.get_operand(
             id,
             // the location is not important for printing

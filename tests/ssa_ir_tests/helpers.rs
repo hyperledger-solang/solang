@@ -43,7 +43,7 @@ pub(crate) fn num_literal(value: i32, signed: bool, width: u16) -> Operand {
 macro_rules! stringfy_expr {
     ($printer:expr, $expr:expr) => {{
         let mut buffer = Vec::new();
-        $printer.print_expr(&mut buffer, $expr).unwrap();
+        $printer.print_expr(&mut buffer, $expr);
         String::from_utf8(buffer).expect("Failed to convert to string")
     }};
 }
@@ -52,7 +52,7 @@ macro_rules! stringfy_expr {
 macro_rules! stringfy_insn {
     ($printer:expr, $insn:expr) => {{
         let mut buf = Vec::new();
-        $printer.print_insn(&mut buf, $insn).unwrap();
+        $printer.print_insn(&mut buf, $insn);
         String::from_utf8(buf).unwrap()
     }};
 }
@@ -61,7 +61,7 @@ macro_rules! stringfy_insn {
 macro_rules! stringfy_cfg {
     ($printer:expr, $cfg:expr) => {{
         let mut buf = Vec::new();
-        $printer.print_cfg(&mut buf, $cfg).unwrap();
+        $printer.print_cfg(&mut buf, $cfg);
         String::from_utf8(buf).unwrap()
     }};
 }

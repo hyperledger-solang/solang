@@ -6,30 +6,30 @@ use crate::ssa_ir::printer::Printer;
 use std::io::Write;
 
 impl Printer {
-    pub fn print_lhs_operand(&self, f: &mut dyn Write, operand: &Operand) -> std::io::Result<()> {
+    pub fn print_lhs_operand(&self, f: &mut dyn Write, operand: &Operand) {
         match operand {
             Operand::Id { id, .. } => {
-                let ty = self.get_var_type(id).unwrap();
-                let name = self.get_var_name(id).unwrap();
-                write!(f, "{} %{}", ty, name)
+                let ty = self.get_var_type(id);
+                let name = self.get_var_name(id);
+                write!(f, "{} %{}", ty, name).unwrap();
             }
-            _ => panic!("unsupported lhs operand: {:?}", operand),
+            _ => unreachable!("unsupported lhs operand: {:?}", operand),
         }
     }
 
-    pub fn print_rhs_operand(&self, f: &mut dyn Write, operand: &Operand) -> std::io::Result<()> {
+    pub fn print_rhs_operand(&self, f: &mut dyn Write, operand: &Operand) {
         match operand {
             Operand::Id { id, .. } => {
-                let ty = self.get_var_type(id).unwrap();
-                let name = self.get_var_name(id).unwrap();
-                write!(f, "{}(%{})", ty, name)
+                let ty = self.get_var_type(id);
+                let name = self.get_var_name(id);
+                write!(f, "{}(%{})", ty, name).unwrap();
             }
-            Operand::BoolLiteral { value, .. } => write!(f, "{}", value),
-            Operand::NumberLiteral { value, ty, .. } => write!(f, "{}({})", ty, value),
+            Operand::BoolLiteral { value, .. } => write!(f, "{}", value).unwrap(),
+            Operand::NumberLiteral { value, ty, .. } => write!(f, "{}({})", ty, value).unwrap(),
         }
     }
 
-    pub fn print_expr(&self, f: &mut dyn Write, expr: &Expression) -> std::io::Result<()> {
+    pub fn print_expr(&self, f: &mut dyn Write, expr: &Expression) {
         match expr {
             Expression::BinaryExpr {
                 operator: op,
@@ -37,91 +37,91 @@ impl Printer {
                 right,
                 ..
             } => {
-                self.print_rhs_operand(f, left)?;
-                write!(f, " {} ", op)?;
-                self.print_rhs_operand(f, right)
+                self.print_rhs_operand(f, left);
+                write!(f, " {} ", op).unwrap();
+                self.print_rhs_operand(f, right);
             }
             Expression::UnaryExpr {
                 operator: op,
                 right,
                 ..
             } => {
-                write!(f, "{}", op)?;
-                self.print_rhs_operand(f, right)
+                write!(f, "{}", op).unwrap();
+                self.print_rhs_operand(f, right);
             }
             Expression::Id { id, .. } => {
-                let ty = self.get_var_type(id).unwrap();
-                let name = self.get_var_name(id).unwrap();
-                write!(f, "{}(%{})", ty, name)
+                let ty = self.get_var_type(id);
+                let name = self.get_var_name(id);
+                write!(f, "{}(%{})", ty, name).unwrap()
             }
             Expression::ArrayLiteral { ty, values, .. } => {
-                write!(f, "{}", ty)?;
-                write!(f, " [")?;
+                write!(f, "{}", ty).unwrap();
+                write!(f, " [").unwrap();
                 values.iter().enumerate().for_each(|(i, val)| {
                     if i != 0 {
                         write!(f, ", ").unwrap();
                     }
-                    self.print_rhs_operand(f, val).unwrap();
+                    self.print_rhs_operand(f, val);
                 });
-                write!(f, "]")
+                write!(f, "]").unwrap()
             }
             Expression::ConstArrayLiteral { ty, values, .. } => {
-                write!(f, "const {}", ty)?;
-                write!(f, " [")?;
+                write!(f, "const {}", ty).unwrap();
+                write!(f, " [").unwrap();
                 values.iter().enumerate().for_each(|(i, val)| {
                     if i != 0 {
                         write!(f, ", ").unwrap();
                     }
-                    self.print_rhs_operand(f, val).unwrap();
+                    self.print_rhs_operand(f, val);
                 });
-                write!(f, "]")
+                write!(f, "]").unwrap();
             }
             Expression::BytesLiteral { ty, value, .. } => {
-                write!(f, "{} hex\"", ty)?;
+                write!(f, "{} hex\"", ty).unwrap();
                 value.iter().enumerate().for_each(|(i, byte)| {
                     if i != 0 {
                         write!(f, "_").unwrap();
                     }
                     write!(f, "{:02x}", byte).unwrap();
                 });
-                write!(f, "\"")
+                write!(f, "\"").unwrap();
             }
             Expression::StructLiteral { values, .. } => {
-                write!(f, "struct {{ ")?;
+                write!(f, "struct {{ ").unwrap();
                 values.iter().enumerate().for_each(|(i, val)| {
                     if i != 0 {
                         write!(f, ", ").unwrap();
                     }
-                    self.print_rhs_operand(f, val).unwrap();
+                    self.print_rhs_operand(f, val);
                 });
-                write!(f, " }}")
+                write!(f, " }}").unwrap();
             }
             Expression::Cast {
                 operand: op, to_ty, ..
             } => {
-                write!(f, "(cast ")?;
-                self.print_rhs_operand(f, op)?;
-                write!(f, " to {})", to_ty)
+                write!(f, "(cast ").unwrap();
+                self.print_rhs_operand(f, op);
+                write!(f, " to {})", to_ty).unwrap();
             }
             Expression::BytesCast { operand, to_ty, .. } => {
-                write!(f, "(cast ")?;
-                self.print_rhs_operand(f, operand)?;
-                write!(f, " to {})", to_ty)
+                write!(f, "(cast ").unwrap();
+                self.print_rhs_operand(f, operand);
+                write!(f, " to {})", to_ty).unwrap();
             }
             Expression::SignExt { to_ty, operand, .. } => {
-                write!(f, "(sext ")?;
-                self.print_rhs_operand(f, operand)?;
-                write!(f, " to {})", to_ty)
+                write!(f, "(sext ").unwrap();
+                self.print_rhs_operand(f, operand);
+                write!(f, " to {})", to_ty).unwrap();
             }
             Expression::ZeroExt { to_ty, operand, .. } => {
-                write!(f, "(zext ")?;
-                self.print_rhs_operand(f, operand)?;
-                write!(f, " to {})", to_ty)
+                write!(f, "(zext ").unwrap();
+                self.print_rhs_operand(f, operand);
+                write!(f, " to {})", to_ty).unwrap();
             }
             Expression::Trunc { operand, to_ty, .. } => {
-                write!(f, "(trunc ")?;
-                self.print_rhs_operand(f, operand)?;
-                write!(f, " to {})", to_ty)
+                write!(f, "(trunc ").unwrap();
+                self.print_rhs_operand(f, operand);
+                write!(f, " to {})", to_ty).unwrap();
             }
             Expression::AllocDynamicBytes {
                 ty,
@@ -130,14 +130,14 @@ impl Printer {
                 ..
             } => {
                 if initializer.is_none() {
-                    write!(f, "alloc {}[", ty)?;
-                    self.print_rhs_operand(f, size)?;
-                    return write!(f, "]");
+                    write!(f, "alloc {}[", ty).unwrap();
+                    self.print_rhs_operand(f, size);
+                    return write!(f, "]").unwrap();
                 }
 
-                write!(f, "alloc {}[", ty)?;
-                self.print_rhs_operand(f, size)?;
-                write!(f, "] {{")?;
+                write!(f, "alloc {}[", ty).unwrap();
+                self.print_rhs_operand(f, size);
+                write!(f, "] {{").unwrap();
                 initializer
                     .as_ref()
                     .unwrap()
@@ -149,119 +149,119 @@ impl Printer {
                         }
                         write!(f, "{:02x}", byte).unwrap();
                     });
-                write!(f, "}}")
+                write!(f, "}}").unwrap();
             }
             Expression::GetRef { operand, .. } => {
-                write!(f, "&")?;
+                write!(f, "&").unwrap();
                 self.print_rhs_operand(f, operand)
             }
             Expression::Load { operand, .. } => {
-                write!(f, "*")?;
+                write!(f, "*").unwrap();
                 self.print_rhs_operand(f, operand)
             }
             Expression::StructMember {
                 operand, member, ..
             } => {
-                write!(f, "access ")?;
-                self.print_rhs_operand(f, operand)?;
-                write!(f, " member {}", member)
+                write!(f, "access ").unwrap();
+                self.print_rhs_operand(f, operand);
+                write!(f, " member {}", member).unwrap();
             }
             Expression::Subscript { arr, index, .. } => {
-                self.print_rhs_operand(f, arr)?;
-                write!(f, "[")?;
-                self.print_rhs_operand(f, index)?;
-                write!(f, "]")
+                self.print_rhs_operand(f, arr);
+                write!(f, "[").unwrap();
+                self.print_rhs_operand(f, index);
+                write!(f, "]").unwrap();
             }
             Expression::AdvancePointer {
                 pointer,
                 bytes_offset,
                 ..
             } => {
-                write!(f, "ptr_add(")?;
-                self.print_rhs_operand(f, pointer)?;
-                write!(f, ", ")?;
-                self.print_rhs_operand(f, bytes_offset)?;
-                write!(f, ")")
+                write!(f, "ptr_add(").unwrap();
+                self.print_rhs_operand(f, pointer);
+                write!(f, ", ").unwrap();
+                self.print_rhs_operand(f, bytes_offset);
+                write!(f, ")").unwrap();
             }
             Expression::FunctionArg { arg_no, ty, .. } => {
-                write!(f, "{}(arg#{})", ty, arg_no)
+                write!(f, "{}(arg#{})", ty, arg_no).unwrap();
             }
             Expression::FormatString { args, .. } => {
-                write!(f, "fmt_str(")?;
+                write!(f, "fmt_str(").unwrap();
                 args.iter().enumerate().for_each(|(i, (spec, arg))| {
                     if i != 0 {
                         write!(f, ", ").unwrap();
                     }
                     let spec_str = spec.to_string();
                     if spec_str.is_empty() {
-                        self.print_rhs_operand(f, arg).unwrap();
+                        self.print_rhs_operand(f, arg);
                     } else {
                         write!(f, "{} ", spec).unwrap();
-                        self.print_rhs_operand(f, arg).unwrap();
+                        self.print_rhs_operand(f, arg);
                     }
                 });
-                write!(f, ")")
+                write!(f, ")").unwrap();
             }
-            Expression::InternalFunctionCfg { cfg_no, .. } => write!(f, "function#{}", cfg_no),
+            Expression::InternalFunctionCfg { cfg_no, .. } => write!(f, "function#{}", cfg_no).unwrap(),
             Expression::Keccak256 { args, .. } => {
-                write!(f, "keccak256(")?;
+                write!(f, "keccak256(").unwrap();
                 args.iter().enumerate().for_each(|(i, arg)| {
                     if i != 0 {
                         write!(f, ", ").unwrap();
                     }
-                    self.print_rhs_operand(f, arg).unwrap();
+                    self.print_rhs_operand(f, arg);
                 });
-                write!(f, ")")
+                write!(f, ")").unwrap();
             }
             Expression::StringCompare { left, right, .. } => {
-                write!(f, "strcmp(")?;
+                write!(f, "strcmp(").unwrap();
                 match left {
-                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s)?,
-                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op)?,
+                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s).unwrap(),
+                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op),
                 };
 
-                write!(f, ", ")?;
+                write!(f, ", ").unwrap();
 
                 match right {
-                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s)?,
-                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op)?,
+                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s).unwrap(),
+                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op),
                 };
-                write!(f, ")")
+                write!(f, ")").unwrap();
             }
             Expression::StringConcat { left, right, .. } => {
-                write!(f, "strcat(")?;
+                write!(f, "strcat(").unwrap();
                 match left {
-                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s)?,
-                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op)?,
+                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s).unwrap(),
+                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op),
                 };
 
-                write!(f, ", ")?;
+                write!(f, ", ").unwrap();
 
                 match right {
-                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s)?,
-                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op)?,
+                    StringLocation::CompileTime(s) => write!(f, "\"{:?}\"", s).unwrap(),
+                    StringLocation::RunTime(op) => self.print_rhs_operand(f, op),
                 };
-                write!(f, ")")
+                write!(f, ")").unwrap();
             }
             Expression::StorageArrayLength { array, .. } => {
-                write!(f, "storage_arr_len(")?;
-                self.print_rhs_operand(f, array)?;
-                write!(f, ")")
+                write!(f, "storage_arr_len(").unwrap();
+                self.print_rhs_operand(f, array);
+                write!(f, ")").unwrap();
             }
-            Expression::ReturnData { .. } => write!(f, "(extern_call_ret_data)"),
+            Expression::ReturnData { .. } => write!(f, "(extern_call_ret_data)").unwrap(),
             Expression::NumberLiteral { value, .. } => {
-                write!(f, "{}", value)
+                write!(f, "{}", value).unwrap();
             }
-            Expression::BoolLiteral { value, .. } => write!(f, "{}", value),
+            Expression::BoolLiteral { value, .. } => write!(f, "{}", value).unwrap(),
             Expression::Builtin { kind, args, .. } => {
-                write!(f, "builtin: {:?}(", kind)?;
+                write!(f, "builtin: {:?}(", kind).unwrap();
                 args.iter().enumerate().for_each(|(i, arg)| {
                     if i != 0 {
                         write!(f, ", ").unwrap();
                     }
-                    self.print_rhs_operand(f, arg).unwrap();
+                    self.print_rhs_operand(f, arg);
                 });
-                write!(f, ")")
+                write!(f, ")").unwrap();
             }
         }
     }

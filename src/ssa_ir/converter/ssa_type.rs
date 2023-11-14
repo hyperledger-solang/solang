@@ -6,29 +6,29 @@ use crate::sema::ast::{self, ArrayLength};
 use crate::ssa_ir::ssa_type::{StructType, Type};
 
 impl Converter<'_> {
-    pub fn from_ast_type(&self, ty: &ast::Type) -> Result<Type, String> {
+    pub fn from_ast_type(&self, ty: &ast::Type) -> Type {
         match ty {
-            ast::Type::Bool => Ok(Type::Bool),
-            ast::Type::Int(width) => Ok(Type::Int(*width)),
-            ast::Type::Uint(width) => Ok(Type::Uint(*width)),
-            ast::Type::Value => Ok(Type::Uint(self.value_length() as u16 * 8)),
+            ast::Type::Bool => Type::Bool,
+            ast::Type::Int(width) => Type::Int(*width),
+            ast::Type::Uint(width) => Type::Uint(*width),
+            ast::Type::Value => Type::Uint(self.value_length() as u16 * 8),
             // DynamicBytes is a Ptr of an array of Bytes with dynamic length
             // an address is an array of byte
-            ast::Type::Address(_) | ast::Type::Contract(_) => Ok(Type::Array(
+            ast::Type::Address(_) | ast::Type::Contract(_) => Type::Array(
                 Box::new(Type::Uint(8)),
                 vec![ArrayLength::Fixed(BigInt::from(self.address_length()))],
-            )),
+            ),
             // Bytes is a Ptr of an array of Bytes with fixed length
             //
             // endians is different: in llvm level, bytes - big-endian, int is little-endian
             // so they cannot be converted here without switching the endianess
-            ast::Type::Bytes(width) => Ok(Type::Bytes(*width)),
+            ast::Type::Bytes(width) => Type::Bytes(*width),
             // String is equivalent to dynamic bytes
-            ast::Type::String | ast::Type::DynamicBytes => Ok(Type::Ptr(Box::new(Type::Struct(
+            ast::Type::String | ast::Type::DynamicBytes => Type::Ptr(Box::new(Type::Struct(
                 StructType::Vector(Box::new(Type::Uint(8))),
-            )))),
+            ))),
             ast::Type::Array(ty, len) => {
-                let ty = self.from_ast_type(ty.as_ref())?;
+                let ty = self.from_ast_type(ty.as_ref());
                 let len = len
                     .iter()
                     .map(|len| match len {
@@ -37,51 +37,51 @@ impl Converter<'_> {
                         ast::ArrayLength::AnyFixed => unreachable!(),
                     })
                     .collect();
-                Ok(Type::Ptr(Box::new(Type::Array(Box::new(ty), len))))
+                Type::Ptr(Box::new(Type::Array(Box::new(ty), len)))
             }
             ast::Type::Enum(enum_no) => self.convert_enum_type(*enum_no),
-            ast::Type::Struct(struct_ty) => Ok(Type::Ptr(Box::new(Type::Struct(
-                StructType::from(struct_ty),
-            )))),
+            ast::Type::Struct(struct_ty) => {
+                Type::Ptr(Box::new(Type::Struct(StructType::from(struct_ty))))
+            }
             ast::Type::Mapping(mapping) => {
-                let key = self.from_ast_type(&mapping.key)?;
-                let value = self.from_ast_type(&mapping.value)?;
-                Ok(Type::Mapping {
+                let key = self.from_ast_type(&mapping.key);
+                let value = self.from_ast_type(&mapping.value);
+                Type::Mapping {
                     key_ty: Box::new(key),
                     value_ty: Box::new(value),
-                })
+                }
             }
             ast::Type::Ref(rty) => {
-                let ty = self.from_ast_type(rty.as_ref())?;
-                Ok(Type::Ptr(Box::new(ty)))
+                let ty = self.from_ast_type(rty.as_ref());
+                Type::Ptr(Box::new(ty))
             }
             ast::Type::StorageRef(immutable, ty) => {
-                let ty = self.from_ast_type(ty.as_ref())?;
-                Ok(Type::StoragePtr(*immutable, Box::new(ty)))
+                let ty = self.from_ast_type(ty.as_ref());
+                Type::StoragePtr(*immutable, Box::new(ty))
             }
-            ast::Type::BufferPointer => Ok(Type::Ptr(Box::new(Type::Uint(8)))),
-            ast::Type::ExternalFunction { .. } => Ok(Type::Ptr(Box::new(Type::Struct(
-                StructType::ExternalFunction,
-            )))),
+            ast::Type::BufferPointer => Type::Ptr(Box::new(Type::Uint(8))),
+            ast::Type::ExternalFunction { .. } => {
+                Type::Ptr(Box::new(Type::Struct(StructType::ExternalFunction)))
+            }
             ast::Type::InternalFunction {
                 params, returns, ..
             } => {
                 let params = params
                     .iter()
                     .map(|param| self.from_ast_type(param))
-                    .collect::<Result<Vec<_>, _>>()?;
+                    .collect::<Vec<_>>();
                 let returns = returns
                     .iter()
                     .map(|ret| self.from_ast_type(ret))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(Type::Ptr(Box::new(Type::Function { params, returns })))
+                    .collect::<Vec<_>>();
+                Type::Ptr(Box::new(Type::Function { params, returns }))
             }
             ast::Type::UserType(_) => self.convert_user_type(ty),
             ast::Type::Slice(ty) => {
-                let ty = self.from_ast_type(ty.as_ref())?;
-                Ok(Type::Ptr(Box::new(Type::Slice(Box::new(ty)))))
+                let ty = self.from_ast_type(ty.as_ref());
+                Type::Ptr(Box::new(Type::Slice(Box::new(ty))))
             }
-            ast::Type::FunctionSelector => Ok(Type::Uint(self.fn_selector_length() as u16 * 8)),
+            ast::Type::FunctionSelector => Type::Uint(self.fn_selector_length() as u16 * 8),
             _ => unreachable!(),
         }
     }

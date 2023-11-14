@@ -278,10 +278,10 @@ impl fmt::Display for UnaryOperator {
 }
 
 impl Operand {
-    pub fn get_id(&self) -> Result<usize, &'static str> {
+    pub fn get_id(&self) -> usize {
         match self {
-            Operand::Id { id, .. } => Ok(*id),
-            _ => Err("Operand is not an id"),
+            Operand::Id { id, .. } => *id,
+            _ => panic!("Operand is not an id"),
         }
     }
 

@@ -7,56 +7,56 @@ use crate::ssa_ir::ssa_type::{InternalCallTy, PhiInput};
 use std::io::Write;
 
 impl Printer {
-    pub fn print_phi(&self, f: &mut dyn Write, phi: &PhiInput) -> std::io::Result<()> {
-        write!(f, "[")?;
-        self.print_rhs_operand(f, &phi.operand)?;
-        write!(f, ", block#{}]", phi.block_no)
+    pub fn print_phi(&self, f: &mut dyn Write, phi: &PhiInput) {
+        write!(f, "[").unwrap();
+        self.print_rhs_operand(f, &phi.operand);
+        write!(f, ", block#{}]", phi.block_no).unwrap();
     }
 
-    pub fn print_insn(&self, f: &mut dyn Write, insn: &Instruction) -> std::io::Result<()> {
+    pub fn print_insn(&self, f: &mut dyn Write, insn: &Instruction) {
         match insn {
-            Instruction::Nop => write!(f, "nop;"),
+            Instruction::Nop => write!(f, "nop;").unwrap(),
             Instruction::ReturnData { data, data_len } => {
-                write!(f, "return_data ")?;
-                self.print_rhs_operand(f, data)?;
-                write!(f, " of length ",)?;
-                self.print_rhs_operand(f, data_len)?;
-                write!(f, ";")
+                write!(f, "return_data ").unwrap();
+                self.print_rhs_operand(f, data);
+                write!(f, " of length ",).unwrap();
+                self.print_rhs_operand(f, data_len);
+                write!(f, ";").unwrap();
             }
-            Instruction::ReturnCode { code, .. } => write!(f, "return_code \"{}\";", code),
+            Instruction::ReturnCode { code, .. } => write!(f, "return_code \"{}\";", code).unwrap(),
             Instruction::Set { res, expr, .. } => {
-                let res_op = self.get_var_operand(res).unwrap();
-                self.print_lhs_operand(f, &res_op)?;
-                write!(f, " = ")?;
-                self.print_expr(f, expr)?;
-                write!(f, ";")
+                let res_op = self.get_var_operand(res);
+                self.print_lhs_operand(f, &res_op);
+                write!(f, " = ").unwrap();
+                self.print_expr(f, expr);
+                write!(f, ";").unwrap();
             }
             Instruction::Store { dest, data, .. } => {
-                write!(f, "store ")?;
-                self.print_rhs_operand(f, data)?;
-                write!(f, " to ")?;
-                self.print_rhs_operand(f, dest)?;
-                write!(f, ";")
+                write!(f, "store ").unwrap();
+                self.print_rhs_operand(f, data);
+                write!(f, " to ").unwrap();
+                self.print_rhs_operand(f, dest);
+                write!(f, ";").unwrap();
             }
             Instruction::PushMemory {
                 res, array, value, ..
             } => {
-                let res_op = self.get_var_operand(res).unwrap();
-                let array_op = self.get_var_operand(array).unwrap();
-                self.print_lhs_operand(f, &res_op)?;
-                write!(f, " = push_mem ")?;
-                self.print_rhs_operand(f, &array_op)?;
-                write!(f, " ")?;
-                self.print_rhs_operand(f, value)?;
-                write!(f, ";")
+                let res_op = self.get_var_operand(res);
+                let array_op = self.get_var_operand(array);
+                self.print_lhs_operand(f, &res_op);
+                write!(f, " = push_mem ").unwrap();
+                self.print_rhs_operand(f, &array_op);
+                write!(f, " ").unwrap();
+                self.print_rhs_operand(f, value);
+                write!(f, ";").unwrap();
             }
             Instruction::PopMemory { res, array, .. } => {
-                let res_op = self.get_var_operand(res).unwrap();
-                let array_op = self.get_var_operand(array).unwrap();
-                self.print_lhs_operand(f, &res_op)?;
-                write!(f, " = pop_mem ")?;
-                self.print_rhs_operand(f, &array_op)?;
-                write!(f, ";")
+                let res_op = self.get_var_operand(res);
+                let array_op = self.get_var_operand(array);
+                self.print_lhs_operand(f, &res_op);
+                write!(f, " = pop_mem ").unwrap();
+                self.print_rhs_operand(f, &array_op);
+                write!(f, ";").unwrap();
             }
             Instruction::Constructor {
                 success,
@@ -75,16 +75,16 @@ impl Printer {
                 // success
                 match success {
                     Some(success) => {
-                        let res_op = self.get_var_operand(res).unwrap();
-                        let success_op = self.get_var_operand(success).unwrap();
-                        self.print_lhs_operand(f, &success_op)?;
-                        write!(f, ", ")?;
-                        self.print_lhs_operand(f, &res_op)?;
+                        let res_op = self.get_var_operand(res);
+                        let success_op = self.get_var_operand(success);
+                        self.print_lhs_operand(f, &success_op);
+                        write!(f, ", ").unwrap();
+                        self.print_lhs_operand(f, &res_op);
                     }
-                    None => write!(f, "{}, _", res)?,
+                    None => write!(f, "{}, _", res).unwrap(),
                 };
 
-                write!(f, " = ")?;
+                write!(f, " = ").unwrap();
 
                 // constructor
                 match constructor_no {
@@ -92,92 +92,95 @@ impl Printer {
                         f,
                         "constructor(no: {}, contract_no:{})",
                         constructor_no, contract_no
-                    )?,
-                    None => write!(f, "constructor(no: _, contract_no:{})", contract_no)?,
+                    )
+                    .unwrap(),
+                    None => write!(f, "constructor(no: _, contract_no:{})", contract_no).unwrap(),
                 };
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
                 // salt
                 match salt {
                     Some(salt) => {
-                        write!(f, "salt:")?;
-                        self.print_rhs_operand(f, salt)?;
+                        write!(f, "salt:").unwrap();
+                        self.print_rhs_operand(f, salt);
                     }
-                    None => write!(f, "salt:_")?,
+                    None => write!(f, "salt:_").unwrap(),
                 };
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
                 // value
                 match value {
                     Some(value) => {
-                        write!(f, "value:")?;
-                        self.print_rhs_operand(f, value)?;
+                        write!(f, "value:").unwrap();
+                        self.print_rhs_operand(f, value);
                     }
-                    None => write!(f, "value:_")?,
+                    None => write!(f, "value:_").unwrap(),
                 };
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
                 // gas
-                write!(f, "gas:")?;
-                self.print_rhs_operand(f, gas)?;
+                write!(f, "gas:").unwrap();
+                self.print_rhs_operand(f, gas);
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
                 match address {
                     Some(address) => {
-                        write!(f, "address:")?;
-                        self.print_rhs_operand(f, address)?;
+                        write!(f, "address:").unwrap();
+                        self.print_rhs_operand(f, address);
                     }
-                    None => write!(f, "address:_")?,
+                    None => write!(f, "address:_").unwrap(),
                 };
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
                 match seeds {
                     Some(seeds) => {
-                        write!(f, "seeds:")?;
-                        self.print_rhs_operand(f, seeds)?;
+                        write!(f, "seeds:").unwrap();
+                        self.print_rhs_operand(f, seeds);
                     }
-                    None => write!(f, "seeds:_")?,
+                    None => write!(f, "seeds:_").unwrap(),
                 };
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
-                write!(f, "encoded-buffer:")?;
-                self.print_rhs_operand(f, encoded_args)?;
+                write!(f, "encoded-buffer:").unwrap();
+                self.print_rhs_operand(f, encoded_args);
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
                 match accounts {
-                    ast::ExternalCallAccounts::NoAccount => write!(f, "accounts:none"),
+                    ast::ExternalCallAccounts::NoAccount => write!(f, "accounts:none").unwrap(),
                     ast::ExternalCallAccounts::Present(acc) => {
-                        write!(f, "accounts:")?;
-                        self.print_rhs_operand(f, acc)
+                        write!(f, "accounts:").unwrap();
+                        self.print_rhs_operand(f, acc);
                     }
-                    ast::ExternalCallAccounts::AbsentArgument => write!(f, "accounts:absent"),
+                    ast::ExternalCallAccounts::AbsentArgument => {
+                        write!(f, "accounts:absent").unwrap()
+                    }
                 }
             }
             Instruction::LoadStorage { res, storage, .. } => {
-                let res_op = self.get_var_operand(res).unwrap();
-                self.print_lhs_operand(f, &res_op)?;
-                write!(f, " = load_storage ")?;
-                self.print_rhs_operand(f, storage)?;
-                write!(f, ";")
+                let res_op = self.get_var_operand(res);
+                self.print_lhs_operand(f, &res_op);
+                write!(f, " = load_storage ").unwrap();
+                self.print_rhs_operand(f, storage);
+                write!(f, ";").unwrap();
             }
             Instruction::ClearStorage { storage, .. } => {
-                write!(f, "clear_storage ")?;
-                self.print_rhs_operand(f, storage)?;
-                write!(f, ";")
+                write!(f, "clear_storage ").unwrap();
+                self.print_rhs_operand(f, storage);
+                write!(f, ";").unwrap();
             }
             Instruction::SetStorage { value, storage, .. } => {
-                write!(f, "set_storage ")?;
-                self.print_rhs_operand(f, storage)?;
-                write!(f, " ")?;
-                self.print_rhs_operand(f, value)?;
-                write!(f, ";")
+                write!(f, "set_storage ").unwrap();
+                self.print_rhs_operand(f, storage);
+                write!(f, " ").unwrap();
+                self.print_rhs_operand(f, value);
+                write!(f, ";").unwrap();
             }
             Instruction::SetStorageBytes {
                 value,
@@ -185,13 +188,13 @@ impl Printer {
                 offset,
                 ..
             } => {
-                write!(f, "set_storage_bytes ")?;
-                self.print_rhs_operand(f, storage)?;
-                write!(f, " offset:")?;
-                self.print_rhs_operand(f, offset)?;
-                write!(f, " value:")?;
-                self.print_rhs_operand(f, value)?;
-                write!(f, ";")
+                write!(f, "set_storage_bytes ").unwrap();
+                self.print_rhs_operand(f, storage);
+                write!(f, " offset:").unwrap();
+                self.print_rhs_operand(f, offset);
+                write!(f, " value:").unwrap();
+                self.print_rhs_operand(f, value);
+                write!(f, ";").unwrap();
             }
             Instruction::PushStorage {
                 res,
@@ -199,77 +202,79 @@ impl Printer {
                 storage,
                 ..
             } => {
-                let res_op = self.get_var_operand(res).unwrap();
-                self.print_lhs_operand(f, &res_op)?;
-                write!(f, " = push_storage ")?;
-                self.print_rhs_operand(f, storage)?;
-                write!(f, " ")?;
+                let res_op = self.get_var_operand(res);
+                self.print_lhs_operand(f, &res_op);
+                write!(f, " = push_storage ").unwrap();
+                self.print_rhs_operand(f, storage);
+                write!(f, " ").unwrap();
                 match value {
-                    Some(value) => self.print_rhs_operand(f, value)?,
-                    None => write!(f, "empty")?,
+                    Some(value) => self.print_rhs_operand(f, value),
+                    None => write!(f, "empty").unwrap(),
                 };
-                write!(f, ";")
+                write!(f, ";").unwrap();
             }
             Instruction::PopStorage { res, storage, .. } => match res {
                 Some(res) => {
-                    let res_op = self.get_var_operand(res).unwrap();
-                    self.print_lhs_operand(f, &res_op)?;
-                    write!(f, " = pop_storage ")?;
-                    self.print_rhs_operand(f, storage)?;
-                    write!(f, ";")
+                    let res_op = self.get_var_operand(res);
+                    self.print_lhs_operand(f, &res_op);
+                    write!(f, " = pop_storage ").unwrap();
+                    self.print_rhs_operand(f, storage);
+                    write!(f, ";").unwrap();
                 }
                 None => {
-                    write!(f, "pop_storage ")?;
-                    self.print_rhs_operand(f, storage)?;
-                    write!(f, ";")
+                    write!(f, "pop_storage ").unwrap();
+                    self.print_rhs_operand(f, storage);
+                    write!(f, ";").unwrap();
                 }
             },
             Instruction::Call { res, call, args } => {
                 // lhs: %0, %1, ...
                 for (i, id) in res.iter().enumerate() {
-                    let res_op = self.get_var_operand(id).unwrap();
+                    let res_op = self.get_var_operand(id);
                     if i != 0 {
-                        write!(f, ", ")?;
+                        write!(f, ", ").unwrap();
                     }
-                    self.print_lhs_operand(f, &res_op)?;
+                    self.print_lhs_operand(f, &res_op);
                 }
 
-                write!(f, " = call ")?;
+                write!(f, " = call ").unwrap();
 
                 match call {
                     InternalCallTy::Builtin { ast_func_no, .. } => {
-                        write!(f, "builtin#{}", ast_func_no)?
+                        write!(f, "builtin#{}", ast_func_no).unwrap();
                     }
-                    InternalCallTy::Static { cfg_no, .. } => write!(f, "function#{}", cfg_no)?,
-                    InternalCallTy::Dynamic(op) => self.print_rhs_operand(f, op)?,
+                    InternalCallTy::Static { cfg_no, .. } => {
+                        write!(f, "function#{}", cfg_no).unwrap()
+                    }
+                    InternalCallTy::Dynamic(op) => self.print_rhs_operand(f, op),
                 };
 
-                write!(f, "(")?;
+                write!(f, "(").unwrap();
 
                 for (i, arg) in args.iter().enumerate() {
                     if i != 0 {
-                        write!(f, ", ")?;
+                        write!(f, ", ").unwrap();
                     }
-                    self.print_rhs_operand(f, arg)?;
+                    self.print_rhs_operand(f, arg);
                 }
 
-                write!(f, ");")
+                write!(f, ");").unwrap();
             }
             Instruction::Print { operand, .. } => {
-                write!(f, "print ")?;
-                self.print_rhs_operand(f, operand)?;
-                write!(f, ";")
+                write!(f, "print ").unwrap();
+                self.print_rhs_operand(f, operand);
+                write!(f, ";").unwrap();
             }
             Instruction::MemCopy {
                 src, dest, bytes, ..
             } => {
-                write!(f, "memcopy ")?;
-                self.print_rhs_operand(f, src)?;
-                write!(f, " to ")?;
-                self.print_rhs_operand(f, dest)?;
-                write!(f, " for ")?;
-                self.print_rhs_operand(f, bytes)?;
-                write!(f, " bytes;")
+                write!(f, "memcopy ").unwrap();
+                self.print_rhs_operand(f, src);
+                write!(f, " to ").unwrap();
+                self.print_rhs_operand(f, dest);
+                write!(f, " for ").unwrap();
+                self.print_rhs_operand(f, bytes);
+                write!(f, " bytes;").unwrap();
             }
             Instruction::ExternalCall {
                 success,
@@ -287,59 +292,61 @@ impl Printer {
                 // {} = call_ext ty:{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{} contract_no:{}, function_no:{} flags:{};
                 match success {
                     Some(success) => {
-                        let success_op = self.get_var_operand(success).unwrap();
-                        self.print_lhs_operand(f, &success_op)?;
+                        let success_op = self.get_var_operand(success);
+                        self.print_lhs_operand(f, &success_op);
                     }
-                    None => write!(f, "_")?,
+                    None => write!(f, "_").unwrap(),
                 };
 
-                write!(f, " = call_ext [{}] ", callty)?;
+                write!(f, " = call_ext [{}] ", callty).unwrap();
 
                 match address {
                     Some(address) => {
-                        write!(f, "address:")?;
-                        self.print_rhs_operand(f, address)?;
+                        write!(f, "address:").unwrap();
+                        self.print_rhs_operand(f, address);
                     }
-                    None => write!(f, "address:_")?,
+                    None => write!(f, "address:_").unwrap(),
                 };
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
-                write!(f, "payload:")?;
-                self.print_rhs_operand(f, payload)?;
+                write!(f, "payload:").unwrap();
+                self.print_rhs_operand(f, payload);
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
-                write!(f, "value:")?;
-                self.print_rhs_operand(f, value)?;
+                write!(f, "value:").unwrap();
+                self.print_rhs_operand(f, value);
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
-                write!(f, "gas:")?;
-                self.print_rhs_operand(f, gas)?;
+                write!(f, "gas:").unwrap();
+                self.print_rhs_operand(f, gas);
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
                 match accounts {
-                    ast::ExternalCallAccounts::NoAccount => write!(f, "accounts:none")?,
+                    ast::ExternalCallAccounts::NoAccount => write!(f, "accounts:none").unwrap(),
                     ast::ExternalCallAccounts::Present(acc) => {
-                        write!(f, "accounts:")?;
-                        self.print_rhs_operand(f, acc)?;
+                        write!(f, "accounts:").unwrap();
+                        self.print_rhs_operand(f, acc);
                     }
-                    ast::ExternalCallAccounts::AbsentArgument => write!(f, "accounts:absent")?,
+                    ast::ExternalCallAccounts::AbsentArgument => {
+                        write!(f, "accounts:absent").unwrap()
+                    }
                 };
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
                 match seeds {
                     Some(seeds) => {
-                        write!(f, "seeds:")?;
-                        self.print_rhs_operand(f, seeds)?;
+                        write!(f, "seeds:").unwrap();
+                        self.print_rhs_operand(f, seeds);
                     }
-                    None => write!(f, "seeds:_")?,
+                    None => write!(f, "seeds:_").unwrap(),
                 };
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
                 match contract_function_no {
                     Some((contract_no, function_no)) => {
@@ -347,22 +354,23 @@ impl Printer {
                             f,
                             "contract_no:{}, function_no:{}",
                             contract_no, function_no
-                        )?;
+                        )
+                        .unwrap();
                     }
-                    None => write!(f, "contract_no:_, function_no:_")?,
+                    None => write!(f, "contract_no:_, function_no:_").unwrap(),
                 };
 
-                write!(f, " ")?;
+                write!(f, " ").unwrap();
 
                 match flags {
                     Some(flags) => {
-                        write!(f, "flags:")?;
-                        self.print_rhs_operand(f, flags)?;
+                        write!(f, "flags:").unwrap();
+                        self.print_rhs_operand(f, flags);
                     }
-                    None => write!(f, "flags:_")?,
+                    None => write!(f, "flags:_").unwrap(),
                 }
 
-                write!(f, ";")
+                write!(f, ";").unwrap();
             }
             Instruction::ValueTransfer {
                 success,
@@ -372,21 +380,21 @@ impl Printer {
             } => {
                 match success {
                     Some(success) => {
-                        let success_op = self.get_var_operand(success).unwrap();
-                        self.print_lhs_operand(f, &success_op)?;
+                        let success_op = self.get_var_operand(success);
+                        self.print_lhs_operand(f, &success_op);
                     }
-                    None => write!(f, "_")?,
+                    None => write!(f, "_").unwrap(),
                 };
-                write!(f, " = value_transfer ")?;
-                self.print_rhs_operand(f, value)?;
-                write!(f, " to ")?;
-                self.print_rhs_operand(f, address)?;
-                write!(f, ";")
+                write!(f, " = value_transfer ").unwrap();
+                self.print_rhs_operand(f, value);
+                write!(f, " to ").unwrap();
+                self.print_rhs_operand(f, address);
+                write!(f, ";").unwrap();
             }
             Instruction::SelfDestruct { recipient, .. } => {
-                write!(f, "self_destruct ")?;
-                self.print_rhs_operand(f, recipient)?;
-                write!(f, ";")
+                write!(f, "self_destruct ").unwrap();
+                self.print_rhs_operand(f, recipient);
+                write!(f, ";").unwrap();
             }
             Instruction::EmitEvent {
                 data,
@@ -394,38 +402,38 @@ impl Printer {
                 event_no,
                 ..
             } => {
-                write!(f, "emit event#{} to topics[", event_no)?;
+                write!(f, "emit event#{} to topics[", event_no).unwrap();
                 for (i, topic) in topics.iter().enumerate() {
                     if i != 0 {
-                        write!(f, ", ")?;
+                        write!(f, ", ").unwrap();
                     }
-                    self.print_rhs_operand(f, topic)?;
+                    self.print_rhs_operand(f, topic);
                 }
-                write!(f, "], data: ")?;
-                self.print_rhs_operand(f, data)?;
-                write!(f, ";")
+                write!(f, "], data: ").unwrap();
+                self.print_rhs_operand(f, data);
+                write!(f, ";").unwrap()
             }
             Instruction::WriteBuffer {
                 buf, offset, value, ..
             } => {
-                write!(f, "write_buf ")?;
-                self.print_rhs_operand(f, buf)?;
-                write!(f, " offset:")?;
-                self.print_rhs_operand(f, offset)?;
-                write!(f, " value:")?;
-                self.print_rhs_operand(f, value)?;
-                write!(f, ";")
+                write!(f, "write_buf ").unwrap();
+                self.print_rhs_operand(f, buf);
+                write!(f, " offset:").unwrap();
+                self.print_rhs_operand(f, offset);
+                write!(f, " value:").unwrap();
+                self.print_rhs_operand(f, value);
+                write!(f, ";").unwrap();
             }
-            Instruction::Branch { block, .. } => write!(f, "br block#{};", block),
+            Instruction::Branch { block, .. } => write!(f, "br block#{};", block).unwrap(),
             Instruction::BranchCond {
                 cond,
                 true_block,
                 false_block,
                 ..
             } => {
-                write!(f, "cbr ")?;
-                self.print_rhs_operand(f, cond)?;
-                write!(f, " block#{} else block#{};", true_block, false_block)
+                write!(f, "cbr ").unwrap();
+                self.print_rhs_operand(f, cond);
+                write!(f, " block#{} else block#{};", true_block, false_block).unwrap();
             }
             Instruction::Switch {
                 cond,
@@ -433,38 +441,38 @@ impl Printer {
                 default,
                 ..
             } => {
-                write!(f, "switch ")?;
-                self.print_rhs_operand(f, cond)?;
-                write!(f, ":")?;
+                write!(f, "switch ").unwrap();
+                self.print_rhs_operand(f, cond);
+                write!(f, ":").unwrap();
                 for (i, (cond, block)) in cases.iter().enumerate() {
                     if i != 0 {
-                        write!(f, ", ")?;
+                        write!(f, ", ").unwrap();
                     }
-                    write!(f, "\n    case:    ")?;
-                    self.print_rhs_operand(f, cond)?;
-                    write!(f, " => block#{}", block)?;
+                    write!(f, "\n    case:    ").unwrap();
+                    self.print_rhs_operand(f, cond);
+                    write!(f, " => block#{}", block).unwrap();
                 }
-                write!(f, "\n    default: block#{};", default)
+                write!(f, "\n    default: block#{};", default).unwrap();
             }
             Instruction::Return { value, .. } => {
-                write!(f, "return")?;
+                write!(f, "return").unwrap();
                 for (i, value) in value.iter().enumerate() {
                     if i == 0 {
-                        write!(f, " ")?;
+                        write!(f, " ").unwrap();
                     } else {
-                        write!(f, ", ")?;
+                        write!(f, ", ").unwrap();
                     }
-                    self.print_rhs_operand(f, value)?;
+                    self.print_rhs_operand(f, value);
                 }
-                write!(f, ";")
+                write!(f, ";").unwrap();
             }
             Instruction::AssertFailure { encoded_args, .. } => match encoded_args {
                 Some(encoded_args) => {
-                    write!(f, "assert_failure ")?;
-                    self.print_rhs_operand(f, encoded_args)?;
-                    write!(f, ";")
+                    write!(f, "assert_failure ").unwrap();
+                    self.print_rhs_operand(f, encoded_args);
+                    write!(f, ";").unwrap();
                 }
-                None => write!(f, "assert_failure;"),
+                None => write!(f, "assert_failure;").unwrap(),
             },
             Instruction::Unimplemented { reachable, .. } => {
                 write!(
@@ -476,18 +484,19 @@ impl Printer {
                         "unreachable"
                     }
                 )
+                .unwrap();
             }
             Instruction::Phi { res, vars, .. } => {
-                let res_op = self.get_var_operand(res).unwrap();
-                self.print_lhs_operand(f, &res_op)?;
-                write!(f, " = phi ")?;
+                let res_op = self.get_var_operand(res);
+                self.print_lhs_operand(f, &res_op);
+                write!(f, " = phi ").unwrap();
                 for (i, var) in vars.iter().enumerate() {
                     if i != 0 {
-                        write!(f, ", ")?;
+                        write!(f, ", ").unwrap();
                     }
-                    self.print_phi(f, var)?;
+                    self.print_phi(f, var);
                 }
-                write!(f, ";")
+                write!(f, ";").unwrap();
             }
         }
     }

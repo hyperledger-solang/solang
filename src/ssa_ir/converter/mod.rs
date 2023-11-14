@@ -39,13 +39,13 @@ impl<'input> Converter<'input> {
         self.ns.address_length
     }
 
-    pub fn convert_user_type(&self, user_ty: &ast::Type) -> Result<Type, String> {
+    pub fn convert_user_type(&self, user_ty: &ast::Type) -> Type {
         // clone happens here because function unwrap_user_type takes ownership
         let real_ty = user_ty.clone().unwrap_user_type(self.ns);
         self.from_ast_type(&real_ty)
     }
 
-    pub fn convert_enum_type(&self, enum_no: usize) -> Result<Type, String> {
+    pub fn convert_enum_type(&self, enum_no: usize) -> Type {
         let ty = &self.ns.enums[enum_no].ty;
         self.from_ast_type(ty)
     }
@@ -54,10 +54,10 @@ impl<'input> Converter<'input> {
         self.ns.value_length
     }
 
-    pub fn get_ast_type_by_id(&self, id: &usize) -> Result<ast::Type, String> {
+    pub fn get_ast_type_by_id(&self, id: &usize) -> ast::Type {
         match self.cfg.vars.get(id) {
-            Some(var) => Ok(var.ty.clone()),
-            None => Err(format!("Cannot find type for id {}", id)),
+            Some(var) => var.ty.clone(),
+            None => panic!("Cannot find type for id {}", id),
         }
     }
 
@@ -68,7 +68,7 @@ impl<'input> Converter<'input> {
     ) -> Option<Operand> {
         match expr {
             codegen::Expression::NumberLiteral { ty, value, loc, .. } => {
-                let ssa_ty = self.from_ast_type(ty).unwrap();
+                let ssa_ty = self.from_ast_type(ty);
                 Some(Operand::new_number_literal(value, ssa_ty, *loc))
             }
             codegen::Expression::BoolLiteral { value, loc, .. } => {
@@ -89,13 +89,13 @@ impl<'input> Converter<'input> {
         expr: &codegen::Expression,
         vartable: &mut Vartable,
         mut result: &mut Vec<Instruction>,
-    ) -> Result<Operand, String> {
+    ) -> Operand {
         match self.to_operand(expr, vartable) {
-            Some(op) => Ok(op),
+            Some(op) => op,
             None => {
-                let tmp = vartable.new_temp(&self.from_ast_type(&expr.ty())?);
-                self.lowering_expression(&tmp, expr, vartable, &mut result)?;
-                Ok(tmp)
+                let tmp = vartable.new_temp(&self.from_ast_type(&expr.ty()));
+                self.lowering_expression(&tmp, expr, vartable, &mut result);
+                tmp
             }
         }
     }
@@ -105,13 +105,13 @@ impl<'input> Converter<'input> {
         expr: &Option<codegen::Expression>,
         vartable: &mut Vartable,
         result: &mut Vec<Instruction>,
-    ) -> Result<Option<Operand>, String> {
+    ) -> Option<Operand> {
         match expr {
             Some(address) => {
-                let tmp = self.to_operand_and_insns(address, vartable, result)?;
-                Ok(Some(tmp))
+                let tmp = self.to_operand_and_insns(address, vartable, result);
+                Some(tmp)
             }
-            None => Ok(None),
+            None => None,
         }
     }
 
@@ -120,14 +120,14 @@ impl<'input> Converter<'input> {
         location: &ast::StringLocation<codegen::Expression>,
         vartable: &mut Vartable,
         result: &mut Vec<Instruction>,
-    ) -> Result<ast::StringLocation<Operand>, String> {
+    ) -> ast::StringLocation<Operand> {
         match location {
             ast::StringLocation::CompileTime(str) => {
-                Ok(ast::StringLocation::CompileTime(str.clone()) as ast::StringLocation<Operand>)
+                ast::StringLocation::CompileTime(str.clone()) as ast::StringLocation<Operand>
             }
             ast::StringLocation::RunTime(expr) => {
-                let op = self.to_operand_and_insns(expr, vartable, result)?;
-                Ok(ast::StringLocation::RunTime(Box::new(op)))
+                let op = self.to_operand_and_insns(expr, vartable, result);
+                ast::StringLocation::RunTime(Box::new(op))
             }
         }
     }
@@ -137,17 +137,17 @@ impl<'input> Converter<'input> {
         accounts: &ast::ExternalCallAccounts<codegen::Expression>,
         vartable: &mut Vartable,
         result: &mut Vec<Instruction>,
-    ) -> Result<ast::ExternalCallAccounts<Operand>, String> {
+    ) -> ast::ExternalCallAccounts<Operand> {
         match accounts {
             ast::ExternalCallAccounts::Present(accounts) => {
-                let tmp = self.to_operand_and_insns(accounts, vartable, result)?;
-                Ok(ast::ExternalCallAccounts::Present(tmp))
+                let tmp = self.to_operand_and_insns(accounts, vartable, result);
+                ast::ExternalCallAccounts::Present(tmp)
             }
             ast::ExternalCallAccounts::NoAccount => {
-                Ok(ast::ExternalCallAccounts::NoAccount as ast::ExternalCallAccounts<Operand>)
+                ast::ExternalCallAccounts::NoAccount as ast::ExternalCallAccounts<Operand>
             }
             ast::ExternalCallAccounts::AbsentArgument => {
-                Ok(ast::ExternalCallAccounts::AbsentArgument as ast::ExternalCallAccounts<Operand>)
+                ast::ExternalCallAccounts::AbsentArgument as ast::ExternalCallAccounts<Operand>
             }
         }
     }
@@ -157,17 +157,17 @@ impl<'input> Converter<'input> {
         call: &cfg::InternalCallTy,
         vartable: &mut Vartable,
         result: &mut Vec<Instruction>,
-    ) -> Result<InternalCallTy, String> {
+    ) -> InternalCallTy {
         match call {
-            cfg::InternalCallTy::Builtin { ast_func_no } => Ok(InternalCallTy::Builtin {
+            cfg::InternalCallTy::Builtin { ast_func_no } => InternalCallTy::Builtin {
                 ast_func_no: *ast_func_no,
-            }),
+            },
             cfg::InternalCallTy::Static { cfg_no } => {
-                Ok(InternalCallTy::Static { cfg_no: *cfg_no })
+                InternalCallTy::Static { cfg_no: *cfg_no }
             }
             cfg::InternalCallTy::Dynamic(expr) => {
-                let tmp = self.to_operand_and_insns(expr, vartable, result)?;
-                Ok(InternalCallTy::Dynamic(tmp))
+                let tmp = self.to_operand_and_insns(expr, vartable, result);
+                InternalCallTy::Dynamic(tmp)
             }
         }
     }

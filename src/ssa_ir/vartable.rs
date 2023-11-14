@@ -9,9 +9,10 @@ use solang_parser::pt::Loc;
 pub const TEMP_PREFIX: &str = "temp.ssa_ir.";
 
 #[derive(Debug, Clone)]
-pub struct Var {
+pub struct Var/*<'a>*/ {
     pub id: usize,
     pub ty: Type,
+    // pub ast_ty: &'a ast::Type,
     pub name: String,
 }
 
@@ -33,25 +34,28 @@ impl Var {
 }
 
 impl Vartable {
-    pub(crate) fn get_type(&self, id: &usize) -> Result<&Type, String> {
+    pub(crate) fn get_type(&self, id: &usize) -> &Type {
         self.vars
             .get(id)
             .map(|var| &var.ty)
             .ok_or(format!("Variable {} not found.", id))
+            .unwrap()
     }
 
-    pub(crate) fn get_name(&self, id: &usize) -> Result<&str, String> {
+    pub(crate) fn get_name(&self, id: &usize) -> &str {
         self.vars
             .get(id)
             .map(|var| var.name.as_str())
             .ok_or(format!("Variable {} not found.", id))
+            .unwrap()
     }
 
-    pub(crate) fn get_operand(&self, id: &usize, loc: Loc) -> Result<Operand, String> {
+    pub(crate) fn get_operand(&self, id: &usize, loc: Loc) -> Operand {
         self.vars
             .get(id)
             .map(|var| Operand::Id { id: var.id, loc })
             .ok_or(format!("Variable {} not found.", id))
+            .unwrap()
     }
 
     pub fn set_tmp(&mut self, id: usize, ty: &Type) {
@@ -83,7 +87,7 @@ impl Vartable {
     pub(crate) fn get_function_arg(&self, arg_no: usize, loc: Loc) -> Option<Operand> {
         match self.args.get(&arg_no) {
             Some(id) => {
-                let op = self.get_operand(id, loc).unwrap();
+                let op = self.get_operand(id, loc);
                 Some(op)
             }
             None => None,
