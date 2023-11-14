@@ -216,7 +216,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
                 }
 
                 top.structs.push(StructDecl {
-                    name: &struct_decl.name,
+                    name: &struct_decl.id.name,
                     contract: struct_decl.contract.as_deref(),
                     title: get_tag("title", &struct_decl.tags),
                     notice: get_tag("notice", &struct_decl.tags),
@@ -241,7 +241,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
             }
 
             top.enums.push(EnumDecl {
-                name: &enum_decl.name,
+                name: &enum_decl.id.name,
                 contract: enum_decl.contract.as_deref(),
                 title: get_tag("title", &enum_decl.tags),
                 notice: get_tag("notice", &enum_decl.tags),
@@ -305,7 +305,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
                 }
 
                 Function {
-                    name: &func.name,
+                    name: &func.id.name,
                     ty: format!("{}", func.ty),
                     mutability: format!("{}", func.mutability),
                     base_contract,

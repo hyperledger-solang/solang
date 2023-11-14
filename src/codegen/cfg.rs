@@ -1130,7 +1130,7 @@ impl ControlFlowGraph {
                     .map(|local| format!("%{}", self.vars[local].id.name))
                     .collect::<Vec<String>>()
                     .join(", "),
-                ns.functions[*ast_func_no].name,
+                ns.functions[*ast_func_no].id,
                 args.iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))
                     .collect::<Vec<String>>()

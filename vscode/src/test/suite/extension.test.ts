@@ -175,7 +175,7 @@ async function testdefs(docUri: vscode.Uri) {
   )) as vscode.Location[];
   const loc4 = actualdef4[0];
   assert.strictEqual(loc4.range.start.line, 23);
-  assert.strictEqual(loc4.range.start.character, 8);
+  assert.strictEqual(loc4.range.start.character, 14);
   assert.strictEqual(loc4.range.end.line, 23);
   assert.strictEqual(loc4.range.end.character, 15);
   assert.strictEqual(loc4.uri.path, docUri.path);
@@ -188,7 +188,7 @@ async function testdefs(docUri: vscode.Uri) {
   )) as vscode.Location[];
   const loc5 = actualdef5[0];
   assert.strictEqual(loc5.range.start.line, 24);
-  assert.strictEqual(loc5.range.start.character, 8);
+  assert.strictEqual(loc5.range.start.character, 13);
   assert.strictEqual(loc5.range.end.line, 24);
   assert.strictEqual(loc5.range.end.character, 14);
   assert.strictEqual(loc5.uri.path, docUri.path);
@@ -218,9 +218,9 @@ async function testtypedefs(docUri: vscode.Uri) {
   )) as vscode.Location[];
   const loc1 = actualtypedef1[0];
   assert.strictEqual(loc1.range.start.line, 7);
-  assert.strictEqual(loc1.range.start.character, 4);
-  assert.strictEqual(loc1.range.end.line, 21);
-  assert.strictEqual(loc1.range.end.character, 5);
+  assert.strictEqual(loc1.range.start.character, 9);
+  assert.strictEqual(loc1.range.end.line, 7);
+  assert.strictEqual(loc1.range.end.character, 14);
   assert.strictEqual(loc1.uri.path, docUri.path);
 }
 
@@ -236,15 +236,15 @@ async function testdecls(docUri: vscode.Uri) {
   assert.strictEqual(actualdecl0.length, 2);
   const loc00 = actualdecl0[0];
   assert.strictEqual(loc00.range.start.line, 12);
-  assert.strictEqual(loc00.range.start.character, 4);
+  assert.strictEqual(loc00.range.start.character, 13);
   assert.strictEqual(loc00.range.end.line, 12);
-  assert.strictEqual(loc00.range.end.character, 61);
+  assert.strictEqual(loc00.range.end.character, 16);
   assert.strictEqual(loc00.uri.path, docUri.path);
   const loc01 = actualdecl0[1];
   assert.strictEqual(loc01.range.start.line, 22);
-  assert.strictEqual(loc01.range.start.character, 4);
+  assert.strictEqual(loc01.range.start.character, 13);
   assert.strictEqual(loc01.range.end.line, 22);
-  assert.strictEqual(loc01.range.end.character, 61);
+  assert.strictEqual(loc01.range.end.character, 16);
   assert.strictEqual(loc01.uri.path, docUri.path);
 
   const pos1 = new vscode.Position(12, 14);
@@ -256,9 +256,9 @@ async function testdecls(docUri: vscode.Uri) {
   assert.strictEqual(actualdecl1.length, 1);
   const loc10 = actualdecl1[0];
   assert.strictEqual(loc10.range.start.line, 32);
-  assert.strictEqual(loc10.range.start.character, 4);
+  assert.strictEqual(loc10.range.start.character, 13);
   assert.strictEqual(loc10.range.end.line, 32);
-  assert.strictEqual(loc10.range.end.character, 52);
+  assert.strictEqual(loc10.range.end.character, 16);
   assert.strictEqual(loc10.uri.path, docUri.path);
 
   const pos2 = new vscode.Position(22, 14);
@@ -270,9 +270,9 @@ async function testdecls(docUri: vscode.Uri) {
   assert.strictEqual(actualdecl2.length, 1);
   const loc20 = actualdecl2[0];
   assert.strictEqual(loc20.range.start.line, 32);
-  assert.strictEqual(loc20.range.start.character, 4);
+  assert.strictEqual(loc20.range.start.character, 13);
   assert.strictEqual(loc20.range.end.line, 32);
-  assert.strictEqual(loc20.range.end.character, 52);
+  assert.strictEqual(loc20.range.end.character, 16);
   assert.strictEqual(loc20.uri.path, docUri.path);
 }
 
@@ -289,15 +289,15 @@ async function testimpls(docUri: vscode.Uri) {
   assert.strictEqual(actualimpl0.length, 2);
   const loc00 = actualimpl0[0];
   assert.strictEqual(loc00.range.start.line, 1);
-  assert.strictEqual(loc00.range.start.character, 4);
+  assert.strictEqual(loc00.range.start.character, 13);
   assert.strictEqual(loc00.range.end.line, 1);
-  assert.strictEqual(loc00.range.end.character, 42);
+  assert.strictEqual(loc00.range.end.character, 16);
   assert.strictEqual(loc00.uri.path, docUri.path);
   const loc01 = actualimpl0[1];
   assert.strictEqual(loc01.range.start.line, 6);
-  assert.strictEqual(loc01.range.start.character, 4);
+  assert.strictEqual(loc01.range.start.character, 13);
   assert.strictEqual(loc01.range.end.line, 6);
-  assert.strictEqual(loc01.range.end.character, 65);
+  assert.strictEqual(loc01.range.end.character, 16);
   assert.strictEqual(loc01.uri.path, docUri.path);
 
 
@@ -310,15 +310,15 @@ async function testimpls(docUri: vscode.Uri) {
   assert.strictEqual(actualimpl1.length, 2);
   const loc10 = actualimpl1[0];
   assert.strictEqual(loc10.range.start.line, 12);
-  assert.strictEqual(loc10.range.start.character, 4);
+  assert.strictEqual(loc10.range.start.character, 13);
   assert.strictEqual(loc10.range.end.line, 12);
-  assert.strictEqual(loc10.range.end.character, 61);
+  assert.strictEqual(loc10.range.end.character, 16);
   assert.strictEqual(loc10.uri.path, docUri.path);
   const loc11 = actualimpl1[1];
   assert.strictEqual(loc11.range.start.line, 16);
-  assert.strictEqual(loc11.range.start.character, 4);
+  assert.strictEqual(loc11.range.start.character, 13);
   assert.strictEqual(loc11.range.end.line, 16);
-  assert.strictEqual(loc11.range.end.character, 53);
+  assert.strictEqual(loc11.range.end.character, 16);
   assert.strictEqual(loc11.uri.path, docUri.path);
 
 
@@ -331,15 +331,15 @@ async function testimpls(docUri: vscode.Uri) {
   assert.strictEqual(actualimpl2.length, 2);
   const loc20 = actualimpl2[0];
   assert.strictEqual(loc20.range.start.line, 22);
-  assert.strictEqual(loc20.range.start.character, 4);
+  assert.strictEqual(loc20.range.start.character, 13);
   assert.strictEqual(loc20.range.end.line, 22);
-  assert.strictEqual(loc20.range.end.character, 61);
+  assert.strictEqual(loc20.range.end.character, 16);
   assert.strictEqual(loc20.uri.path, docUri.path);
   const loc21 = actualimpl2[1];
   assert.strictEqual(loc21.range.start.line, 26);
-  assert.strictEqual(loc21.range.start.character, 4);
+  assert.strictEqual(loc21.range.start.character, 13);
   assert.strictEqual(loc21.range.end.line, 26);
-  assert.strictEqual(loc21.range.end.character, 54);
+  assert.strictEqual(loc21.range.end.character, 17);
   assert.strictEqual(loc21.uri.path, docUri.path);
 }
 
@@ -569,6 +569,18 @@ async function testhover(docUri: vscode.Uri) {
   )) as vscode.Hover[];
 
   assert.strictEqual(actualhover4.length, 0);
+
+  const pos5 = new vscode.Position(134, 73);
+
+  const actualhover5 = (await vscode.commands.executeCommand(
+    'vscode.executeHoverProvider',
+    docUri,
+    pos5
+  )) as vscode.Hover[];
+
+  const contentarr5 = actualhover5[0].contents as vscode.MarkdownString[];
+
+  assert.strictEqual(contentarr5[0].value, '```solidity\nfunction foo.sum(uint64 a, uint64 b) returns (uint64)\n\n```');
 }
 
 async function testdiagnos(docUri: vscode.Uri, expecteddiag: vscode.Diagnostic[]) {

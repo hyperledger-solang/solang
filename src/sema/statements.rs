@@ -198,7 +198,7 @@ pub fn resolve_function_body(
                     let modifier_name = &modifier.name.identifiers[0];
                     if let Ok(e) = function_call_pos_args(
                         &modifier.loc,
-                        modifier_name,
+                        &modifier.name,
                         pt::FunctionTy::Modifier,
                         modifier.args.as_ref().unwrap_or(&Vec::new()),
                         available_functions(

@@ -91,7 +91,7 @@ pub fn resolve_typenames<'a>(
                 ) {
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
-                        name: def.name.as_ref().unwrap().name.to_owned(),
+                        id: def.name.clone().unwrap(),
                         loc: def.name.as_ref().unwrap().loc,
                         contract: None,
                         fields: Vec::new(),
@@ -381,7 +381,7 @@ fn find_struct_recursion(ns: &mut Namespace) {
         if !notes.is_empty() {
             ns.diagnostics.push(Diagnostic::error_with_notes(
                 ns.structs[n].loc,
-                format!("struct '{}' has infinite size", ns.structs[n].name),
+                format!("struct '{}' has infinite size", ns.structs[n].id),
                 notes,
             ));
         }
@@ -495,7 +495,7 @@ fn resolve_contract<'a>(
                 ) {
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
-                        name: pt.name.as_ref().unwrap().name.to_owned(),
+                        id: pt.name.clone().unwrap(),
                         loc: pt.name.as_ref().unwrap().loc,
                         contract: Some(def.name.as_ref().unwrap().name.to_owned()),
                         fields: Vec::new(),
@@ -1073,7 +1073,7 @@ fn enum_decl(
 
     let decl = EnumDecl {
         tags,
-        name: enum_.name.as_ref().unwrap().name.to_string(),
+        id: enum_.name.clone().unwrap(),
         loc: enum_.loc,
         contract: match contract_no {
             Some(c) => Some(ns.contracts[c].id.name.to_owned()),

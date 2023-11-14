@@ -166,7 +166,7 @@ fn idl_instructions(
         } else if func.mangled_name_contracts.contains(&contract_no) {
             func.mangled_name.clone()
         } else {
-            func.name.clone()
+            func.id.name.clone()
         };
 
         let accounts = func
@@ -251,7 +251,7 @@ impl TypeManager<'_> {
             name: name.clone(),
             docs: Some(vec![format!(
                 "Data structure to hold the multiple returns of function {}",
-                func.name
+                func.id
             )]),
             ty: IdlTypeDefinitionTy::Struct { fields },
             generics: None,
@@ -315,11 +315,11 @@ impl TypeManager<'_> {
             });
         }
 
-        let name = self.unique_custom_type_name(&def.name, &def.contract);
+        let name = self.unique_custom_type_name(&def.id.name, &def.contract);
 
         self.added_names.insert(
             name.clone(),
-            (self.types.len(), def.contract.clone(), def.name.clone()),
+            (self.types.len(), def.contract.clone(), def.id.name.clone()),
         );
 
         self.types.push(IdlTypeDefinition {
@@ -368,10 +368,10 @@ impl TypeManager<'_> {
 
         let docs = idl_docs(&def.tags);
 
-        let name = self.unique_custom_type_name(&def.name, &def.contract);
+        let name = self.unique_custom_type_name(&def.id.name, &def.contract);
         self.added_names.insert(
             name.clone(),
-            (self.types.len(), def.contract.clone(), def.name.clone()),
+            (self.types.len(), def.contract.clone(), def.id.name.clone()),
         );
 
         let variants = def
@@ -419,7 +419,7 @@ impl TypeManager<'_> {
             Type::Struct(struct_type) => {
                 let def = struct_type.definition(self.namespace);
                 self.add_struct_definition(def, ast_type);
-                IdlType::Defined(def.name.clone())
+                IdlType::Defined(def.id.name.clone())
             }
             Type::Array(ty, dims) => {
                 let mut idl_type = self.convert(ty);
@@ -442,7 +442,7 @@ impl TypeManager<'_> {
             Type::Bytes(dim) => IdlType::Array(Box::new(IdlType::U8), *dim as usize),
             Type::Enum(enum_no) => {
                 self.add_enum_definition(*enum_no, ast_type);
-                IdlType::Defined(self.namespace.enums[*enum_no].name.clone())
+                IdlType::Defined(self.namespace.enums[*enum_no].id.name.clone())
             }
             Type::ExternalFunction { .. } => {
                 self.convert(&Type::Struct(StructType::ExternalFunction))

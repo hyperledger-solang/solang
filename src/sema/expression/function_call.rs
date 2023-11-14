@@ -203,7 +203,7 @@ pub fn available_functions(
             ns.contracts[contract_no]
                 .all_functions
                 .keys()
-                .filter(|func_no| ns.functions[**func_no].name == name)
+                .filter(|func_no| ns.functions[**func_no].id.name == name)
                 .filter_map(|func_no| {
                     let is_abstract = ns.functions[*func_no].is_virtual
                         && !ns.contracts[contract_no].is_concrete();
@@ -234,7 +234,7 @@ pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace)
                 .filter_map(|func_no| {
                     let func = &ns.functions[*func_no];
 
-                    if func.name == name && func.has_body {
+                    if func.id.name == name && func.has_body {
                         Some(*func_no)
                     } else {
                         None
@@ -249,7 +249,7 @@ pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace)
 /// Resolve a function call with positional arguments
 pub fn function_call_pos_args(
     loc: &pt::Loc,
-    id: &pt::Identifier,
+    id: &pt::IdentifierPath,
     func_ty: pt::FunctionTy,
     args: &[pt::Expression],
     function_nos: Vec<usize>,
@@ -317,6 +317,7 @@ pub fn function_call_pos_args(
 
         match resolve_internal_call(
             loc,
+            id,
             *function_no,
             context,
             resolve_to,
@@ -330,6 +331,7 @@ pub fn function_call_pos_args(
         }
     }
 
+    let id = id.identifiers.last().unwrap();
     match name_matches {
         0 => {
             if func_ty == pt::FunctionTy::Modifier {
@@ -359,7 +361,7 @@ pub fn function_call_pos_args(
 /// Resolve a function call with named arguments
 pub(super) fn function_call_named_args(
     loc: &pt::Loc,
-    id: &pt::Identifier,
+    id: &pt::IdentifierPath,
     args: &[pt::NamedArgument],
     function_nos: Vec<usize>,
     virtual_call: bool,
@@ -412,7 +414,7 @@ pub(super) fn function_call_named_args(
                     "function cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
                 ),
                 func.loc,
-                format!("definition of {}", func.name),
+                format!("definition of {}", func.id),
             ));
             matches = false;
         } else if params_len != args.len() {
@@ -444,7 +446,7 @@ pub(super) fn function_call_named_args(
                         format!(
                             "missing argument '{}' to function '{}'",
                             param.name_as_str(),
-                            id.name,
+                            id.identifiers.last().unwrap().name,
                         ),
                     ));
                     continue;
@@ -466,6 +468,7 @@ pub(super) fn function_call_named_args(
 
         match resolve_internal_call(
             loc,
+            id,
             *function_no,
             context,
             resolve_to,
@@ -481,6 +484,7 @@ pub(super) fn function_call_named_args(
 
     match function_nos.len() {
         0 => {
+            let id = id.identifiers.last().unwrap();
             diagnostics.push(Diagnostic::error(
                 id.loc,
                 format!("unknown function or type '{}'", id.name),
@@ -551,6 +555,11 @@ fn try_namespace(
             )?));
         }
 
+        let id_path = pt::IdentifierPath {
+            loc: *loc,
+            identifiers: vec![namespace.clone(), func.clone()],
+        };
+
         // is it a call to super
         if namespace.name == "super" {
             if let Some(cur_contract_no) = context.contract_no {
@@ -564,7 +573,7 @@ fn try_namespace(
 
                 return Ok(Some(function_call_pos_args(
                     loc,
-                    func,
+                    &id_path,
                     pt::FunctionTy::Function,
                     args,
                     available_super_functions(&func.name, cur_contract_no, ns),
@@ -597,7 +606,7 @@ fn try_namespace(
 
                 return Ok(Some(function_call_pos_args(
                     loc,
-                    func,
+                    &id_path,
                     pt::FunctionTy::Function,
                     args,
                     available_functions(
@@ -644,7 +653,7 @@ fn try_namespace(
 
                     return Ok(Some(function_call_pos_args(
                         loc,
-                        func,
+                        &id_path,
                         pt::FunctionTy::Function,
                         args,
                         available_functions(
@@ -1375,6 +1384,7 @@ pub(super) fn method_call_pos_args(
     }
 
     if let Some(mut path) = ns.expr_to_identifier_path(var) {
+        // `path.loc` needs to be modified `func.loc`
         path.identifiers.push(func.clone());
 
         if let Ok(list) = ns.resolve_function_with_namespace(
@@ -1412,7 +1422,7 @@ pub(super) fn method_call_pos_args(
 
             return function_call_pos_args(
                 loc,
-                func,
+                &path,
                 pt::FunctionTy::Function,
                 args,
                 list.iter().map(|(_, no)| *no).collect(),
@@ -1528,6 +1538,11 @@ pub(super) fn method_call_named_args(
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
+        let id_path = pt::IdentifierPath {
+            loc: *loc,
+            identifiers: vec![namespace.clone(), func_name.clone()],
+        };
+
         // is it a call to super
         if namespace.name == "super" {
             if let Some(cur_contract_no) = context.contract_no {
@@ -1541,7 +1556,7 @@ pub(super) fn method_call_named_args(
 
                 return function_call_named_args(
                     loc,
-                    func_name,
+                    &id_path,
                     args,
                     available_super_functions(&func_name.name, cur_contract_no, ns),
                     false,
@@ -1573,7 +1588,7 @@ pub(super) fn method_call_named_args(
 
                 return function_call_named_args(
                     loc,
-                    func_name,
+                    &id_path,
                     args,
                     available_functions(
                         &func_name.name,
@@ -1619,7 +1634,7 @@ pub(super) fn method_call_named_args(
 
                     return function_call_named_args(
                         loc,
-                        func_name,
+                        &id_path,
                         args,
                         available_functions(
                             &func_name.name,
@@ -1664,6 +1679,7 @@ pub(super) fn method_call_named_args(
     }
 
     if let Some(mut path) = ns.expr_to_identifier_path(var) {
+        // `path.loc` needs to be modified to include `func_name.loc`
         path.identifiers.push(func_name.clone());
 
         if let Ok(list) = ns.resolve_function_with_namespace(
@@ -1699,7 +1715,7 @@ pub(super) fn method_call_named_args(
 
             return function_call_named_args(
                 loc,
-                func_name,
+                &path,
                 args,
                 list.iter().map(|(_, no)| *no).collect(),
                 false,
@@ -2125,7 +2141,17 @@ pub fn named_call_expr(
         &mut nullsink,
     ) {
         Ok(Type::Struct(str_ty)) => {
-            return named_struct_literal(loc, &str_ty, args, context, ns, symtable, diagnostics);
+            let id = ns.expr_to_identifier_path(ty).unwrap();
+            return named_struct_literal(
+                loc,
+                id,
+                &str_ty,
+                args,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+            );
         }
         Ok(_) => {
             diagnostics.push(Diagnostic::error(
@@ -2192,7 +2218,8 @@ pub fn call_expr(
         &mut nullsink,
     ) {
         Ok(Type::Struct(str_ty)) => {
-            return struct_literal(loc, &str_ty, args, context, ns, symtable, diagnostics);
+            let id = ns.expr_to_identifier_path(ty).unwrap();
+            return struct_literal(loc, id, &str_ty, args, context, ns, symtable, diagnostics);
         }
         Ok(to) => {
             // Cast
@@ -2349,9 +2376,14 @@ pub fn function_call_expr(
                     return Err(());
                 }
 
+                let id_path = pt::IdentifierPath {
+                    loc: id.loc,
+                    identifiers: vec![id.clone()],
+                };
+
                 function_call_pos_args(
                     loc,
-                    id,
+                    &id_path,
                     pt::FunctionTy::Function,
                     args,
                     available_functions(&id.name, true, context.file_no, context.contract_no, ns),
@@ -2415,9 +2447,14 @@ pub fn named_function_call_expr(
                 return Err(());
             }
 
+            let id_path = pt::IdentifierPath {
+                loc: id.loc,
+                identifiers: vec![id.clone()],
+            };
+
             function_call_named_args(
                 loc,
-                id,
+                &id_path,
                 args,
                 available_functions(&id.name, true, context.file_no, context.contract_no, ns),
                 true,
@@ -2496,6 +2533,7 @@ fn evaluate_argument(
 /// possible to resolve the function.
 fn resolve_internal_call(
     loc: &Loc,
+    id: &pt::IdentifierPath,
     function_no: usize,
     context: &ExprContext,
     resolve_to: ResolveTo,
@@ -2511,7 +2549,7 @@ fn resolve_internal_call(
             *loc,
             format!("cannot call private {}", func.ty),
             func.loc,
-            format!("declaration of {} '{}'", func.ty, func.name),
+            format!("declaration of {} '{}'", func.ty, func.id),
         ));
 
         return None;
@@ -2522,7 +2560,7 @@ fn resolve_internal_call(
                     *loc,
                     "accessor function cannot be called via an internal function call".to_string(),
                     func.loc,
-                    format!("declaration of '{}'", func.name),
+                    format!("declaration of '{}'", func.id),
                 ));
             } else {
                 errors.push(Diagnostic::error_with_note(
@@ -2530,7 +2568,7 @@ fn resolve_internal_call(
                     "functions declared external cannot be called via an internal function call"
                         .to_string(),
                     func.loc,
-                    format!("declaration of {} '{}'", func.ty, func.name),
+                    format!("declaration of {} '{}'", func.ty, func.id),
                 ));
             }
             return None;
@@ -2545,6 +2583,7 @@ fn resolve_internal_call(
         returns,
         function: Box::new(Expression::InternalFunction {
             loc: *loc,
+            id: id.clone(),
             ty,
             function_no,
             signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
@@ -2632,7 +2671,7 @@ fn contract_call_named_args(
                     "function cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
                 ),
                 func.loc,
-                format!("definition of {}", func.name),
+                format!("definition of {}", func.id),
             ));
             matches = false;
         } else if params_len != args.len() {
@@ -2932,7 +2971,7 @@ fn preprocess_contract_call<T>(
     let mut name_matches: Vec<usize> = Vec::new();
 
     for function_no in ns.contracts[external_contract_no].all_functions.keys() {
-        if func.name != ns.functions[*function_no].name
+        if func.name != ns.functions[*function_no].id.name
             || ns.functions[*function_no].ty != pt::FunctionTy::Function
         {
             continue;

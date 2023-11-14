@@ -244,7 +244,7 @@ pub(crate) fn using_decl(
                                     existing.loc,
                                     format!(
                                         "previous definition of '{oper}' was '{}'",
-                                        ns.functions[existing.function_no].name
+                                        ns.functions[existing.function_no].id
                                     ),
                                 ));
                             } else {
@@ -254,7 +254,7 @@ pub(crate) fn using_decl(
                                     existing.loc,
                                     format!(
                                         "previous definition of '{oper}' was '{}'",
-                                        ns.functions[existing.function_no].name
+                                        ns.functions[existing.function_no].id
                                     ),
                                 ));
                             }
@@ -391,7 +391,7 @@ fn possible_functions(
         .filter(|func_no| {
             let func = &ns.functions[**func_no];
 
-            func.name == function_name && func.ty == pt::FunctionTy::Function
+            func.id.name == function_name && func.ty == pt::FunctionTy::Function
         })
         .cloned()
         .collect()
@@ -449,7 +449,7 @@ pub(super) fn try_resolve_using_call(
 
     for function_no in functions {
         let libfunc = &ns.functions[function_no];
-        if libfunc.name != func.name || libfunc.ty != pt::FunctionTy::Function {
+        if libfunc.id.name != func.name || libfunc.ty != pt::FunctionTy::Function {
             continue;
         }
 
@@ -520,7 +520,7 @@ pub(super) fn try_resolve_using_call(
                 *loc,
                 "cannot call private library function".to_string(),
                 libfunc.loc,
-                format!("declaration of function '{}'", libfunc.name),
+                format!("declaration of function '{}'", libfunc.id),
             ));
 
             continue;
@@ -529,11 +529,17 @@ pub(super) fn try_resolve_using_call(
         let returns = function_returns(libfunc, resolve_to);
         let ty = function_type(libfunc, false, resolve_to);
 
+        let id_path = pt::IdentifierPath {
+            loc: func.loc,
+            identifiers: vec![func.clone()],
+        };
+
         return Ok(Some(Expression::InternalFunctionCall {
             loc: *loc,
             returns,
             function: Box::new(Expression::InternalFunction {
                 loc: *loc,
+                id: id_path,
                 ty,
                 function_no,
                 signature: None,
