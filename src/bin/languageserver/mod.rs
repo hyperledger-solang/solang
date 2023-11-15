@@ -18,7 +18,7 @@ use solang::{
     },
     Target,
 };
-use solang_parser::pt;
+use solang_parser::pt::{self, CodeLocation};
 use std::{
     collections::{HashMap, HashSet},
     ffi::OsString,

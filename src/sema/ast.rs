@@ -1553,7 +1553,7 @@ impl CodeLocation for Statement {
             | Statement::Emit { loc, .. }
             | Statement::TryCatch(loc, ..)
             | Statement::Underscore(loc, ..) => *loc,
-            Statement::Assembly(..) => pt::Loc::Codegen,
+            Statement::Assembly(ia, _) => ia.loc,
         }
     }
 }
@@ -1875,28 +1875,6 @@ impl Statement {
     /// Shorthand for checking underscore
     pub fn is_underscore(&self) -> bool {
         matches!(&self, Statement::Underscore(_))
-    }
-
-    pub fn loc(&self) -> pt::Loc {
-        match self {
-            Statement::Block { loc, .. }
-            | Statement::VariableDecl(loc, _, _, _)
-            | Statement::If(loc, _, _, _, _)
-            | Statement::While(loc, _, _, _)
-            | Statement::For { loc, .. }
-            | Statement::DoWhile(loc, _, _, _)
-            | Statement::Expression(loc, _, _)
-            | Statement::Delete(loc, _, _)
-            | Statement::Destructure(loc, _, _)
-            | Statement::Continue(loc)
-            | Statement::Break(loc)
-            | Statement::Return(loc, _)
-            | Statement::Revert { loc, .. }
-            | Statement::Emit { loc, .. }
-            | Statement::TryCatch(loc, _, _)
-            | Statement::Underscore(loc) => *loc,
-            Statement::Assembly(ia, _) => ia.loc,
-        }
     }
 
     pub fn reachable(&self) -> bool {
