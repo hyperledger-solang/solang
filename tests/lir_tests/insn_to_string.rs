@@ -608,25 +608,6 @@ fn test_stringfy_assert_failure_insn() {
 }
 
 #[test]
-fn test_stringfy_unimplemented_insn() {
-    assert_eq!(
-        stringfy_insn!(
-            &new_printer!(),
-            &Instruction::Unimplemented { reachable: true }
-        ),
-        "unimplemented: reachable;"
-    );
-
-    assert_eq!(
-        stringfy_insn!(
-            &new_printer!(),
-            &Instruction::Unimplemented { reachable: false }
-        ),
-        "unimplemented: unreachable;"
-    )
-}
-
-#[test]
 fn test_stringfy_phi_insn() {
     let mut v = new_vartable();
 

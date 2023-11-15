@@ -291,12 +291,8 @@ impl Converter<'_> {
             Instr::ReturnCode { code } => {
                 results.push(Instruction::ReturnCode { code: code.clone() });
             }
-            Instr::Unimplemented { reachable } => {
-                results.push(Instruction::Unimplemented {
-                    reachable: *reachable,
-                });
-            }
-            Instr::AccountAccess { .. } => panic!("AccountAccess should be replaced by Subscript"),
+            Instr::Unimplemented { .. } => unreachable!("Unimplemented should be removed"),
+            Instr::AccountAccess { .. } => unreachable!("AccountAccess should be replaced by Subscript"),
             Instr::Constructor {
                 success,
                 res,

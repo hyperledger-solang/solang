@@ -474,18 +474,6 @@ impl Printer {
                 }
                 None => write!(f, "assert_failure;").unwrap(),
             },
-            Instruction::Unimplemented { reachable, .. } => {
-                write!(
-                    f,
-                    "unimplemented: {};",
-                    if *reachable {
-                        "reachable"
-                    } else {
-                        "unreachable"
-                    }
-                )
-                .unwrap();
-            }
             Instruction::Phi { res, vars, .. } => {
                 let res_op = self.get_var_operand(res);
                 self.print_lhs_operand(f, &res_op);

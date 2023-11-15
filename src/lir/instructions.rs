@@ -175,9 +175,6 @@ pub enum Instruction {
     AssertFailure {
         encoded_args: Option<Operand>,
     },
-    Unimplemented {
-        reachable: bool,
-    },
 
     // AccountAccess should be replaced by Subscript
 
