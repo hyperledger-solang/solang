@@ -2,7 +2,7 @@
 
 use crate::codegen;
 use crate::sema::ast::{FormatArg, StringLocation};
-use crate::ssa_ir::ssa_type::Type;
+use crate::lir::ssa_type::Type;
 use num_bigint::BigInt;
 use solang_parser::pt::Loc;
 use std::fmt;

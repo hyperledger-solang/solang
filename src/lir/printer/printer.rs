@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::ASTFunction;
-use crate::ssa_ir::cfg::Block;
-use crate::ssa_ir::cfg::Cfg;
-use crate::ssa_ir::printer::Printer;
+use crate::lir::printer::Printer;
+use crate::lir::{Block, LIR};
 use std::io::Write;
 
 impl Printer {
-    pub fn print_cfg(&self, f: &mut dyn Write, cfg: &Cfg) {
+    pub fn print_lir(&self, f: &mut dyn Write, cfg: &LIR) {
         let function_no = match cfg.function_no {
             ASTFunction::SolidityFunction(no) => format!("sol#{}", no),
             ASTFunction::YulFunction(no) => format!("yul#{}", no),

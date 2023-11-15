@@ -3,7 +3,7 @@ use super::Converter;
 use num_bigint::BigInt;
 
 use crate::sema::ast::{self, ArrayLength};
-use crate::ssa_ir::ssa_type::{StructType, Type};
+use crate::lir::ssa_type::{StructType, Type};
 
 impl Converter<'_> {
     pub fn from_ast_type(&self, ty: &ast::Type) -> Type {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::ssa_ir::vartable::Vartable;
+use crate::lir::vartable::Vartable;
 
 use super::{expressions::Operand, ssa_type::Type};
 

@@ -2,8 +2,8 @@
 
 use crate::codegen;
 use crate::sema::ast::{CallTy, ExternalCallAccounts};
-use crate::ssa_ir::expressions::{Expression, Operand};
-use crate::ssa_ir::ssa_type::InternalCallTy;
+use crate::lir::expressions::{Expression, Operand};
+use crate::lir::ssa_type::InternalCallTy;
 use solang_parser::pt::Loc;
 
 use super::ssa_type::PhiInput;

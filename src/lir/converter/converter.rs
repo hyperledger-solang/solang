@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::BasicBlock;
+use crate::lir::converter::Converter;
+use crate::lir::ssa_type;
+use crate::lir::vartable::Vartable;
+use crate::lir::{Block, LIR};
 use crate::sema::ast::{self, Parameter};
-use crate::ssa_ir::cfg::{Block, Cfg};
-use crate::ssa_ir::converter::Converter;
-use crate::ssa_ir::ssa_type;
-use crate::ssa_ir::vartable::Vartable;
 
 impl Converter<'_> {
-    pub fn get_three_address_code_cfg(&self) -> Cfg {
+    pub fn get_lir(&self) -> LIR {
         let mut vartable = self.from_vars(&self.cfg.vars);
 
         let blocks = self
@@ -32,7 +32,7 @@ impl Converter<'_> {
             .map(|p| self.to_ssa_typed_parameter(p))
             .collect::<Vec<Parameter<ssa_type::Type>>>();
 
-        Cfg {
+        LIR {
             name: self.cfg.name.clone(),
             function_no: self.cfg.function_no,
             params,

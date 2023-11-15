@@ -1,15 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod converter;
+pub mod expressions;
+pub mod instructions;
+pub mod printer;
+pub mod ssa_type;
+pub mod vartable;
+
 use crate::codegen::cfg::ASTFunction;
+use crate::lir::instructions::Instruction;
+use crate::lir::vartable::Vartable;
 use crate::pt::FunctionTy;
 use crate::sema::ast::Parameter;
-use crate::ssa_ir::instructions::Instruction;
-use crate::ssa_ir::vartable::Vartable;
 
-use super::ssa_type::Type;
+use self::ssa_type::Type;
 
 #[derive(Debug)]
-pub struct Cfg {
+pub struct LIR {
     pub name: String,
     pub function_no: ASTFunction,
     pub params: Vec<Parameter<Type>>,

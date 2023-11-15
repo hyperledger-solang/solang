@@ -13,7 +13,7 @@ pub mod standard_json;
 // when code-misparses. The error will be added to the namespace diagnostics, no need to have anything but unit
 // as error.
 pub mod sema;
-pub mod ssa_ir;
+pub mod lir;
 
 use file_resolver::FileResolver;
 use sema::diagnostics;

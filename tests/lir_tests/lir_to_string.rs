@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::ssa_ir_tests::helpers::{identifier, num_literal};
-use crate::{num_literal, stringfy_cfg};
+use crate::lir_tests::helpers::{identifier, num_literal};
+use crate::{num_literal, stringfy_lir};
 use indexmap::IndexMap;
+use solang::lir::printer::Printer;
+use solang::lir::vartable::Var;
+use solang::lir::{instructions::Instruction, ssa_type::Type, vartable::Vartable, Block, LIR};
 use solang::sema::ast::Parameter;
-use solang::ssa_ir::printer::Printer;
-use solang::ssa_ir::vartable::Var;
-use solang::ssa_ir::{
-    cfg::{Block, Cfg},
-    instructions::Instruction,
-    ssa_type::Type,
-    vartable::Vartable,
-};
 use solang_parser::pt::{Identifier, Loc};
 
 #[test]
@@ -81,9 +76,6 @@ fn test_stringfy_cfg() {
             name: String::from("st"),
         },
     );
-    // let printer = Printer {
-    //     vartable: Box::new(var_table),
-    // };
     let printer = Printer::new(Box::new(var_table));
 
     assert_eq!(
@@ -105,7 +97,7 @@ fn test_stringfy_cfg() {
             "block#3 exit:",
             "    return_data int32(%x) of length uint8(1);"
         ),
-        stringfy_cfg!(&printer, &cfg).trim()
+        stringfy_lir!(&printer, &cfg).trim()
     )
 }
 
@@ -113,8 +105,8 @@ fn new_block(name: String, instructions: Vec<Instruction>) -> Block {
     Block { name, instructions }
 }
 
-fn new_cfg(blocks: Vec<Block>) -> Cfg {
-    Cfg {
+fn new_cfg(blocks: Vec<Block>) -> LIR {
+    LIR {
         name: String::from("test_cfg"),
         function_no: solang::codegen::cfg::ASTFunction::SolidityFunction(0),
         ty: solang_parser::pt::FunctionTy::Function,

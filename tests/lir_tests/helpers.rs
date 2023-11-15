@@ -2,7 +2,7 @@
 
 use indexmap::IndexMap;
 use num_bigint::BigInt;
-use solang::ssa_ir::{
+use solang::lir::{
     expressions::{BinaryOperator, Expression, Operand, UnaryOperator},
     printer::Printer,
     ssa_type::Type,
@@ -58,10 +58,10 @@ macro_rules! stringfy_insn {
 }
 
 #[macro_export]
-macro_rules! stringfy_cfg {
-    ($printer:expr, $cfg:expr) => {{
+macro_rules! stringfy_lir {
+    ($printer:expr, $lir:expr) => {{
         let mut buf = Vec::new();
-        $printer.print_cfg(&mut buf, $cfg);
+        $printer.print_lir(&mut buf, $lir);
         String::from_utf8(buf).unwrap()
     }};
 }

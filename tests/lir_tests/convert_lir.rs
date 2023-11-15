@@ -5,13 +5,13 @@ use std::ffi::OsStr;
 use solang::{
     codegen::codegen,
     file_resolver::FileResolver,
+    lir::{converter::Converter, printer::Printer},
     parse_and_resolve,
     sema::ast::Namespace,
-    ssa_ir::{converter::Converter, printer::Printer},
     Target,
 };
 
-use crate::stringfy_cfg;
+use crate::stringfy_lir;
 
 fn new_file_resolver(src: &str) -> FileResolver {
     let mut cache = FileResolver::default();
@@ -19,7 +19,7 @@ fn new_file_resolver(src: &str) -> FileResolver {
     cache
 }
 
-fn assert_cfg_str_eq(src: &str, cfg_no: usize, expected: &str) {
+fn assert_lir_str_eq(src: &str, cfg_no: usize, expected: &str) {
     let mut resolver = new_file_resolver(src);
     let mut ns: Namespace =
         parse_and_resolve(OsStr::new("test.sol"), &mut resolver, Target::Solana);
@@ -38,15 +38,15 @@ fn assert_cfg_str_eq(src: &str, cfg_no: usize, expected: &str) {
     // println!("=====================cfg no: {}", cfg_no);
 
     let converter = Converter::new(&ns, cfg);
-    let new_cfg = converter.get_three_address_code_cfg();
+    let lir = converter.get_lir();
 
     // let printer = Printer {
     //     vartable: Box::new(new_cfg.vartable.clone()),
     // };
-    let printer = Printer::new(Box::new(new_cfg.vartable.clone()));
+    let printer = Printer::new(Box::new(lir.vartable.clone()));
 
     // printer.print_cfg(&mut std::io::stdout(), &new_cfg).unwrap();
-    let result = stringfy_cfg!(printer, &new_cfg);
+    let result = stringfy_lir!(printer, &lir);
     assert_eq!(result.trim(), expected);
 
     // use '%temp\.ssa_ir\.\d+ =' to get all the temp variables in the cfg and check if they are duplicated
@@ -64,7 +64,7 @@ fn assert_cfg_str_eq(src: &str, cfg_no: usize, expected: &str) {
 }
 
 #[test]
-fn test_convert_cfg() {
+fn test_convert_lir() {
     let src = r#"
 contract dynamicarray {
     function test() public pure {
@@ -78,7 +78,7 @@ contract dynamicarray {
     }
 }"#;
 
-    assert_cfg_str_eq(
+    assert_lir_str_eq(
         src,
         0,
         r#"public function sol#2 dynamicarray::dynamicarray::function::test ():
@@ -157,7 +157,7 @@ fn test_bool_exprs() {
 			}
 		}"#;
 
-    assert_cfg_str_eq(
+    assert_lir_str_eq(
         src,
         cfg_no,
         r#"public function sol#3 test::test::function::is_zombie_reaper () returns (bool):
@@ -190,7 +190,7 @@ fn test_cast() {
 			}
 		}"#;
 
-    assert_cfg_str_eq(
+    assert_lir_str_eq(
         src,
         cfg_no,
         r#"public function sol#2 test::test::function::systemd_pid () returns (uint32):
@@ -213,7 +213,7 @@ fn test_arithmetic_exprs() {
 			}
 		}"#;
 
-    assert_cfg_str_eq(
+    assert_lir_str_eq(
         src,
         cfg_no,
         r#"public function sol#2 test::test::function::celcius2fahrenheit__int32 (int32) returns (int32):
@@ -245,7 +245,7 @@ fn test_arithmetic_exprs_1() {
 			}
 		}"#;
 
-    assert_cfg_str_eq(
+    assert_lir_str_eq(
         src,
         cfg_no,
         r#"public function sol#2 test::test::function::byte8reverse__bytes8 (bytes8) returns (bytes8):
@@ -316,7 +316,7 @@ fn test_for_loop() {
             }
 		}"#;
 
-    assert_cfg_str_eq(
+    assert_lir_str_eq(
         src,
         cfg_no,
         r#"private function sol#2 test::test::function::get_pid_state__uint64 (uint64) returns (uint8):
@@ -392,7 +392,7 @@ fn test_test_more_() {
             }
 		}"#;
 
-    assert_cfg_str_eq(
+    assert_lir_str_eq(
         src,
         cfg_no,
         r#"public function sol#2 test::test::function::score_card__test.card (ptr<struct.0>) returns (uint32):
@@ -470,7 +470,7 @@ fn test_init_struct() {
             }
 		}"#;
 
-    assert_cfg_str_eq(
+    assert_lir_str_eq(
         src,
         cfg_no,
         r#"public function sol#2 test::test::function::ace_of_spaces () returns (ptr<struct.0>):

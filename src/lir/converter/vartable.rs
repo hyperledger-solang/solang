@@ -3,7 +3,7 @@ use indexmap::IndexMap;
 
 use crate::{
     codegen::vartable::Vars,
-    ssa_ir::vartable::{Var, Vartable},
+    lir::vartable::{Var, Vartable},
 };
 
 use super::Converter;

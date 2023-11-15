@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::ssa_ir_tests::helpers::{
+use crate::lir_tests::helpers::{
     binop_expr, bool_literal, identifier, new_printer, new_vartable, num_literal, unop_expr,
 };
 use crate::stringfy_expr;
@@ -8,8 +8,8 @@ use crate::{new_printer, num_literal};
 use num_bigint::BigInt;
 use solang::codegen::Builtin;
 use solang::sema::ast::{self, ArrayLength, FormatArg, StringLocation};
-use solang::ssa_ir::expressions::{BinaryOperator, Expression, UnaryOperator};
-use solang::ssa_ir::ssa_type::{StructType, Type};
+use solang::lir::expressions::{BinaryOperator, Expression, UnaryOperator};
+use solang::lir::ssa_type::{StructType, Type};
 use solang_parser::pt::Loc;
 
 #[test]

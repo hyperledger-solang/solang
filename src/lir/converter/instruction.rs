@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::Instr;
-use crate::ssa_ir::converter::Converter;
-use crate::ssa_ir::instructions::Instruction;
-use crate::ssa_ir::vartable::Vartable;
+use crate::lir::converter::Converter;
+use crate::lir::instructions::Instruction;
+use crate::lir::vartable::Vartable;
 
 impl Converter<'_> {
     pub(crate) fn lowering_instr(

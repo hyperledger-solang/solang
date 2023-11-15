@@ -6,10 +6,10 @@ use solang_parser::pt::Loc;
 
 use crate::codegen;
 use crate::sema::ast;
-use crate::ssa_ir::converter::Converter;
-use crate::ssa_ir::expressions::{BinaryOperator, Expression, Operand, UnaryOperator};
-use crate::ssa_ir::instructions::Instruction;
-use crate::ssa_ir::vartable::Vartable;
+use crate::lir::converter::Converter;
+use crate::lir::expressions::{BinaryOperator, Expression, Operand, UnaryOperator};
+use crate::lir::instructions::Instruction;
+use crate::lir::vartable::Vartable;
 
 impl Converter<'_> {
     pub(crate) fn lowering_expression(
@@ -352,9 +352,6 @@ impl Converter<'_> {
             codegen::Expression::StringCompare {
                 loc, left, right, ..
             } => self.string_compare(dest, loc, left, right, vartable, results),
-            codegen::Expression::StringConcat {
-                loc, left, right, ..
-            } => self.string_concat(dest, loc, left, right, vartable, results),
             codegen::Expression::StructLiteral {
                 loc, ty, values, ..
             } => self.struct_literal(dest, loc, ty, values, vartable, results),
@@ -490,7 +487,6 @@ impl Converter<'_> {
                 index: Box::new(index_op),
             },
         });
-        
     }
 
     fn struct_member(
@@ -512,7 +508,6 @@ impl Converter<'_> {
                 member: *member,
             },
         });
-        
     }
 
     fn struct_literal(
@@ -526,9 +521,7 @@ impl Converter<'_> {
     ) {
         let value_ops = values
             .iter()
-            .map(|value| {
-                self.to_operand_and_insns(value, vartable, &mut results)
-            })
+            .map(|value| self.to_operand_and_insns(value, vartable, &mut results))
             .collect::<Vec<Operand>>();
 
         results.push(Instruction::Set {
@@ -540,32 +533,6 @@ impl Converter<'_> {
                 values: value_ops,
             },
         });
-
-        
-    }
-
-    fn string_concat(
-        &self,
-        dest: &Operand,
-        loc: &Loc,
-        left: &ast::StringLocation<codegen::Expression>,
-        right: &ast::StringLocation<codegen::Expression>,
-        vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
-    ) {
-        let left_string_loc = self.to_string_location_and_insns(left, vartable, &mut results);
-        let right_string_loc = self.to_string_location_and_insns(right, vartable, &mut results);
-
-        results.push(Instruction::Set {
-            loc: *loc,
-            res: dest.get_id(),
-            expr: Expression::StringConcat {
-                loc: *loc,
-                left: left_string_loc,
-                right: right_string_loc,
-            },
-        });
-        
     }
 
     fn string_compare(
@@ -589,7 +556,6 @@ impl Converter<'_> {
                 right: right_string_loc,
             },
         });
-        
     }
 
     fn storage_array_length(
@@ -609,7 +575,6 @@ impl Converter<'_> {
                 array: Box::new(array_op),
             },
         });
-        
     }
 
     fn sign_ext(
@@ -632,7 +597,6 @@ impl Converter<'_> {
             res: dest.get_id(),
             expr: sext,
         });
-        
     }
 
     fn load(
@@ -652,7 +616,6 @@ impl Converter<'_> {
                 operand: Box::new(from_op),
             },
         });
-        
     }
 
     fn keccak256(
@@ -676,7 +639,6 @@ impl Converter<'_> {
                 args: expr_ops,
             },
         });
-        
     }
 
     fn get_ref(
@@ -696,7 +658,6 @@ impl Converter<'_> {
                 operand: Box::new(from_op),
             },
         });
-        
     }
 
     fn function_arg(
@@ -721,7 +682,6 @@ impl Converter<'_> {
             res,
             expr,
         });
-        
     }
 
     fn format_string(
@@ -745,7 +705,6 @@ impl Converter<'_> {
                 args: arg_ops,
             },
         });
-        
     }
 
     fn const_array_literal(
@@ -760,9 +719,7 @@ impl Converter<'_> {
     ) {
         let value_ops = values
             .iter()
-            .map(|value| {
-                self.to_operand_and_insns(value, vartable, &mut results)
-            })
+            .map(|value| self.to_operand_and_insns(value, vartable, &mut results))
             .collect::<Vec<Operand>>();
 
         results.push(Instruction::Set {
@@ -775,8 +732,6 @@ impl Converter<'_> {
                 values: value_ops,
             },
         });
-
-        
     }
 
     fn cast(
@@ -798,7 +753,6 @@ impl Converter<'_> {
                 to_ty: self.from_ast_type(ty),
             },
         });
-        
     }
 
     fn byte_cast(
@@ -820,7 +774,6 @@ impl Converter<'_> {
                 to_ty: self.from_ast_type(ty),
             },
         });
-        
     }
 
     fn builtin(
@@ -846,7 +799,6 @@ impl Converter<'_> {
                 args: arg_ops,
             },
         });
-        
     }
 
     fn binary_operation(
@@ -916,8 +868,6 @@ impl Converter<'_> {
                 initializer: initializer.clone(),
             },
         });
-
-        
     }
 
     fn bytes_literal(
@@ -938,7 +888,6 @@ impl Converter<'_> {
             res: dest.get_id(),
             expr,
         });
-        
     }
 
     fn bool_literal(
@@ -957,7 +906,6 @@ impl Converter<'_> {
             res: dest.get_id(),
             expr,
         });
-        
     }
 
     fn number_literal(
@@ -978,7 +926,6 @@ impl Converter<'_> {
                 },
             },
         );
-        
     }
 
     fn array_literal(
@@ -993,9 +940,7 @@ impl Converter<'_> {
     ) {
         let value_ops = values
             .iter()
-            .map(|value| {
-                self.to_operand_and_insns(value, vartable, &mut results)
-            })
+            .map(|value| self.to_operand_and_insns(value, vartable, &mut results))
             .collect::<Vec<Operand>>();
 
         results.push(Instruction::Set {
@@ -1022,16 +967,9 @@ impl Converter<'_> {
             res: dest.get_id(),
             expr,
         });
-        
     }
 
-    fn variable(
-        &self,
-        dest: &Operand,
-        loc: &Loc,
-        var_no: &usize,
-        results: &mut Vec<Instruction>,
-    ) {
+    fn variable(&self, dest: &Operand, loc: &Loc, var_no: &usize, results: &mut Vec<Instruction>) {
         let expr = Expression::Id {
             loc: *loc,
             id: *var_no,
@@ -1041,20 +979,13 @@ impl Converter<'_> {
             res: dest.get_id(),
             expr,
         });
-        
     }
 
-    fn return_data(
-        &self,
-        dest: &Operand,
-        loc: &Loc,
-        results: &mut Vec<Instruction>,
-    ) {
+    fn return_data(&self, dest: &Operand, loc: &Loc, results: &mut Vec<Instruction>) {
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
             expr: Expression::ReturnData { loc: *loc },
         });
-        
     }
 }

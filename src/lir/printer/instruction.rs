@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast;
-use crate::ssa_ir::instructions::Instruction;
-use crate::ssa_ir::printer::Printer;
-use crate::ssa_ir::ssa_type::{InternalCallTy, PhiInput};
+use crate::lir::instructions::Instruction;
+use crate::lir::printer::Printer;
+use crate::lir::ssa_type::{InternalCallTy, PhiInput};
 use std::io::Write;
 
 impl Printer {
