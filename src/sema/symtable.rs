@@ -83,18 +83,20 @@ pub struct VarScope(pub HashMap<String, usize>, Option<HashSet<usize>>);
 #[derive(Default, Debug, Clone)]
 pub struct Symtable {
     pub vars: IndexMap<usize, Variable>,
-    pub scopes: Vec<VarScope>,
+    pub active_scopes: Vec<VarScope>,
     pub arguments: Vec<Option<usize>>,
     pub returns: Vec<usize>,
+    pub popped_scopes: Vec<(pt::Loc, VarScope)>,
 }
 
 impl Symtable {
     pub fn new() -> Self {
         Symtable {
             vars: IndexMap::new(),
-            scopes: vec![VarScope(HashMap::new(), None)],
+            active_scopes: vec![VarScope(HashMap::new(), None)],
             arguments: Vec::new(),
             returns: Vec::new(),
+            popped_scopes: Vec::new(),
         }
     }
 
@@ -137,7 +139,7 @@ impl Symtable {
                 return None;
             }
 
-            self.scopes
+            self.active_scopes
                 .last_mut()
                 .unwrap()
                 .0
@@ -174,7 +176,7 @@ impl Symtable {
     }
 
     pub fn find(&self, name: &str) -> Option<&Variable> {
-        for scope in self.scopes.iter().rev() {
+        for scope in self.active_scopes.iter().rev() {
             if let Some(n) = scope.0.get(name) {
                 return self.vars.get(n);
             }
@@ -184,21 +186,12 @@ impl Symtable {
     }
 
     pub fn enter_scope(&mut self) {
-        self.scopes.push(VarScope(HashMap::new(), None));
+        self.active_scopes.push(VarScope(HashMap::new(), None));
     }
 
-    pub fn leave_scope(&mut self, ns: &mut Namespace, loc: pt::Loc) {
-        if let Some(curr_scope) = self.scopes.pop() {
-            let curr_scope = curr_scope
-                .0
-                .values()
-                .filter_map(|pos| {
-                    self.vars
-                        .get(pos)
-                        .map(|var| (var.id.name.clone(), var.ty.clone()))
-                })
-                .collect();
-            ns.scopes.push((loc, curr_scope));
+    pub fn leave_scope(&mut self, loc: pt::Loc) {
+        if let Some(curr_scope) = self.active_scopes.pop() {
+            self.popped_scopes.push((loc, curr_scope));
         }
     }
 

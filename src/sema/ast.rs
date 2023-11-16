@@ -697,12 +697,6 @@ pub struct Namespace {
     pub var_constants: HashMap<pt::Loc, codegen::Expression>,
     /// Overrides for hover in the language server
     pub hover_overrides: HashMap<pt::Loc, String>,
-    /// Inner scopes of all functions in the namespace.
-    /// Inner scopes of a function includes all block scopes in a function
-    /// excluding the outermost scope that includes named function params,
-    /// return values and variables defined outside any of the inner scopes.
-    /// Used by the language server.
-    pub scopes: Vec<(pt::Loc, Vec<(String, Type)>)>,
 }
 
 #[derive(Debug)]

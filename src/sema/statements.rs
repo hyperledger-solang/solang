@@ -449,7 +449,7 @@ fn statement(
                 )?;
             }
 
-            symtable.leave_scope(ns, *loc);
+            symtable.leave_scope(*loc);
 
             res.push(Statement::Block {
                 loc: *loc,
@@ -508,7 +508,7 @@ fn statement(
                 ns,
                 diagnostics,
             )?;
-            symtable.leave_scope(ns, *loc);
+            symtable.leave_scope(*loc);
             loops.leave_scope();
 
             res.push(Statement::While(*loc, true, cond, body_stmts));
@@ -540,7 +540,7 @@ fn statement(
                 ns,
                 diagnostics,
             )?;
-            symtable.leave_scope(ns, *loc);
+            symtable.leave_scope(*loc);
             loops.leave_scope();
 
             res.push(Statement::DoWhile(*loc, true, body_stmts, cond));
@@ -571,7 +571,7 @@ fn statement(
                 ns,
                 diagnostics,
             )?;
-            symtable.leave_scope(ns, *loc);
+            symtable.leave_scope(*loc);
 
             let mut else_stmts = Vec::new();
             if let Some(stmts) = else_ {
@@ -586,7 +586,7 @@ fn statement(
                     diagnostics,
                 )?;
 
-                symtable.leave_scope(ns, *loc);
+                symtable.leave_scope(*loc);
             } else {
                 reachable = true;
             }
@@ -651,7 +651,7 @@ fn statement(
                 )?);
             }
 
-            symtable.leave_scope(ns, *loc);
+            symtable.leave_scope(*loc);
 
             res.push(Statement::For {
                 loc: *loc,
@@ -730,7 +730,7 @@ fn statement(
                 }
             }
 
-            symtable.leave_scope(ns, *loc);
+            symtable.leave_scope(*loc);
 
             res.push(Statement::For {
                 loc: *loc,
@@ -2460,7 +2460,7 @@ fn try_catch(
         diagnostics,
     )?;
 
-    symtable.leave_scope(ns, *loc);
+    symtable.leave_scope(*loc);
 
     let mut clauses_unique = HashSet::new();
     let mut errors_resolved = Vec::new();
@@ -2551,7 +2551,7 @@ fn try_catch(
 
                 finally_reachable |= reachable;
 
-                symtable.leave_scope(ns, *catch_loc);
+                symtable.leave_scope(*catch_loc);
 
                 catch_all = Some(super::ast::CatchClause {
                     param: catch_param,
@@ -2641,7 +2641,7 @@ fn try_catch(
 
                 finally_reachable |= reachable;
 
-                symtable.leave_scope(ns, *catch_loc);
+                symtable.leave_scope(*catch_loc);
 
                 errors_resolved.push((error_pos, error_param, error_stmt_resolved));
 

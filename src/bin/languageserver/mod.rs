@@ -1615,54 +1615,42 @@ impl<'a> Builder<'a> {
                 loc_to_range(&func.id.loc, file),
             );
 
-            self.scopes.push((
-                file_no,
-                ScopeEntry {
-                    start: func.loc.start(),
-                    stop: func.loc.exclusive_end(),
-                    val: func
-                        .symtable
-                        .scopes
-                        .first()
-                        .map(|curr_scope| {
-                            curr_scope
-                                .0
-                                .values()
-                                .filter_map(|pos| {
-                                    func.symtable.vars.get(pos).map(|var| {
-                                        (
-                                            var.id.name.clone(),
-                                            get_type_definition(&var.ty).map(|dt| dt.into()),
-                                        )
-                                    })
-                                })
-                                .collect_vec()
+            // The outermost scope of a function
+            let outermost_scope = (
+                func.loc,
+                func.symtable.active_scopes.first().cloned().unwrap(),
+            );
+            // Rest of the lexical scopes that were popped previously
+            let func_scopes = func
+                .symtable
+                .popped_scopes
+                .iter()
+                .chain(std::iter::once(&outermost_scope));
+            self.scopes.extend(func_scopes.map(|(loc, scope)| {
+                let scope_entry = ScopeEntry {
+                    start: loc.start(),
+                    stop: loc.exclusive_end(),
+                    val: scope
+                        .0
+                        .values()
+                        .filter_map(|pos| {
+                            func.symtable.vars.get(pos).map(|var| {
+                                (
+                                    var.id.name.clone(),
+                                    get_type_definition(&var.ty).map(|dt| dt.into()),
+                                )
+                            })
                         })
-                        .unwrap(),
-                },
-            ));
+                        .collect_vec(),
+                };
+                (file_no, scope_entry)
+            }));
 
             if func.contract_no.is_none() {
                 self.top_level_code_objects
                     .push((file_no, (func.id.name.clone(), None)))
             }
         }
-
-        self.scopes.extend(self.ns.scopes.iter().map(|(loc, vars)| {
-            let file_no = loc.file_no();
-            let scope_entry = ScopeEntry {
-                start: loc.start(),
-                stop: loc.exclusive_end(),
-                val: vars
-                    .iter()
-                    .map(|(name, ty)| {
-                        let ty = get_type_definition(ty).map(|dt| dt.into());
-                        (name.clone(), ty)
-                    })
-                    .collect_vec(),
-            };
-            (file_no, scope_entry)
-        }));
 
         for (i, constant) in self.ns.constants.iter().enumerate() {
             let samptb = symtable::Symtable::new();
