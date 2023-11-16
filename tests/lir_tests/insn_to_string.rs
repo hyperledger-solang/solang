@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::lir_tests::helpers::{identifier, new_printer, new_vartable, num_literal};
+use crate::lir_tests::helpers::{identifier, new_printer, new_vartable, num_literal, set_tmp};
 use crate::{new_printer, num_literal, stringfy_insn};
 use num_bigint::BigInt;
 use solang::codegen::cfg;
@@ -19,7 +19,7 @@ fn test_stringfy_nop_insn() {
 #[test]
 fn test_stringfy_returndata_insn() {
     let mut v = new_vartable();
-    v.set_tmp(0, &Type::Bytes(1));
+    set_tmp(&mut v, 0, Type::Bytes(1));
     let printer = new_printer(v);
 
     assert_eq!(
@@ -66,8 +66,8 @@ fn test_stringfy_returncode_insn() {
 fn test_stringfy_set_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(121, &Type::Uint(8));
-    v.set_tmp(122, &Type::Uint(8));
+    set_tmp(&mut v, 121, Type::Uint(8));
+    set_tmp(&mut v, 122, Type::Uint(8));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -92,8 +92,8 @@ fn test_stringfy_set_insn() {
 fn test_stringfy_store_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(0, &Type::Ptr(Box::new(Type::Uint(8))));
-    v.set_tmp(1, &Type::Uint(8));
+    set_tmp(&mut v, 0, Type::Ptr(Box::new(Type::Uint(8))));
+    set_tmp(&mut v, 1, Type::Uint(8));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -126,14 +126,14 @@ fn test_stringfy_store_insn() {
 fn test_stringfy_push_memory_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(
+    set_tmp(&mut v, 
         3,
-        &Type::Ptr(Box::new(Type::Array(
+        Type::Ptr(Box::new(Type::Array(
             Box::new(Type::Uint(32)),
             vec![ArrayLength::Fixed(BigInt::from(3))],
         ))),
     );
-    v.set_tmp(101, &Type::Uint(32));
+    set_tmp(&mut v, 101, Type::Uint(32));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -153,14 +153,14 @@ fn test_stringfy_push_memory_insn() {
 fn test_stringfy_pop_memory_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(
+    set_tmp(&mut v, 
         3,
-        &Type::Ptr(Box::new(Type::Array(
+        Type::Ptr(Box::new(Type::Array(
             Box::new(Type::Uint(32)),
             vec![ArrayLength::Fixed(BigInt::from(3))],
         ))),
     );
-    v.set_tmp(101, &Type::Uint(32));
+    set_tmp(&mut v, 101, Type::Uint(32));
     let printer = new_printer(v);
 
     assert_eq!(
@@ -181,8 +181,8 @@ fn test_stringfy_pop_memory_insn() {
 fn test_stringfy_load_storage_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(101, &Type::Uint(32));
-    v.set_tmp(3, &Type::StoragePtr(false, Box::new(Type::Uint(32))));
+    set_tmp(&mut v, 101, Type::Uint(32));
+    set_tmp(&mut v, 3, Type::StoragePtr(false, Box::new(Type::Uint(32))));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -201,7 +201,7 @@ fn test_stringfy_load_storage_insn() {
 fn test_stringfy_clear_storage_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(3, &Type::StoragePtr(false, Box::new(Type::Uint(32))));
+    set_tmp(&mut v, 3, Type::StoragePtr(false, Box::new(Type::Uint(32))));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -219,7 +219,7 @@ fn test_stringfy_clear_storage_insn() {
 fn test_stringfy_set_storage_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::StoragePtr(false, Box::new(Type::Uint(256))));
+    set_tmp(&mut v, 1, Type::StoragePtr(false, Box::new(Type::Uint(256))));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -238,8 +238,8 @@ fn test_stringfy_set_storage_insn() {
 fn test_stringfy_set_storage_bytes_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Bytes(32));
-    v.set_tmp(2, &Type::StoragePtr(false, Box::new(Type::Bytes(32))));
+    set_tmp(&mut v, 1, Type::Bytes(32));
+    set_tmp(&mut v, 2, Type::StoragePtr(false, Box::new(Type::Bytes(32))));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -259,10 +259,10 @@ fn test_stringfy_set_storage_bytes_insn() {
 fn test_stringfy_push_storage_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(101, &Type::Uint(32));
-    v.set_tmp(
+    set_tmp(&mut v, 101, Type::Uint(32));
+    set_tmp(&mut v, 
         3,
-        &Type::StoragePtr(
+        Type::StoragePtr(
             false,
             Box::new(Type::Array(
                 Box::new(Type::Uint(32)),
@@ -289,10 +289,10 @@ fn test_stringfy_push_storage_insn() {
 fn test_stringfy_pop_storage_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(123, &Type::Uint(32));
-    v.set_tmp(
+    set_tmp(&mut v, 123, Type::Uint(32));
+    set_tmp(&mut v, 
         3,
-        &Type::StoragePtr(
+        Type::StoragePtr(
             false,
             Box::new(Type::Array(
                 Box::new(Type::Uint(32)),
@@ -330,13 +330,13 @@ fn test_stringfy_pop_storage_insn() {
 fn test_stringfy_call_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Uint(8));
-    v.set_tmp(2, &Type::Uint(64));
-    v.set_tmp(3, &Type::Uint(8));
-    v.set_tmp(133, &Type::Uint(64));
-    v.set_tmp(
+    set_tmp(&mut v, 1, Type::Uint(8));
+    set_tmp(&mut v, 2, Type::Uint(64));
+    set_tmp(&mut v, 3, Type::Uint(8));
+    set_tmp(&mut v, 133, Type::Uint(64));
+    set_tmp(&mut v, 
         123,
-        &Type::Ptr(Box::new(Type::Function {
+        Type::Ptr(Box::new(Type::Function {
             params: vec![Type::Uint(8), Type::Uint(64), Type::Uint(64)],
             returns: vec![Type::Uint(8), Type::Uint(64), Type::Uint(8)],
         })),
@@ -388,13 +388,13 @@ fn test_stringfy_external_call_insn() {
     let mut v = new_vartable();
 
     // success
-    v.set_tmp(1, &Type::Bool);
+    set_tmp(&mut v, 1, Type::Bool);
     // payload
-    v.set_tmp(3, &Type::Bytes(32));
+    set_tmp(&mut v, 3, Type::Bytes(32));
     // value
-    v.set_tmp(4, &Type::Uint(64));
+    set_tmp(&mut v, 4, Type::Uint(64));
     // gas
-    v.set_tmp(7, &Type::Uint(64));
+    set_tmp(&mut v, 7, Type::Uint(64));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -421,7 +421,7 @@ fn test_stringfy_external_call_insn() {
 fn test_stringfy_print_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(3, &Type::Uint(8));
+    set_tmp(&mut v, 3, Type::Uint(8));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -439,8 +439,8 @@ fn test_stringfy_print_insn() {
 fn test_stringfy_memcopy_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(3, &Type::Bytes(32));
-    v.set_tmp(4, &Type::Bytes(16));
+    set_tmp(&mut v, 3, Type::Bytes(32));
+    set_tmp(&mut v, 4, Type::Bytes(16));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -460,15 +460,15 @@ fn test_stringfy_memcopy_insn() {
 fn test_stringfy_value_transfer_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Bool);
-    v.set_tmp(
+    set_tmp(&mut v, 1, Type::Bool);
+    set_tmp(&mut v, 
         2,
-        &Type::Array(
+        Type::Array(
             Box::new(Type::Uint(8)),
             vec![ArrayLength::Fixed(BigInt::from(32))],
         ),
     );
-    v.set_tmp(3, &Type::Uint(8));
+    set_tmp(&mut v, 3, Type::Uint(8));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -488,9 +488,9 @@ fn test_stringfy_value_transfer_insn() {
 fn test_stringfy_selfdestruct_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(
+    set_tmp(&mut v, 
         3,
-        &Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
+        Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
     );
     let printer = new_printer(v);
     assert_eq!(
@@ -509,9 +509,9 @@ fn test_stringfy_selfdestruct_insn() {
 fn test_stringfy_emit_event_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Bytes(32));
-    v.set_tmp(2, &Type::Bytes(32));
-    v.set_tmp(3, &Type::Bytes(32));
+    set_tmp(&mut v, 1, Type::Bytes(32));
+    set_tmp(&mut v, 2, Type::Bytes(32));
+    set_tmp(&mut v, 3, Type::Bytes(32));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -545,7 +545,7 @@ fn test_stringfy_branch_insn() {
 fn test_stringfy_branch_cond_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(3, &Type::Bool);
+    set_tmp(&mut v, 3, Type::Bool);
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -565,10 +565,10 @@ fn test_stringfy_branch_cond_insn() {
 fn test_stringfy_switch_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Uint(8));
-    v.set_tmp(4, &Type::Uint(8));
-    v.set_tmp(5, &Type::Uint(8));
-    v.set_tmp(6, &Type::Uint(8));
+    set_tmp(&mut v, 1, Type::Uint(8));
+    set_tmp(&mut v, 4, Type::Uint(8));
+    set_tmp(&mut v, 5, Type::Uint(8));
+    set_tmp(&mut v, 6, Type::Uint(8));
     let printer = new_printer(v);
     let s = stringfy_insn!(
         &printer,
@@ -597,8 +597,8 @@ fn test_stringfy_switch_insn() {
 fn test_stringfy_return_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Uint(8));
-    v.set_tmp(2, &Type::Bytes(32));
+    set_tmp(&mut v, 1, Type::Uint(8));
+    set_tmp(&mut v, 2, Type::Bytes(32));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -616,7 +616,7 @@ fn test_stringfy_return_insn() {
 fn test_stringfy_assert_failure_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(3, &Type::Bytes(32));
+    set_tmp(&mut v, 3, Type::Bytes(32));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(
@@ -645,9 +645,9 @@ fn test_stringfy_assert_failure_insn() {
 fn test_stringfy_phi_insn() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Uint(8));
-    v.set_tmp(2, &Type::Uint(8));
-    v.set_tmp(12, &Type::Uint(8));
+    set_tmp(&mut v, 1, Type::Uint(8));
+    set_tmp(&mut v, 2, Type::Uint(8));
+    set_tmp(&mut v, 12, Type::Uint(8));
     let printer = new_printer(v);
     assert_eq!(
         stringfy_insn!(

@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 use solang::lir::printer::Printer;
 use solang::lir::vartable::Var;
 use solang::lir::{instructions::Instruction, lir_type::Type, vartable::Vartable, Block, LIR};
-use solang::sema::ast::Parameter;
+use solang::sema::ast::{Parameter, self};
 use solang_parser::pt::{Identifier, Loc};
 
 #[test]
@@ -70,6 +70,7 @@ fn test_stringfy_cfg() {
         Var {
             id: 0,
             ty: Type::Int(32),
+            ast_ty: ast::Type::Int(32),
             name: String::from("x"),
         },
     );
@@ -78,6 +79,7 @@ fn test_stringfy_cfg() {
         Var {
             id: 1,
             ty: Type::StoragePtr(false, Box::new(Type::Int(32))),
+            ast_ty: ast::Type::Int(32),
             name: String::from("st"),
         },
     );

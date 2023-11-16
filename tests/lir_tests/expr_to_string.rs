@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::lir_tests::helpers::{
-    binop_expr, bool_literal, identifier, new_printer, new_vartable, num_literal, unop_expr,
+    binop_expr, bool_literal, identifier, new_printer, new_vartable, num_literal, unop_expr, set_tmp,
 };
 use crate::stringfy_expr;
 use crate::{new_printer, num_literal};
@@ -16,7 +16,7 @@ use solang_parser::pt::Loc;
 fn test_stringfy_binary_expr() {
     let mut v = new_vartable();
     for i in 0..100 {
-        v.set_tmp(i, &Type::Int(16));
+        set_tmp(&mut v, i, Type::Int(16));
     }
     let printer = new_printer(v);
 
@@ -292,9 +292,9 @@ fn test_stringfy_binary_expr() {
 #[test]
 fn test_stringfy_unary_expr() {
     let mut v = new_vartable();
-    v.set_tmp(1, &Type::Int(16));
-    v.set_tmp(2, &Type::Int(16));
-    v.set_tmp(4, &Type::Int(16));
+    set_tmp(&mut v, 1, Type::Int(16));
+    set_tmp(&mut v, 2, Type::Int(16));
+    set_tmp(&mut v, 4, Type::Int(16));
     let printer = new_printer(v);
 
     // Not,
@@ -335,7 +335,7 @@ fn test_stringfy_unary_expr() {
 fn test_stringfy_id_expr() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Int(16));
+    set_tmp(&mut v, 1, Type::Int(16));
 
     let printer = new_printer(v);
 
@@ -546,7 +546,7 @@ fn test_stringfy_struct_literal_expr() {
 #[test]
 fn test_stringfy_cast_expr() {
     let mut v = new_vartable();
-    v.set_tmp(1, &Type::Uint(8));
+    set_tmp(&mut v, 1, Type::Uint(8));
     let printer = new_printer(v);
 
     // example: uint8(1)
@@ -566,7 +566,7 @@ fn test_stringfy_cast_expr() {
 #[test]
 fn test_stringfy_bytes_cast_expr() {
     let mut v = new_vartable();
-    v.set_tmp(1, &Type::Bytes(2));
+    set_tmp(&mut v, 1, Type::Bytes(2));
     let printer = new_printer(v);
 
     assert_eq!(
@@ -585,7 +585,7 @@ fn test_stringfy_bytes_cast_expr() {
 #[test]
 fn test_stringfy_sext_expr() {
     let mut v = new_vartable();
-    v.set_tmp(1, &Type::Int(8));
+    set_tmp(&mut v, 1, Type::Int(8));
     let printer = new_printer(v);
 
     // example: sign extending a int8 to int16:
@@ -607,7 +607,7 @@ fn test_stringfy_sext_expr() {
 #[test]
 fn test_stringfy_zext_expr() {
     let mut v = new_vartable();
-    v.set_tmp(1, &Type::Uint(8));
+    set_tmp(&mut v, 1, Type::Uint(8));
     let printer = new_printer(v);
 
     // example: zero extending a uint8 to uint16:
@@ -629,7 +629,7 @@ fn test_stringfy_zext_expr() {
 #[test]
 fn test_stringfy_trunc_expr() {
     let mut v = new_vartable();
-    v.set_tmp(1, &Type::Uint(16));
+    set_tmp(&mut v, 1, Type::Uint(16));
     let printer = new_printer(v);
 
     // example: truncating a uint16 to uint8:
@@ -687,7 +687,7 @@ fn test_stringfy_alloc_dyn_bytes() {
 #[test]
 fn test_stringfy_get_ref_expr() {
     let mut v = new_vartable();
-    v.set_tmp(1, &Type::Uint(8));
+    set_tmp(&mut v, 1, Type::Uint(8));
     let printer = new_printer(v);
 
     // example: &ptr<uint8>(%temp.ssa_ir.1)
@@ -707,7 +707,7 @@ fn test_stringfy_get_ref_expr() {
 #[test]
 fn test_stringfy_load_expr() {
     let mut v = new_vartable();
-    v.set_tmp(1, &Type::Ptr(Box::new(Type::Bytes(1))));
+    set_tmp(&mut v, 1, Type::Ptr(Box::new(Type::Bytes(1))));
     let printer = new_printer(v);
 
     // example: *%1
@@ -727,9 +727,9 @@ fn test_stringfy_load_expr() {
 #[test]
 fn test_stringfy_struct_member_expr() {
     let mut v = new_vartable();
-    v.set_tmp(
+    set_tmp(&mut v, 
         1,
-        &Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
+        Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
     );
     let printer = new_printer(v);
 
@@ -752,23 +752,23 @@ fn test_stringfy_struct_member_expr() {
 fn test_stringfy_subscript_expr() {
     let mut v = new_vartable();
 
-    v.set_tmp(
+    set_tmp(&mut v, 
         1,
-        &Type::Ptr(Box::new(Type::Array(
+        Type::Ptr(Box::new(Type::Array(
             Box::new(Type::Uint(8)),
             vec![ArrayLength::Fixed(BigInt::from(2))],
         ))),
     );
-    v.set_tmp(
+    set_tmp(&mut v, 
         2,
-        &Type::Ptr(Box::new(Type::Array(
+        Type::Ptr(Box::new(Type::Array(
             Box::new(Type::Uint(8)),
             vec![ArrayLength::Dynamic],
         ))),
     );
-    v.set_tmp(
+    set_tmp(&mut v, 
         3,
-        &Type::Ptr(Box::new(Type::Array(
+        Type::Ptr(Box::new(Type::Array(
             Box::new(Type::Uint(8)),
             vec![ArrayLength::AnyFixed],
         ))),
@@ -819,11 +819,11 @@ fn test_stringfy_subscript_expr() {
 #[test]
 fn test_stringfy_advance_pointer_expr() {
     let mut v = new_vartable();
-    v.set_tmp(
+    set_tmp(&mut v, 
         1,
-        &Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
+        Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
     );
-    v.set_tmp(2, &Type::Uint(8));
+    set_tmp(&mut v, 2, Type::Uint(8));
     let printer = new_printer(v);
 
     // example: ptr_add(%1, %2)
@@ -876,10 +876,10 @@ fn test_stringfy_function_arg_expr() {
 fn test_stringfy_format_string_expr() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Bytes(4));
-    v.set_tmp(2, &Type::Int(16));
-    v.set_tmp(3, &Type::Uint(8));
-    v.set_tmp(4, &Type::Uint(32));
+    set_tmp(&mut v, 1, Type::Bytes(4));
+    set_tmp(&mut v, 2, Type::Int(16));
+    set_tmp(&mut v, 3, Type::Uint(8));
+    set_tmp(&mut v, 4, Type::Uint(32));
 
     let printer = new_printer(v);
     // case1: spec is empty:
@@ -967,8 +967,8 @@ fn test_stringfy_internal_function_cfg_expr() {
 fn test_stringfy_keccak256_expr() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Bytes(4));
-    v.set_tmp(2, &Type::Bytes(4));
+    set_tmp(&mut v, 1, Type::Bytes(4));
+    set_tmp(&mut v, 2, Type::Bytes(4));
 
     let printer = new_printer(v);
     // example: keccak256(%1, %2)
@@ -989,9 +989,9 @@ fn test_stringfy_keccak256_expr() {
 fn test_stringfy_string_compare_expr() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Bytes(4));
-    v.set_tmp(2, &Type::Bytes(4));
-    v.set_tmp(3, &Type::Bytes(3));
+    set_tmp(&mut v, 1, Type::Bytes(4));
+    set_tmp(&mut v, 2, Type::Bytes(4));
+    set_tmp(&mut v, 3, Type::Bytes(3));
 
     let printer = new_printer(v);
     // case1: strcmp(%1, %2)
@@ -1039,8 +1039,8 @@ fn test_stringfy_string_compare_expr() {
 fn test_stringfy_string_concat() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Bytes(4));
-    v.set_tmp(2, &Type::Bytes(2));
+    set_tmp(&mut v, 1, Type::Bytes(4));
+    set_tmp(&mut v, 2, Type::Bytes(2));
 
     let printer = new_printer(v);
     // case1: strcat(%1, %2)
@@ -1086,9 +1086,9 @@ fn test_stringfy_string_concat() {
 fn test_stringfy_storage_array_length() {
     let mut v = new_vartable();
 
-    v.set_tmp(
+    set_tmp(&mut v, 
         1,
-        &Type::StoragePtr(
+        Type::StoragePtr(
             false,
             Box::new(Type::Array(
                 Box::new(Type::Uint(8)),
@@ -1129,8 +1129,8 @@ fn test_stringfy_return_data() {
 fn test_stringfy_builtin() {
     let mut v = new_vartable();
 
-    v.set_tmp(1, &Type::Int(16));
-    v.set_tmp(2, &Type::Int(16));
+    set_tmp(&mut v, 1, Type::Int(16));
+    set_tmp(&mut v, 2, Type::Int(16));
 
     let printer = new_printer(v);
     // example: builtin "addmod"(%1, %2, 0x100)

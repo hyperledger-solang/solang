@@ -6,11 +6,11 @@ use crate::lir::lir_type::{StructType, Type};
 use crate::sema::ast::{self, ArrayLength};
 
 impl Converter<'_> {
-    pub fn to_lir_type(&self, ty: &ast::Type) -> Type {
-        self.to_lir_type_by_depth(ty, 0)
+    pub fn lowering_ast_type(&self, ty: &ast::Type) -> Type {
+        self.lowering_ast_type_by_depth(ty, 0)
     }
 
-    fn to_lir_type_by_depth(&self, ty: &ast::Type, depth: u8) -> Type {
+    fn lowering_ast_type_by_depth(&self, ty: &ast::Type, depth: u8) -> Type {
         match ty {
             ast::Type::Bool => Type::Bool,
             ast::Type::Int(width) => Type::Int(*width),
@@ -33,7 +33,7 @@ impl Converter<'_> {
                 depth,
             ),
             ast::Type::Array(ty, len) => {
-                let ty = self.to_lir_type_by_depth(ty.as_ref(), depth + 1);
+                let ty = self.lowering_ast_type_by_depth(ty.as_ref(), depth + 1);
                 let len = len
                     .iter()
                     .map(|len| match len {
@@ -49,19 +49,19 @@ impl Converter<'_> {
                 self.wrap_ptr_by_depth(Type::Struct(StructType::from(struct_ty)), depth)
             }
             ast::Type::Mapping(mapping) => {
-                let key = self.to_lir_type_by_depth(&mapping.key, depth + 1);
-                let value = self.to_lir_type_by_depth(&mapping.value, depth + 1);
+                let key = self.lowering_ast_type_by_depth(&mapping.key, depth + 1);
+                let value = self.lowering_ast_type_by_depth(&mapping.value, depth + 1);
                 Type::Mapping {
                     key_ty: Box::new(key),
                     value_ty: Box::new(value),
                 }
             }
             ast::Type::Ref(rty) => {
-                let ty = self.to_lir_type_by_depth(rty.as_ref(), depth + 1);
+                let ty = self.lowering_ast_type_by_depth(rty.as_ref(), depth + 1);
                 Type::Ptr(Box::new(ty))
             }
             ast::Type::StorageRef(immutable, ty) => {
-                let ty = self.to_lir_type_by_depth(ty.as_ref(), depth + 1);
+                let ty = self.lowering_ast_type_by_depth(ty.as_ref(), depth + 1);
                 Type::StoragePtr(*immutable, Box::new(ty))
             }
             ast::Type::BufferPointer => self.wrap_ptr_by_depth(Type::Uint(8), depth),
@@ -73,17 +73,17 @@ impl Converter<'_> {
             } => {
                 let params = params
                     .iter()
-                    .map(|param| self.to_lir_type_by_depth(param, depth + 1))
+                    .map(|param| self.lowering_ast_type_by_depth(param, depth + 1))
                     .collect::<Vec<_>>();
                 let returns = returns
                     .iter()
-                    .map(|ret| self.to_lir_type_by_depth(ret, depth + 1))
+                    .map(|ret| self.lowering_ast_type_by_depth(ret, depth + 1))
                     .collect::<Vec<_>>();
                 self.wrap_ptr_by_depth(Type::Function { params, returns }, depth)
             }
             ast::Type::UserType(_) => self.convert_user_type(ty),
             ast::Type::Slice(ty) => {
-                let ty = self.to_lir_type_by_depth(ty.as_ref(), depth + 1);
+                let ty = self.lowering_ast_type_by_depth(ty.as_ref(), depth + 1);
                 self.wrap_ptr_by_depth(Type::Slice(Box::new(ty)), depth)
             }
             ast::Type::FunctionSelector => Type::Uint(self.fn_selector_length() as u16 * 8),

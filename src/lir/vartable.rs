@@ -2,17 +2,18 @@
 
 use crate::lir::expressions::Operand;
 use crate::lir::lir_type::Type;
+use crate::sema::ast;
 use indexmap::IndexMap;
 use solang_parser::pt::Loc;
 
-/// define a constant prefix for temporary variables
+/// a constant prefix for temporary variables
 pub const TEMP_PREFIX: &str = "temp.ssa_ir.";
 
 #[derive(Debug, Clone)]
-pub struct Var/*<'a>*/ {
+pub struct Var {
     pub id: usize,
     pub ty: Type,
-    // pub ast_ty: &'a ast::Type,
+    pub ast_ty: ast::Type,
     pub name: String,
 }
 
@@ -21,16 +22,6 @@ pub struct Vartable {
     pub vars: IndexMap<usize, Var>,
     pub args: IndexMap</* arg no */ usize, /* var id */ usize>,
     pub next_id: usize,
-}
-
-impl Var {
-    pub(crate) fn new(id: usize, ty: Type, name: String) -> Self {
-        Self {
-            id,
-            ty,
-            name,
-        }
-    }
 }
 
 impl Vartable {
@@ -58,21 +49,23 @@ impl Vartable {
             .unwrap()
     }
 
-    pub fn set_tmp(&mut self, id: usize, ty: &Type) {
+    pub fn set_tmp(&mut self, id: usize, ty: Type, ast_ty: ast::Type) {
         let var = Var {
             id,
-            ty: ty.clone(),
+            ty,
+            ast_ty,
             name: format!("{}{}", TEMP_PREFIX, id),
         };
         self.next_id = self.next_id.max(id + 1);
         self.vars.insert(id, var);
     }
 
-    pub(crate) fn new_temp(&mut self, ty: &Type) -> Operand {
+    pub(crate) fn new_temp(&mut self, ty: Type, ast_ty: ast::Type) -> Operand {
         let name = format!("{}{}", TEMP_PREFIX, self.next_id);
         let var = Var {
             id: self.next_id,
-            ty: ty.clone(),
+            ty,
+            ast_ty,
             name: name.clone(),
         };
         self.vars.insert(self.next_id, var);

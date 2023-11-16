@@ -9,13 +9,18 @@ use crate::{
 use super::Converter;
 
 impl Converter<'_> {
-    pub fn from_vars(&self, tab: &Vars) -> Vartable {
+    pub fn to_vartable(&self, tab: &Vars) -> Vartable {
         let mut vars = IndexMap::new();
         let mut max_id = 0;
         for (id, var) in tab {
             vars.insert(
                 *id,
-                Var::new(*id, self.to_lir_type(&var.ty), var.id.name.clone()),
+                Var {
+                    id: *id,
+                    ty: self.lowering_ast_type(&var.ty),
+                    ast_ty: var.ty.clone(),
+                    name: var.id.name.clone(),
+                },
             );
             max_id = max_id.max(*id);
         }

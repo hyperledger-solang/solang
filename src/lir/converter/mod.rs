@@ -43,12 +43,12 @@ impl<'input> Converter<'input> {
     pub fn convert_user_type(&self, user_ty: &ast::Type) -> Type {
         // clone happens here because function unwrap_user_type takes ownership
         let real_ty = user_ty.clone().unwrap_user_type(self.ns);
-        self.to_lir_type(&real_ty)
+        self.lowering_ast_type(&real_ty)
     }
 
     pub fn convert_enum_type(&self, enum_no: usize) -> Type {
         let ty = &self.ns.enums[enum_no].ty;
-        self.to_lir_type(ty)
+        self.lowering_ast_type(ty)
     }
 
     pub fn value_length(&self) -> usize {
@@ -69,7 +69,7 @@ impl<'input> Converter<'input> {
     ) -> Option<Operand> {
         match expr {
             codegen::Expression::NumberLiteral { ty, value, loc, .. } => {
-                let ssa_ty = self.to_lir_type(ty);
+                let ssa_ty = self.lowering_ast_type(ty);
                 Some(Operand::new_number_literal(value, ssa_ty, *loc))
             }
             codegen::Expression::BoolLiteral { value, loc, .. } => {
@@ -94,7 +94,8 @@ impl<'input> Converter<'input> {
         match self.to_operand(expr, vartable) {
             Some(op) => op,
             None => {
-                let tmp = vartable.new_temp(&self.to_lir_type(&expr.ty()));
+                let ast_ty = expr.ty();
+                let tmp = vartable.new_temp(self.lowering_ast_type(&ast_ty), ast_ty);
                 self.lowering_expression(&tmp, expr, vartable, result);
                 tmp
             }
@@ -172,7 +173,7 @@ impl<'input> Converter<'input> {
     }
 
     pub fn get_lir(&self) -> LIR {
-        let mut vartable = self.from_vars(&self.cfg.vars);
+        let mut vartable = self.to_vartable(&self.cfg.vars);
 
         let blocks = self
             .cfg
@@ -185,14 +186,14 @@ impl<'input> Converter<'input> {
             .cfg
             .params
             .iter()
-            .map(|p| self.to_ssa_typed_parameter(p))
+            .map(|p| self.to_lir_typed_parameter(p))
             .collect::<Vec<Parameter<Type>>>();
 
         let returns = self
             .cfg
             .returns
             .iter()
-            .map(|p| self.to_ssa_typed_parameter(p))
+            .map(|p| self.to_lir_typed_parameter(p))
             .collect::<Vec<Parameter<Type>>>();
 
         LIR {
@@ -221,11 +222,11 @@ impl<'input> Converter<'input> {
         }
     }
 
-    fn to_ssa_typed_parameter(&self, param: &Parameter<ast::Type>) -> Parameter<Type> {
+    fn to_lir_typed_parameter(&self, param: &Parameter<ast::Type>) -> Parameter<Type> {
         Parameter {
             loc: param.loc,
             id: param.id.clone(),
-            ty: self.to_lir_type(&param.ty),
+            ty: self.lowering_ast_type(&param.ty),
             ty_loc: param.ty_loc,
             indexed: param.indexed,
             readonly: param.readonly,
