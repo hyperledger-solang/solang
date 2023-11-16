@@ -15,11 +15,7 @@ impl Converter<'_> {
         for (id, var) in tab {
             vars.insert(
                 *id,
-                Var::new(
-                    *id,
-                    self.from_ast_type(&var.ty),
-                    var.id.name.clone(),
-                ),
+                Var::new(*id, self.to_lir_type(&var.ty), var.id.name.clone()),
             );
             max_id = max_id.max(*id);
         }

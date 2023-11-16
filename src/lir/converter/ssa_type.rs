@@ -2,11 +2,15 @@
 use super::Converter;
 use num_bigint::BigInt;
 
-use crate::sema::ast::{self, ArrayLength};
 use crate::lir::ssa_type::{StructType, Type};
+use crate::sema::ast::{self, ArrayLength};
 
 impl Converter<'_> {
-    pub fn from_ast_type(&self, ty: &ast::Type) -> Type {
+    pub fn to_lir_type(&self, ty: &ast::Type) -> Type {
+        self.to_lir_type_by_depth(ty, 0)
+    }
+
+    fn to_lir_type_by_depth(&self, ty: &ast::Type, depth: u8) -> Type {
         match ty {
             ast::Type::Bool => Type::Bool,
             ast::Type::Int(width) => Type::Int(*width),
@@ -24,11 +28,12 @@ impl Converter<'_> {
             // so they cannot be converted here without switching the endianess
             ast::Type::Bytes(width) => Type::Bytes(*width),
             // String is equivalent to dynamic bytes
-            ast::Type::String | ast::Type::DynamicBytes => Type::Ptr(Box::new(Type::Struct(
-                StructType::Vector(Box::new(Type::Uint(8))),
-            ))),
+            ast::Type::String | ast::Type::DynamicBytes => self.wrap_ptr_by_depth(
+                Type::Struct(StructType::Vector(Box::new(Type::Uint(8)))),
+                depth,
+            ),
             ast::Type::Array(ty, len) => {
-                let ty = self.from_ast_type(ty.as_ref());
+                let ty = self.to_lir_type_by_depth(ty.as_ref(), depth + 1);
                 let len = len
                     .iter()
                     .map(|len| match len {
@@ -37,52 +42,60 @@ impl Converter<'_> {
                         ast::ArrayLength::AnyFixed => unreachable!(),
                     })
                     .collect();
-                Type::Ptr(Box::new(Type::Array(Box::new(ty), len)))
+                self.wrap_ptr_by_depth(Type::Array(Box::new(ty), len), depth)
             }
             ast::Type::Enum(enum_no) => self.convert_enum_type(*enum_no),
             ast::Type::Struct(struct_ty) => {
-                Type::Ptr(Box::new(Type::Struct(StructType::from(struct_ty))))
+                self.wrap_ptr_by_depth(Type::Struct(StructType::from(struct_ty)), depth)
             }
             ast::Type::Mapping(mapping) => {
-                let key = self.from_ast_type(&mapping.key);
-                let value = self.from_ast_type(&mapping.value);
+                let key = self.to_lir_type_by_depth(&mapping.key, depth + 1);
+                let value = self.to_lir_type_by_depth(&mapping.value, depth + 1);
                 Type::Mapping {
                     key_ty: Box::new(key),
                     value_ty: Box::new(value),
                 }
             }
             ast::Type::Ref(rty) => {
-                let ty = self.from_ast_type(rty.as_ref());
+                let ty = self.to_lir_type_by_depth(rty.as_ref(), depth + 1);
                 Type::Ptr(Box::new(ty))
             }
             ast::Type::StorageRef(immutable, ty) => {
-                let ty = self.from_ast_type(ty.as_ref());
+                let ty = self.to_lir_type_by_depth(ty.as_ref(), depth + 1);
                 Type::StoragePtr(*immutable, Box::new(ty))
             }
-            ast::Type::BufferPointer => Type::Ptr(Box::new(Type::Uint(8))),
+            ast::Type::BufferPointer => self.wrap_ptr_by_depth(Type::Uint(8), depth),
             ast::Type::ExternalFunction { .. } => {
-                Type::Ptr(Box::new(Type::Struct(StructType::ExternalFunction)))
+                self.wrap_ptr_by_depth(Type::Struct(StructType::ExternalFunction), depth)
             }
             ast::Type::InternalFunction {
                 params, returns, ..
             } => {
                 let params = params
                     .iter()
-                    .map(|param| self.from_ast_type(param))
+                    .map(|param| self.to_lir_type_by_depth(param, depth + 1))
                     .collect::<Vec<_>>();
                 let returns = returns
                     .iter()
-                    .map(|ret| self.from_ast_type(ret))
+                    .map(|ret| self.to_lir_type_by_depth(ret, depth + 1))
                     .collect::<Vec<_>>();
-                Type::Ptr(Box::new(Type::Function { params, returns }))
+                self.wrap_ptr_by_depth(Type::Function { params, returns }, depth)
             }
             ast::Type::UserType(_) => self.convert_user_type(ty),
             ast::Type::Slice(ty) => {
-                let ty = self.from_ast_type(ty.as_ref());
-                Type::Ptr(Box::new(Type::Slice(Box::new(ty))))
+                let ty = self.to_lir_type_by_depth(ty.as_ref(), depth + 1);
+                self.wrap_ptr_by_depth(Type::Slice(Box::new(ty)), depth)
             }
             ast::Type::FunctionSelector => Type::Uint(self.fn_selector_length() as u16 * 8),
             _ => unreachable!(),
+        }
+    }
+
+    fn wrap_ptr_by_depth(&self, ty: Type, depth: u8) -> Type {
+        if depth == 0 {
+            Type::Ptr(Box::new(ty))
+        } else {
+            ty
         }
     }
 }

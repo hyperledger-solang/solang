@@ -43,12 +43,12 @@ impl<'input> Converter<'input> {
     pub fn convert_user_type(&self, user_ty: &ast::Type) -> Type {
         // clone happens here because function unwrap_user_type takes ownership
         let real_ty = user_ty.clone().unwrap_user_type(self.ns);
-        self.from_ast_type(&real_ty)
+        self.to_lir_type(&real_ty)
     }
 
     pub fn convert_enum_type(&self, enum_no: usize) -> Type {
         let ty = &self.ns.enums[enum_no].ty;
-        self.from_ast_type(ty)
+        self.to_lir_type(ty)
     }
 
     pub fn value_length(&self) -> usize {
@@ -69,7 +69,7 @@ impl<'input> Converter<'input> {
     ) -> Option<Operand> {
         match expr {
             codegen::Expression::NumberLiteral { ty, value, loc, .. } => {
-                let ssa_ty = self.from_ast_type(ty);
+                let ssa_ty = self.to_lir_type(ty);
                 Some(Operand::new_number_literal(value, ssa_ty, *loc))
             }
             codegen::Expression::BoolLiteral { value, loc, .. } => {
@@ -94,7 +94,7 @@ impl<'input> Converter<'input> {
         match self.to_operand(expr, vartable) {
             Some(op) => op,
             None => {
-                let tmp = vartable.new_temp(&self.from_ast_type(&expr.ty()));
+                let tmp = vartable.new_temp(&self.to_lir_type(&expr.ty()));
                 self.lowering_expression(&tmp, expr, vartable, result);
                 tmp
             }
@@ -225,7 +225,7 @@ impl<'input> Converter<'input> {
         Parameter {
             loc: param.loc,
             id: param.id.clone(),
-            ty: self.from_ast_type(&param.ty),
+            ty: self.to_lir_type(&param.ty),
             ty_loc: param.ty_loc,
             indexed: param.indexed,
             readonly: param.readonly,
