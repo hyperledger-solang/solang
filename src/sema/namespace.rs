@@ -1526,26 +1526,23 @@ impl Namespace {
         diagnostics: &mut Diagnostics,
     ) -> Result<ArrayDimension, ()> {
         let mut symtable = Symtable::new();
-        let context = ExprContext {
+        let mut context = ExprContext {
             file_no,
             unchecked: true,
             contract_no,
             function_no,
             constant: true,
-            lvalue: false,
-            yul_function: false,
-            loop_nesting_level: 0,
+            ..Default::default()
         };
 
         let size_expr = expression(
             expr,
-            &context,
+            &mut context,
             self,
             &mut symtable,
             diagnostics,
             ResolveTo::Type(&Type::Uint(256)),
         )?;
-        context.drop();
 
         match size_expr.ty() {
             Type::Uint(_) | Type::Int(_) => {}

@@ -34,7 +34,7 @@ fn get_suffix_from_string(suffix_name: &str) -> Option<YulSuffix> {
 /// Resolve an yul expression.
 pub(crate) fn resolve_yul_expression(
     expr: &pt::YulExpression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
@@ -267,7 +267,7 @@ fn resolve_variable_reference(
     id: &pt::Identifier,
     ns: &mut Namespace,
     symtable: &Symtable,
-    context: &ExprContext,
+    context: &mut ExprContext,
 ) -> Result<YulExpression, ()> {
     if let Some(v) = symtable.find(&id.name) {
         match &v.usage_type {
@@ -354,7 +354,7 @@ fn resolve_variable_reference(
 pub(crate) fn resolve_function_call(
     function_table: &mut FunctionsTable,
     func_call: &YulFunctionCall,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<YulExpression, ()> {
@@ -529,7 +529,7 @@ fn resolve_suffix_access(
     loc: &pt::Loc,
     expr: &pt::YulExpression,
     id: &Identifier,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
@@ -653,7 +653,7 @@ fn resolve_suffix_access(
 /// has a valid expression given the context.
 pub(crate) fn check_type(
     expr: &YulExpression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
 ) -> Option<Diagnostic> {
