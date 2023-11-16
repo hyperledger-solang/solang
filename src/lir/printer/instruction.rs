@@ -3,7 +3,7 @@
 use crate::sema::ast;
 use crate::lir::instructions::Instruction;
 use crate::lir::printer::Printer;
-use crate::lir::ssa_type::{InternalCallTy, PhiInput};
+use crate::lir::lir_type::{InternalCallTy, PhiInput};
 use std::io::Write;
 
 impl Printer {

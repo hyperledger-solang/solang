@@ -3,10 +3,10 @@
 use crate::codegen;
 use crate::sema::ast::{CallTy, ExternalCallAccounts};
 use crate::lir::expressions::{Expression, Operand};
-use crate::lir::ssa_type::InternalCallTy;
+use crate::lir::lir_type::InternalCallTy;
 use solang_parser::pt::Loc;
 
-use super::ssa_type::PhiInput;
+use super::lir_type::PhiInput;
 
 /// Statements using three-address code format
 #[derive(Debug)]

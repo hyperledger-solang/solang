@@ -5,7 +5,7 @@ use num_bigint::BigInt;
 use solang::lir::{
     expressions::{BinaryOperator, Expression, Operand, UnaryOperator},
     printer::Printer,
-    ssa_type::Type,
+    lir_type::Type,
     vartable::Vartable,
 };
 use solang_parser::pt::Loc;

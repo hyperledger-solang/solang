@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{expressions::Operand, ssa_type::Type};
+use super::{expressions::Operand, lir_type::Type};
 use crate::codegen::cfg::ASTFunction;
 use crate::lir::vartable::Vartable;
 use crate::lir::{Block, LIR};

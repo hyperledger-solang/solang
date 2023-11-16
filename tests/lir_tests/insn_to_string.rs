@@ -6,7 +6,7 @@ use num_bigint::BigInt;
 use solang::codegen::cfg;
 use solang::lir::expressions::{BinaryOperator, Expression};
 use solang::lir::instructions::Instruction;
-use solang::lir::ssa_type::{InternalCallTy, PhiInput, StructType, Type};
+use solang::lir::lir_type::{InternalCallTy, PhiInput, StructType, Type};
 use solang::sema::ast::{ArrayLength, CallTy};
 use solang_parser::pt::Loc;
 

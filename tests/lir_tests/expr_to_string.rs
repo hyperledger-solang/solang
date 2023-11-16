@@ -8,7 +8,7 @@ use crate::{new_printer, num_literal};
 use num_bigint::BigInt;
 use solang::codegen::Builtin;
 use solang::lir::expressions::{BinaryOperator, Expression, UnaryOperator};
-use solang::lir::ssa_type::{StructType, Type};
+use solang::lir::lir_type::{StructType, Type};
 use solang::sema::ast::{self, ArrayLength, FormatArg, StringLocation};
 use solang_parser::pt::Loc;
 

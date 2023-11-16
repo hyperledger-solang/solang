@@ -5,7 +5,7 @@ use crate::{num_literal, stringfy_lir};
 use indexmap::IndexMap;
 use solang::lir::printer::Printer;
 use solang::lir::vartable::Var;
-use solang::lir::{instructions::Instruction, ssa_type::Type, vartable::Vartable, Block, LIR};
+use solang::lir::{instructions::Instruction, lir_type::Type, vartable::Vartable, Block, LIR};
 use solang::sema::ast::Parameter;
 use solang_parser::pt::{Identifier, Loc};
 

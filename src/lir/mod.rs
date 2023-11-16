@@ -4,7 +4,7 @@ pub mod converter;
 pub mod expressions;
 pub mod instructions;
 pub mod printer;
-pub mod ssa_type;
+pub mod lir_type;
 pub mod vartable;
 
 use crate::codegen::cfg::ASTFunction;
@@ -13,7 +13,7 @@ use crate::lir::vartable::Vartable;
 use crate::pt::FunctionTy;
 use crate::sema::ast::Parameter;
 
-use self::ssa_type::Type;
+use self::lir_type::Type;
 
 #[derive(Debug)]
 pub struct LIR {

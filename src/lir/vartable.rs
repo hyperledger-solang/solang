@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::lir::expressions::Operand;
-use crate::lir::ssa_type::Type;
+use crate::lir::lir_type::Type;
 use indexmap::IndexMap;
 use solang_parser::pt::Loc;
 

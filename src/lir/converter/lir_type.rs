@@ -2,7 +2,7 @@
 use super::Converter;
 use num_bigint::BigInt;
 
-use crate::lir::ssa_type::{StructType, Type};
+use crate::lir::lir_type::{StructType, Type};
 use crate::sema::ast::{self, ArrayLength};
 
 impl Converter<'_> {

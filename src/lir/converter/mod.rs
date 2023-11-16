@@ -12,13 +12,13 @@ use crate::{
 use super::{
     expressions::Operand,
     instructions::Instruction,
-    ssa_type::{InternalCallTy, Type},
+    lir_type::{InternalCallTy, Type},
     vartable::Vartable,
 };
 
 mod expression;
 mod instruction;
-mod ssa_type;
+mod lir_type;
 mod vartable;
 
 pub struct Converter<'a> {
