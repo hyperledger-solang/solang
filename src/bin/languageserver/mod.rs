@@ -1491,7 +1491,7 @@ impl<'a> Builder<'a> {
         }
 
         for (i, func) in self.ns.functions.iter().enumerate() {
-            if func.is_accessor || func.loc == pt::Loc::Builtin {
+            if func.is_accessor || func.loc_prototype == pt::Loc::Builtin {
                 // accessor functions are synthetic; ignore them, all the locations are fake
                 continue;
             }
@@ -1618,12 +1618,12 @@ impl<'a> Builder<'a> {
             self.scopes.push((
                 file_no,
                 ScopeEntry {
-                    start: func.loc.start(),
+                    start: func.loc_prototype.start(),
                     stop: func
                         .body
                         .last()
                         .map(|stmt| stmt.loc())
-                        .unwrap_or(func.loc)
+                        .unwrap_or(func.loc_prototype)
                         .exclusive_end(),
                     val: func
                         .symtable
@@ -1772,7 +1772,7 @@ impl<'a> Builder<'a> {
                         let decls = parent_decls
                             .iter()
                             .map(|&i| {
-                                let loc = self.ns.functions[i].loc;
+                                let loc = self.ns.functions[i].loc_prototype;
                                 DefinitionIndex {
                                     def_path: self.ns.files[loc.file_no()].path.clone(),
                                     def_type: DefinitionType::Function(i),

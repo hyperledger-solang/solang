@@ -46,7 +46,9 @@ impl Access {
 pub fn mutability(file_no: usize, ns: &mut Namespace) {
     if !ns.diagnostics.any_errors() {
         for func in &ns.functions {
-            if func.loc.try_file_no() != Some(file_no) || func.ty == pt::FunctionTy::Modifier {
+            if func.loc_prototype.try_file_no() != Some(file_no)
+                || func.ty == pt::FunctionTy::Modifier
+            {
                 continue;
             }
 
@@ -189,13 +191,13 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Diagnostics {
                 Mutability::Payable(_) | Mutability::Pure(_) => (),
                 Mutability::Nonpayable(_) => {
                     state.diagnostic.push(Diagnostic::warning(
-                        func.loc,
+                        func.loc_prototype,
                         "function can be declared 'pure'".to_string(),
                     ));
                 }
                 _ => {
                     state.diagnostic.push(Diagnostic::warning(
-                        func.loc,
+                        func.loc_prototype,
                         format!(
                             "function declared '{}' can be declared 'pure'",
                             func.mutability
@@ -208,7 +210,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Diagnostics {
         // don't suggest marking payable as view (declared_access == Value)
         if state.required_access == Access::Read && state.declared_access == Access::Write {
             state.diagnostic.push(Diagnostic::warning(
-                func.loc,
+                func.loc_prototype,
                 "function can be declared 'view'".to_string(),
             ));
         }

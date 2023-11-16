@@ -375,7 +375,7 @@ pub(super) fn function_body_annotations(
 
     if has_annotation && diagnostics.is_empty() && annotations.payer.is_none() {
         diagnostics.push(Diagnostic::error(
-            ns.functions[function_no].loc,
+            ns.functions[function_no].loc_prototype,
             "@payer annotation required for constructor".into(),
         ));
     }

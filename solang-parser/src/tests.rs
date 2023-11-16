@@ -184,7 +184,8 @@ fn parse_test() {
             ],
         })),
         SourceUnitPart::FunctionDefinition(Box::new(FunctionDefinition {
-            loc: Loc::File(0, 720, 735),
+            loc_prototype: Loc::File(0, 720, 735),
+            loc: Loc::File(0, 720, 1147),
             ty: FunctionTy::Function,
             name: Some(Identifier {
                 loc: Loc::File(0, 729, 732),
@@ -587,7 +588,8 @@ fn test_assembly_parser() {
 
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::FunctionDefinition(Box::new(
         FunctionDefinition {
-            loc: Loc::File(0, 17, 32),
+            loc_prototype: Loc::File(0, 17, 32),
+            loc: Loc::File(0, 17, 1045),
             ty: FunctionTy::Function,
             name: Some(Identifier {
                 loc: Loc::File(0, 26, 29),
@@ -1040,7 +1042,8 @@ fn parse_revert_test() {
                     fields: vec![],
                 })),
                 ContractPart::FunctionDefinition(Box::new(FunctionDefinition {
-                    loc: Loc::File(0, 73, 89),
+                    loc_prototype: Loc::File(0, 73, 89),
+                    loc: Loc::File(0, 73, 140),
                     ty: FunctionTy::Function,
                     name: Some(Identifier {
                         loc: Loc::File(0, 82, 85),
@@ -1293,7 +1296,8 @@ contract MyTest {
             base: vec![],
             parts: vec![ContractPart::FunctionDefinition(
                 FunctionDefinition {
-                    loc: File(0, 23, 55),
+                    loc_prototype: File(0, 23, 55),
+                    loc: File(0, 23, 57),
                     ty: FunctionTy::Constructor,
                     name: None,
                     name_loc: File(0, 34, 34),

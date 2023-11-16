@@ -169,7 +169,7 @@ pub fn resolve_function_body(
                 // does the contract require arguments
                 if ns.contracts[base.contract_no].constructor_needs_arguments(ns) {
                     ns.diagnostics.push(Diagnostic::error(
-                        def.loc,
+                        def.loc_prototype,
                         format!(
                             "missing arguments to contract '{}' constructor",
                             ns.contracts[base.contract_no].id
@@ -191,7 +191,7 @@ pub fn resolve_function_body(
             if let pt::FunctionAttribute::BaseOrModifier(_, modifier) = attr {
                 if modifier.name.identifiers.len() != 1 {
                     ns.diagnostics.push(Diagnostic::error(
-                        def.loc,
+                        def.loc_prototype,
                         format!("unknown modifier '{}' on function", modifier.name),
                     ));
                 } else {

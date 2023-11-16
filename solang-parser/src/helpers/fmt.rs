@@ -1825,6 +1825,7 @@ mod tests {
             } => "event name() anonymous;",
 
             pt::FunctionDefinition {
+                loc_prototype: loc!(),
                 ty: pt::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
@@ -1835,6 +1836,7 @@ mod tests {
                 body: None,
             } => "function name();",
             pt::FunctionDefinition {
+                loc_prototype: loc!(),
                 ty: pt::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
@@ -1845,6 +1847,7 @@ mod tests {
                 body: Some(stmt!({})),
             } => "function name() {}",
             pt::FunctionDefinition {
+                loc_prototype: loc!(),
                 ty: pt::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
@@ -1855,6 +1858,7 @@ mod tests {
                 body: Some(stmt!({})),
             } => "function name() returns (uint256) {}",
             pt::FunctionDefinition {
+                loc_prototype: loc!(),
                 ty: pt::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),

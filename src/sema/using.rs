@@ -126,7 +126,7 @@ pub(crate) fn using_decl(
                             diagnostics.push(Diagnostic::error_with_note(
                                 function_name.loc,
                                 format!("'{function_name}' is not a library function"),
-                                func.loc,
+                                func.loc_prototype,
                                 format!("definition of {}", using_function.path),
                             ));
                             continue;
@@ -519,7 +519,7 @@ pub(super) fn try_resolve_using_call(
             errors.push(Diagnostic::error_with_note(
                 *loc,
                 "cannot call private library function".to_string(),
-                libfunc.loc,
+                libfunc.loc_prototype,
                 format!("declaration of function '{}'", libfunc.id),
             ));
 
