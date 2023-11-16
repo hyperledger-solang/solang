@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sema::ast;
 use crate::lir::instructions::Instruction;
-use crate::lir::printer::Printer;
 use crate::lir::lir_type::{InternalCallTy, PhiInput};
+use crate::lir::printer::Printer;
+use crate::sema::ast;
 use std::io::Write;
 
 impl Printer {
@@ -227,7 +227,9 @@ impl Printer {
                     write!(f, ";").unwrap();
                 }
             },
-            Instruction::Call { res, call, args, .. } => {
+            Instruction::Call {
+                res, call, args, ..
+            } => {
                 // lhs: %0, %1, ...
                 for (i, id) in res.iter().enumerate() {
                     let res_op = self.get_var_operand(id);

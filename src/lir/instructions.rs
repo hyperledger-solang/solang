@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen;
-use crate::sema::ast::{CallTy, ExternalCallAccounts};
 use crate::lir::expressions::{Expression, Operand};
 use crate::lir::lir_type::InternalCallTy;
+use crate::sema::ast::{CallTy, ExternalCallAccounts};
 use solang_parser::pt::Loc;
 
 use super::lir_type::PhiInput;

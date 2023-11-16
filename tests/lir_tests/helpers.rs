@@ -2,12 +2,15 @@
 
 use indexmap::IndexMap;
 use num_bigint::BigInt;
-use solang::{lir::{
-    expressions::{BinaryOperator, Expression, Operand, UnaryOperator},
-    printer::Printer,
-    lir_type::Type,
-    vartable::Vartable,
-}, sema::ast};
+use solang::{
+    lir::{
+        expressions::{BinaryOperator, Expression, Operand, UnaryOperator},
+        lir_type::Type,
+        printer::Printer,
+        vartable::Vartable,
+    },
+    sema::ast,
+};
 use solang_parser::pt::Loc;
 
 pub(crate) fn binop_expr(left: Operand, op: BinaryOperator, right: Operand) -> Expression {
@@ -114,5 +117,5 @@ pub fn new_vartable() -> Vartable {
 }
 
 pub fn set_tmp(v: &mut Vartable, id: usize, ty: Type) {
-    v.set_tmp( id, ty, /*mock value*/ ast::Type::Void);
+    v.set_tmp(id, ty, /*mock value*/ ast::Type::Void);
 }

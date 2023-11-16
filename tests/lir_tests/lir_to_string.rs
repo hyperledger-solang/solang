@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 use solang::lir::printer::Printer;
 use solang::lir::vartable::Var;
 use solang::lir::{instructions::Instruction, lir_type::Type, vartable::Vartable, Block, LIR};
-use solang::sema::ast::{Parameter, self};
+use solang::sema::ast::{self, Parameter};
 use solang_parser::pt::{Identifier, Loc};
 
 #[test]

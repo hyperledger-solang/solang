@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::lir_tests::helpers::{
-    binop_expr, bool_literal, identifier, new_printer, new_vartable, num_literal, unop_expr, set_tmp,
+    binop_expr, bool_literal, identifier, new_printer, new_vartable, num_literal, set_tmp,
+    unop_expr,
 };
 use crate::stringfy_expr;
 use crate::{new_printer, num_literal};
@@ -727,7 +728,8 @@ fn test_stringfy_load_expr() {
 #[test]
 fn test_stringfy_struct_member_expr() {
     let mut v = new_vartable();
-    set_tmp(&mut v, 
+    set_tmp(
+        &mut v,
         1,
         Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
     );
@@ -752,21 +754,24 @@ fn test_stringfy_struct_member_expr() {
 fn test_stringfy_subscript_expr() {
     let mut v = new_vartable();
 
-    set_tmp(&mut v, 
+    set_tmp(
+        &mut v,
         1,
         Type::Ptr(Box::new(Type::Array(
             Box::new(Type::Uint(8)),
             vec![ArrayLength::Fixed(BigInt::from(2))],
         ))),
     );
-    set_tmp(&mut v, 
+    set_tmp(
+        &mut v,
         2,
         Type::Ptr(Box::new(Type::Array(
             Box::new(Type::Uint(8)),
             vec![ArrayLength::Dynamic],
         ))),
     );
-    set_tmp(&mut v, 
+    set_tmp(
+        &mut v,
         3,
         Type::Ptr(Box::new(Type::Array(
             Box::new(Type::Uint(8)),
@@ -819,7 +824,8 @@ fn test_stringfy_subscript_expr() {
 #[test]
 fn test_stringfy_advance_pointer_expr() {
     let mut v = new_vartable();
-    set_tmp(&mut v, 
+    set_tmp(
+        &mut v,
         1,
         Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
     );
@@ -1086,7 +1092,8 @@ fn test_stringfy_string_concat() {
 fn test_stringfy_storage_array_length() {
     let mut v = new_vartable();
 
-    set_tmp(&mut v, 
+    set_tmp(
+        &mut v,
         1,
         Type::StoragePtr(
             false,

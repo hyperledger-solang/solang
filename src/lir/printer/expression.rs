@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sema::ast::StringLocation;
 use crate::lir::expressions::{Expression, Operand};
 use crate::lir::printer::Printer;
+use crate::sema::ast::StringLocation;
 use std::io::Write;
 
 impl Printer {
@@ -202,7 +202,9 @@ impl Printer {
                 });
                 write!(f, ")").unwrap();
             }
-            Expression::InternalFunctionCfg { cfg_no, .. } => write!(f, "function#{}", cfg_no).unwrap(),
+            Expression::InternalFunctionCfg { cfg_no, .. } => {
+                write!(f, "function#{}", cfg_no).unwrap()
+            }
             Expression::Keccak256 { args, .. } => {
                 write!(f, "keccak256(").unwrap();
                 args.iter().enumerate().for_each(|(i, arg)| {

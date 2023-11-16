@@ -3,8 +3,8 @@
 pub mod converter;
 pub mod expressions;
 pub mod instructions;
-pub mod printer;
 pub mod lir_type;
+pub mod printer;
 pub mod vartable;
 
 use crate::codegen::cfg::ASTFunction;

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen;
-use crate::sema::ast::{FormatArg, StringLocation};
 use crate::lir::lir_type::Type;
+use crate::sema::ast::{FormatArg, StringLocation};
 use num_bigint::BigInt;
 use solang_parser::pt::Loc;
 use std::fmt;

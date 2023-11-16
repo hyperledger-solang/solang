@@ -2,9 +2,9 @@
 
 use std::fmt;
 
+use crate::lir::expressions::Operand;
 use crate::sema::ast;
 use crate::sema::ast::ArrayLength;
-use crate::lir::expressions::Operand;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StructType {
