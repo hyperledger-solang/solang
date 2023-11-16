@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use solang_parser::pt::Loc;
+
 use crate::codegen::cfg::Instr;
 use crate::lir::converter::Converter;
 use crate::lir::instructions::Instruction;
@@ -10,7 +12,7 @@ impl Converter<'_> {
         &self,
         instr: &Instr,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
         match instr {
             Instr::Nop => {
@@ -27,9 +29,10 @@ impl Converter<'_> {
             }
             Instr::Store { dest, data } => {
                 // type checking the dest.ty() and data.ty()
-                let dest_op = self.to_operand_and_insns(dest, vartable, &mut results);
-                let data_op = self.to_operand_and_insns(data, vartable, &mut results);
+                let dest_op = self.to_operand_and_insns(dest, vartable, results);
+                let data_op = self.to_operand_and_insns(data, vartable, results);
                 results.push(Instruction::Store {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     dest: dest_op,
                     data: data_op,
                 });
@@ -37,8 +40,9 @@ impl Converter<'_> {
             Instr::PushMemory {
                 res, array, value, ..
             } => {
-                let value_op = self.to_operand_and_insns(value, vartable, &mut results);
+                let value_op = self.to_operand_and_insns(value, vartable, results);
                 results.push(Instruction::PushMemory {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     res: *res,
                     array: *array,
                     value: value_op,
@@ -55,15 +59,19 @@ impl Converter<'_> {
             }
 
             Instr::Branch { block } => {
-                results.push(Instruction::Branch { block: *block });
+                results.push(Instruction::Branch {
+                    loc: /*missing from cfg*/ Loc::Codegen,
+                    block: *block,
+                });
             }
             Instr::BranchCond {
                 cond,
                 true_block,
                 false_block,
             } => {
-                let cond_op = self.to_operand_and_insns(cond, vartable, &mut results);
+                let cond_op = self.to_operand_and_insns(cond, vartable, results);
                 results.push(Instruction::BranchCond {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     cond: cond_op,
                     true_block: *true_block,
                     false_block: *false_block,
@@ -72,62 +80,76 @@ impl Converter<'_> {
             Instr::Return { value } => {
                 let mut operands = vec![];
                 for v in value {
-                    let tmp = self.to_operand_and_insns(v, vartable, &mut results);
+                    let tmp = self.to_operand_and_insns(v, vartable, results);
                     operands.push(tmp);
                 }
-                results.push(Instruction::Return { value: operands });
+                results.push(Instruction::Return {
+                    loc: /*missing from cfg*/ Loc::Codegen,
+                    value: operands,
+                });
             }
             Instr::AssertFailure { encoded_args } => match encoded_args {
                 Some(args) => {
-                    let tmp = self.to_operand_and_insns(args, vartable, &mut results);
+                    let tmp = self.to_operand_and_insns(args, vartable, results);
                     results.push(Instruction::AssertFailure {
+                        loc: /*missing from cfg*/ Loc::Codegen,
                         encoded_args: Some(tmp),
                     });
                 }
                 None => {
-                    results.push(Instruction::AssertFailure { encoded_args: None });
+                    results.push(Instruction::AssertFailure {
+                        loc: /*missing from cfg*/ Loc::Codegen,
+                        encoded_args: None,
+                    });
                 }
             },
             Instr::Call {
                 res, call, args, ..
             } => {
                 // resolve the function
-                let callty = self.to_internal_call_ty_and_insns(call, vartable, &mut results);
+                let callty = self.to_internal_call_ty_and_insns(call, vartable, results);
 
                 // resolve the arguments
                 let mut arg_ops = vec![];
                 for arg in args {
-                    let tmp = self.to_operand_and_insns(arg, vartable, &mut results);
+                    let tmp = self.to_operand_and_insns(arg, vartable, results);
                     arg_ops.push(tmp);
                 }
 
                 results.push(Instruction::Call {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     res: res.clone(),
                     call: callty,
                     args: arg_ops,
                 });
             }
             Instr::Print { expr } => {
-                let tmp = self.to_operand_and_insns(expr, vartable, &mut results);
-                results.push(Instruction::Print { operand: tmp });
+                let tmp = self.to_operand_and_insns(expr, vartable, results);
+                results.push(Instruction::Print {
+                    loc: /*missing from cfg*/ Loc::Codegen,
+                    operand: tmp,
+                });
             }
             Instr::LoadStorage { res, storage, .. } => {
-                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results);
+                let storage_op = self.to_operand_and_insns(storage, vartable, results);
                 results.push(Instruction::LoadStorage {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     res: *res,
                     storage: storage_op,
                 });
             }
             Instr::ClearStorage { storage, .. } => {
-                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results);
+                let storage_op = self.to_operand_and_insns(storage, vartable, results);
                 results.push(Instruction::ClearStorage {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     storage: storage_op,
                 });
             }
             Instr::SetStorage { value, storage, .. } => {
-                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results);
-                let value_op = self.to_operand_and_insns(value, vartable, &mut results);
+                let storage_op = self.to_operand_and_insns(storage, vartable, results);
+                let value_op = self.to_operand_and_insns(value, vartable, results);
                 results.push(Instruction::SetStorage {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     value: value_op,
                     storage: storage_op,
                 });
@@ -137,10 +159,11 @@ impl Converter<'_> {
                 storage,
                 offset,
             } => {
-                let value_op = self.to_operand_and_insns(value, vartable, &mut results);
-                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results);
-                let offset_op = self.to_operand_and_insns(offset, vartable, &mut results);
+                let value_op = self.to_operand_and_insns(value, vartable, results);
+                let storage_op = self.to_operand_and_insns(storage, vartable, results);
+                let offset_op = self.to_operand_and_insns(offset, vartable, results);
                 results.push(Instruction::SetStorageBytes {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     value: value_op,
                     storage: storage_op,
                     offset: offset_op,
@@ -152,17 +175,19 @@ impl Converter<'_> {
                 storage,
                 ..
             } => {
-                let value_op = self.to_operand_option_and_insns(value, vartable, &mut results);
-                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results);
+                let value_op = self.to_operand_option_and_insns(value, vartable, results);
+                let storage_op = self.to_operand_and_insns(storage, vartable, results);
                 results.push(Instruction::PushStorage {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     res: *res,
                     value: value_op,
                     storage: storage_op,
                 });
             }
             Instr::PopStorage { res, storage, .. } => {
-                let storage_op = self.to_operand_and_insns(storage, vartable, &mut results);
+                let storage_op = self.to_operand_and_insns(storage, vartable, results);
                 results.push(Instruction::PopStorage {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     res: *res,
                     storage: storage_op,
                 });
@@ -180,14 +205,14 @@ impl Converter<'_> {
                 contract_function_no,
                 flags,
             } => {
-                let address_op = self.to_operand_option_and_insns(address, vartable, &mut results);
+                let address_op = self.to_operand_option_and_insns(address, vartable, results);
                 let accounts_op =
-                    self.to_external_call_accounts_and_insns(accounts, vartable, &mut results);
-                let seeds_op = self.to_operand_option_and_insns(seeds, vartable, &mut results);
-                let payload_op = self.to_operand_and_insns(payload, vartable, &mut results);
-                let value_op = self.to_operand_and_insns(value, vartable, &mut results);
-                let gas_op = self.to_operand_and_insns(gas, vartable, &mut results);
-                let flags_op = self.to_operand_option_and_insns(flags, vartable, &mut results);
+                    self.to_external_call_accounts_and_insns(accounts, vartable, results);
+                let seeds_op = self.to_operand_option_and_insns(seeds, vartable, results);
+                let payload_op = self.to_operand_and_insns(payload, vartable, results);
+                let value_op = self.to_operand_and_insns(value, vartable, results);
+                let gas_op = self.to_operand_and_insns(gas, vartable, results);
+                let flags_op = self.to_operand_option_and_insns(flags, vartable, results);
 
                 results.push(Instruction::ExternalCall {
                     loc: *loc,
@@ -208,40 +233,46 @@ impl Converter<'_> {
                 address,
                 value,
             } => {
-                let address_op = self.to_operand_and_insns(address, vartable, &mut results);
-                let value_op = self.to_operand_and_insns(value, vartable, &mut results);
+                let address_op = self.to_operand_and_insns(address, vartable, results);
+                let value_op = self.to_operand_and_insns(value, vartable, results);
                 results.push(Instruction::ValueTransfer {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     success: *success,
                     address: address_op,
                     value: value_op,
                 });
             }
             Instr::SelfDestruct { recipient } => {
-                let tmp = self.to_operand_and_insns(recipient, vartable, &mut results);
-                results.push(Instruction::SelfDestruct { recipient: tmp });
+                let tmp = self.to_operand_and_insns(recipient, vartable, results);
+                results.push(Instruction::SelfDestruct {
+                    loc: /*missing from cfg*/ Loc::Codegen,
+                    recipient: tmp,
+                });
             }
             Instr::EmitEvent {
                 event_no,
                 data,
                 topics,
             } => {
-                let data_op = self.to_operand_and_insns(data, vartable, &mut results);
+                let data_op = self.to_operand_and_insns(data, vartable, results);
                 let mut topic_ops = vec![];
                 for topic in topics {
-                    let topic_op = self.to_operand_and_insns(topic, vartable, &mut results);
+                    let topic_op = self.to_operand_and_insns(topic, vartable, results);
                     topic_ops.push(topic_op);
                 }
                 results.push(Instruction::EmitEvent {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     event_no: *event_no,
                     data: data_op,
                     topics: topic_ops,
                 });
             }
             Instr::WriteBuffer { buf, offset, value } => {
-                let buf_op = self.to_operand_and_insns(buf, vartable, &mut results);
-                let offset_op = self.to_operand_and_insns(offset, vartable, &mut results);
-                let value_op = self.to_operand_and_insns(value, vartable, &mut results);
+                let buf_op = self.to_operand_and_insns(buf, vartable, results);
+                let offset_op = self.to_operand_and_insns(offset, vartable, results);
+                let value_op = self.to_operand_and_insns(value, vartable, results);
                 results.push(Instruction::WriteBuffer {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     buf: buf_op,
                     offset: offset_op,
                     value: value_op,
@@ -252,10 +283,11 @@ impl Converter<'_> {
                 destination,
                 bytes,
             } => {
-                let source_op = self.to_operand_and_insns(source, vartable, &mut results);
-                let dest_op = self.to_operand_and_insns(destination, vartable, &mut results);
-                let bytes_op = self.to_operand_and_insns(bytes, vartable, &mut results);
+                let source_op = self.to_operand_and_insns(source, vartable, results);
+                let dest_op = self.to_operand_and_insns(destination, vartable, results);
+                let bytes_op = self.to_operand_and_insns(bytes, vartable, results);
                 results.push(Instruction::MemCopy {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     src: source_op,
                     dest: dest_op,
                     bytes: bytes_op,
@@ -266,33 +298,40 @@ impl Converter<'_> {
                 cases,
                 default,
             } => {
-                let cond_op = self.to_operand_and_insns(cond, vartable, &mut results);
+                let cond_op = self.to_operand_and_insns(cond, vartable, results);
 
                 let mut case_ops = vec![];
                 for (case, block_no) in cases {
-                    let case_op = self.to_operand_and_insns(case, vartable, &mut results);
+                    let case_op = self.to_operand_and_insns(case, vartable, results);
                     case_ops.push((case_op, *block_no));
                 }
 
                 results.push(Instruction::Switch {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     cond: cond_op,
                     cases: case_ops,
                     default: *default,
                 });
             }
             Instr::ReturnData { data, data_len } => {
-                let data_op = self.to_operand_and_insns(data, vartable, &mut results);
-                let data_len_op = self.to_operand_and_insns(data_len, vartable, &mut results);
+                let data_op = self.to_operand_and_insns(data, vartable, results);
+                let data_len_op = self.to_operand_and_insns(data_len, vartable, results);
                 results.push(Instruction::ReturnData {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     data: data_op,
                     data_len: data_len_op,
                 });
             }
             Instr::ReturnCode { code } => {
-                results.push(Instruction::ReturnCode { code: code.clone() });
+                results.push(Instruction::ReturnCode {
+                    loc: /*missing from cfg*/ Loc::Codegen,
+                    code: code.clone(),
+                });
             }
             Instr::Unimplemented { .. } => unreachable!("Unimplemented should be removed"),
-            Instr::AccountAccess { .. } => unreachable!("AccountAccess should be replaced by Subscript"),
+            Instr::AccountAccess { .. } => {
+                unreachable!("AccountAccess should be replaced by Subscript")
+            }
             Instr::Constructor {
                 success,
                 res,
@@ -307,14 +346,14 @@ impl Converter<'_> {
                 accounts,
                 loc,
             } => {
-                let args_op = self.to_operand_and_insns(encoded_args, vartable, &mut results);
-                let value_op = self.to_operand_option_and_insns(value, vartable, &mut results);
-                let gas_op = self.to_operand_and_insns(gas, vartable, &mut results);
-                let salt_op = self.to_operand_option_and_insns(salt, vartable, &mut results);
-                let address_op = self.to_operand_option_and_insns(address, vartable, &mut results);
-                let seeds_op = self.to_operand_option_and_insns(seeds, vartable, &mut results);
+                let args_op = self.to_operand_and_insns(encoded_args, vartable, results);
+                let value_op = self.to_operand_option_and_insns(value, vartable, results);
+                let gas_op = self.to_operand_and_insns(gas, vartable, results);
+                let salt_op = self.to_operand_option_and_insns(salt, vartable, results);
+                let address_op = self.to_operand_option_and_insns(address, vartable, results);
+                let seeds_op = self.to_operand_option_and_insns(seeds, vartable, results);
                 let accounts =
-                    self.to_external_call_accounts_and_insns(accounts, vartable, &mut results);
+                    self.to_external_call_accounts_and_insns(accounts, vartable, results);
 
                 results.push(Instruction::Constructor {
                     loc: *loc,

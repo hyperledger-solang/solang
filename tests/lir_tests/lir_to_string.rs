@@ -16,10 +16,12 @@ fn test_stringfy_cfg() {
             String::from("entry"),
             vec![
                 Instruction::LoadStorage {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     res: 0,
                     storage: identifier(3),
                 },
                 Instruction::BranchCond {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     cond: identifier(0),
                     true_block: 1,
                     false_block: 2,
@@ -30,23 +32,26 @@ fn test_stringfy_cfg() {
             String::from("blk1"),
             vec![
                 Instruction::Print {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     operand: num_literal!(1),
                 },
-                Instruction::Branch { block: 3 },
+                Instruction::Branch { loc: /*missing from cfg*/ Loc::Codegen, block: 3 },
             ],
         ),
         new_block(
             String::from("blk2"),
             vec![
                 Instruction::Print {
+                    loc: /*missing from cfg*/ Loc::Codegen,
                     operand: num_literal!(2),
                 },
-                Instruction::Branch { block: 3 },
+                Instruction::Branch { loc: /*missing from cfg*/ Loc::Codegen, block: 3 },
             ],
         ),
         new_block(
             String::from("exit"),
             vec![Instruction::ReturnData {
+                loc: /*missing from cfg*/ Loc::Codegen,
                 data: identifier(0),
                 data_len: num_literal!(1),
             }],

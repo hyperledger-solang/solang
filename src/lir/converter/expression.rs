@@ -5,11 +5,11 @@ use core::panic;
 use solang_parser::pt::Loc;
 
 use crate::codegen;
-use crate::sema::ast;
 use crate::lir::converter::Converter;
 use crate::lir::expressions::{BinaryOperator, Expression, Operand, UnaryOperator};
 use crate::lir::instructions::Instruction;
 use crate::lir::vartable::Vartable;
+use crate::sema::ast;
 
 impl Converter<'_> {
     pub(crate) fn lowering_expression(
@@ -411,14 +411,15 @@ impl Converter<'_> {
         pointer: &codegen::Expression,
         bytes_offset: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let pointer_op = self.to_operand_and_insns(pointer, vartable, &mut results);
-        let bytes_offset_op = self.to_operand_and_insns(bytes_offset, vartable, &mut results);
+        let pointer_op = self.to_operand_and_insns(pointer, vartable, results);
+        let bytes_offset_op = self.to_operand_and_insns(bytes_offset, vartable, results);
         results.push(Instruction::Set {
             loc: Loc::Codegen,
             res: dest.get_id(),
             expr: Expression::AdvancePointer {
+                loc: /*missing from cfg*/ Loc::Codegen,
                 pointer: Box::new(pointer_op),
                 bytes_offset: Box::new(bytes_offset_op),
             },
@@ -432,9 +433,9 @@ impl Converter<'_> {
         ty: &ast::Type,
         expr: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let from_op = self.to_operand_and_insns(expr, vartable, &mut results);
+        let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -453,9 +454,9 @@ impl Converter<'_> {
         ty: &ast::Type,
         expr: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let from_op = self.to_operand_and_insns(expr, vartable, &mut results);
+        let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -474,10 +475,10 @@ impl Converter<'_> {
         expr: &codegen::Expression,
         index: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let array_op = self.to_operand_and_insns(expr, vartable, &mut results);
-        let index_op = self.to_operand_and_insns(index, vartable, &mut results);
+        let array_op = self.to_operand_and_insns(expr, vartable, results);
+        let index_op = self.to_operand_and_insns(index, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -496,9 +497,9 @@ impl Converter<'_> {
         expr: &codegen::Expression,
         member: &usize,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let struct_op = self.to_operand_and_insns(expr, vartable, &mut results);
+        let struct_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -517,11 +518,11 @@ impl Converter<'_> {
         ty: &ast::Type,
         values: &[codegen::Expression],
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
         let value_ops = values
             .iter()
-            .map(|value| self.to_operand_and_insns(value, vartable, &mut results))
+            .map(|value| self.to_operand_and_insns(value, vartable, results))
             .collect::<Vec<Operand>>();
 
         results.push(Instruction::Set {
@@ -542,10 +543,10 @@ impl Converter<'_> {
         left: &ast::StringLocation<codegen::Expression>,
         right: &ast::StringLocation<codegen::Expression>,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let left_string_loc = self.to_string_location_and_insns(left, vartable, &mut results);
-        let right_string_loc = self.to_string_location_and_insns(right, vartable, &mut results);
+        let left_string_loc = self.to_string_location_and_insns(left, vartable, results);
+        let right_string_loc = self.to_string_location_and_insns(right, vartable, results);
 
         results.push(Instruction::Set {
             loc: *loc,
@@ -564,9 +565,9 @@ impl Converter<'_> {
         loc: &Loc,
         array: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let array_op = self.to_operand_and_insns(array, vartable, &mut results);
+        let array_op = self.to_operand_and_insns(array, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -584,9 +585,9 @@ impl Converter<'_> {
         ty: &ast::Type,
         expr: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let tmp = self.to_operand_and_insns(expr, vartable, &mut results);
+        let tmp = self.to_operand_and_insns(expr, vartable, results);
         let sext = Expression::SignExt {
             loc: *loc,
             operand: Box::new(tmp),
@@ -605,9 +606,9 @@ impl Converter<'_> {
         loc: &Loc,
         expr: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let from_op = self.to_operand_and_insns(expr, vartable, &mut results);
+        let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -624,11 +625,11 @@ impl Converter<'_> {
         loc: &Loc,
         exprs: &Vec<codegen::Expression>,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
         let mut expr_ops = vec![];
         for expr in exprs {
-            let op = self.to_operand_and_insns(expr, vartable, &mut results);
+            let op = self.to_operand_and_insns(expr, vartable, results);
             expr_ops.push(op);
         }
         results.push(Instruction::Set {
@@ -647,9 +648,9 @@ impl Converter<'_> {
         loc: &Loc,
         expr: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let from_op = self.to_operand_and_insns(expr, vartable, &mut results);
+        let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -690,11 +691,11 @@ impl Converter<'_> {
         loc: &Loc,
         args: &Vec<(ast::FormatArg, codegen::Expression)>,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
         let mut arg_ops = vec![];
         for (format, arg) in args {
-            let op = self.to_operand_and_insns(arg, vartable, &mut results);
+            let op = self.to_operand_and_insns(arg, vartable, results);
             arg_ops.push((*format, op));
         }
         results.push(Instruction::Set {
@@ -715,11 +716,11 @@ impl Converter<'_> {
         dimensions: &[u32],
         values: &[codegen::Expression],
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
         let value_ops = values
             .iter()
-            .map(|value| self.to_operand_and_insns(value, vartable, &mut results))
+            .map(|value| self.to_operand_and_insns(value, vartable, results))
             .collect::<Vec<Operand>>();
 
         results.push(Instruction::Set {
@@ -741,9 +742,9 @@ impl Converter<'_> {
         ty: &ast::Type,
         expr: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let from_op = self.to_operand_and_insns(expr, vartable, &mut results);
+        let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -762,9 +763,9 @@ impl Converter<'_> {
         expr: &codegen::Expression,
         ty: &ast::Type,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let from_op = self.to_operand_and_insns(expr, vartable, &mut results);
+        let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -783,11 +784,11 @@ impl Converter<'_> {
         kind: &crate::codegen::Builtin,
         args: &Vec<codegen::Expression>,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
         let mut arg_ops = vec![];
         for arg in args {
-            let op = self.to_operand_and_insns(arg, vartable, &mut results);
+            let op = self.to_operand_and_insns(arg, vartable, results);
             arg_ops.push(op);
         }
         results.push(Instruction::Set {
@@ -810,10 +811,10 @@ impl Converter<'_> {
         left: &codegen::Expression,
         right: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let left_op = self.to_operand_and_insns(left, vartable, &mut results);
-        let right_op = self.to_operand_and_insns(right, vartable, &mut results);
+        let left_op = self.to_operand_and_insns(left, vartable, results);
+        let right_op = self.to_operand_and_insns(right, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -833,9 +834,9 @@ impl Converter<'_> {
         operator: UnaryOperator,
         expr: &codegen::Expression,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let expr_op = self.to_operand_and_insns(expr, vartable, &mut results);
+        let expr_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -855,9 +856,9 @@ impl Converter<'_> {
         size: &codegen::Expression,
         initializer: &Option<Vec<u8>>,
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
-        let size_op = self.to_operand_and_insns(size, vartable, &mut results);
+        let size_op = self.to_operand_and_insns(size, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
             res: dest.get_id(),
@@ -936,11 +937,11 @@ impl Converter<'_> {
         dimensions: &[u32],
         values: &[codegen::Expression],
         vartable: &mut Vartable,
-        mut results: &mut Vec<Instruction>,
+        results: &mut Vec<Instruction>,
     ) {
         let value_ops = values
             .iter()
-            .map(|value| self.to_operand_and_insns(value, vartable, &mut results))
+            .map(|value| self.to_operand_and_insns(value, vartable, results))
             .collect::<Vec<Operand>>();
 
         results.push(Instruction::Set {
@@ -961,7 +962,7 @@ impl Converter<'_> {
         cfg_no: &usize,
         results: &mut Vec<Instruction>,
     ) {
-        let expr = Expression::InternalFunctionCfg { cfg_no: *cfg_no };
+        let expr = Expression::InternalFunctionCfg { loc: /*missing from cfg*/ Loc::Codegen, cfg_no: *cfg_no };
         results.push(Instruction::Set {
             loc: Loc::Codegen,
             res: dest.get_id(),

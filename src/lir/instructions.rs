@@ -16,10 +16,12 @@ pub enum Instruction {
     /*************************** Contract As Callee ***************************/
     // Return data to the outside callers
     ReturnData {
+        loc: Loc,
         data: Operand,
         data_len: Operand,
     },
     ReturnCode {
+        loc: Loc,
         code: codegen::cfg::ReturnCode,
     },
 
@@ -31,20 +33,23 @@ pub enum Instruction {
         expr: Expression,
     },
     Store {
+        loc: Loc,
         dest: Operand,
         data: Operand,
     },
     PushMemory {
+        loc: Loc,
         res: usize,
         array: usize,
         value: Operand,
     },
     PopMemory {
+        loc: Loc,
         res: usize,
         array: usize,
-        loc: Loc,
     },
     Constructor {
+        loc: Loc,
         success: Option<usize>,
         res: usize,
         contract_no: usize,
@@ -56,32 +61,37 @@ pub enum Instruction {
         address: Option<Operand>,
         seeds: Option<Operand>,
         accounts: ExternalCallAccounts<Operand>,
-        loc: Loc,
     },
 
     /*************************** Storage Access ***************************/
     LoadStorage {
+        loc: Loc,
         res: usize,
         storage: Operand,
     },
     ClearStorage {
+        loc: Loc,
         storage: Operand,
     },
     SetStorage {
+        loc: Loc,
         value: Operand,
         storage: Operand,
     },
     SetStorageBytes {
+        loc: Loc,
         value: Operand,
         storage: Operand,
         offset: Operand,
     },
     PushStorage {
+        loc: Loc,
         res: usize,
         value: Option<Operand>,
         storage: Operand,
     },
     PopStorage {
+        loc: Loc,
         res: Option<usize>,
         storage: Operand,
     },
@@ -89,15 +99,18 @@ pub enum Instruction {
     /*************************** Function Calls ***************************/
     // Call internal function, either static dispatch or dynamic dispatch
     Call {
+        loc: Loc,
         res: Vec<usize>,
         call: InternalCallTy,
         args: Vec<Operand>,
     },
     // Print to log message
     Print {
+        loc: Loc,
         operand: Operand,
     },
     MemCopy {
+        loc: Loc,
         src: Operand,
         dest: Operand,
         bytes: Operand,
@@ -132,6 +145,7 @@ pub enum Instruction {
     /// Value transfer; either address.send() or address.transfer()
     // transfer tokens from one addr to another
     ValueTransfer {
+        loc: Loc,
         success: Option<usize>,
         address: Operand,
         value: Operand,
@@ -140,14 +154,17 @@ pub enum Instruction {
     // for destructing the contract from inside
     // Note: only available on Polkadot
     SelfDestruct {
+        loc: Loc,
         recipient: Operand,
     },
     EmitEvent {
+        loc: Loc,
         event_no: usize,
         data: Operand,
         topics: Vec<Operand>,
     },
     WriteBuffer {
+        loc: Loc,
         buf: Operand,
         offset: Operand,
         value: Operand,
@@ -155,24 +172,29 @@ pub enum Instruction {
 
     /*************************** Branching ***************************/
     Branch {
+        loc: Loc,
         block: usize,
     },
     BranchCond {
+        loc: Loc,
         cond: Operand,
         true_block: usize,
         false_block: usize,
     },
     Switch {
+        loc: Loc,
         cond: Operand,
         cases: Vec<(Operand, usize)>,
         default: usize,
     },
     Return {
+        loc: Loc,
         value: Vec<Operand>,
     },
 
     /*************************** Error Ctl ***************************/
     AssertFailure {
+        loc: Loc,
         encoded_args: Option<Operand>,
     },
 
@@ -180,6 +202,7 @@ pub enum Instruction {
 
     /*************************** Phi Function ***************************/
     Phi {
+        loc: Loc,
         res: usize,
         vars: Vec<PhiInput>,
     },

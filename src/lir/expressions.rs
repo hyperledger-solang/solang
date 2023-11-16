@@ -175,6 +175,7 @@ pub enum Expression {
     },
     // [b1, b2, b3]
     AdvancePointer {
+        loc: Loc,
         pointer: Box<Operand>,
         bytes_offset: Box<Operand>,
     },
@@ -190,6 +191,7 @@ pub enum Expression {
         args: Vec<(FormatArg, Operand)>,
     },
     InternalFunctionCfg {
+        loc: Loc,
         cfg_no: usize,
     },
     // hash function

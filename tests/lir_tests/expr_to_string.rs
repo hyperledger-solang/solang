@@ -7,9 +7,9 @@ use crate::stringfy_expr;
 use crate::{new_printer, num_literal};
 use num_bigint::BigInt;
 use solang::codegen::Builtin;
-use solang::sema::ast::{self, ArrayLength, FormatArg, StringLocation};
 use solang::lir::expressions::{BinaryOperator, Expression, UnaryOperator};
 use solang::lir::ssa_type::{StructType, Type};
+use solang::sema::ast::{self, ArrayLength, FormatArg, StringLocation};
 use solang_parser::pt::Loc;
 
 #[test]
@@ -831,6 +831,7 @@ fn test_stringfy_advance_pointer_expr() {
         stringfy_expr!(
             &printer,
             &Expression::AdvancePointer {
+                loc: /*missing from cfg*/ Loc::Codegen,
                 pointer: Box::new(identifier(1)),
                 bytes_offset: Box::new(identifier(2)),
             }
@@ -843,6 +844,7 @@ fn test_stringfy_advance_pointer_expr() {
         stringfy_expr!(
             &printer,
             &Expression::AdvancePointer {
+                loc: /*missing from cfg*/ Loc::Codegen,
                 pointer: Box::new(identifier(1)),
                 bytes_offset: Box::new(num_literal!(1)),
             }
@@ -954,7 +956,7 @@ fn test_stringfy_internal_function_cfg_expr() {
     assert_eq!(
         stringfy_expr!(
             &new_printer!(),
-            &Expression::InternalFunctionCfg { cfg_no: 123 }
+            &Expression::InternalFunctionCfg { loc: /*missing from cfg*/ Loc::Codegen, cfg_no: 123 }
         ),
         "function#123"
     );

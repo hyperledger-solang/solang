@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
+use crate::codegen::cfg::BasicBlock;
+use crate::lir::{Block, LIR};
 use crate::{
     codegen::{
         self,
         cfg::{self, ControlFlowGraph},
     },
-    sema::ast::{self, Namespace, RetrieveType},
+    sema::ast::{self, Namespace, Parameter, RetrieveType},
 };
 
 use super::{
@@ -14,7 +16,6 @@ use super::{
     vartable::Vartable,
 };
 
-mod converter;
 mod expression;
 mod instruction;
 mod ssa_type;
@@ -88,13 +89,13 @@ impl<'input> Converter<'input> {
         &self,
         expr: &codegen::Expression,
         vartable: &mut Vartable,
-        mut result: &mut Vec<Instruction>,
+        result: &mut Vec<Instruction>,
     ) -> Operand {
         match self.to_operand(expr, vartable) {
             Some(op) => op,
             None => {
                 let tmp = vartable.new_temp(&self.from_ast_type(&expr.ty()));
-                self.lowering_expression(&tmp, expr, vartable, &mut result);
+                self.lowering_expression(&tmp, expr, vartable, result);
                 tmp
             }
         }
@@ -162,13 +163,75 @@ impl<'input> Converter<'input> {
             cfg::InternalCallTy::Builtin { ast_func_no } => InternalCallTy::Builtin {
                 ast_func_no: *ast_func_no,
             },
-            cfg::InternalCallTy::Static { cfg_no } => {
-                InternalCallTy::Static { cfg_no: *cfg_no }
-            }
+            cfg::InternalCallTy::Static { cfg_no } => InternalCallTy::Static { cfg_no: *cfg_no },
             cfg::InternalCallTy::Dynamic(expr) => {
                 let tmp = self.to_operand_and_insns(expr, vartable, result);
                 InternalCallTy::Dynamic(tmp)
             }
+        }
+    }
+
+    pub fn get_lir(&self) -> LIR {
+        let mut vartable = self.from_vars(&self.cfg.vars);
+
+        let blocks = self
+            .cfg
+            .blocks
+            .iter()
+            .map(|block| self.lowering_basic_block(block, &mut vartable))
+            .collect::<Vec<Block>>();
+
+        let params = self
+            .cfg
+            .params
+            .iter()
+            .map(|p| self.to_ssa_typed_parameter(p))
+            .collect::<Vec<Parameter<Type>>>();
+
+        let returns = self
+            .cfg
+            .returns
+            .iter()
+            .map(|p| self.to_ssa_typed_parameter(p))
+            .collect::<Vec<Parameter<Type>>>();
+
+        LIR {
+            name: self.cfg.name.clone(),
+            function_no: self.cfg.function_no,
+            params,
+            returns,
+            vartable,
+            blocks,
+            nonpayable: self.cfg.nonpayable,
+            public: self.cfg.public,
+            ty: self.cfg.ty,
+            selector: self.cfg.selector.clone(),
+        }
+    }
+
+    fn lowering_basic_block(&self, basic_block: &BasicBlock, vartable: &mut Vartable) -> Block {
+        let mut instructions = vec![];
+        for insn in &basic_block.instr {
+            self.lowering_instr(insn, vartable, &mut instructions);
+        }
+
+        Block {
+            name: basic_block.name.clone(),
+            instructions,
+        }
+    }
+
+    fn to_ssa_typed_parameter(&self, param: &Parameter<ast::Type>) -> Parameter<Type> {
+        Parameter {
+            loc: param.loc,
+            id: param.id.clone(),
+            ty: self.from_ast_type(&param.ty),
+            ty_loc: param.ty_loc,
+            indexed: param.indexed,
+            readonly: param.readonly,
+            infinite_size: param.infinite_size,
+            recursive: param.recursive,
+            annotation: param.annotation.clone(),
         }
     }
 }

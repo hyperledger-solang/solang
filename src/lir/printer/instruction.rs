@@ -16,7 +16,7 @@ impl Printer {
     pub fn print_insn(&self, f: &mut dyn Write, insn: &Instruction) {
         match insn {
             Instruction::Nop => write!(f, "nop;").unwrap(),
-            Instruction::ReturnData { data, data_len } => {
+            Instruction::ReturnData { data, data_len, .. } => {
                 write!(f, "return_data ").unwrap();
                 self.print_rhs_operand(f, data);
                 write!(f, " of length ",).unwrap();
@@ -227,7 +227,7 @@ impl Printer {
                     write!(f, ";").unwrap();
                 }
             },
-            Instruction::Call { res, call, args } => {
+            Instruction::Call { res, call, args, .. } => {
                 // lhs: %0, %1, ...
                 for (i, id) in res.iter().enumerate() {
                     let res_op = self.get_var_operand(id);
