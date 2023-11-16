@@ -2,20 +2,32 @@ Interacting with smart contracts on the command line
 ====================================================
 Solang Aqd (عَقد, meaning "contract" in Arabic), is a Command-Line Interface (CLI) tool 
 designed for easy interaction with smart contracts on Solana and Polkadot blockchains.
-It simplifies the process of deploying smart contracts and executing specific functions on these contracts. 
-This documentation provides essential guidance for using ``solang-aqd`` effectively.
+It simplifies the process of deploying smart contracts and executing specific functions on these contracts.
+
+Solang Aqd distinguishes itself by offering seamless integration with Solang-compiled contracts and is actively maintained by the Solang team. 
+When it comes to Polkadot, Solang Aqd focuses specifically on essential commands for node interactions with on-chain contracts. 
+In the case of Solana, Solang Aqd fills a notable gap as there currently isn't a dedicated tool for calling specific functions on deployed Solana contracts.
 
 
 Installation
 ____________
 
-To install `solang-aqd`, run this command:
+As of now, the only available method to install ``solang-aqd`` is via Cargo. Run the following command:
 
 .. code-block:: bash
 
     cargo install --force --locked aqd
     
 To update to the latest version, use the same command.
+
+
+.. note::
+
+    If you're interested in a specific target, you can use feature flags. For example, to install with only the Solana target, use:
+
+    .. code-block:: bash
+
+        cargo install --force --locked aqd --no-default-features --features solana
 
 
 Submitting extrinsics to Polkadot on-chain
@@ -25,8 +37,13 @@ The command line syntax for interacting with a program deployed on Polkadot is a
 
 aqd polkadot [SUBCOMMAND] [OPTIONS]... [FILE]
 
-This means that the command line is ``aqd polkadot`` followed by a subcommand followed by any options described below,
+The command line is ``aqd polkadot`` followed by a subcommand followed by any options described below,
 followed by the filename. The filename could be ``.wasm file``, ``.contract`` bundle, or ``.json`` metadata file.
+
+.. note::
+  Under the hood, Solang Aqd utilizes ``cargo-contract`` for submitting extrinsics to Polkadot on-chain. 
+  For detailed documentation of specific parameters, please refer to 
+  `contract extrinsics documentation <https://github.com/paritytech/cargo-contract/blob/master/crates/extrinsics/README.md>`_.
 
 General Options (for all subcommands):
 ++++++++++++++++++++++++++++++++++++++
@@ -74,7 +91,7 @@ General Options (for all subcommands):
     With a password: ``//Alice///SECRET_PASSWORD``
 
 -x, \-\-execute
-  Specifies whether to submit the extrinsic for on-chain execution.
+  Specifies whether to submit the extrinsic for on-chain execution; if not provided, it will perform a dry run and return the result.
 
 \-\-storage-deposit-limit *storage-deposit-limit*
   Specifies the maximum amount of balance that can be charged from the caller to pay for the storage consumed.
@@ -113,7 +130,7 @@ Options specific to the ``instantiate`` subcommand:
   Specifies the name of the contract constructor to call. [default: new]
 
 \-\-args *<args>...*
-  Specifies the arguments of the contract constructor to call.
+  Accepts a space separated list of values, encoded in order as the arguments of the constructor to invoke.
 
 \-\-value *value*
   Specifies the value to be transferred as part of the call. [default: 0]
@@ -133,7 +150,7 @@ Options specific to the ``instantiate`` subcommand:
 Call Subcommand
 ---------------
 
-This subcommand enables the calling of contracts on the Polkadot blockchain."
+This subcommand enables the calling of contracts on the Polkadot blockchain.
 
 .. code-block:: bash
 
@@ -149,7 +166,7 @@ Options specific to the ``call`` subcommand:
   Specifies the name of the contract message to call.
 
 \-\-args *<args>...*
-  Specifies the arguments of the contract message to call.
+  Accepts a space separated list of values, encoded in order as the arguments of the message to invoke.
 
 \-\-value *value*
   Specifies the value to be transferred as part of the call. [default: 0]
@@ -237,13 +254,20 @@ Options specific to the ``show`` subcommand:
 Call Subcommand
 ---------------
 
-Send a custom transaction to a Solana program.
+Allows you to send a custom transaction to a Solana program, enabling the execution of specific functions within the deployed smart contract.
 
 .. code-block:: bash
 
   aqd solana call --idl flipper.json --program G2eBnLvwPCGCFVywrUT2LtKCCYFkGetAVXJfW82UXmPe --instruction new --data true --accounts new self system
 
-Options specific to the ``show`` subcommand:
+To interact with a function on a Solana-deployed smart contract, you'll need to specify key details like the program's address, data arguments, necessary accounts, and signatories. 
+Solang Aqd simplifies this process by accepting these parameters as command-line arguments. 
+Additionally, it ensures the submitted transaction aligns with the expected values in the Interface Description Language (IDL).
+
+.. note::
+  If unsure, you can always check the expected arguements and accounts for a specific function by using the ``show`` subcommand.
+
+Options specific to the ``call`` subcommand:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 \-\-idl *idl-json-file-path*
