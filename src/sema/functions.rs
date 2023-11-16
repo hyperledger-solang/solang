@@ -464,6 +464,7 @@ pub fn contract_function(
 
     let mut fdecl = Function::new(
         func.loc_prototype,
+        func.loc,
         name,
         Some(contract_no),
         tags,
@@ -794,6 +795,7 @@ pub fn function(
 
     let mut fdecl = Function::new(
         func.loc_prototype,
+        func.loc,
         name,
         None,
         doc,
@@ -1121,6 +1123,7 @@ fn signatures() {
     ));
 
     let fdecl = Function::new(
+        pt::Loc::Implicit,
         pt::Loc::Implicit,
         pt::Identifier {
             name: "foo".to_owned(),

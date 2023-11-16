@@ -320,6 +320,7 @@ pub struct Function {
     pub tags: Vec<Tag>,
     /// The location of the prototype (not body)
     pub loc_prototype: pt::Loc,
+    pub loc: pt::Loc,
     pub id: pt::Identifier,
     pub contract_no: Option<usize>,
     pub ty: pt::FunctionTy,
@@ -402,6 +403,7 @@ impl FunctionAttributes for Function {
 impl Function {
     pub fn new(
         loc_prototype: pt::Loc,
+        loc: pt::Loc,
         id: pt::Identifier,
         contract_no: Option<usize>,
         tags: Vec<Tag>,
@@ -437,6 +439,7 @@ impl Function {
         Function {
             tags,
             loc_prototype,
+            loc,
             id,
             contract_no,
             ty,

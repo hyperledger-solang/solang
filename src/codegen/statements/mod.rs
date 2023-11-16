@@ -1143,6 +1143,7 @@ impl Namespace {
     pub fn default_constructor(&self, contract_no: usize) -> Function {
         let mut func = Function::new(
             Codegen,
+            Codegen,
             pt::Identifier {
                 name: "".to_owned(),
                 loc: Codegen,

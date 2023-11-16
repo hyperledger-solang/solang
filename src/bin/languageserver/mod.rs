@@ -18,7 +18,7 @@ use solang::{
     },
     Target,
 };
-use solang_parser::pt::{self, CodeLocation};
+use solang_parser::pt;
 use std::{
     collections::{HashMap, HashSet},
     ffi::OsString,
@@ -1491,7 +1491,7 @@ impl<'a> Builder<'a> {
         }
 
         for (i, func) in self.ns.functions.iter().enumerate() {
-            if func.is_accessor || func.loc_prototype == pt::Loc::Builtin {
+            if func.is_accessor || func.loc == pt::Loc::Builtin {
                 // accessor functions are synthetic; ignore them, all the locations are fake
                 continue;
             }
@@ -1618,13 +1618,8 @@ impl<'a> Builder<'a> {
             self.scopes.push((
                 file_no,
                 ScopeEntry {
-                    start: func.loc_prototype.start(),
-                    stop: func
-                        .body
-                        .last()
-                        .map(|stmt| stmt.loc())
-                        .unwrap_or(func.loc_prototype)
-                        .exclusive_end(),
+                    start: func.loc.start(),
+                    stop: func.loc.exclusive_end(),
                     val: func
                         .symtable
                         .scopes
@@ -1772,7 +1767,7 @@ impl<'a> Builder<'a> {
                         let decls = parent_decls
                             .iter()
                             .map(|&i| {
-                                let loc = self.ns.functions[i].loc_prototype;
+                                let loc = self.ns.functions[i].loc;
                                 DefinitionIndex {
                                     def_path: self.ns.files[loc.file_no()].path.clone(),
                                     def_type: DefinitionType::Function(i),
