@@ -16,17 +16,21 @@ pub(super) fn assign_single(
     loc: &pt::Loc,
     left: &pt::Expression,
     right: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    let mut lcontext = context.clone();
-    lcontext.lvalue = true;
+    let prev_lvalue = context.lvalue;
+    context.lvalue = true;
+
+    let mut context = scopeguard::guard(context, |context| {
+        context.lvalue = prev_lvalue;
+    });
 
     let var = expression(
         left,
-        &lcontext,
+        &mut context,
         ns,
         symtable,
         diagnostics,
@@ -34,10 +38,11 @@ pub(super) fn assign_single(
     )?;
     assigned_variable(ns, &var, symtable);
 
+    context.lvalue = false;
     let var_ty = var.ty();
     let val = expression(
         right,
-        context,
+        &mut context,
         ns,
         symtable,
         diagnostics,
@@ -170,17 +175,21 @@ pub(super) fn assign_expr(
     left: &pt::Expression,
     expr: &pt::Expression,
     right: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    let mut lcontext = context.clone();
-    lcontext.lvalue = true;
+    let prev_lvalue = context.lvalue;
+    context.lvalue = true;
+
+    let mut context = scopeguard::guard(context, |context| {
+        context.lvalue = prev_lvalue;
+    });
 
     let var = expression(
         left,
-        &lcontext,
+        &mut context,
         ns,
         symtable,
         diagnostics,
@@ -198,7 +207,8 @@ pub(super) fn assign_expr(
         ResolveTo::Type(var_ty.deref_any().deref_any())
     };
 
-    let set = expression(right, context, ns, symtable, diagnostics, resolve_to)?;
+    context.lvalue = false;
+    let set = expression(right, &mut context, ns, symtable, diagnostics, resolve_to)?;
     used_variable(ns, &set, symtable);
     let set_type = set.ty();
 

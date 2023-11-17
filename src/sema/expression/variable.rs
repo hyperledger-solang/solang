@@ -11,7 +11,7 @@ use solang_parser::pt;
 
 pub(super) fn variable(
     id: &pt::Identifier,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,

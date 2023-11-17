@@ -44,7 +44,7 @@ contract 9c {
             errors,
             vec![
                 Diagnostic { loc: File(0, 17, 21), level: Error, ty: ParserError, message: "'frum' found where 'from' expected".to_string(), notes: vec![]},
-                Diagnostic { loc: File(0, 48, 49), level: Error, ty: ParserError, message: r#"unrecognised token ';', expected string"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 48, 49), level: Error, ty: ParserError, message: "unrecognised token ';', expected \"*\", \"<\", \"<=\", \"=\", \">\", \">=\", \"^\", \"~\", identifier, number, string".to_string(), notes: vec![] },
                 Diagnostic { loc: File(0, 62, 65), level: Error, ty: ParserError, message: r#"unrecognised token 'for', expected "(", ";", "=""#.to_string(), notes: vec![] },
                 Diagnostic { loc: File(0, 78, 79), level: Error, ty: ParserError, message: r#"unrecognised token '9', expected "case", "default", "leave", "revert", "switch", identifier"#.to_string(), notes: vec![] },
                 Diagnostic { loc: File(0, 95, 96), level: Error, ty: ParserError, message: "unrecognised token '0', expected \"(\", \"++\", \"--\", \".\", \"[\", \"case\", \"constant\", \"default\", \"external\", \"immutable\", \"internal\", \"leave\", \"override\", \"private\", \"public\", \"revert\", \"switch\", \"{\", identifier".to_string(), notes: vec![] },

@@ -19,7 +19,7 @@ use super::diagnostics::Diagnostics;
 use super::eval::eval_const_rational;
 use crate::sema::contracts::is_base;
 use crate::sema::eval::eval_const_number;
-use crate::sema::using::user_defined_operator_binding;
+use crate::sema::{symtable::LoopScopes, using::user_defined_operator_binding};
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, ToPrimitive, Zero};
@@ -50,7 +50,7 @@ pub enum ResolveTo<'a> {
     Type(&'a Type), // We will be wanting this type please, e.g. `int64 x = 1;`
 }
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct ExprContext {
     /// What source file are we in
     pub file_no: usize,
@@ -66,26 +66,8 @@ pub struct ExprContext {
     pub lvalue: bool,
     /// Are we resolving a yul function (it cannot have external dependencies)
     pub yul_function: bool,
-    /// How many loops are we in? (i.e how many nested loops de we have?)
-    pub loop_nesting_level: usize,
-}
-
-impl ExprContext {
-    pub fn enter_loop(&mut self) {
-        self.loop_nesting_level += 1;
-    }
-
-    pub fn exit_loop(&mut self) {
-        self.loop_nesting_level -= 1;
-    }
-
-    pub fn in_a_loop(&self) -> bool {
-        self.loop_nesting_level > 0
-    }
-
-    pub fn drop(&self) {
-        assert_eq!(self.loop_nesting_level, 0);
-    }
+    /// Loops nesting
+    pub loops: LoopScopes,
 }
 
 impl Expression {

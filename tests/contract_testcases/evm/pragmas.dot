@@ -1,0 +1,36 @@
+strict digraph "tests/contract_testcases/evm/pragmas.sol" {
+	contract [label="contract C\ntests/contract_testcases/evm/pragmas.sol:6:1-14"]
+	pragma [label="name: foo\nvalue: bar\ntests/contract_testcases/evm/pragmas.sol:1:1-15"]
+	pragma_4 [label="name: abicode\nvalue: v2\ntests/contract_testcases/evm/pragmas.sol:2:1-18"]
+	pragma_5 [label="name: abicode\nvalue: 'v2'\ntests/contract_testcases/evm/pragmas.sol:3:1-20"]
+	pragma_6 [label="name: solidity\ntests/contract_testcases/evm/pragmas.sol:4:1-65"]
+	operator [label="version: ^0.5.16\ntests/contract_testcases/evm/pragmas.sol:4:17-24"]
+	range [label="version: 0.4 - 1\ntests/contract_testcases/evm/pragmas.sol:4:25-32"]
+	or [label="||\ntests/contract_testcases/evm/pragmas.sol:4:33-52"]
+	operator_10 [label="version: =0.8.22\ntests/contract_testcases/evm/pragmas.sol:4:33-40"]
+	operator_11 [label="version: >=0.8.21\ntests/contract_testcases/evm/pragmas.sol:4:44-52"]
+	operator_12 [label="version: <=2\ntests/contract_testcases/evm/pragmas.sol:4:53-56"]
+	operator_13 [label="version: ~1\ntests/contract_testcases/evm/pragmas.sol:4:57-59"]
+	plain [label="version: 0.6.2\ntests/contract_testcases/evm/pragmas.sol:4:60-65"]
+	diagnostic [label="unknown pragma 'foo' with value 'bar' ignored\nlevel Warning\ntests/contract_testcases/evm/pragmas.sol:1:1-15"]
+	diagnostic_17 [label="unknown pragma 'abicode' with value 'v2' ignored\nlevel Warning\ntests/contract_testcases/evm/pragmas.sol:2:1-18"]
+	diagnostic_18 [label="unknown pragma 'abicode' with value 'v2' ignored\nlevel Warning\ntests/contract_testcases/evm/pragmas.sol:3:1-20"]
+	diagnostic_19 [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/evm/pragmas.sol:6:1-14"]
+	contracts -> contract
+	pragmas -> pragma
+	pragmas -> pragma_4
+	pragmas -> pragma_5
+	pragmas -> pragma_6
+	pragma_6 -> operator [label="version 0"]
+	pragma_6 -> range [label="version 1"]
+	pragma_6 -> or [label="version 2"]
+	or -> operator_10 [label="left"]
+	or -> operator_11 [label="right"]
+	pragma_6 -> operator_12 [label="version 3"]
+	pragma_6 -> operator_13 [label="version 4"]
+	pragma_6 -> plain [label="version 5"]
+	diagnostics -> diagnostic [label="Warning"]
+	diagnostics -> diagnostic_17 [label="Warning"]
+	diagnostics -> diagnostic_18 [label="Warning"]
+	diagnostics -> diagnostic_19 [label="Debug"]
+}

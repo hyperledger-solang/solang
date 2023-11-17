@@ -34,7 +34,7 @@ use solang_parser::{diagnostics::Diagnostic, pt, pt::CodeLocation};
 /// type the result should be.
 pub fn expression(
     expr: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -433,7 +433,7 @@ pub fn expression(
 
 fn bitwise_not(
     expr: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -472,7 +472,7 @@ fn negate(
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
 ) -> Result<Expression, ()> {
     match expr {
@@ -559,7 +559,7 @@ fn negate(
 fn less_equal(
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -613,7 +613,7 @@ fn less_equal(
 fn more_equal(
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -667,7 +667,7 @@ fn more_equal(
 fn less(
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -722,7 +722,7 @@ fn less(
 fn more(
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,

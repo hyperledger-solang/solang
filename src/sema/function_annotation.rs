@@ -195,7 +195,7 @@ pub(super) fn function_body_annotations(
     body_annotations: &[&pt::Annotation],
     parameter_annotations: &[UnresolvedAnnotation],
     symtable: &mut Symtable,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
 ) {
     let mut diagnostics = Diagnostics::default();
@@ -392,7 +392,7 @@ fn body_annotation(
     resolved_annotation: &mut Option<(pt::Loc, Expression)>,
     annotation: &Annotation,
     diagnostics: &mut Diagnostics,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     has_annotation: &mut bool,
