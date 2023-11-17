@@ -20,7 +20,7 @@ pub fn string_format(
     loc: &pt::Loc,
     literals: &[pt::StringLiteral],
     args: &[pt::Expression],
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,

@@ -236,12 +236,17 @@ pub(crate) fn process_function_header(
 pub(crate) fn resolve_function_definition(
     func_def: &pt::YulFunctionDefinition,
     functions_table: &mut FunctionsTable,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
 ) -> Result<YulFunction, ()> {
     let mut symtable = Symtable::new();
-    let mut local_ctx = context.clone();
-    local_ctx.yul_function = true;
+
+    let prev_yul_function = context.yul_function;
+    context.yul_function = true;
+
+    let mut context = scopeguard::guard(context, |context| {
+        context.yul_function = prev_yul_function;
+    });
 
     let (params, returns, func_no) = functions_table.get_params_returns_func_no(&func_def.id.name);
 
@@ -276,7 +281,7 @@ pub(crate) fn resolve_function_definition(
     let (body_block, _) = resolve_yul_block(
         &func_def.body.loc,
         &func_def.body.statements,
-        &local_ctx,
+        &mut context,
         true,
         &mut loop_scope,
         functions_table,

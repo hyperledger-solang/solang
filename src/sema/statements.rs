@@ -7,7 +7,7 @@ use super::expression::{
     function_call::{available_functions, call_expr, named_call_expr},
     ExprContext, ResolveTo,
 };
-use super::symtable::{LoopScopes, Symtable};
+use super::symtable::Symtable;
 use crate::sema::expression::constructor::{
     constructor_named_args, match_constructor_to_args, new,
 };
@@ -39,17 +39,12 @@ pub fn resolve_function_body(
     ns: &mut Namespace,
 ) -> Result<(), ()> {
     let mut symtable = Symtable::new();
-    let mut loops = LoopScopes::new();
     let mut res = Vec::new();
     let mut context = ExprContext {
         file_no,
         contract_no,
         function_no: Some(function_no),
-        unchecked: false,
-        constant: false,
-        lvalue: false,
-        yul_function: false,
-        loop_nesting_level: 0,
+        ..Default::default()
     };
 
     let mut unresolved_annotation: Vec<UnresolvedAnnotation> = Vec::new();
@@ -84,7 +79,7 @@ pub fn resolve_function_body(
         annotations,
         &unresolved_annotation,
         &mut symtable,
-        &context,
+        &mut context,
         ns,
     );
 
@@ -125,7 +120,7 @@ pub fn resolve_function_body(
                                 &base.loc,
                                 args,
                                 base_no,
-                                &context,
+                                &mut context,
                                 ns,
                                 &mut symtable,
                                 &mut diagnostics,
@@ -209,7 +204,7 @@ pub fn resolve_function_body(
                             ns,
                         ),
                         true,
-                        &context,
+                        &mut context,
                         ns,
                         ResolveTo::Unknown,
                         &mut symtable,
@@ -221,7 +216,6 @@ pub fn resolve_function_body(
             }
         }
 
-        context.drop();
         ns.diagnostics.extend(diagnostics);
         ns.functions[function_no].modifiers = modifiers;
     }
@@ -289,7 +283,6 @@ pub fn resolve_function_body(
         &mut res,
         &mut context,
         &mut symtable,
-        &mut loops,
         ns,
         &mut diagnostics,
     );
@@ -346,7 +339,6 @@ fn statement(
     res: &mut Vec<Statement>,
     context: &mut ExprContext,
     symtable: &mut Symtable,
-    loops: &mut LoopScopes,
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
 ) -> Result<bool, ()> {
@@ -425,8 +417,12 @@ fn statement(
             let mut reachable = true;
             let mut already_unreachable = false;
 
-            let mut context = context.clone();
+            let prev_unchecked = context.unchecked;
             context.unchecked |= *unchecked;
+
+            let mut context = scopeguard::guard(context, |context| {
+                context.unchecked = prev_unchecked;
+            });
 
             let mut resolved_stmts = Vec::new();
 
@@ -443,7 +439,6 @@ fn statement(
                     &mut resolved_stmts,
                     &mut context,
                     symtable,
-                    loops,
                     ns,
                     diagnostics,
                 )?;
@@ -460,7 +455,7 @@ fn statement(
             Ok(reachable)
         }
         pt::Statement::Break(loc) => {
-            if loops.do_break() {
+            if context.loops.do_break() {
                 res.push(Statement::Break(*loc));
                 Ok(false)
             } else {
@@ -472,7 +467,7 @@ fn statement(
             }
         }
         pt::Statement::Continue(loc) => {
-            if loops.do_continue() {
+            if context.loops.do_continue() {
                 res.push(Statement::Continue(*loc));
                 Ok(false)
             } else {
@@ -484,7 +479,6 @@ fn statement(
             }
         }
         pt::Statement::While(loc, cond_expr, body) => {
-            context.enter_loop();
             let expr = expression(
                 cond_expr,
                 context,
@@ -498,25 +492,15 @@ fn statement(
 
             symtable.enter_scope();
             let mut body_stmts = Vec::new();
-            loops.enter_scope();
-            statement(
-                body,
-                &mut body_stmts,
-                context,
-                symtable,
-                loops,
-                ns,
-                diagnostics,
-            )?;
+            context.loops.enter_scope();
+            statement(body, &mut body_stmts, context, symtable, ns, diagnostics)?;
             symtable.leave_scope();
-            loops.leave_scope();
+            context.loops.leave_scope();
 
             res.push(Statement::While(*loc, true, cond, body_stmts));
-            context.exit_loop();
             Ok(true)
         }
         pt::Statement::DoWhile(loc, body, cond_expr) => {
-            context.enter_loop();
             let expr = expression(
                 cond_expr,
                 context,
@@ -530,21 +514,12 @@ fn statement(
 
             symtable.enter_scope();
             let mut body_stmts = Vec::new();
-            loops.enter_scope();
-            statement(
-                body,
-                &mut body_stmts,
-                context,
-                symtable,
-                loops,
-                ns,
-                diagnostics,
-            )?;
+            context.loops.enter_scope();
+            statement(body, &mut body_stmts, context, symtable, ns, diagnostics)?;
             symtable.leave_scope();
-            loops.leave_scope();
+            context.loops.leave_scope();
 
             res.push(Statement::DoWhile(*loc, true, body_stmts, cond));
-            context.exit_loop();
             Ok(true)
         }
         pt::Statement::If(loc, cond_expr, then, else_) => {
@@ -562,29 +537,14 @@ fn statement(
 
             symtable.enter_scope();
             let mut then_stmts = Vec::new();
-            let mut reachable = statement(
-                then,
-                &mut then_stmts,
-                context,
-                symtable,
-                loops,
-                ns,
-                diagnostics,
-            )?;
+            let mut reachable =
+                statement(then, &mut then_stmts, context, symtable, ns, diagnostics)?;
             symtable.leave_scope();
 
             let mut else_stmts = Vec::new();
             if let Some(stmts) = else_ {
                 symtable.enter_scope();
-                reachable |= statement(
-                    stmts,
-                    &mut else_stmts,
-                    context,
-                    symtable,
-                    loops,
-                    ns,
-                    diagnostics,
-                )?;
+                reachable |= statement(stmts, &mut else_stmts, context, symtable, ns, diagnostics)?;
 
                 symtable.leave_scope();
             } else {
@@ -608,35 +568,18 @@ fn statement(
             let mut init = Vec::new();
 
             if let Some(init_stmt) = init_stmt {
-                statement(
-                    init_stmt,
-                    &mut init,
-                    context,
-                    symtable,
-                    loops,
-                    ns,
-                    diagnostics,
-                )?;
+                statement(init_stmt, &mut init, context, symtable, ns, diagnostics)?;
             }
 
-            loops.enter_scope();
-            context.enter_loop();
+            context.loops.enter_scope();
 
             let mut body = Vec::new();
 
             if let Some(body_stmt) = body_stmt {
-                statement(
-                    body_stmt,
-                    &mut body,
-                    context,
-                    symtable,
-                    loops,
-                    ns,
-                    diagnostics,
-                )?;
+                statement(body_stmt, &mut body, context, symtable, ns, diagnostics)?;
             }
 
-            let control = loops.leave_scope();
+            let control = context.loops.leave_scope();
             let reachable = control.no_breaks > 0;
             let mut next = None;
 
@@ -661,7 +604,6 @@ fn statement(
                 cond: None,
                 body,
             });
-            context.exit_loop();
             Ok(reachable)
         }
         pt::Statement::For(loc, init_stmt, Some(cond_expr), next_expr, body_stmt) => {
@@ -672,18 +614,9 @@ fn statement(
             let mut next = None;
 
             if let Some(init_stmt) = init_stmt {
-                statement(
-                    init_stmt,
-                    &mut init,
-                    context,
-                    symtable,
-                    loops,
-                    ns,
-                    diagnostics,
-                )?;
+                statement(init_stmt, &mut init, context, symtable, ns, diagnostics)?;
             }
 
-            context.enter_loop();
             let cond = expression(
                 cond_expr,
                 context,
@@ -696,22 +629,16 @@ fn statement(
             let cond = cond.cast(&cond_expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
             // continue goes to next, and if that does exist, cond
-            loops.enter_scope();
+            context.loops.enter_scope();
 
             let mut body_reachable = match body_stmt {
-                Some(body_stmt) => statement(
-                    body_stmt,
-                    &mut body,
-                    context,
-                    symtable,
-                    loops,
-                    ns,
-                    diagnostics,
-                )?,
+                Some(body_stmt) => {
+                    statement(body_stmt, &mut body, context, symtable, ns, diagnostics)?
+                }
                 None => true,
             };
 
-            let control = loops.leave_scope();
+            let control = context.loops.leave_scope();
 
             if control.no_continues > 0 {
                 body_reachable = true;
@@ -741,7 +668,6 @@ fn statement(
                 body,
             });
 
-            context.exit_loop();
             Ok(true)
         }
         pt::Statement::Return(loc, None) => {
@@ -877,7 +803,6 @@ fn statement(
                 clause_stmts,
                 context,
                 symtable,
-                loops,
                 ns,
                 diagnostics,
             )?;
@@ -969,7 +894,7 @@ fn revert_pos_arg(
     loc: &pt::Loc,
     path: &Option<pt::IdentifierPath>,
     args: &[pt::Expression],
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
     ns: &mut Namespace,
@@ -1098,7 +1023,7 @@ fn revert_named_arg(
     loc: &pt::Loc,
     path: &Option<pt::IdentifierPath>,
     args: &[pt::NamedArgument],
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
     ns: &mut Namespace,
@@ -1247,7 +1172,7 @@ fn revert_named_arg(
 fn emit_event(
     loc: &pt::Loc,
     ty: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
@@ -1522,7 +1447,7 @@ fn destructure(
     loc: &pt::Loc,
     vars: &[(pt::Loc, Option<pt::Parameter>)],
     expr: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
@@ -1531,8 +1456,12 @@ fn destructure(
     let mut fields = Vec::new();
     let mut left_tys = Vec::new();
 
-    let mut lcontext = context.clone();
-    lcontext.lvalue = true;
+    let prev_lvalue = context.lvalue;
+    context.lvalue = true;
+
+    let mut context = scopeguard::guard(context, |context| {
+        context.lvalue = prev_lvalue;
+    });
 
     for (_, param) in vars {
         match param {
@@ -1560,7 +1489,14 @@ fn destructure(
                 }
 
                 // ty will just be a normal expression, not a type
-                let e = expression(ty, &lcontext, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+                let e = expression(
+                    ty,
+                    &mut context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Unknown,
+                )?;
 
                 match &e {
                     Expression::ConstantVariable {
@@ -1635,7 +1571,7 @@ fn destructure(
                 // The grammar does not allow annotation in destructures, so this assertion shall
                 // always be true.
                 assert!(annotation.is_none());
-                let (ty, ty_loc) = resolve_var_decl_ty(ty, storage, context, ns, diagnostics)?;
+                let (ty, ty_loc) = resolve_var_decl_ty(ty, storage, &mut context, ns, diagnostics)?;
 
                 if let Some(pos) = symtable.add(
                     name,
@@ -1668,12 +1604,14 @@ fn destructure(
         }
     }
 
+    context.lvalue = false;
+
     let expr = destructure_values(
         loc,
         expr,
         &left_tys,
         &fields,
-        context,
+        &mut context,
         symtable,
         ns,
         diagnostics,
@@ -1687,7 +1625,7 @@ fn destructure_values(
     expr: &pt::Expression,
     left_tys: &[Option<Type>],
     fields: &[DestructureField],
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
@@ -1851,7 +1789,7 @@ fn destructure_values(
 fn resolve_var_decl_ty(
     ty: &pt::Expression,
     storage: &Option<pt::StorageLocation>,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
 ) -> Result<(Type, pt::Loc), ()> {
@@ -1905,7 +1843,7 @@ fn resolve_var_decl_ty(
 fn return_with_values(
     returns: &pt::Expression,
     loc: &pt::Loc,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
@@ -2165,7 +2103,6 @@ fn try_catch(
     clause_stmts: &[pt::CatchClause],
     context: &mut ExprContext,
     symtable: &mut Symtable,
-    loops: &mut LoopScopes,
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
 ) -> Result<(Statement, bool), ()> {
@@ -2450,15 +2387,8 @@ fn try_catch(
 
     let mut ok_resolved = Vec::new();
 
-    let mut finally_reachable = statement(
-        ok,
-        &mut ok_resolved,
-        context,
-        symtable,
-        loops,
-        ns,
-        diagnostics,
-    )?;
+    let mut finally_reachable =
+        statement(ok, &mut ok_resolved, context, symtable, ns, diagnostics)?;
 
     symtable.leave_scope();
 
@@ -2544,7 +2474,6 @@ fn try_catch(
                     &mut catch_stmt_resolved,
                     context,
                     symtable,
-                    loops,
                     ns,
                     diagnostics,
                 )?;
@@ -2634,7 +2563,6 @@ fn try_catch(
                     &mut error_stmt_resolved,
                     context,
                     symtable,
-                    loops,
                     ns,
                     diagnostics,
                 )?;

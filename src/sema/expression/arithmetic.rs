@@ -16,7 +16,7 @@ pub(super) fn subtract(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -79,7 +79,7 @@ pub(super) fn bitwise_or(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -123,7 +123,7 @@ pub(super) fn bitwise_and(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -167,7 +167,7 @@ pub(super) fn bitwise_xor(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -211,7 +211,7 @@ pub(super) fn shift_left(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -240,7 +240,7 @@ pub(super) fn shift_right(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -270,7 +270,7 @@ pub(super) fn multiply(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -362,7 +362,7 @@ pub(super) fn divide(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -406,7 +406,7 @@ pub(super) fn modulo(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -450,7 +450,7 @@ pub(super) fn power(
     loc: &pt::Loc,
     b: &pt::Expression,
     e: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -523,7 +523,7 @@ pub(super) fn equal(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -585,7 +585,7 @@ pub(super) fn not_equal(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -726,7 +726,7 @@ pub(super) fn addition(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -839,46 +839,57 @@ pub(super) fn addition(
 pub(super) fn incr_decr(
     v: &pt::Expression,
     expr: &pt::Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
+    let prev_lvalue = context.lvalue;
+    context.lvalue = true;
+
+    let mut context = scopeguard::guard(context, |context| {
+        context.lvalue = prev_lvalue;
+    });
+    let unchecked = context.unchecked;
+
     let op = |e: Expression, ty: Type| -> Expression {
         match expr {
             pt::Expression::PreIncrement(loc, _) => Expression::PreIncrement {
                 loc: *loc,
                 ty,
-                unchecked: context.unchecked,
+                unchecked,
                 expr: Box::new(e),
             },
             pt::Expression::PreDecrement(loc, _) => Expression::PreDecrement {
                 loc: *loc,
                 ty,
-                unchecked: context.unchecked,
+                unchecked,
                 expr: Box::new(e),
             },
             pt::Expression::PostIncrement(loc, _) => Expression::PostIncrement {
                 loc: *loc,
                 ty,
-                unchecked: context.unchecked,
+                unchecked,
                 expr: Box::new(e),
             },
             pt::Expression::PostDecrement(loc, _) => Expression::PostDecrement {
                 loc: *loc,
                 ty,
-                unchecked: context.unchecked,
+                unchecked,
                 expr: Box::new(e),
             },
             _ => unreachable!(),
         }
     };
 
-    let mut context = context.clone();
-
-    context.lvalue = true;
-
-    let var = expression(v, &context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+    let var = expression(
+        v,
+        &mut context,
+        ns,
+        symtable,
+        diagnostics,
+        ResolveTo::Unknown,
+    )?;
     used_variable(ns, &var, symtable);
     let var_ty = var.ty();
 

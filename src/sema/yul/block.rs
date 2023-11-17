@@ -18,7 +18,7 @@ use solang_parser::{
 pub fn resolve_yul_block(
     loc: &pt::Loc,
     statements: &[pt::YulStatement],
-    context: &ExprContext,
+    context: &mut ExprContext,
     reachable: bool,
     loop_scope: &mut LoopScopes,
     function_table: &mut FunctionsTable,
@@ -58,7 +58,7 @@ pub fn resolve_yul_block(
 /// next statement is reachable
 pub(crate) fn process_statements(
     statements: &[pt::YulStatement],
-    context: &ExprContext,
+    context: &mut ExprContext,
     mut reachable: bool,
     symtable: &mut Symtable,
     loop_scope: &mut LoopScopes,

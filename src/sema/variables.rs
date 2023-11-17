@@ -9,8 +9,7 @@ use super::{
     contracts::is_base,
     diagnostics::Diagnostics,
     expression::{ExprContext, ResolveTo},
-    symtable::Symtable,
-    symtable::{VariableInitializer, VariableUsage},
+    symtable::{Symtable, VariableInitializer, VariableUsage},
     tags::resolve_tags,
     ContractDefinition,
 };
@@ -324,19 +323,15 @@ pub fn variable_decl<'a>(
 
     let initializer = if constant {
         if let Some(initializer) = &def.initializer {
-            let context = ExprContext {
+            let mut context = ExprContext {
                 file_no,
-                unchecked: false,
                 contract_no,
-                function_no: None,
                 constant,
-                lvalue: false,
-                yul_function: false,
-                loop_nesting_level: 0,
+                ..Default::default()
             };
             match expression(
                 initializer,
-                &context,
+                &mut context,
                 ns,
                 symtable,
                 &mut diagnostics,
@@ -783,7 +778,7 @@ pub fn resolve_initializers(
         let var = &ns.contracts[*contract_no].variables[*var_no];
         let ty = var.ty.clone();
 
-        let context = ExprContext {
+        let mut context = ExprContext {
             file_no,
             contract_no: Some(*contract_no),
             ..Default::default()
@@ -791,7 +786,7 @@ pub fn resolve_initializers(
 
         if let Ok(res) = expression(
             initializer,
-            &context,
+            &mut context,
             ns,
             &mut symtable,
             &mut diagnostics,
@@ -802,7 +797,6 @@ pub fn resolve_initializers(
                 ns.contracts[*contract_no].variables[*var_no].initializer = Some(res);
             }
         }
-        context.drop();
     }
 
     ns.diagnostics.extend(diagnostics);

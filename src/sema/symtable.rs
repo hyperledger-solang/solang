@@ -235,6 +235,10 @@ impl LoopScopes {
         }
     }
 
+    pub fn in_a_loop(&self) -> bool {
+        !self.0.is_empty()
+    }
+
     pub fn do_continue(&mut self) -> bool {
         match self.0.last_mut() {
             Some(scope) => {
