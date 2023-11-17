@@ -18,7 +18,7 @@ use std::collections::HashMap;
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 pub(crate) fn resolve_switch(
     yul_switch: &pt::YulSwitch,
-    context: &ExprContext,
+    context: &mut ExprContext,
     reachable: bool,
     function_table: &mut FunctionsTable,
     loop_scope: &mut LoopScopes,
@@ -112,7 +112,7 @@ pub(crate) fn resolve_switch(
 /// Resolves condition statements for either if-statement and switch-statements
 pub(crate) fn resolve_condition(
     condition: &pt::YulExpression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     function_table: &mut FunctionsTable,
     ns: &mut Namespace,
@@ -135,7 +135,7 @@ fn resolve_case_or_default(
     switch_case: &pt::YulSwitchOptions,
     default_block: &mut Option<YulBlock>,
     case_blocks: &mut Vec<CaseBlock>,
-    context: &ExprContext,
+    context: &mut ExprContext,
     reachable: bool,
     function_table: &mut FunctionsTable,
     loop_scope: &mut LoopScopes,
@@ -183,7 +183,7 @@ fn resolve_case_block(
     has_default: bool,
     condition: &pt::YulExpression,
     block: &[pt::YulStatement],
-    context: &ExprContext,
+    context: &mut ExprContext,
     reachable: bool,
     function_table: &mut FunctionsTable,
     loop_scope: &mut LoopScopes,

@@ -16,7 +16,7 @@ use solang_parser::{
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 pub(crate) fn resolve_for_loop(
     yul_for: &pt::YulFor,
-    context: &ExprContext,
+    context: &mut ExprContext,
     reachable: bool,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
@@ -87,7 +87,7 @@ pub(crate) fn resolve_for_loop(
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
 fn resolve_for_init_block(
     init_block: &pt::YulBlock,
-    context: &ExprContext,
+    context: &mut ExprContext,
     reachable: bool,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,

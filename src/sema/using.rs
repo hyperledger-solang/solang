@@ -421,7 +421,7 @@ pub(super) fn try_resolve_using_call(
     loc: &pt::Loc,
     func: &pt::Identifier,
     self_expr: &Expression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     args: &[pt::Expression],
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,

@@ -19,7 +19,7 @@ fn constructor(
     no: usize,
     args: &[pt::Expression],
     call_args: CallArgs,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -93,7 +93,7 @@ pub fn match_constructor_to_args(
     loc: &pt::Loc,
     args: &[pt::Expression],
     contract_no: usize,
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -205,7 +205,7 @@ pub fn constructor_named_args(
     loc: &pt::Loc,
     ty: &pt::Expression,
     args: &[pt::NamedArgument],
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -434,7 +434,7 @@ pub fn new(
     loc: &pt::Loc,
     ty: &pt::Expression,
     args: &[pt::Expression],
-    context: &ExprContext,
+    context: &mut ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
@@ -606,7 +606,7 @@ pub(super) fn solana_constructor_check(
     loc: &pt::Loc,
     constructor_contract_no: usize,
     diagnostics: &mut Diagnostics,
-    context: &ExprContext,
+    context: &mut ExprContext,
     call_args: &CallArgs,
     ns: &mut Namespace,
 ) {
@@ -646,7 +646,7 @@ pub(super) fn solana_constructor_check(
         ));
     }
 
-    if !context.in_a_loop() || !call_args.accounts.is_absent() {
+    if !context.loops.in_a_loop() || !call_args.accounts.is_absent() {
         return;
     }
 

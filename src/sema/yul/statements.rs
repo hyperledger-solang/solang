@@ -18,7 +18,7 @@ use solang_parser::{diagnostics::Diagnostic, pt};
 /// Resolves an yul statement. Returns a boolean that indicates if the next statement is reachable.
 pub(crate) fn resolve_yul_statement(
     statement: &pt::YulStatement,
-    context: &ExprContext,
+    context: &mut ExprContext,
     reachable: bool,
     loop_scope: &mut LoopScopes,
     symtable: &mut Symtable,
@@ -173,7 +173,7 @@ fn resolve_top_level_function_call(
     func_call: &pt::YulFunctionCall,
     reachable: bool,
     function_table: &mut FunctionsTable,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<(YulStatement, bool), ()> {
@@ -220,7 +220,7 @@ fn resolve_variable_declaration(
     initializer: &Option<pt::YulExpression>,
     reachable: bool,
     function_table: &mut FunctionsTable,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<YulStatement, ()> {
@@ -302,31 +302,36 @@ fn resolve_assignment(
     loc: &pt::Loc,
     lhs: &[pt::YulExpression],
     rhs: &pt::YulExpression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     reachable: bool,
     function_table: &mut FunctionsTable,
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<YulStatement, ()> {
     let mut resolved_lhs: Vec<YulExpression> = Vec::with_capacity(lhs.len());
-    let mut local_ctx = context.clone();
-    local_ctx.lvalue = true;
+    let prev_lvalue = context.lvalue;
+    context.lvalue = true;
+
+    let mut context = scopeguard::guard(context, |context| {
+        context.lvalue = prev_lvalue;
+    });
+
     for item in lhs {
-        let resolved = resolve_yul_expression(item, &local_ctx, symtable, function_table, ns)?;
-        if let Some(diagnostic) = check_type(&resolved, &local_ctx, ns, symtable) {
+        let resolved = resolve_yul_expression(item, &mut context, symtable, function_table, ns)?;
+        if let Some(diagnostic) = check_type(&resolved, &mut context, ns, symtable) {
             ns.diagnostics.push(diagnostic);
             return Err(());
         }
         resolved_lhs.push(resolved);
     }
 
-    local_ctx.lvalue = false;
-    let resolved_rhs = resolve_yul_expression(rhs, &local_ctx, symtable, function_table, ns)?;
+    context.lvalue = false;
+    let resolved_rhs = resolve_yul_expression(rhs, &mut context, symtable, function_table, ns)?;
     check_assignment_compatibility(
         loc,
         &resolved_lhs,
         &resolved_rhs,
-        context,
+        &mut context,
         function_table,
         symtable,
         ns,
@@ -345,7 +350,7 @@ fn check_assignment_compatibility<T>(
     loc: &pt::Loc,
     lhs: &[T],
     rhs: &YulExpression,
-    context: &ExprContext,
+    context: &mut ExprContext,
     function_table: &FunctionsTable,
     symtable: &mut Symtable,
     ns: &mut Namespace,
@@ -396,7 +401,7 @@ fn resolve_if_block(
     loc: &pt::Loc,
     condition: &pt::YulExpression,
     if_block: &[pt::YulStatement],
-    context: &ExprContext,
+    context: &mut ExprContext,
     reachable: bool,
     loop_scope: &mut LoopScopes,
     function_table: &mut FunctionsTable,

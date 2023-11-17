@@ -803,14 +803,79 @@ impl Display for pt::SourceUnitPart {
             Self::TypeDefinition(inner) => inner.fmt(f),
             Self::Annotation(inner) => inner.fmt(f),
             Self::Using(inner) => inner.fmt(f),
-            Self::PragmaDirective(_, ident, lit) => {
+            Self::PragmaDirective(inner) => inner.fmt(f),
+            Self::StraySemicolon(_) => f.write_char(';'),
+        }
+    }
+}
+
+impl Display for pt::PragmaDirective {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            Self::Identifier(_, ident, val) => {
                 f.write_str("pragma")?;
                 write_opt!(f, ' ', ident);
-                // this isn't really a string literal, it's just parsed as one by the lexer
-                write_opt!(f, ' ', lit.as_ref().map(|lit| &lit.string));
+                write_opt!(f, ' ', val);
                 f.write_char(';')
             }
-            Self::StraySemicolon(_) => f.write_char(';'),
+            Self::StringLiteral(_, ident, lit) => {
+                f.write_str("pragma ")?;
+                ident.fmt(f)?;
+                f.write_char(' ')?;
+                lit.fmt(f)?;
+                f.write_char(';')
+            }
+            Self::Version(_, ident, versions) => {
+                f.write_str("pragma ")?;
+                ident.fmt(f)?;
+                f.write_char(' ')?;
+                write_separated(versions, f, " ")?;
+                f.write_char(';')
+            }
+        }
+    }
+}
+
+impl Display for pt::VersionComparator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            Self::Plain { version, .. } => write_separated(version, f, "."),
+            Self::Operator { op, version, .. } => {
+                op.fmt(f)?;
+                write_separated(version, f, ".")
+            }
+            Self::Range { from, to, .. } => {
+                write_separated(from, f, ".")?;
+                f.write_str(" - ")?;
+                write_separated(to, f, ".")
+            }
+            Self::Or { left, right, .. } => {
+                left.fmt(f)?;
+                f.write_str(" || ")?;
+                right.fmt(f)
+            }
+        }
+    }
+}
+
+impl Display for pt::VersionOp {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl pt::VersionOp {
+    /// Returns the string representation of this type.
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Exact => "=",
+            Self::Greater => ">",
+            Self::GreaterEq => ">=",
+            Self::Less => "<",
+            Self::LessEq => "<=",
+            Self::Tilde => "~",
+            Self::Caret => "^",
+            Self::Wildcard => "*",
         }
     }
 }
@@ -1047,6 +1112,7 @@ impl Display for pt::UserDefinedOperator {
         f.write_str(self.as_str())
     }
 }
+
 impl pt::UserDefinedOperator {
     /// Returns the string representation of this type.
     pub const fn as_str(&self) -> &'static str {
@@ -1372,6 +1438,52 @@ mod tests {
                 loc: loc!(),
                 unicode: false,
                 string: concat!( $($l),+ ).to_string(),
+            }
+        };
+    }
+
+    /// VersionComparsion
+    macro_rules! version {
+        ($($l:literal),+) => {
+            <[_]>::into_vec(Box::new([ $( $l.into() ),+ ]))
+        }
+    }
+
+    macro_rules! plain_version {
+        ($($l:literal),+) => {
+            pt::VersionComparator::Plain {
+                loc: loc!(),
+                version: <[_]>::into_vec(Box::new([ $( $l.into() ),+ ])),
+            }
+        };
+    }
+
+    macro_rules! op_version {
+        ($op:expr, $($l:literal),+) => {
+            pt::VersionComparator::Operator {
+                loc: loc!(),
+                op: $op,
+                version: <[_]>::into_vec(Box::new([ $( $l.into() ),+ ])),
+            }
+        };
+    }
+
+    macro_rules! range_version {
+        ($from:expr, $to:expr) => {
+            pt::VersionComparator::Range {
+                loc: loc!(),
+                from: $from,
+                to: $to,
+            }
+        };
+    }
+
+    macro_rules! or_version {
+        ($left:expr, $right:expr) => {
+            pt::VersionComparator::Or {
+                loc: loc!(),
+                left: $left.into(),
+                right: $right.into(),
             }
         };
     }
@@ -2236,12 +2348,27 @@ mod tests {
             pt::SourceUnitPart: {
                 // rest tested individually
 
-                pt::SourceUnitPart::PragmaDirective(loc!(), None, None) => "pragma;",
-                pt::SourceUnitPart::PragmaDirective(loc!(), Some(id("solidity")), None)
+                pt::SourceUnitPart::PragmaDirective(pt::PragmaDirective::Identifier(loc!(), None, None).into()) => "pragma;",
+                pt::SourceUnitPart::PragmaDirective(pt::PragmaDirective::Identifier(loc!(), Some(id("solidity")), None).into())
                     => "pragma solidity;",
-                pt::SourceUnitPart::PragmaDirective(loc!(), Some(id("solidity")), Some(lit!("0.8.0")))
+                pt::SourceUnitPart::PragmaDirective(pt::PragmaDirective::StringLiteral(loc!(), id("abi"), lit!("v2")).into())
+                    => "pragma abi \"v2\";",
+                pt::SourceUnitPart::PragmaDirective(pt::PragmaDirective::Version(loc!(), id("solidity"), vec![plain_version!("0", "8", "0")]).into())
                     => "pragma solidity 0.8.0;",
-
+                pt::SourceUnitPart::PragmaDirective(pt::PragmaDirective::Version(loc!(), id("solidity"), vec![
+                    op_version!(pt::VersionOp::Exact, "0", "5", "16"),
+                    op_version!(pt::VersionOp::GreaterEq, "0", "5"),
+                    op_version!(pt::VersionOp::Greater, "0"),
+                    op_version!(pt::VersionOp::Less, "1"),
+                    op_version!(pt::VersionOp::LessEq, "1"),
+                    op_version!(pt::VersionOp::Caret, "0", "5", "16"),
+                    op_version!(pt::VersionOp::Wildcard, "5", "5")]
+                ).into())
+                    => "pragma solidity =0.5.16 >=0.5 >0 <1 <=1 ^0.5.16 *5.5;",
+                pt::SourceUnitPart::PragmaDirective(pt::PragmaDirective::Version(loc!(), id("solidity"), vec![or_version!(plain_version!("0"), op_version!(pt::VersionOp::Caret, "1", "0"))]).into())
+                    => "pragma solidity 0 || ^1.0;",
+                pt::SourceUnitPart::PragmaDirective(pt::PragmaDirective::Version(loc!(), id("solidity"), vec![range_version!(version!["0"], version!["1", "0"])]).into())
+                    => "pragma solidity 0 - 1.0;",
                 pt::SourceUnitPart::StraySemicolon(loc!()) => ";",
             }
 

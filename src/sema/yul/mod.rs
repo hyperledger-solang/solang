@@ -26,7 +26,7 @@ pub fn resolve_inline_assembly(
     loc: &pt::Loc,
     memory_safe: bool,
     statements: &[pt::YulStatement],
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> (InlineAssembly, bool) {
