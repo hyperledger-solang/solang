@@ -348,6 +348,8 @@ pub struct Lexer<'input> {
     chars: PeekNth<CharIndices<'input>>,
     comments: &'input mut Vec<Comment>,
     file_no: usize,
+    /// While parsing version semver, do not parse rational numbers
+    parse_semver: bool,
     last_tokens: [Option<Token<'input>>; 2],
     /// The mutable reference to the error vector.
     pub errors: &'input mut Vec<LexicalError>,
@@ -577,6 +579,7 @@ impl<'input> Lexer<'input> {
             chars: peek_nth(input.char_indices()),
             comments,
             file_no,
+            parse_semver: false,
             last_tokens: [None, None],
             errors,
         }
@@ -632,6 +635,14 @@ impl<'input> Lexer<'input> {
             end = *i;
             self.chars.next();
         }
+
+        if self.parse_semver {
+            let integer = &self.input[start..=end];
+            let exp = &self.input[0..0];
+
+            return Ok((start, Token::Number(integer, exp), end + 1));
+        }
+
         let mut rational_end = end;
         let mut end_before_rational = end + 1;
         let mut rational_start = end;
@@ -971,7 +982,10 @@ impl<'input> Lexer<'input> {
                         return Some((start, Token::Annotation(&id[1..]), end));
                     };
                 }
-                Some((i, ';')) => return Some((i, Token::Semicolon, i + 1)),
+                Some((i, ';')) => {
+                    self.parse_semver = false;
+                    return Some((i, Token::Semicolon, i + 1));
+                }
                 Some((i, ',')) => return Some((i, Token::Comma, i + 1)),
                 Some((i, '(')) => return Some((i, Token::OpenParenthesis, i + 1)),
                 Some((i, ')')) => return Some((i, Token::CloseParenthesis, i + 1)),
@@ -1124,7 +1138,7 @@ impl<'input> Lexer<'input> {
                 }
                 Some((i, '.')) => {
                     if let Some((_, a)) = self.chars.peek() {
-                        if a.is_ascii_digit() {
+                        if a.is_ascii_digit() && !self.parse_semver {
                             return match self.parse_number(i + 1, '.') {
                                 Err(lex_error) => {
                                     self.errors.push(lex_error);
@@ -1175,46 +1189,6 @@ impl<'input> Lexer<'input> {
         }
     }
 
-    /// Next token is pragma value. Return it
-    fn pragma_value(&mut self) -> Option<Spanned<'input>> {
-        // special parser for pragma solidity >=0.4.22 <0.7.0;
-        let mut start = None;
-        let mut end = 0;
-
-        // solc will include anything upto the next semicolon, whitespace
-        // trimmed on left and right
-        loop {
-            match self.chars.peek() {
-                Some((_, ';')) | None => {
-                    return if let Some(start) = start {
-                        Some((
-                            start,
-                            Token::StringLiteral(false, &self.input[start..end]),
-                            end,
-                        ))
-                    } else {
-                        self.next()
-                    };
-                }
-                Some((_, ch)) if ch.is_whitespace() => {
-                    self.chars.next();
-                }
-                Some((i, _)) => {
-                    if start.is_none() {
-                        start = Some(*i);
-                    }
-                    self.chars.next();
-
-                    // end should point to the byte _after_ the character
-                    end = match self.chars.peek() {
-                        Some((i, _)) => *i,
-                        None => self.input.len(),
-                    }
-                }
-            }
-        }
-    }
-
     fn match_identifier(&mut self, start: usize) -> (&'input str, usize) {
         let end;
         loop {
@@ -1241,11 +1215,11 @@ impl<'input> Iterator for Lexer<'input> {
         // Lexer should be aware of whether the last two tokens were
         // pragma followed by identifier. If this is true, then special parsing should be
         // done for the pragma value
-        let token = if let [Some(Token::Pragma), Some(Token::Identifier(_))] = self.last_tokens {
-            self.pragma_value()
-        } else {
-            self.next()
-        };
+        if let [Some(Token::Pragma), Some(Token::Identifier(_))] = self.last_tokens {
+            self.parse_semver = true;
+        }
+
+        let token = self.next();
 
         self.last_tokens = [
             self.last_tokens[1],
@@ -1412,7 +1386,18 @@ mod tests {
             vec!(
                 (0, Token::Pragma, 6),
                 (7, Token::Identifier("solidity"), 15),
-                (16, Token::StringLiteral(false, ">=0.5.0 <0.7.0"), 30),
+                (16, Token::MoreEqual, 18),
+                (18, Token::Number("0", ""), 19),
+                (19, Token::Member, 20),
+                (20, Token::Number("5", ""), 21),
+                (21, Token::Member, 22),
+                (22, Token::Number("0", ""), 23),
+                (24, Token::Less, 25),
+                (25, Token::Number("0", ""), 26),
+                (26, Token::Member, 27),
+                (27, Token::Number("7", ""), 28),
+                (28, Token::Member, 29),
+                (29, Token::Number("0", ""), 30),
                 (30, Token::Semicolon, 31),
             )
         );
@@ -1430,7 +1415,18 @@ mod tests {
             vec!(
                 (0, Token::Pragma, 6),
                 (7, Token::Identifier("solidity"), 15),
-                (17, Token::StringLiteral(false, ">=0.5.0 <0.7.0"), 31),
+                (17, Token::MoreEqual, 19),
+                (19, Token::Number("0", ""), 20),
+                (20, Token::Member, 21),
+                (21, Token::Number("5", ""), 22),
+                (22, Token::Member, 23),
+                (23, Token::Number("0", ""), 24),
+                (25, Token::Less, 26),
+                (26, Token::Number("0", ""), 27),
+                (27, Token::Member, 28),
+                (28, Token::Number("7", ""), 29),
+                (29, Token::Member, 30),
+                (30, Token::Number("0", ""), 31),
                 (34, Token::Semicolon, 35),
             )
         );
@@ -1443,7 +1439,7 @@ mod tests {
             vec!(
                 (0, Token::Pragma, 6),
                 (7, Token::Identifier("solidity"), 15),
-                (16, Token::StringLiteral(false, "赤"), 19),
+                (16, Token::Identifier("赤"), 19),
                 (19, Token::Semicolon, 20)
             )
         );
@@ -1533,7 +1529,7 @@ mod tests {
             vec!(
                 (0, Token::Pragma, 6),
                 (7, Token::Identifier("foo"), 10),
-                (11, Token::StringLiteral(false, "bar"), 14),
+                (11, Token::Identifier("bar"), 14),
             )
         );
 

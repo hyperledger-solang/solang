@@ -8,20 +8,18 @@ use super::{
     builtin,
     diagnostics::Diagnostics,
     eval::eval_const_number,
-    expression::{ExprContext, ResolveTo},
+    expression::{resolve_expression::expression, ExprContext, ResolveTo},
     resolve_params, resolve_returns,
     symtable::Symtable,
     ArrayDimension,
 };
-use crate::sema::expression::resolve_expression::expression;
 use crate::Target;
+use itertools::Itertools;
 use num_bigint::BigInt;
-use num_traits::Signed;
-use num_traits::Zero;
-use solang_parser::pt::FunctionTy;
+use num_traits::{Signed, Zero};
 use solang_parser::{
     pt,
-    pt::{CodeLocation, OptionalCodeLocation},
+    pt::{CodeLocation, FunctionTy, OptionalCodeLocation},
 };
 use std::collections::HashMap;
 
@@ -47,6 +45,7 @@ impl Namespace {
 
         let mut ns = Namespace {
             target,
+            pragmas: Vec::new(),
             files: Vec::new(),
             enums: Vec::new(),
             structs: Vec::new(),
@@ -1545,7 +1544,6 @@ impl Namespace {
             diagnostics,
             ResolveTo::Type(&Type::Uint(256)),
         )?;
-        context.drop();
 
         match size_expr.ty() {
             Type::Uint(_) | Type::Int(_) => {}
@@ -1573,7 +1571,6 @@ impl Namespace {
             params
                 .iter()
                 .map(|p| p.ty.to_signature_string(false, self))
-                .collect::<Vec<String>>()
                 .join(",")
         )
     }

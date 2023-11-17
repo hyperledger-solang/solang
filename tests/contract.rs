@@ -89,7 +89,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
         }
     }
 
-    check_diagnostics(&path, &ns);
+    check_diagnostics(&path, &ns)?;
 
     if !ns.diagnostics.any_errors() {
         // let's try and emit
@@ -144,7 +144,7 @@ fn add_file(cache: &mut FileResolver, path: &Path, target: Target) -> io::Result
     Ok(filename.to_string())
 }
 
-fn check_diagnostics(path: &Path, ns: &Namespace) {
+fn check_diagnostics(path: &Path, ns: &Namespace) -> io::Result<()> {
     let mut expected = "// ---- Expect: diagnostics ----\n".to_owned();
 
     for diag in ns.diagnostics.iter() {
@@ -172,6 +172,10 @@ fn check_diagnostics(path: &Path, ns: &Namespace) {
     for line in BufReader::new(file).lines() {
         let line = line.unwrap();
 
+        if line.starts_with("// ---- Expect: dot ----") {
+            check_dot(path, ns)?;
+        }
+
         if found.is_empty() && !line.starts_with("// ---- Expect: diagnostics ----") {
             continue;
         }
@@ -183,4 +187,32 @@ fn check_diagnostics(path: &Path, ns: &Namespace) {
     assert!(!found.is_empty());
 
     assert_eq!(found, expected, "source: {}", path.display());
+
+    Ok(())
+}
+
+fn check_dot(path: &Path, ns: &Namespace) -> io::Result<()> {
+    let mut path = path.to_path_buf();
+
+    path.set_extension("dot");
+
+    let generated_dot = ns.dotgraphviz();
+
+    // uncomment the next three lines to regenerate the test data
+    // use std::io::Write;
+    // let mut file = File::create(&path)?;
+    // file.write_all(generated_dot.as_bytes())?;
+
+    let mut file = File::open(&path)?;
+
+    let mut test_dot = String::new();
+
+    file.read_to_string(&mut test_dot)?;
+
+    // The dot files may have had their end of lines mangled on Windows
+    let test_dot = test_dot.replace("\r\n", "\n");
+
+    pretty_assertions::assert_eq!(generated_dot, test_dot);
+
+    Ok(())
 }

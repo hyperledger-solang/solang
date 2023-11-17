@@ -393,8 +393,8 @@ impl_for_enums! {
         Self::TypeDefinition(ref l, ..) => l.loc(),
         Self::Annotation(ref l, ..) => l.loc(),
         Self::Using(ref l, ..) => l.loc(),
-        Self::PragmaDirective(l, ..)
-        | Self::StraySemicolon(l, ..) => l,
+        Self::PragmaDirective(ref l, ..) => l.loc(),
+        Self::StraySemicolon(l, ..) => l,
     }
 
     pt::Statement: match self {
@@ -465,6 +465,12 @@ impl_for_enums! {
     pt::YulSwitchOptions: match self {
         Self::Case(l, ..)
         | Self::Default(l, ..) => l,
+    }
+
+    pt::PragmaDirective: match self {
+        Self::Identifier(l, ..)
+        | Self::StringLiteral(l, ..)
+        | Self::Version(l, ..) => l,
     }
 
     // other
