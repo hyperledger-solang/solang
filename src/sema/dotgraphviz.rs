@@ -2406,6 +2406,53 @@ impl Dot {
 
         node
     }
+
+    fn add_version(
+        &mut self,
+        version: &VersionReq,
+        parent: usize,
+        parent_rel: String,
+        ns: &Namespace,
+    ) {
+        match version {
+            VersionReq::Plain { loc, version } => {
+                let labels = vec![
+                    format!("version: {version}"),
+                    ns.loc_to_string(PathDisplay::FullPath, loc),
+                ];
+
+                self.add_node(Node::new("plain", labels), Some(parent), Some(parent_rel));
+            }
+            VersionReq::Operator { loc, op, version } => {
+                let labels = vec![
+                    format!("version: {op}{version}"),
+                    ns.loc_to_string(PathDisplay::FullPath, loc),
+                ];
+
+                self.add_node(
+                    Node::new("operator", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+            }
+            VersionReq::Range { loc, from, to } => {
+                let labels = vec![
+                    format!("version: {from} - {to}"),
+                    ns.loc_to_string(PathDisplay::FullPath, loc),
+                ];
+
+                self.add_node(Node::new("range", labels), Some(parent), Some(parent_rel));
+            }
+            VersionReq::Or { loc, left, right } => {
+                let labels = vec![format!("||"), ns.loc_to_string(PathDisplay::FullPath, loc)];
+
+                let node = self.add_node(Node::new("or", labels), Some(parent), Some(parent_rel));
+
+                self.add_version(left, node, "left".into(), ns);
+                self.add_version(right, node, "right".into(), ns);
+            }
+        }
+    }
 }
 
 impl Namespace {
@@ -2681,6 +2728,46 @@ impl Namespace {
 
             for func in &c.functions {
                 dot.add_function(&self.functions[*func], self, contract);
+            }
+        }
+
+        // pragmas
+        if !self.pragmas.is_empty() {
+            let pragmas = dot.add_node(Node::new("pragmas", Vec::new()), None, None);
+
+            for pragma in &self.pragmas {
+                match pragma {
+                    Pragma::Identifier { loc, name, value } => {
+                        let labels = vec![
+                            format!("name: {}", name.name),
+                            format!("value: {}", value.name),
+                            self.loc_to_string(PathDisplay::FullPath, loc),
+                        ];
+
+                        dot.add_node(Node::new("pragma", labels), Some(pragmas), None);
+                    }
+                    Pragma::StringLiteral { loc, name, value } => {
+                        let labels = vec![
+                            format!("name: {}", name.name),
+                            format!("value: '{}'", value.string),
+                            self.loc_to_string(PathDisplay::FullPath, loc),
+                        ];
+
+                        dot.add_node(Node::new("pragma", labels), Some(pragmas), None);
+                    }
+                    Pragma::SolidityVersion { loc, versions } => {
+                        let labels = vec![
+                            "name: solidity".into(),
+                            self.loc_to_string(PathDisplay::FullPath, loc),
+                        ];
+
+                        let node = dot.add_node(Node::new("pragma", labels), Some(pragmas), None);
+
+                        for (no, version) in versions.iter().enumerate() {
+                            dot.add_version(version, node, format!("version {no}"), self);
+                        }
+                    }
+                }
             }
         }
 
