@@ -1615,36 +1615,26 @@ impl<'a> Builder<'a> {
                 loc_to_range(&func.id.loc, file),
             );
 
-            // The outermost scope of a function
-            let outermost_scope = (
-                func.loc,
-                func.symtable.active_scopes.first().cloned().unwrap(),
-            );
-            // Rest of the lexical scopes that were popped previously
-            let func_scopes = func
-                .symtable
-                .popped_scopes
-                .iter()
-                .chain(std::iter::once(&outermost_scope));
-            self.scopes.extend(func_scopes.map(|(loc, scope)| {
-                let scope_entry = ScopeEntry {
-                    start: loc.start(),
-                    stop: loc.exclusive_end(),
-                    val: scope
-                        .0
-                        .values()
-                        .filter_map(|pos| {
-                            func.symtable.vars.get(pos).map(|var| {
-                                (
-                                    var.id.name.clone(),
-                                    get_type_definition(&var.ty).map(|dt| dt.into()),
-                                )
+            self.scopes
+                .extend(func.symtable.popped_scopes.iter().map(|(loc, scope)| {
+                    let scope_entry = ScopeEntry {
+                        start: loc.start(),
+                        stop: loc.exclusive_end(),
+                        val: scope
+                            .0
+                            .values()
+                            .filter_map(|pos| {
+                                func.symtable.vars.get(pos).map(|var| {
+                                    (
+                                        var.id.name.clone(),
+                                        get_type_definition(&var.ty).map(|dt| dt.into()),
+                                    )
+                                })
                             })
-                        })
-                        .collect_vec(),
-                };
-                (file_no, scope_entry)
-            }));
+                            .collect_vec(),
+                    };
+                    (file_no, scope_entry)
+                }));
 
             if func.contract_no.is_none() {
                 self.top_level_code_objects

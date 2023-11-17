@@ -332,6 +332,8 @@ pub fn resolve_function_body(
         }
     }
 
+    symtable.leave_scope(ns.functions[function_no].loc);
+
     ns.functions[function_no].body = res;
 
     std::mem::swap(&mut ns.functions[function_no].symtable, &mut symtable);
