@@ -96,7 +96,7 @@ impl<'input> Converter<'input> {
             None => {
                 let ast_ty = expr.ty();
                 let tmp = vartable.new_temp(self.lowering_ast_type(&ast_ty), ast_ty);
-                self.lowering_expression(&tmp, expr, vartable, result);
+                self.lower_expression(&tmp, expr, vartable, result);
                 tmp
             }
         }
@@ -213,7 +213,7 @@ impl<'input> Converter<'input> {
     fn lowering_basic_block(&self, basic_block: &BasicBlock, vartable: &mut Vartable) -> Block {
         let mut instructions = vec![];
         for insn in &basic_block.instr {
-            self.lowering_instr(insn, vartable, &mut instructions);
+            self.lower_instr(insn, vartable, &mut instructions);
         }
 
         Block {

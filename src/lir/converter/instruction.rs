@@ -4,11 +4,12 @@ use solang_parser::pt::Loc;
 
 use crate::codegen::cfg::Instr;
 use crate::lir::converter::Converter;
+use crate::lir::expressions::Operand;
 use crate::lir::instructions::Instruction;
 use crate::lir::vartable::Vartable;
 
 impl Converter<'_> {
-    pub(crate) fn lowering_instr(
+    pub(crate) fn lower_instr(
         &self,
         instr: &Instr,
         vartable: &mut Vartable,
@@ -25,7 +26,7 @@ impl Converter<'_> {
                 //   2. [t2] tmp_2 = b + tmp_1
                 //   3. [t] a = tmp_2;
                 let dest_operand = vartable.get_operand(res, *loc);
-                self.lowering_expression(&dest_operand, expr, vartable, results);
+                self.lower_expression(&dest_operand, expr, vartable, results);
             }
             Instr::Store { dest, data } => {
                 // type checking the dest.ty() and data.ty()
@@ -78,11 +79,10 @@ impl Converter<'_> {
                 });
             }
             Instr::Return { value } => {
-                let mut operands = vec![];
-                for v in value {
-                    let tmp = self.to_operand_and_insns(v, vartable, results);
-                    operands.push(tmp);
-                }
+                let operands = value
+                    .iter()
+                    .map(|v| self.to_operand_and_insns(v, vartable, results))
+                    .collect::<Vec<Operand>>();
                 results.push(Instruction::Return {
                     loc: /*missing from cfg*/ Loc::Codegen,
                     value: operands,
@@ -110,11 +110,10 @@ impl Converter<'_> {
                 let callty = self.to_internal_call_ty_and_insns(call, vartable, results);
 
                 // resolve the arguments
-                let mut arg_ops = vec![];
-                for arg in args {
-                    let tmp = self.to_operand_and_insns(arg, vartable, results);
-                    arg_ops.push(tmp);
-                }
+                let arg_ops = args
+                    .iter()
+                    .map(|arg| self.to_operand_and_insns(arg, vartable, results))
+                    .collect::<Vec<Operand>>();
 
                 results.push(Instruction::Call {
                     loc: /*missing from cfg*/ Loc::Codegen,
@@ -255,11 +254,10 @@ impl Converter<'_> {
                 topics,
             } => {
                 let data_op = self.to_operand_and_insns(data, vartable, results);
-                let mut topic_ops = vec![];
-                for topic in topics {
-                    let topic_op = self.to_operand_and_insns(topic, vartable, results);
-                    topic_ops.push(topic_op);
-                }
+                let topic_ops = topics
+                    .iter()
+                    .map(|topic| self.to_operand_and_insns(topic, vartable, results))
+                    .collect::<Vec<Operand>>();
                 results.push(Instruction::EmitEvent {
                     loc: /*missing from cfg*/ Loc::Codegen,
                     event_no: *event_no,

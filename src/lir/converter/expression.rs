@@ -12,7 +12,7 @@ use crate::lir::vartable::Vartable;
 use crate::sema::ast;
 
 impl Converter<'_> {
-    pub(crate) fn lowering_expression(
+    pub(crate) fn lower_expression(
         &self,
         dest: &Operand,
         expr: &codegen::Expression,
