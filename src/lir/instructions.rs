@@ -13,7 +13,6 @@ use super::lir_type::PhiInput;
 pub enum Instruction {
     Nop,
 
-    /*************************** Contract As Callee ***************************/
     // Return data to the outside callers
     ReturnData {
         loc: Loc,
@@ -25,7 +24,6 @@ pub enum Instruction {
         code: codegen::cfg::ReturnCode,
     },
 
-    /*************************** Memory Alloc/Access ***************************/
     // Set variable
     Set {
         loc: Loc,
@@ -63,7 +61,6 @@ pub enum Instruction {
         accounts: ExternalCallAccounts<Operand>,
     },
 
-    /*************************** Storage Access ***************************/
     LoadStorage {
         loc: Loc,
         res: usize,
@@ -96,7 +93,6 @@ pub enum Instruction {
         storage: Operand,
     },
 
-    /*************************** Function Calls ***************************/
     // Call internal function, either static dispatch or dynamic dispatch
     Call {
         loc: Loc,
@@ -116,7 +112,6 @@ pub enum Instruction {
         bytes: Operand,
     },
 
-    /*************************** External Calls ***************************/
     ExternalCall {
         loc: Loc,
         // Polkadot specific
@@ -170,7 +165,6 @@ pub enum Instruction {
         value: Operand,
     },
 
-    /*************************** Branching ***************************/
     Branch {
         loc: Loc,
         block: usize,
@@ -192,15 +186,11 @@ pub enum Instruction {
         value: Vec<Operand>,
     },
 
-    /*************************** Error Ctl ***************************/
     AssertFailure {
         loc: Loc,
         encoded_args: Option<Operand>,
     },
 
-    // AccountAccess should be replaced by Subscript
-
-    /*************************** Phi Function ***************************/
     Phi {
         loc: Loc,
         res: usize,
