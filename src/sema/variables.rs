@@ -327,7 +327,7 @@ pub fn variable_decl<'a>(
                 file_no,
                 contract_no,
                 constant,
-                ..Default::default()
+                ..ExprContext::new()
             };
             match expression(
                 initializer,
@@ -446,9 +446,17 @@ pub fn variable_decl<'a>(
             // If the variable is an array or mapping, the accessor function takes mapping keys
             // or array indices as arguments, and returns the dereferenced value
             let mut symtable = Symtable::new();
+            let mut context = ExprContext::new();
             let mut params = Vec::new();
-            let param =
-                collect_parameters(&ty, &def.name, &mut symtable, &mut params, &mut expr, ns)?;
+            let param = collect_parameters(
+                &ty,
+                &def.name,
+                &mut symtable,
+                &mut context,
+                &mut params,
+                &mut expr,
+                ns,
+            )?;
 
             if param.ty.contains_mapping(ns) {
                 // we can't return a mapping
@@ -458,7 +466,8 @@ pub fn variable_decl<'a>(
                 ));
             }
 
-            let (body, returns) = accessor_body(expr, param, constant, &mut symtable, ns);
+            let (body, returns) =
+                accessor_body(expr, param, constant, &mut symtable, &mut context, ns);
 
             let mut func = Function::new(
                 def.name.as_ref().unwrap().loc,
@@ -510,6 +519,7 @@ fn collect_parameters(
     ty: &Type,
     name: &Option<pt::Identifier>,
     symtable: &mut Symtable,
+    context: &mut ExprContext,
     params: &mut Vec<Parameter>,
     expr: &mut Expression,
     ns: &mut Namespace,
@@ -540,6 +550,7 @@ fn collect_parameters(
                 VariableInitializer::Solidity(None),
                 VariableUsage::Parameter,
                 None,
+                context,
             )?;
 
             symtable.arguments.push(Some(arg_no));
@@ -568,7 +579,7 @@ fn collect_parameters(
                 annotation: None,
             });
 
-            collect_parameters(value, value_name, symtable, params, expr, ns)
+            collect_parameters(value, value_name, symtable, context, params, expr, ns)
         }
         Type::Array(elem_ty, dims) => {
             let mut ty = Type::StorageRef(false, Box::new(ty.clone()));
@@ -589,6 +600,7 @@ fn collect_parameters(
                         VariableInitializer::Solidity(None),
                         VariableUsage::Parameter,
                         None,
+                        context,
                     )
                     .unwrap();
 
@@ -621,7 +633,7 @@ fn collect_parameters(
                 });
             }
 
-            collect_parameters(elem_ty, &None, symtable, params, expr, ns)
+            collect_parameters(elem_ty, &None, symtable, context, params, expr, ns)
         }
         _ => Some(Parameter {
             id: name.clone(),
@@ -647,6 +659,7 @@ fn accessor_body(
     param: Parameter,
     constant: bool,
     symtable: &mut Symtable,
+    context: &mut ExprContext,
     ns: &mut Namespace,
 ) -> (Vec<Statement>, Vec<Parameter>) {
     // This could be done in codegen rather than sema, however I am not sure how we would implement
@@ -677,6 +690,7 @@ fn accessor_body(
                 VariableInitializer::Solidity(Some(expr.clone())),
                 VariableUsage::LocalVariable,
                 Some(pt::StorageLocation::Storage(pt::Loc::Implicit)),
+                context,
             )
             .unwrap();
 
@@ -782,7 +796,7 @@ pub fn resolve_initializers(
         let mut context = ExprContext {
             file_no,
             contract_no: Some(*contract_no),
-            ..Default::default()
+            ..ExprContext::new()
         };
 
         if let Ok(res) = expression(

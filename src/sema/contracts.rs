@@ -203,7 +203,7 @@ fn resolve_base_args(contracts: &[ContractDefinition], file_no: usize, ns: &mut 
         let mut context = ExprContext {
             file_no,
             contract_no: Some(contract.contract_no),
-            ..Default::default()
+            ..ExprContext::new()
         };
 
         for base in &contract.base {

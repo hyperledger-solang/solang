@@ -2349,7 +2349,7 @@ pub fn function_call_expr(
             }
 
             // is there a local variable or contract variable with this name
-            if symtable.find(&id.name).is_some()
+            if symtable.find(context, &id.name).is_some()
                 || matches!(
                     ns.resolve_var(context.file_no, context.contract_no, id, true),
                     Some(Symbol::Variable(..))

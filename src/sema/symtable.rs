@@ -7,6 +7,7 @@ use std::str;
 use std::sync::Arc;
 
 use super::ast::{Diagnostic, Namespace, Type};
+use super::expression::ExprContext;
 use crate::sema::ast::Expression;
 use solang_parser::pt;
 
@@ -78,12 +79,12 @@ pub enum VariableUsage {
 }
 
 #[derive(Debug, Clone)]
-pub struct VarScope(pub HashMap<String, usize>, Option<HashSet<usize>>);
+pub struct VarScope(pub HashMap<String, usize>, pub Option<HashSet<usize>>);
 
 #[derive(Default, Debug, Clone)]
 pub struct Symtable {
     pub vars: IndexMap<usize, Variable>,
-    pub active_scopes: Vec<VarScope>,
+    // pub active_scopes: Vec<VarScope>,
     pub arguments: Vec<Option<usize>>,
     pub returns: Vec<usize>,
     pub popped_scopes: Vec<(pt::Loc, VarScope)>,
@@ -93,7 +94,7 @@ impl Symtable {
     pub fn new() -> Self {
         Symtable {
             vars: IndexMap::new(),
-            active_scopes: vec![VarScope(HashMap::new(), None)],
+            // active_scopes: vec![VarScope(HashMap::new(), None)],
             arguments: Vec::new(),
             returns: Vec::new(),
             popped_scopes: Vec::new(),
@@ -108,6 +109,7 @@ impl Symtable {
         initializer: VariableInitializer,
         usage_type: VariableUsage,
         storage_location: Option<pt::StorageLocation>,
+        context: &mut ExprContext,
     ) -> Option<usize> {
         let pos = ns.next_id;
         ns.next_id += 1;
@@ -129,7 +131,7 @@ impl Symtable {
 
         // the variable has no name, like unnamed return or parameters values
         if !id.name.is_empty() {
-            if let Some(prev) = self.find(&id.name) {
+            if let Some(prev) = self.find(context, &id.name) {
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     id.loc,
                     format!("{} is already declared", id.name),
@@ -139,7 +141,8 @@ impl Symtable {
                 return None;
             }
 
-            self.active_scopes
+            context
+                .active_scopes
                 .last_mut()
                 .unwrap()
                 .0
@@ -157,8 +160,9 @@ impl Symtable {
         initializer: VariableInitializer,
         usage_type: VariableUsage,
         storage_location: Option<pt::StorageLocation>,
+        context: &mut ExprContext,
     ) -> Option<usize> {
-        if let Some(var) = self.find(&id.name) {
+        if let Some(var) = self.find(context, &id.name) {
             ns.diagnostics.push(Diagnostic {
                 level: Level::Error,
                 ty: ErrorType::DeclarationError,
@@ -172,11 +176,19 @@ impl Symtable {
             return None;
         }
 
-        self.add(id, ty, ns, initializer, usage_type, storage_location)
+        self.add(
+            id,
+            ty,
+            ns,
+            initializer,
+            usage_type,
+            storage_location,
+            context,
+        )
     }
 
-    pub fn find(&self, name: &str) -> Option<&Variable> {
-        for scope in self.active_scopes.iter().rev() {
+    pub fn find(&self, context: &mut ExprContext, name: &str) -> Option<&Variable> {
+        for scope in context.active_scopes.iter().rev() {
             if let Some(n) = scope.0.get(name) {
                 return self.vars.get(n);
             }
@@ -185,12 +197,12 @@ impl Symtable {
         None
     }
 
-    pub fn enter_scope(&mut self) {
-        self.active_scopes.push(VarScope(HashMap::new(), None));
+    pub fn enter_scope(&mut self, context: &mut ExprContext) {
+        context.active_scopes.push(VarScope(HashMap::new(), None));
     }
 
-    pub fn leave_scope(&mut self, loc: pt::Loc) {
-        if let Some(curr_scope) = self.active_scopes.pop() {
+    pub fn leave_scope(&mut self, context: &mut ExprContext, loc: pt::Loc) {
+        if let Some(curr_scope) = context.active_scopes.pop() {
             self.popped_scopes.push((loc, curr_scope));
         }
     }

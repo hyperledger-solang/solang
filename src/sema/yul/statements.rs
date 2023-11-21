@@ -266,6 +266,7 @@ fn resolve_variable_declaration(
             VariableInitializer::Yul(initializer.is_some()),
             VariableUsage::YulLocalVariable,
             None,
+            context,
         ) {
             added_variables.push((pos, ty));
         } else {

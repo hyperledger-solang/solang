@@ -23,7 +23,7 @@ use std::sync::Arc;
 
 #[test]
 fn resolve_bool_literal() {
-    let mut ctx = ExprContext::default();
+    let mut ctx = ExprContext::new();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
@@ -63,7 +63,7 @@ fn resolve_bool_literal() {
 
 #[test]
 fn resolve_number_literal() {
-    let mut ctx = ExprContext::default();
+    let mut ctx = ExprContext::new();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
@@ -120,7 +120,7 @@ fn resolve_number_literal() {
 
 #[test]
 fn resolve_hex_number_literal() {
-    let mut ctx = ExprContext::default();
+    let mut ctx = ExprContext::new();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
@@ -165,7 +165,7 @@ fn resolve_hex_number_literal() {
 
 #[test]
 fn resolve_hex_string_literal() {
-    let mut ctx = ExprContext::default();
+    let mut ctx = ExprContext::new();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
@@ -231,7 +231,7 @@ fn resolve_hex_string_literal() {
 
 #[test]
 fn resolve_string_literal() {
-    let mut ctx = ExprContext::default();
+    let mut ctx = ExprContext::new();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
@@ -261,7 +261,7 @@ fn resolve_string_literal() {
 
 #[test]
 fn resolve_variable_local() {
-    let mut context = ExprContext::default();
+    let mut context = ExprContext::new();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
     let mut ns = Namespace::new(Target::EVM);
@@ -278,6 +278,7 @@ fn resolve_variable_local() {
             VariableInitializer::Yul(false),
             VariableUsage::YulLocalVariable,
             None,
+            &mut context,
         )
         .unwrap();
     let pos2 = symtable
@@ -291,6 +292,7 @@ fn resolve_variable_local() {
             VariableInitializer::Yul(false),
             VariableUsage::LocalVariable,
             None,
+            &mut context,
         )
         .unwrap();
 
@@ -334,7 +336,7 @@ fn resolve_variable_contract() {
     let mut context = ExprContext {
         contract_no: Some(0),
         function_no: Some(0),
-        ..Default::default()
+        ..ExprContext::new()
     };
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
@@ -531,7 +533,7 @@ fn resolve_variable_contract() {
 
 #[test]
 fn function_call() {
-    let mut context = ExprContext::default();
+    let mut context = ExprContext::new();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
     function_table.enter_scope();
@@ -726,7 +728,7 @@ fn function_call() {
 
 #[test]
 fn check_arguments() {
-    let mut context = ExprContext::default();
+    let mut context = ExprContext::new();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
     function_table.enter_scope();
@@ -880,7 +882,7 @@ fn test_member_access() {
     let mut context = ExprContext {
         contract_no: Some(0),
         function_no: Some(0),
-        ..Default::default()
+        ..ExprContext::new()
     };
 
     let mut symtable = Symtable::new();
@@ -1006,7 +1008,7 @@ fn test_check_types() {
         0,
     );
 
-    let mut context = ExprContext::default();
+    let mut context = ExprContext::new();
 
     let mut ns = Namespace::new(Target::EVM);
     let mut contract = ast::Contract::new(
@@ -1042,6 +1044,7 @@ fn test_check_types() {
         VariableInitializer::Solidity(None),
         VariableUsage::YulLocalVariable,
         None,
+        &mut context,
     );
     let res = check_type(&expr, &mut context, &mut ns, &mut symtable);
     assert!(res.is_some());

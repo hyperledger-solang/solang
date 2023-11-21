@@ -17,7 +17,7 @@ pub(super) fn variable(
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
-    if let Some(v) = symtable.find(&id.name) {
+    if let Some(v) = symtable.find(context, &id.name) {
         return if context.constant {
             diagnostics.push(Diagnostic::error(
                 id.loc,
