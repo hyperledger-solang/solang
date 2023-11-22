@@ -44,7 +44,7 @@ pub fn resolve_function_body(
         file_no,
         contract_no,
         function_no: Some(function_no),
-        ..ExprContext::default()
+        ..Default::default()
     };
     context.enter_scope();
 

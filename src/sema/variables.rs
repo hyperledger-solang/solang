@@ -327,7 +327,7 @@ pub fn variable_decl<'a>(
                 file_no,
                 contract_no,
                 constant,
-                ..ExprContext::default()
+                ..Default::default()
             };
             context.enter_scope();
 
@@ -799,7 +799,7 @@ pub fn resolve_initializers(
         let mut context = ExprContext {
             file_no,
             contract_no: Some(*contract_no),
-            ..ExprContext::default()
+            ..Default::default()
         };
         context.enter_scope();
 

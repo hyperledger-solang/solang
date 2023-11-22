@@ -1759,7 +1759,7 @@ impl<'a> Builder<'a> {
 
             self.declarations.extend(decls);
 
-            //////////// Code objects defined within the contract ////////////
+            // Code objects defined within the contract
 
             let functions = contract.functions.iter().filter_map(|&fno| {
                 self.ns

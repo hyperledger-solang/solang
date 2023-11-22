@@ -342,7 +342,7 @@ fn resolve_variable_contract() {
     let mut context = ExprContext {
         contract_no: Some(0),
         function_no: Some(0),
-        ..ExprContext::default()
+        ..Default::default()
     };
     context.enter_scope();
 
@@ -892,7 +892,7 @@ fn test_member_access() {
     let mut context = ExprContext {
         contract_no: Some(0),
         function_no: Some(0),
-        ..ExprContext::default()
+        ..Default::default()
     };
     context.enter_scope();
 

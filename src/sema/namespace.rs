@@ -1531,7 +1531,7 @@ impl Namespace {
             contract_no,
             function_no,
             constant: true,
-            ..ExprContext::default()
+            ..Default::default()
         };
         context.enter_scope();
 
