@@ -1616,7 +1616,7 @@ impl<'a> Builder<'a> {
             );
 
             self.scopes
-                .extend(func.symtable.popped_scopes.iter().map(|(loc, scope)| {
+                .extend(func.symtable.scopes.iter().map(|(loc, scope)| {
                     let scope_entry = ScopeEntry {
                         start: loc.start(),
                         stop: loc.exclusive_end(),

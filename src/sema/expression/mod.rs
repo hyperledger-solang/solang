@@ -17,7 +17,7 @@ mod variable;
 use super::ast::{ArrayLength, Diagnostic, Expression, Mutability, Namespace, RetrieveType, Type};
 use super::diagnostics::Diagnostics;
 use super::eval::eval_const_rational;
-use super::symtable::VarScope;
+use super::symtable::{Symtable, VarScope};
 use crate::sema::contracts::is_base;
 use crate::sema::eval::eval_const_number;
 use crate::sema::{symtable::LoopScopes, using::user_defined_operator_binding};
@@ -79,6 +79,16 @@ impl ExprContext {
         Self {
             active_scopes: vec![VarScope(HashMap::new(), None)],
             ..Default::default()
+        }
+    }
+
+    pub fn enter_scope(&mut self) {
+        self.active_scopes.push(VarScope(HashMap::new(), None));
+    }
+
+    pub fn leave_scope(&mut self, symtable: &mut Symtable, loc: pt::Loc) {
+        if let Some(curr_scope) = self.active_scopes.pop() {
+            symtable.scopes.push((loc, curr_scope));
         }
     }
 }

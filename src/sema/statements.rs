@@ -328,7 +328,7 @@ pub fn resolve_function_body(
         }
     }
 
-    symtable.leave_scope(&mut context, ns.functions[function_no].loc);
+    context.leave_scope(&mut symtable, ns.functions[function_no].loc);
 
     ns.functions[function_no].body = res;
 
@@ -419,7 +419,7 @@ fn statement(
             unchecked,
             loc,
         } => {
-            symtable.enter_scope(context);
+            context.enter_scope();
             let mut reachable = true;
             let mut already_unreachable = false;
 
@@ -450,7 +450,7 @@ fn statement(
                 )?;
             }
 
-            symtable.leave_scope(&mut context, *loc);
+            context.leave_scope(symtable, *loc);
 
             res.push(Statement::Block {
                 loc: *loc,
@@ -496,11 +496,11 @@ fn statement(
             used_variable(ns, &expr, symtable);
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.enter_scope(context);
+            context.enter_scope();
             let mut body_stmts = Vec::new();
             context.loops.enter_scope();
             statement(body, &mut body_stmts, context, symtable, ns, diagnostics)?;
-            symtable.leave_scope(context, *loc);
+            context.leave_scope(symtable, *loc);
             context.loops.leave_scope();
 
             res.push(Statement::While(*loc, true, cond, body_stmts));
@@ -518,11 +518,11 @@ fn statement(
             used_variable(ns, &expr, symtable);
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.enter_scope(context);
+            context.enter_scope();
             let mut body_stmts = Vec::new();
             context.loops.enter_scope();
             statement(body, &mut body_stmts, context, symtable, ns, diagnostics)?;
-            symtable.leave_scope(context, *loc);
+            context.leave_scope(symtable, *loc);
             context.loops.leave_scope();
 
             res.push(Statement::DoWhile(*loc, true, body_stmts, cond));
@@ -541,18 +541,18 @@ fn statement(
 
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.enter_scope(context);
+            context.enter_scope();
             let mut then_stmts = Vec::new();
             let mut reachable =
                 statement(then, &mut then_stmts, context, symtable, ns, diagnostics)?;
-            symtable.leave_scope(context, *loc);
+            context.leave_scope(symtable, *loc);
 
             let mut else_stmts = Vec::new();
             if let Some(stmts) = else_ {
-                symtable.enter_scope(context);
+                context.enter_scope();
                 reachable |= statement(stmts, &mut else_stmts, context, symtable, ns, diagnostics)?;
 
-                symtable.leave_scope(context, *loc);
+                context.leave_scope(symtable, *loc);
             } else {
                 reachable = true;
             }
@@ -569,7 +569,7 @@ fn statement(
             Err(())
         }
         pt::Statement::For(loc, init_stmt, None, next_expr, body_stmt) => {
-            symtable.enter_scope(context);
+            context.enter_scope();
 
             let mut init = Vec::new();
 
@@ -600,7 +600,7 @@ fn statement(
                 )?);
             }
 
-            symtable.leave_scope(context, *loc);
+            context.leave_scope(symtable, *loc);
 
             res.push(Statement::For {
                 loc: *loc,
@@ -613,7 +613,7 @@ fn statement(
             Ok(reachable)
         }
         pt::Statement::For(loc, init_stmt, Some(cond_expr), next_expr, body_stmt) => {
-            symtable.enter_scope(context);
+            context.enter_scope();
 
             let mut init = Vec::new();
             let mut body = Vec::new();
@@ -663,7 +663,7 @@ fn statement(
                 }
             }
 
-            symtable.leave_scope(context, *loc);
+            context.leave_scope(symtable, *loc);
 
             res.push(Statement::For {
                 loc: *loc,
@@ -2303,7 +2303,7 @@ fn try_catch(
         }
     };
 
-    symtable.enter_scope(context);
+    context.enter_scope();
 
     let mut params = Vec::new();
     let mut broken = false;
@@ -2398,7 +2398,7 @@ fn try_catch(
     let mut finally_reachable =
         statement(ok, &mut ok_resolved, context, symtable, ns, diagnostics)?;
 
-    symtable.leave_scope(context, *loc);
+    context.leave_scope(symtable, *loc);
 
     let mut clauses_unique = HashSet::new();
     let mut errors_resolved = Vec::new();
@@ -2424,7 +2424,7 @@ fn try_catch(
 
         match clause_stmt {
             CatchClause::Simple(catch_loc, param, stmt) => {
-                symtable.enter_scope(context);
+                context.enter_scope();
 
                 let mut catch_param = None;
                 let mut catch_param_pos = None;
@@ -2489,7 +2489,7 @@ fn try_catch(
 
                 finally_reachable |= reachable;
 
-                symtable.leave_scope(context, *catch_loc);
+                context.leave_scope(symtable, *catch_loc);
 
                 catch_all = Some(super::ast::CatchClause {
                     param: catch_param,
@@ -2535,7 +2535,7 @@ fn try_catch(
                     ));
                 }
 
-                symtable.enter_scope(context);
+                context.enter_scope();
 
                 let mut error_pos = None;
                 let mut error_stmt_resolved = Vec::new();
@@ -2579,7 +2579,7 @@ fn try_catch(
 
                 finally_reachable |= reachable;
 
-                symtable.leave_scope(context, *catch_loc);
+                context.leave_scope(symtable, *catch_loc);
 
                 errors_resolved.push((error_pos, error_param, error_stmt_resolved));
 

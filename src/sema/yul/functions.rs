@@ -240,7 +240,7 @@ pub(crate) fn resolve_function_definition(
     ns: &mut Namespace,
 ) -> Result<YulFunction, ()> {
     let mut symtable = Symtable::new();
-    symtable.enter_scope(context);
+    context.enter_scope();
 
     let prev_yul_function = context.yul_function;
     context.yul_function = true;
@@ -292,7 +292,7 @@ pub(crate) fn resolve_function_definition(
         ns,
     );
 
-    symtable.leave_scope(&mut context, func_def.loc);
+    context.leave_scope(&mut symtable, func_def.loc);
 
     Ok(YulFunction {
         loc: func_def.loc,

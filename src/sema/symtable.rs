@@ -84,20 +84,18 @@ pub struct VarScope(pub HashMap<String, usize>, pub Option<HashSet<usize>>);
 #[derive(Default, Debug, Clone)]
 pub struct Symtable {
     pub vars: IndexMap<usize, Variable>,
-    // pub active_scopes: Vec<VarScope>,
     pub arguments: Vec<Option<usize>>,
     pub returns: Vec<usize>,
-    pub popped_scopes: Vec<(pt::Loc, VarScope)>,
+    pub scopes: Vec<(pt::Loc, VarScope)>,
 }
 
 impl Symtable {
     pub fn new() -> Self {
         Symtable {
             vars: IndexMap::new(),
-            // active_scopes: vec![VarScope(HashMap::new(), None)],
             arguments: Vec::new(),
             returns: Vec::new(),
-            popped_scopes: Vec::new(),
+            scopes: Vec::new(),
         }
     }
 
@@ -195,16 +193,6 @@ impl Symtable {
         }
 
         None
-    }
-
-    pub fn enter_scope(&mut self, context: &mut ExprContext) {
-        context.active_scopes.push(VarScope(HashMap::new(), None));
-    }
-
-    pub fn leave_scope(&mut self, context: &mut ExprContext, loc: pt::Loc) {
-        if let Some(curr_scope) = context.active_scopes.pop() {
-            self.popped_scopes.push((loc, curr_scope));
-        }
     }
 
     pub fn get_name(&self, pos: usize) -> &str {

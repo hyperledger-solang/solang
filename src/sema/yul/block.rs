@@ -26,7 +26,7 @@ pub fn resolve_yul_block(
     ns: &mut Namespace,
 ) -> (YulBlock, bool) {
     function_table.enter_scope();
-    symtable.enter_scope(context);
+    context.enter_scope();
 
     let (body, mut next_reachable) = process_statements(
         statements,
@@ -39,7 +39,7 @@ pub fn resolve_yul_block(
     );
 
     next_reachable &= reachable;
-    symtable.leave_scope(context, *loc);
+    context.leave_scope(symtable, *loc);
     function_table.leave_scope(ns);
 
     (
