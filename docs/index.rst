@@ -31,6 +31,7 @@ Contents
 
    installing
    running
+   aqd
    extension
    examples
 

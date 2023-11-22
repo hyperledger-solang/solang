@@ -60,15 +60,15 @@ Here is a brief description of what we envision for the next versions.
 
 ### V0.4
 
-| Feature                                            | Status      |
-|----------------------------------------------------|-------------|
-| Improve management over optimization passes        | Not started |
-| Adopt single static assignment for code generation | In progress |
-| Support openzeppelin on Polkadot target            | In progress |
-| Provide Solidity -> Polkadot porting guide         | Not started |
-| Declare accounts for a Solidity function on Solana | In progress |
-| Tooling for calls between ink! <> solidity         | In progress |
-| Provide CLI for node interactions                  | In progress |
+| Feature                                            | Status                                               |
+|----------------------------------------------------|------------------------------------------------------|
+| Improve management over optimization passes        | Not started                                          |
+| Adopt single static assignment for code generation | In progress                                          |
+| Support openzeppelin on Polkadot target            | In progress                                          |
+| Provide Solidity -> Polkadot porting guide         | Not started                                          |
+| Declare accounts for a Solidity function on Solana | In progress                                          |
+| Tooling for calls between ink! <> solidity         | In progress                                          |
+| Provide CLI for node interactions                  | [Done](https://github.com/hyperledger/solang-aqd)    |
 
 ## License
 
