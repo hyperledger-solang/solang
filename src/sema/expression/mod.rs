@@ -75,13 +75,6 @@ pub struct ExprContext {
 }
 
 impl ExprContext {
-    pub fn new() -> Self {
-        Self {
-            active_scopes: vec![VarScope(HashMap::new(), None)],
-            ..Default::default()
-        }
-    }
-
     pub fn enter_scope(&mut self) {
         self.active_scopes.push(VarScope(HashMap::new(), None));
     }

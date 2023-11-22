@@ -327,8 +327,10 @@ pub fn variable_decl<'a>(
                 file_no,
                 contract_no,
                 constant,
-                ..ExprContext::new()
+                ..ExprContext::default()
             };
+            context.enter_scope();
+
             match expression(
                 initializer,
                 &mut context,
@@ -446,7 +448,8 @@ pub fn variable_decl<'a>(
             // If the variable is an array or mapping, the accessor function takes mapping keys
             // or array indices as arguments, and returns the dereferenced value
             let mut symtable = Symtable::new();
-            let mut context = ExprContext::new();
+            let mut context = ExprContext::default();
+            context.enter_scope();
             let mut params = Vec::new();
             let param = collect_parameters(
                 &ty,
@@ -796,8 +799,9 @@ pub fn resolve_initializers(
         let mut context = ExprContext {
             file_no,
             contract_no: Some(*contract_no),
-            ..ExprContext::new()
+            ..ExprContext::default()
         };
+        context.enter_scope();
 
         if let Ok(res) = expression(
             initializer,

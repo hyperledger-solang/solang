@@ -44,8 +44,9 @@ pub fn resolve_function_body(
         file_no,
         contract_no,
         function_no: Some(function_no),
-        ..ExprContext::new()
+        ..ExprContext::default()
     };
+    context.enter_scope();
 
     let mut unresolved_annotation: Vec<UnresolvedAnnotation> = Vec::new();
     // first add function parameters

@@ -1531,8 +1531,9 @@ impl Namespace {
             contract_no,
             function_no,
             constant: true,
-            ..ExprContext::new()
+            ..ExprContext::default()
         };
+        context.enter_scope();
 
         let size_expr = expression(
             expr,
