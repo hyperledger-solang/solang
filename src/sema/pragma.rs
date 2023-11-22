@@ -136,3 +136,129 @@ fn parse_version(
         patch: res.get(2).cloned(),
     })
 }
+
+impl ast::VersionReq {
+    fn highest_version(&self) -> Vec<ast::Version> {
+        match self {
+            ast::VersionReq::Plain { version, .. } => vec![version.clone()],
+            ast::VersionReq::Operator { op, version, .. } => match op {
+                pt::VersionOp::Exact => vec![version.clone()],
+                pt::VersionOp::Less => {
+                    let mut version = version.clone();
+
+                    if let Some(patch) = &mut version.patch {
+                        if *patch != 0 {
+                            *patch -= 1;
+                            return vec![version];
+                        }
+                    }
+
+                    if let Some(minor) = &mut version.minor {
+                        if *minor != 0 {
+                            *minor -= 1;
+
+                            version.patch = None;
+                            return vec![version];
+                        }
+                    }
+
+                    if version.major > 0 {
+                        version.major -= 1;
+                        version.minor = None;
+                        version.patch = None;
+
+                        return vec![version];
+                    }
+
+                    vec![]
+                }
+                pt::VersionOp::LessEq => vec![version.clone()],
+                pt::VersionOp::Greater => vec![],
+                pt::VersionOp::GreaterEq => vec![],
+                pt::VersionOp::Caret if version.major == 0 => {
+                    if let Some(m) = version.minor {
+                        if m > 0 {
+                            let mut version = version.clone();
+                            version.patch = None;
+                            return vec![version];
+                        }
+                    }
+
+                    vec![]
+                }
+                pt::VersionOp::Caret => {
+                    let mut version = version.clone();
+                    version.minor = None;
+                    version.patch = None;
+                    return vec![version];
+                }
+                pt::VersionOp::Tilde => {
+                    if let Some(m) = version.minor {
+                        if m > 0 {
+                            let mut version = version.clone();
+                            version.patch = None;
+                            return vec![version];
+                        }
+                    }
+
+                    vec![]
+                }
+                pt::VersionOp::Wildcard => vec![],
+            },
+            ast::VersionReq::Or { left, right, .. } => {
+                let mut v = Vec::new();
+                v.extend(left.highest_version());
+                v.extend(right.highest_version());
+                v
+            }
+            ast::VersionReq::Range { to, .. } => vec![to.clone()],
+        }
+    }
+}
+
+impl ast::Namespace {
+    /// Return the highest supported version of Solidity according the solidity
+    /// version pragmas
+    pub fn highest_solidty_version(&self, file_no: usize) -> Option<ast::Version> {
+        let mut v = Vec::new();
+
+        for pragma in &self.pragmas {
+            if let ast::Pragma::SolidityVersion { loc, versions } = pragma {
+                if file_no == loc.file_no() {
+                    versions
+                        .iter()
+                        .map(|v| v.highest_version())
+                        .for_each(|res| v.extend(res));
+                }
+            }
+        }
+
+        // pick the most specific version
+        v.sort_by(|a, b| {
+            let cmp = a.minor.is_some().cmp(&b.minor.is_some());
+
+            if cmp == std::cmp::Ordering::Equal {
+                a.patch.is_some().cmp(&b.patch.is_some())
+            } else {
+                cmp
+            }
+        });
+
+        v.pop()
+    }
+
+    /// Are we supporting minor_version at most?
+    pub fn solidity_minor_version(&self, file_no: usize, minor_version: u64) -> bool {
+        if let Some(version) = self.highest_solidty_version(file_no) {
+            if version.major == 0 {
+                if let Some(minor) = version.minor {
+                    if minor <= minor_version {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+}

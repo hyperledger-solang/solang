@@ -46,6 +46,18 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         require(success && (data.length == 0 || abi.decode(data, (bool))), 'UniswapV2: TRANSFER_FAILED');
     }
 
+    event Mint(address sender, uint amount0, uint amount1);
+    event Burn(address sender, uint amount0, uint amount1, address to);
+    event Swap(
+        address sender,
+        uint amount0In,
+        uint amount1In,
+        uint amount0Out,
+        uint amount1Out,
+        address to
+    );
+    event Sync(uint112 reserve0, uint112 reserve1);
+
     constructor() public payable {
         factory = msg.sender;
     }

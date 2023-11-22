@@ -44,6 +44,7 @@ pub fn resolve_function_body(
         file_no,
         contract_no,
         function_no: Some(function_no),
+        allow_multi: ns.solidity_minor_version(file_no, 5),
         ..Default::default()
     };
     context.enter_scope();
@@ -1305,37 +1306,35 @@ fn emit_event(
                 }
             }
 
-            match resolved_events.len() {
-                0 => {
-                    diagnostics.extend(emit_diagnostics);
-                }
-                1 => {
-                    let (event_no, candidate_diagnostics, stmt) = resolved_events.remove(0);
+            let count = resolved_events.len();
 
-                    let event = &mut ns.events[event_no];
-                    event.used = true;
+            if count == 0 {
+                diagnostics.extend(emit_diagnostics);
+            } else if context.allow_multi || count == 1 {
+                let (event_no, candidate_diagnostics, stmt) = resolved_events.remove(0);
 
-                    diagnostics.extend(candidate_diagnostics);
+                let event = &mut ns.events[event_no];
+                event.used = true;
 
-                    return Ok(stmt);
-                }
-                _ => {
-                    diagnostics.push(Diagnostic::error_with_notes(
-                        *loc,
-                        "emit can be resolved to multiple events".into(),
-                        resolved_events
-                            .into_iter()
-                            .map(|(event_no, _, _)| {
-                                let event = &ns.events[event_no];
+                diagnostics.extend(candidate_diagnostics);
 
-                                Note {
-                                    loc: event.id.loc,
-                                    message: "candidate event".into(),
-                                }
-                            })
-                            .collect(),
-                    ));
-                }
+                return Ok(stmt);
+            } else {
+                diagnostics.push(Diagnostic::error_with_notes(
+                    *loc,
+                    "emit can be resolved to multiple events".into(),
+                    resolved_events
+                        .into_iter()
+                        .map(|(event_no, _, _)| {
+                            let event = &ns.events[event_no];
+
+                            Note {
+                                loc: event.id.loc,
+                                message: "candidate event".into(),
+                            }
+                        })
+                        .collect(),
+                ));
             };
         }
         pt::Expression::NamedFunctionCall(_, ty, args) => {
@@ -1481,38 +1480,36 @@ fn emit_event(
                 }
             }
 
-            match resolved_events.len() {
-                0 => {
-                    diagnostics.extend(emit_diagnostics);
-                }
-                1 => {
-                    let (event_no, candidate_diagnostics, stmt) = resolved_events.remove(0);
+            let count = resolved_events.len();
 
-                    diagnostics.extend(candidate_diagnostics);
+            if count == 0 {
+                diagnostics.extend(emit_diagnostics);
+            } else if count == 1 || context.allow_multi {
+                let (event_no, candidate_diagnostics, stmt) = resolved_events.remove(0);
 
-                    let event = &mut ns.events[event_no];
-                    event.used = true;
+                diagnostics.extend(candidate_diagnostics);
 
-                    return Ok(stmt);
-                }
-                _ => {
-                    diagnostics.push(Diagnostic::error_with_notes(
-                        *loc,
-                        "emit can be resolved to multiple events".into(),
-                        resolved_events
-                            .into_iter()
-                            .map(|(event_no, _, _)| {
-                                let event = &ns.events[event_no];
+                let event = &mut ns.events[event_no];
+                event.used = true;
 
-                                Note {
-                                    loc: event.id.loc,
-                                    message: "candidate event".into(),
-                                }
-                            })
-                            .collect(),
-                    ));
-                }
-            };
+                return Ok(stmt);
+            } else {
+                diagnostics.push(Diagnostic::error_with_notes(
+                    *loc,
+                    "emit can be resolved to multiple events".into(),
+                    resolved_events
+                        .into_iter()
+                        .map(|(event_no, _, _)| {
+                            let event = &ns.events[event_no];
+
+                            Note {
+                                loc: event.id.loc,
+                                message: "candidate event".into(),
+                            }
+                        })
+                        .collect(),
+                ));
+            }
         }
         pt::Expression::FunctionCallBlock(_, ty, block) => {
             let _ = ns.resolve_event(context.file_no, context.contract_no, ty, diagnostics);

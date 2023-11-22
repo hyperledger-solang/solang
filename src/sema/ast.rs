@@ -742,7 +742,7 @@ pub enum VersionReq {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Version {
     pub major: u64,
     pub minor: Option<u64>,

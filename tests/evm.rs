@@ -9,6 +9,8 @@ use std::{
 };
 use walkdir::WalkDir;
 
+mod evm_tests;
+
 fn test_solidity(src: &str) -> ast::Namespace {
     let mut cache = FileResolver::default();
 

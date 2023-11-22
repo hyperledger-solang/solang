@@ -18,6 +18,9 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
     bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
     mapping(address => uint) public nonces;
 
+    event Approval(address owner, address spender, uint value);
+    event Transfer(address from, address to, uint value);
+
     constructor() public {
         uint chainId = 1;
         DOMAIN_SEPARATOR = keccak256(
@@ -32,6 +35,7 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
     }
 
     function _mint(address to, uint value) internal {
+        print("_mint {} {}".format(to, value));
         totalSupply = totalSupply.add(value);
         balanceOf[to] = balanceOf[to].add(value);
         emit Transfer(address(0), to, value);
