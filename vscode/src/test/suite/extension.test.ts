@@ -530,16 +530,16 @@ async function testcompletion(docUri: vscode.Uri) {
 
   const get_labels = (list: vscode.CompletionList) => list.items.map(item => item.label);
 
-  const pos0 = new vscode.Position(4, 30);
+  const pos0 = new vscode.Position(6, 30);
   const suggestions0 = (await vscode.commands.executeCommand(
     'vscode.executeCompletionItemProvider',
     docUri,
     pos0
   )) as vscode.CompletionList;
   const labels0 = get_labels(suggestions0);
-  assert.ok(labels0.includes('value') && labels0.includes('first') && !labels0.includes('second'));
+  assert.ok(labels0.includes('VAL') && labels0.includes('value') && labels0.includes('first') && !labels0.includes('second'));
 
-  const pos1 = new vscode.Position(8, 30);
+  const pos1 = new vscode.Position(10, 30);
   const suggestions1 = (await vscode.commands.executeCommand(
     'vscode.executeCompletionItemProvider',
     docUri,
@@ -547,18 +547,18 @@ async function testcompletion(docUri: vscode.Uri) {
   )) as vscode.CompletionList;
   const labels1 = get_labels(suggestions1);
   labels1.includes('second');
-  assert.ok(labels1.includes('value') && !labels1.includes('first') && labels1.includes('second'));
+  assert.ok(labels1.includes('VAL') && labels1.includes('value') && !labels1.includes('first') && labels1.includes('second'));
   
-  const pos2 = new vscode.Position(9, 10);
+  const pos2 = new vscode.Position(11, 10);
   const suggestions2 = (await vscode.commands.executeCommand(
     'vscode.executeCompletionItemProvider',
     docUri,
     pos2
   )) as vscode.CompletionList;
   const labels2 = get_labels(suggestions2);
-  assert.ok(labels2.includes('value') && !labels2.includes('first') && !labels2.includes('second'));
+  assert.ok(labels2.includes('VAL') && labels2.includes('value') && !labels2.includes('first') && !labels2.includes('second'));
 
-  const pos3 = new vscode.Position(12, 28);
+  const pos3 = new vscode.Position(14, 28);
   const suggestions3 = (await vscode.commands.executeCommand(
     'vscode.executeCompletionItemProvider',
     docUri,
@@ -566,7 +566,17 @@ async function testcompletion(docUri: vscode.Uri) {
     '.'
   )) as vscode.CompletionList;
   const labels3 = get_labels(suggestions3);
-  assert.ok(labels3.includes('field1') && labels3.includes('field2') && !labels3.includes('value')&& !labels3.includes('first') && !labels3.includes('second'));
+  assert.ok(labels3.includes('field1') && labels3.includes('field2') && !labels3.includes('value')&& !labels3.includes('first') && !labels3.includes('second') && !labels3.includes('VAL'));
+  
+  const pos4 = new vscode.Position(18, 36);
+  const suggestions4 = (await vscode.commands.executeCommand(
+    'vscode.executeCompletionItemProvider',
+    docUri,
+    pos4,
+    '.'
+  )) as vscode.CompletionList;
+  const labels4 = get_labels(suggestions4);
+  assert.ok(labels4.includes('aaa') && labels4.includes('bbbb') && !labels4.includes('field1') && !labels4.includes('field2') && !labels4.includes('value')&& !labels4.includes('first') && !labels4.includes('second') && !labels4.includes('VAL'));
 }
 
 async function testhover(docUri: vscode.Uri) {
