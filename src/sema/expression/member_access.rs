@@ -521,8 +521,6 @@ fn contract_constant(
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Option<Expression>, ()> {
-    let file_no = context.file_no;
-
     let namespace = match e {
         pt::Expression::Variable(namespace) => namespace,
         _ => return Ok(None),
@@ -532,7 +530,7 @@ fn contract_constant(
         return Ok(None);
     }
 
-    if let Some(contract_no) = ns.resolve_contract(file_no, namespace) {
+    if let Some(contract_no) = ns.resolve_contract(context.file_no, namespace) {
         if let Some((var_no, var)) = ns.contracts[contract_no]
             .variables
             .iter_mut()

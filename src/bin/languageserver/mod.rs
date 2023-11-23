@@ -2297,9 +2297,9 @@ impl LanguageServer for SolangServer {
                 let builtin_structs = BUILTIN_STRUCTS
                     .iter()
                     .map(|r#struct| {
-                        let def_type = DefinitionType::Struct(r#struct.1);
+                        let def_type = DefinitionType::Struct(r#struct.struct_type);
                         let fields = r#struct
-                            .0
+                            .struct_decl
                             .fields
                             .iter()
                             .map(|field| (field.name_as_str().to_string(), None))

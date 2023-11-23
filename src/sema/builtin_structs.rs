@@ -4,10 +4,16 @@ use crate::sema::ast::{Namespace, Parameter, StructDecl, StructType, Type};
 use once_cell::sync::Lazy;
 use solang_parser::pt;
 
-pub static BUILTIN_STRUCTS: Lazy<[(StructDecl, StructType); 3]> = Lazy::new(|| {
+/// Represents builtin structs
+pub struct BuiltinStructDeclaration {
+    pub struct_decl: StructDecl,
+    pub struct_type: StructType,
+}
+
+pub static BUILTIN_STRUCTS: Lazy<[BuiltinStructDeclaration; 3]> = Lazy::new(|| {
     [
-        (
-            StructDecl {
+        BuiltinStructDeclaration {
+            struct_decl: StructDecl {
                 tags: Vec::new(),
                 loc: pt::Loc::Builtin,
                 contract: None,
@@ -132,10 +138,10 @@ pub static BUILTIN_STRUCTS: Lazy<[(StructDecl, StructType); 3]> = Lazy::new(|| {
                 offsets: Vec::new(),
                 storage_offsets: Vec::new(),
             },
-            StructType::AccountInfo,
-        ),
-        (
-            StructDecl {
+            struct_type: StructType::AccountInfo,
+        },
+        BuiltinStructDeclaration {
+            struct_decl: StructDecl {
                 tags: Vec::new(),
                 loc: pt::Loc::Builtin,
                 contract: None,
@@ -190,10 +196,10 @@ pub static BUILTIN_STRUCTS: Lazy<[(StructDecl, StructType); 3]> = Lazy::new(|| {
                 offsets: Vec::new(),
                 storage_offsets: Vec::new(),
             },
-            StructType::AccountMeta,
-        ),
-        (
-            StructDecl {
+            struct_type: StructType::AccountMeta,
+        },
+        BuiltinStructDeclaration {
+            struct_decl: StructDecl {
                 tags: Vec::new(),
                 id: pt::Identifier {
                     name: "ExternalFunction".to_string(),
@@ -228,8 +234,8 @@ pub static BUILTIN_STRUCTS: Lazy<[(StructDecl, StructType); 3]> = Lazy::new(|| {
                 offsets: Vec::new(),
                 storage_offsets: Vec::new(),
             },
-            StructType::ExternalFunction,
-        ),
+            struct_type: StructType::ExternalFunction,
+        },
     ]
 });
 
@@ -237,9 +243,9 @@ impl StructType {
     pub fn definition<'a>(&'a self, ns: &'a Namespace) -> &StructDecl {
         match self {
             StructType::UserDefined(struct_no) => &ns.structs[*struct_no],
-            StructType::AccountInfo => &BUILTIN_STRUCTS[0].0,
-            StructType::AccountMeta => &BUILTIN_STRUCTS[1].0,
-            StructType::ExternalFunction => &BUILTIN_STRUCTS[2].0,
+            StructType::AccountInfo => &BUILTIN_STRUCTS[0].struct_decl,
+            StructType::AccountMeta => &BUILTIN_STRUCTS[1].struct_decl,
+            StructType::ExternalFunction => &BUILTIN_STRUCTS[2].struct_decl,
             StructType::SolParameters => unreachable!("SolParameters is defined in a solana.c"),
         }
     }
