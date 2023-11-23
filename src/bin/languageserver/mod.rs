@@ -1422,15 +1422,15 @@ impl<'a> Builder<'a> {
                 },
             ));
 
-            let di = DefinitionIndex {
+            let def_index = DefinitionIndex {
                 def_path: file.path.clone(),
                 def_type: DefinitionType::Enum(ei),
             };
             self.definitions
-                .insert(di.clone(), loc_to_range(&enum_decl.id.loc, file));
+                .insert(def_index.clone(), loc_to_range(&enum_decl.id.loc, file));
 
             self.properties.insert(
-                di.clone(),
+                def_index.clone(),
                 enum_decl
                     .values
                     .iter()
@@ -1440,7 +1440,7 @@ impl<'a> Builder<'a> {
 
             if enum_decl.contract.is_none() {
                 self.top_level_code_objects
-                    .push((file_no, (enum_decl.id.name.clone(), Some(di))));
+                    .push((file_no, (enum_decl.id.name.clone(), Some(def_index))));
             }
         }
 
@@ -1461,31 +1461,32 @@ impl<'a> Builder<'a> {
                     },
                 ));
 
-                let di = DefinitionIndex {
+                let def_index = DefinitionIndex {
                     def_path: file.path.clone(),
                     def_type: DefinitionType::Struct(StructType::UserDefined(si)),
                 };
                 self.definitions
-                    .insert(di.clone(), loc_to_range(&struct_decl.id.loc, file));
+                    .insert(def_index.clone(), loc_to_range(&struct_decl.id.loc, file));
 
                 self.properties.insert(
-                    di.clone(),
+                    def_index.clone(),
                     struct_decl
                         .fields
                         .iter()
                         .filter_map(|field| {
-                            let di = get_type_definition(&field.ty).map(|dt| DefinitionIndex {
-                                def_path: file.path.clone(),
-                                def_type: dt,
-                            });
-                            field.id.as_ref().map(|id| (id.name.clone(), di))
+                            let def_index =
+                                get_type_definition(&field.ty).map(|def_type| DefinitionIndex {
+                                    def_path: file.path.clone(),
+                                    def_type,
+                                });
+                            field.id.as_ref().map(|id| (id.name.clone(), def_index))
                         })
                         .collect(),
                 );
 
                 if struct_decl.contract.is_none() {
                     self.top_level_code_objects
-                        .push((file_no, (struct_decl.id.name.clone(), Some(di))));
+                        .push((file_no, (struct_decl.id.name.clone(), Some(def_index))));
                 }
             }
         }
@@ -1627,7 +1628,7 @@ impl<'a> Builder<'a> {
                             func.symtable.vars.get(pos).map(|var| {
                                 (
                                     var.id.name.clone(),
-                                    get_type_definition(&var.ty).map(|dt| dt.into()),
+                                    get_type_definition(&var.ty).map(|def_type| def_type.into()),
                                 )
                             })
                         })
@@ -1690,13 +1691,15 @@ impl<'a> Builder<'a> {
                 },
             ));
 
-            let cdi = DefinitionIndex {
+            let contract_def_index = DefinitionIndex {
                 def_path: file.path.clone(),
                 def_type: DefinitionType::Contract(ci),
             };
 
-            self.definitions
-                .insert(cdi.clone(), loc_to_range(&contract.id.loc, file));
+            self.definitions.insert(
+                contract_def_index.clone(),
+                loc_to_range(&contract.id.loc, file),
+            );
 
             let impls = contract
                 .functions
@@ -1707,7 +1710,8 @@ impl<'a> Builder<'a> {
                 })
                 .collect();
 
-            self.implementations.insert(cdi.clone(), impls);
+            self.implementations
+                .insert(contract_def_index.clone(), impls);
 
             let decls = contract
                 .virtual_functions
@@ -1765,50 +1769,50 @@ impl<'a> Builder<'a> {
                 self.ns
                     .functions
                     .get(fno)
-                    .map(|f| (f.id.name.clone(), None))
+                    .map(|func| (func.id.name.clone(), None))
             });
 
-            let structs =
+            let structs = self
+                .ns
+                .structs
+                .iter()
+                .enumerate()
+                .filter_map(|(i, r#struct)| match &r#struct.contract {
+                    Some(contract_name) if contract_name == &contract.id.name => Some((
+                        r#struct.id.name.clone(),
+                        Some(DefinitionType::Struct(StructType::UserDefined(i))),
+                    )),
+                    _ => None,
+                });
+
+            let enums =
                 self.ns
-                    .structs
+                    .enums
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, s)| match &s.contract {
-                        Some(c) if c == &contract.id.name => Some((
-                            s.id.name.clone(),
-                            Some(DefinitionType::Struct(StructType::UserDefined(i))),
-                        )),
+                    .filter_map(|(i, r#enum)| match &r#enum.contract {
+                        Some(contract_name) if contract_name == &contract.id.name => {
+                            Some((r#enum.id.name.clone(), Some(DefinitionType::Enum(i))))
+                        }
                         _ => None,
                     });
 
-            let enums = self
-                .ns
-                .enums
-                .iter()
-                .enumerate()
-                .filter_map(|(i, e)| match &e.contract {
-                    Some(c) if c == &contract.id.name => {
-                        Some((e.id.name.clone(), Some(DefinitionType::Enum(i))))
-                    }
-                    _ => None,
-                });
-
-            let events = self
-                .ns
-                .events
-                .iter()
-                .enumerate()
-                .filter_map(|(i, e)| match &e.contract {
-                    Some(c) if *c == ci => {
-                        Some((e.id.name.clone(), Some(DefinitionType::Event(i))))
-                    }
-                    _ => None,
-                });
+            let events =
+                self.ns
+                    .events
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, event)| match &event.contract {
+                        Some(event_contract) if *event_contract == ci => {
+                            Some((event.id.name.clone(), Some(DefinitionType::Event(i))))
+                        }
+                        _ => None,
+                    });
 
             let variables = contract.variables.iter().map(|var| {
                 (
                     var.name.clone(),
-                    get_type_definition(&var.ty).map(|dt| dt.into()),
+                    get_type_definition(&var.ty).map(|def_type| def_type.into()),
                 )
             });
 
@@ -1817,16 +1821,18 @@ impl<'a> Builder<'a> {
                 .chain(enums)
                 .chain(events)
                 .map(|(name, dt)| {
-                    let di = dt.map(|dt| DefinitionIndex {
+                    let def_index = dt.map(|def_type| DefinitionIndex {
                         def_path: file.path.clone(),
-                        def_type: dt,
+                        def_type,
                     });
-                    (name, di)
+                    (name, def_index)
                 })
                 .chain(variables);
 
-            self.properties
-                .insert(cdi.clone(), contract_contents.clone().collect());
+            self.properties.insert(
+                contract_def_index.clone(),
+                contract_contents.clone().collect(),
+            );
 
             self.scopes.push((
                 file_no,
@@ -1839,8 +1845,10 @@ impl<'a> Builder<'a> {
 
             // Contracts can't be defined within other contracts.
             // So all the contracts are top level objects in a file.
-            self.top_level_code_objects
-                .push((file_no, (contract.id.name.clone(), Some(cdi))));
+            self.top_level_code_objects.push((
+                file_no,
+                (contract.id.name.clone(), Some(contract_def_index)),
+            ));
         }
 
         for (ei, event) in self.ns.events.iter().enumerate() {
@@ -1859,16 +1867,16 @@ impl<'a> Builder<'a> {
                 },
             ));
 
-            let di = DefinitionIndex {
+            let def_index = DefinitionIndex {
                 def_path: file.path.clone(),
                 def_type: DefinitionType::Event(ei),
             };
             self.definitions
-                .insert(di.clone(), loc_to_range(&event.id.loc, file));
+                .insert(def_index.clone(), loc_to_range(&event.id.loc, file));
 
             if event.contract.is_none() {
                 self.top_level_code_objects
-                    .push((file_no, (event.id.name.clone(), Some(di))));
+                    .push((file_no, (event.id.name.clone(), Some(def_index))));
             }
         }
 
@@ -1946,7 +1954,7 @@ impl<'a> Builder<'a> {
                 references: Lapper::new(
                     self.references
                         .iter()
-                        .filter(|r| r.0 == i)
+                        .filter(|reference| reference.0 == i)
                         .map(|(_, i)| {
                             let mut i = i.clone();
                             if let Some(def_path) = defs_to_files.get(&i.val.def_type) {
@@ -1959,43 +1967,44 @@ impl<'a> Builder<'a> {
                 scopes: Lapper::new(
                     self.scopes
                         .iter()
-                        .filter(|s| s.0 == i)
-                        .map(|(_, s)| {
-                            let mut s = s.clone();
-                            for val in &mut s.val {
+                        .filter(|scope| scope.0 == i)
+                        .map(|(_, scope)| {
+                            let mut scope = scope.clone();
+                            for val in &mut scope.val {
                                 if let Some(val) = &mut val.1 {
                                     if let Some(def_path) = defs_to_files.get(&val.def_type) {
                                         val.def_path = def_path.clone();
                                     }
                                 }
                             }
-                            s
+                            scope
                         })
                         .collect(),
                 ),
                 top_level_code_objects: self
                     .top_level_code_objects
                     .iter_mut()
-                    .filter(|co| co.0 == i)
-                    .map(|co| {
-                        if let Some(DefinitionIndex { def_path, def_type }) = &mut co.1 .1 {
+                    .filter(|code_object| code_object.0 == i)
+                    .map(|code_object| {
+                        if let Some(DefinitionIndex { def_path, def_type }) = &mut code_object.1 .1
+                        {
                             if def_path.to_str().unwrap() == "" {
                                 if let Some(dp) = defs_to_files.get(def_type) {
                                     *def_path = dp.clone();
                                 }
                             }
                         }
-                        co.1.clone()
+                        code_object.1.clone()
                     })
                     .collect(),
             })
             .collect();
 
-        for sc in &mut self.properties {
-            for di in sc.1.values_mut().flatten() {
-                if di.def_path.to_str().unwrap() == "" {
-                    if let Some(def_path) = defs_to_files.get(&di.def_type) {
-                        di.def_path = def_path.clone();
+        for properties in self.properties.values_mut() {
+            for def_index in properties.values_mut().flatten() {
+                if def_index.def_path.to_str().unwrap() == "" {
+                    if let Some(def_path) = defs_to_files.get(&def_index.def_type) {
+                        def_index.def_path = def_path.clone();
                     }
                 }
             }
@@ -2241,12 +2250,12 @@ impl LanguageServer for SolangServer {
 
         let builtin_functions = BUILTIN_FUNCTIONS
             .iter()
-            .filter(|f| f.target.is_empty() || f.target.contains(&self.target))
-            .map(|f| (f.name.to_string(), None));
+            .filter(|function| function.target.is_empty() || function.target.contains(&self.target))
+            .map(|function| (function.name.to_string(), None));
         let builtin_variables = BUILTIN_VARIABLE
             .iter()
-            .filter(|f| f.target.is_empty() || f.target.contains(&self.target))
-            .map(|v| (v.name.to_string(), None));
+            .filter(|var| var.target.is_empty() || var.target.contains(&self.target))
+            .map(|var| (var.name.to_string(), None));
 
         // Get all the code objects available from the lexical scope from which the request was raised.
         let code_objects_in_scope = cache
@@ -2261,7 +2270,7 @@ impl LanguageServer for SolangServer {
             .chain(builtin_variables)
             .collect::<HashMap<_, _>>();
 
-        let gc = self.global_cache.lock().await;
+        let global_cache = self.global_cache.lock().await;
 
         let suggestions = match params.context {
             Some(CompletionContext {
@@ -2274,13 +2283,12 @@ impl LanguageServer for SolangServer {
 
                 let mut builtin_methods =
                     HashMap::<DefinitionType, HashMap<String, Option<DefinitionIndex>>>::new();
-                for method in BUILTIN_METHODS
-                    .iter()
-                    .filter(|f| f.target.is_empty() || f.target.contains(&self.target))
-                {
-                    if let Some(dt) = get_type_definition(&method.method[0]) {
+                for method in BUILTIN_METHODS.iter().filter(|method| {
+                    method.target.is_empty() || method.target.contains(&self.target)
+                }) {
+                    if let Some(def_type) = get_type_definition(&method.method[0]) {
                         builtin_methods
-                            .entry(dt)
+                            .entry(def_type)
                             .or_default()
                             .insert(method.name.to_string(), None);
                     }
@@ -2288,14 +2296,15 @@ impl LanguageServer for SolangServer {
 
                 let builtin_structs = BUILTIN_STRUCTS
                     .iter()
-                    .map(|s| {
-                        let dt = DefinitionType::Struct(s.1);
-                        let fields =
-                            s.0.fields
-                                .iter()
-                                .map(|f| (f.name_as_str().to_string(), None))
-                                .collect();
-                        (dt, fields)
+                    .map(|r#struct| {
+                        let def_type = DefinitionType::Struct(r#struct.1);
+                        let fields = r#struct
+                            .0
+                            .fields
+                            .iter()
+                            .map(|field| (field.name_as_str().to_string(), None))
+                            .collect();
+                        (def_type, fields)
                     })
                     .collect::<HashMap<_, HashMap<_, _>>>();
 
@@ -2304,18 +2313,19 @@ impl LanguageServer for SolangServer {
                 // This includes all the alphanumeric characters that come before the triggering "."
                 // and the interspersed "." characters between the alphanumeric characters.
                 let code_object = {
-                    let b = text_buf.chars().collect_vec();
+                    let buffer = text_buf.chars().collect_vec();
                     let mut curr: isize = offset as isize - 2;
                     while curr >= 0
-                        && (b[curr as usize].is_ascii_alphanumeric() || b[curr as usize] == '.')
+                        && (buffer[curr as usize].is_ascii_alphanumeric()
+                            || buffer[curr as usize] == '.')
                     {
                         curr -= 1;
                     }
                     curr = isize::max(curr, 0);
-                    if !b[curr as usize].is_ascii_alphanumeric() {
+                    if !buffer[curr as usize].is_ascii_alphanumeric() {
                         curr += 1;
                     }
-                    let name = b[curr as usize..offset - 1].iter().collect::<String>();
+                    let name = buffer[curr as usize..offset - 1].iter().collect::<String>();
 
                     name
                 };
@@ -2325,25 +2335,27 @@ impl LanguageServer for SolangServer {
                 let mut code_object_parts = code_object.split('.');
 
                 // `properties` gives the list of fields, variants and methods defined for the code object in question.
-                let properties = code_object_parts.next().and_then(|n| {
+                let properties = code_object_parts.next().and_then(|symbol| {
                     code_objects_in_scope
-                        .get(n)
-                        .and_then(|a| a.as_ref())
-                        .and_then(|n| {
-                            gc.properties
-                                .get(n)
-                                .or_else(|| builtin_methods.get(&n.def_type))
-                                .or_else(|| builtin_structs.get(&n.def_type))
+                        .get(symbol)
+                        .and_then(|def_index| def_index.as_ref())
+                        .and_then(|def_index| {
+                            global_cache
+                                .properties
+                                .get(def_index)
+                                .or_else(|| builtin_methods.get(&def_index.def_type))
+                                .or_else(|| builtin_structs.get(&def_index.def_type))
                         })
                 });
                 let properties = code_object_parts.fold(properties, |acc, prop| {
-                    acc.and_then(|p| p.get(prop))
-                        .and_then(|a| a.as_ref())
-                        .and_then(|n| {
-                            gc.properties
-                                .get(n)
-                                .or_else(|| builtin_methods.get(&n.def_type))
-                                .or_else(|| builtin_structs.get(&n.def_type))
+                    acc.and_then(|properties| properties.get(prop))
+                        .and_then(|def_index| def_index.as_ref())
+                        .and_then(|def_index| {
+                            global_cache
+                                .properties
+                                .get(def_index)
+                                .or_else(|| builtin_methods.get(&def_index.def_type))
+                                .or_else(|| builtin_structs.get(&def_index.def_type))
                         })
                 });
 
@@ -2363,9 +2375,9 @@ impl LanguageServer for SolangServer {
                 ..
             }) => {
                 let suggestions = code_objects_in_scope
-                    .into_iter()
-                    .map(|val| CompletionItem {
-                        label: val.0.clone(),
+                    .into_keys()
+                    .map(|label| CompletionItem {
+                        label: label.clone(),
                         ..Default::default()
                     })
                     .collect_vec();
