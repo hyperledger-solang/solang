@@ -6,7 +6,8 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 
 // The LLD entry points are not safe to re-enter without destroying their state.
-static bool DestroyCTX() {
+static bool DestroyCTX()
+{
 	llvm::CrashRecoveryContext crc;
 
  	return crc.RunSafely([&]() { lld::CommonLinkerContext::destroy(); });
