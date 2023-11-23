@@ -76,12 +76,16 @@ pub struct ExprContext {
 
 impl ExprContext {
     pub fn enter_scope(&mut self) {
-        self.active_scopes.push(VarScope(HashMap::new(), None));
+        self.active_scopes.push(VarScope {
+            loc: None,
+            names: HashMap::new(),
+        });
     }
 
     pub fn leave_scope(&mut self, symtable: &mut Symtable, loc: pt::Loc) {
-        if let Some(curr_scope) = self.active_scopes.pop() {
-            symtable.scopes.push((loc, curr_scope));
+        if let Some(mut curr_scope) = self.active_scopes.pop() {
+            curr_scope.loc = Some(loc);
+            symtable.scopes.push(curr_scope);
         }
     }
 }

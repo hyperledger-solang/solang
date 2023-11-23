@@ -2,7 +2,7 @@
 
 use indexmap::IndexMap;
 use solang_parser::diagnostics::{ErrorType, Level, Note};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::str;
 use std::sync::Arc;
 
@@ -79,14 +79,17 @@ pub enum VariableUsage {
 }
 
 #[derive(Debug, Clone)]
-pub struct VarScope(pub HashMap<String, usize>, pub Option<HashSet<usize>>);
+pub struct VarScope {
+    pub loc: Option<pt::Loc>,
+    pub names: HashMap<String, usize>,
+}
 
 #[derive(Default, Debug, Clone)]
 pub struct Symtable {
     pub vars: IndexMap<usize, Variable>,
     pub arguments: Vec<Option<usize>>,
     pub returns: Vec<usize>,
-    pub scopes: Vec<(pt::Loc, VarScope)>,
+    pub scopes: Vec<VarScope>,
 }
 
 impl Symtable {
@@ -143,7 +146,7 @@ impl Symtable {
                 .active_scopes
                 .last_mut()
                 .unwrap()
-                .0
+                .names
                 .insert(id.name.to_string(), pos);
         }
 
@@ -187,7 +190,7 @@ impl Symtable {
 
     pub fn find(&self, context: &mut ExprContext, name: &str) -> Option<&Variable> {
         for scope in context.active_scopes.iter().rev() {
-            if let Some(n) = scope.0.get(name) {
+            if let Some(n) = scope.names.get(name) {
                 return self.vars.get(n);
             }
         }

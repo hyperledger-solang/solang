@@ -1615,26 +1615,26 @@ impl<'a> Builder<'a> {
                 loc_to_range(&func.id.loc, file),
             );
 
-            self.scopes
-                .extend(func.symtable.scopes.iter().map(|(loc, scope)| {
-                    let scope_entry = ScopeEntry {
-                        start: loc.start(),
-                        stop: loc.exclusive_end(),
-                        val: scope
-                            .0
-                            .values()
-                            .filter_map(|pos| {
-                                func.symtable.vars.get(pos).map(|var| {
-                                    (
-                                        var.id.name.clone(),
-                                        get_type_definition(&var.ty).map(|dt| dt.into()),
-                                    )
-                                })
+            self.scopes.extend(func.symtable.scopes.iter().map(|scope| {
+                let loc = scope.loc.unwrap();
+                let scope_entry = ScopeEntry {
+                    start: loc.start(),
+                    stop: loc.exclusive_end(),
+                    val: scope
+                        .names
+                        .values()
+                        .filter_map(|pos| {
+                            func.symtable.vars.get(pos).map(|var| {
+                                (
+                                    var.id.name.clone(),
+                                    get_type_definition(&var.ty).map(|dt| dt.into()),
+                                )
                             })
-                            .collect_vec(),
-                    };
-                    (file_no, scope_entry)
-                }));
+                        })
+                        .collect_vec(),
+                };
+                (file_no, scope_entry)
+            }));
 
             if func.contract_no.is_none() {
                 self.top_level_code_objects
