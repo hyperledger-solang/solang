@@ -70,7 +70,7 @@ pub struct ExprContext {
     pub yul_function: bool,
     /// Loops nesting
     pub loops: LoopScopes,
-    /// Stack of currently actively variable scopes
+    /// Stack of currently active variable scopes
     pub active_scopes: Vec<VarScope>,
 }
 
