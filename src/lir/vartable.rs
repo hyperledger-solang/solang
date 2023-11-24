@@ -9,18 +9,30 @@ use solang_parser::pt::Loc;
 /// a constant prefix for temporary variables
 pub const TEMP_PREFIX: &str = "temp.ssa_ir.";
 
+/// The `Var` struct represents a variable in the Lower Intermediate Representation.
+/// It contains the variable's unique identifier, its type, and its name.
 #[derive(Debug, Clone)]
 pub struct Var {
+    /// The unique identifier of the variable.
     pub id: usize,
+    /// The type of the variable.
     pub ty: Type,
+    /// The AST type of the variable.
     pub ast_ty: ast::Type,
+    /// The name of the variable.
     pub name: String,
 }
 
+/// The `Vartable` struct represents a table of variables in the Lower Intermediate Representation.
+/// It holds a map of variables, a map of function arguments, and the next variable identifier.
 #[derive(Debug, Clone)]
 pub struct Vartable {
+    /// The map of variables 
+    /// that contains the variable's unique identifier, its type, and its name.
     pub vars: IndexMap<usize, Var>,
+    /// The map of function arguments
     pub args: IndexMap</* arg no */ usize, /* var id */ usize>,
+    /// The next variable identifier.
     pub next_id: usize,
 }
 
