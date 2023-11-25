@@ -83,22 +83,15 @@ pub(super) fn member_access(
     }
 
     // is it a constant (unless basecontract is a local variable)
-    if let Some(expr) = contract_constant(
-        loc,
-        e,
-        id,
-        context.file_no,
-        ns,
-        symtable,
-        diagnostics,
-        resolve_to,
-    )? {
+    if let Some(expr) =
+        contract_constant(loc, e, id, ns, symtable, context, diagnostics, resolve_to)?
+    {
         return Ok(expr);
     }
 
     // is it a basecontract.function.selector expression (unless basecontract is a local variable)
     if let pt::Expression::Variable(namespace) = e {
-        if symtable.find(&namespace.name).is_none() {
+        if symtable.find(context, &namespace.name).is_none() {
             if let Some(call_contract_no) = ns.resolve_contract(context.file_no, namespace) {
                 // find function with this name
                 let mut name_matches = 0;
@@ -522,9 +515,9 @@ fn contract_constant(
     loc: &pt::Loc,
     e: &pt::Expression,
     id: &pt::Identifier,
-    file_no: usize,
     ns: &mut Namespace,
     symtable: &mut Symtable,
+    context: &mut ExprContext,
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Option<Expression>, ()> {
@@ -533,11 +526,11 @@ fn contract_constant(
         _ => return Ok(None),
     };
 
-    if symtable.find(&namespace.name).is_some() {
+    if symtable.find(context, &namespace.name).is_some() {
         return Ok(None);
     }
 
-    if let Some(contract_no) = ns.resolve_contract(file_no, namespace) {
+    if let Some(contract_no) = ns.resolve_contract(context.file_no, namespace) {
         if let Some((var_no, var)) = ns.contracts[contract_no]
             .variables
             .iter_mut()

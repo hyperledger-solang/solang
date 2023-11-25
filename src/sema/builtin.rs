@@ -33,7 +33,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
+pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::Assert,
@@ -348,7 +348,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins variables
-static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
+pub static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::BlockCoinbase,
@@ -544,7 +544,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins methods
-static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
+pub static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::ReadInt8,
@@ -1555,6 +1555,7 @@ impl Namespace {
 
         let mut func = Function::new(
             pt::Loc::Builtin,
+            pt::Loc::Builtin,
             pt::Identifier {
                 name: "create_program_address".to_string(),
                 loc: pt::Loc::Builtin,
@@ -1623,6 +1624,7 @@ impl Namespace {
         ));
 
         let mut func = Function::new(
+            pt::Loc::Builtin,
             pt::Loc::Builtin,
             pt::Identifier {
                 name: "try_find_program_address".to_string(),
@@ -1742,6 +1744,7 @@ impl Namespace {
         for mut func in [
             Function::new(
                 loc,
+                loc,
                 pt::Identifier {
                     name: "chain_extension".to_string(),
                     loc,
@@ -1804,6 +1807,7 @@ impl Namespace {
             // is_contract API
             Function::new(
                 loc,
+                loc,
                 pt::Identifier {
                     name: "is_contract".to_string(),
                     loc,
@@ -1839,6 +1843,7 @@ impl Namespace {
             ),
             // set_code_hash API
             Function::new(
+                loc,
                 loc,
                 pt::Identifier {
                     name: "set_code_hash".to_string(),

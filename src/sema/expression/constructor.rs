@@ -329,7 +329,7 @@ pub fn constructor_named_args(
                 format!(
                     "constructor cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
                 ),
-                func.loc,
+                func.loc_prototype,
                 format!("definition of {}", func.ty),
             ));
             matches = false;
@@ -341,7 +341,7 @@ pub fn constructor_named_args(
                     params_len,
                     args.len()
                 ),
-                func.loc,
+                func.loc_prototype,
                 "definition of constructor".to_owned(),
             ));
             matches = false;
@@ -349,7 +349,7 @@ pub fn constructor_named_args(
 
         let mut cast_args = Vec::new();
 
-        let func_loc = ns.functions[*function_no].loc;
+        let func_loc = ns.functions[*function_no].loc_prototype;
 
         // check if arguments can be implicitly casted
         for i in 0..params_len {

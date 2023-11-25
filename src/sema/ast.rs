@@ -320,6 +320,7 @@ impl fmt::Display for Mutability {
 pub struct Function {
     pub tags: Vec<Tag>,
     /// The location of the prototype (not body)
+    pub loc_prototype: pt::Loc,
     pub loc: pt::Loc,
     pub id: pt::Identifier,
     pub contract_no: Option<usize>,
@@ -402,6 +403,7 @@ impl FunctionAttributes for Function {
 
 impl Function {
     pub fn new(
+        loc_prototype: pt::Loc,
         loc: pt::Loc,
         id: pt::Identifier,
         contract_no: Option<usize>,
@@ -420,7 +422,7 @@ impl Function {
         };
 
         let mutability = match mutability {
-            None => Mutability::Nonpayable(loc),
+            None => Mutability::Nonpayable(loc_prototype),
             Some(pt::Mutability::Payable(loc)) => Mutability::Payable(loc),
             Some(pt::Mutability::Pure(loc)) => Mutability::Pure(loc),
             Some(pt::Mutability::View(loc)) => Mutability::View(loc),
@@ -437,6 +439,7 @@ impl Function {
 
         Function {
             tags,
+            loc_prototype,
             loc,
             id,
             contract_no,
@@ -1612,7 +1615,7 @@ impl CodeLocation for Statement {
             | Statement::Emit { loc, .. }
             | Statement::TryCatch(loc, ..)
             | Statement::Underscore(loc, ..) => *loc,
-            Statement::Assembly(..) => pt::Loc::Codegen,
+            Statement::Assembly(ia, _) => ia.loc,
         }
     }
 }

@@ -269,7 +269,7 @@ fn resolve_variable_reference(
     symtable: &Symtable,
     context: &mut ExprContext,
 ) -> Result<YulExpression, ()> {
-    if let Some(v) = symtable.find(&id.name) {
+    if let Some(v) = symtable.find(context, &id.name) {
         match &v.usage_type {
             VariableUsage::YulLocalVariable => {
                 return Ok(YulExpression::YulLocalVariable(id.loc, v.ty.clone(), v.pos))

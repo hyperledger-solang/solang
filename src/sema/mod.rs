@@ -20,7 +20,7 @@ use std::{ffi::OsString, str};
 mod address;
 pub mod ast;
 pub mod builtin;
-mod builtin_structs;
+pub mod builtin_structs;
 pub(crate) mod contracts;
 pub mod diagnostics;
 mod dotgraphviz;

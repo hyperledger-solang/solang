@@ -686,11 +686,12 @@ returns: Option<Loc> = {
 ModifierDefinition: Box<FunctionDefinition> = {
     <l:@L> "modifier" <nl:@L> <name:SolIdentifier> <nr:@R> <params:ParameterList?>
     <attributes:FunctionAttribute*>
-    <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
+    <returns:(returns ParameterList)?> <pr:@R> <body:BlockStatementOrSemiColon> <r:@R> => {
         let params = params.unwrap_or(Vec::new());
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
+            loc_prototype: Loc::File(file_no, l, pr),
             loc: Loc::File(file_no, l, r),
             ty: FunctionTy::Modifier,
             name: Some(name),
@@ -707,10 +708,11 @@ ModifierDefinition: Box<FunctionDefinition> = {
 ConstructorDefinition: Box<FunctionDefinition> = {
     <l:@L> <ty:FunctionTy> <nl:@L> <name:SolIdentifier?> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
-    <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
+    <returns:(returns ParameterList)?> <pr:@R> <body:BlockStatementOrSemiColon> <r:@R> => {
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
+            loc_prototype: Loc::File(file_no, l, pr),
             loc: Loc::File(file_no, l, r),
             ty,
             name,
@@ -727,10 +729,11 @@ ConstructorDefinition: Box<FunctionDefinition> = {
 FunctionDefinition: Box<FunctionDefinition> = {
     <l:@L> "function" <nl:@L> <name:SolIdentifierOrError> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
-    <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
+    <returns:(returns ParameterList)?> <pr:@R> <body:BlockStatementOrSemiColon> <r:@R> => {
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
 
         Box::new(FunctionDefinition{
+            loc_prototype: Loc::File(file_no, l, pr),
             loc: Loc::File(file_no, l, r),
             ty: FunctionTy::Function,
             name,
@@ -744,16 +747,17 @@ FunctionDefinition: Box<FunctionDefinition> = {
     },
     // Old-style fallback function without name. Sema will give a nice error message
     // with some instructions how to update your syntax
-    <l:@L> <ft:FunctionType> <r:@R> <body:BlockStatementOrSemiColon> => {
+    <l:@L> <ft:FunctionType> <pr:@R> <body:BlockStatementOrSemiColon> <r:@R> => {
         match ft {
             // we're dropping the trailing attributes, but this production is for
             // generating an error messages
             Type::Function { params, attributes, returns, .. } => {
                 Box::new(FunctionDefinition{
+                    loc_prototype: Loc::File(file_no, l, pr),
                     loc: Loc::File(file_no, l, r),
                     ty: FunctionTy::Function,
                     name: None,
-                    name_loc: Loc::File(file_no, l, r),
+                    name_loc: Loc::File(file_no, l, pr),
                     params,
                     attributes,
                     return_not_returns: None,

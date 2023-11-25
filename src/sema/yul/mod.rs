@@ -33,7 +33,7 @@ pub fn resolve_inline_assembly(
     let start = ns.yul_functions.len();
     let mut functions_table = FunctionsTable::new(start);
     functions_table.enter_scope();
-    symtable.enter_scope();
+    context.enter_scope();
     let mut loop_scope = LoopScopes::new();
 
     let (body, reachable) = process_statements(
@@ -46,7 +46,7 @@ pub fn resolve_inline_assembly(
         ns,
     );
 
-    symtable.leave_scope();
+    context.leave_scope(symtable, *loc);
     functions_table.leave_scope(ns);
     let end = start + functions_table.resolved_functions.len();
     ns.yul_functions

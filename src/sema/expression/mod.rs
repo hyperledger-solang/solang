@@ -17,6 +17,7 @@ mod variable;
 use super::ast::{ArrayLength, Diagnostic, Expression, Mutability, Namespace, RetrieveType, Type};
 use super::diagnostics::Diagnostics;
 use super::eval::eval_const_rational;
+use super::symtable::{Symtable, VarScope};
 use crate::sema::contracts::is_base;
 use crate::sema::eval::eval_const_number;
 use crate::sema::{symtable::LoopScopes, using::user_defined_operator_binding};
@@ -25,6 +26,7 @@ use num_rational::BigRational;
 use num_traits::{FromPrimitive, ToPrimitive, Zero};
 use solang_parser::pt::{self, CodeLocation};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 
 /// Compare two mutability levels
 pub fn compatible_mutability(left: &Mutability, right: &Mutability) -> bool {
@@ -68,6 +70,24 @@ pub struct ExprContext {
     pub yul_function: bool,
     /// Loops nesting
     pub loops: LoopScopes,
+    /// Stack of currently active variable scopes
+    pub active_scopes: Vec<VarScope>,
+}
+
+impl ExprContext {
+    pub fn enter_scope(&mut self) {
+        self.active_scopes.push(VarScope {
+            loc: None,
+            names: HashMap::new(),
+        });
+    }
+
+    pub fn leave_scope(&mut self, symtable: &mut Symtable, loc: pt::Loc) {
+        if let Some(mut curr_scope) = self.active_scopes.pop() {
+            curr_scope.loc = Some(loc);
+            symtable.scopes.push(curr_scope);
+        }
+    }
 }
 
 impl Expression {

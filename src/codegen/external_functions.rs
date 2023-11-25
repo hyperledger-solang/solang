@@ -45,7 +45,7 @@ pub fn add_external_functions(contract_no: usize, ns: &mut Namespace) {
 
         // add functions to contract functions list
         for function_no in &call_list.solidity {
-            if ns.functions[*function_no].loc != pt::Loc::Builtin {
+            if ns.functions[*function_no].loc_prototype != pt::Loc::Builtin {
                 let func = &ns.functions[*function_no];
 
                 // make sure we are not adding a public function which is not a base or library

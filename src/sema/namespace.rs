@@ -1533,6 +1533,7 @@ impl Namespace {
             constant: true,
             ..Default::default()
         };
+        context.enter_scope();
 
         let size_expr = expression(
             expr,

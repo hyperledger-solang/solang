@@ -413,7 +413,7 @@ pub(super) fn function_call_named_args(
                 format!(
                     "function cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
                 ),
-                func.loc,
+                func.loc_prototype,
                 format!("definition of {}", func.id),
             ));
             matches = false;
@@ -2349,7 +2349,7 @@ pub fn function_call_expr(
             }
 
             // is there a local variable or contract variable with this name
-            if symtable.find(&id.name).is_some()
+            if symtable.find(context, &id.name).is_some()
                 || matches!(
                     ns.resolve_var(context.file_no, context.contract_no, id, true),
                     Some(Symbol::Variable(..))
@@ -2548,7 +2548,7 @@ fn resolve_internal_call(
         errors.push(Diagnostic::error_with_note(
             *loc,
             format!("cannot call private {}", func.ty),
-            func.loc,
+            func.loc_prototype,
             format!("declaration of {} '{}'", func.ty, func.id),
         ));
 
@@ -2559,7 +2559,7 @@ fn resolve_internal_call(
                 errors.push(Diagnostic::error_with_note(
                     *loc,
                     "accessor function cannot be called via an internal function call".to_string(),
-                    func.loc,
+                    func.loc_prototype,
                     format!("declaration of '{}'", func.id),
                 ));
             } else {
@@ -2567,7 +2567,7 @@ fn resolve_internal_call(
                     *loc,
                     "functions declared external cannot be called via an internal function call"
                         .to_string(),
-                    func.loc,
+                    func.loc_prototype,
                     format!("declaration of {} '{}'", func.ty, func.id),
                 ));
             }
@@ -2670,7 +2670,7 @@ fn contract_call_named_args(
                 format!(
                     "function cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
                 ),
-                func.loc,
+                func.loc_prototype,
                 format!("definition of {}", func.id),
             ));
             matches = false;

@@ -1478,6 +1478,8 @@ pub enum FunctionTy {
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct FunctionDefinition {
+    /// The function prototype location.
+    pub loc_prototype: Loc,
     /// The code location.
     pub loc: Loc,
     /// The function type.

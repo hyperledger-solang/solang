@@ -240,6 +240,7 @@ pub(crate) fn resolve_function_definition(
     ns: &mut Namespace,
 ) -> Result<YulFunction, ()> {
     let mut symtable = Symtable::new();
+    context.enter_scope();
 
     let prev_yul_function = context.yul_function;
     context.yul_function = true;
@@ -258,6 +259,7 @@ pub(crate) fn resolve_function_definition(
             VariableInitializer::Yul(true),
             VariableUsage::YulLocalVariable,
             None,
+            &mut context,
         );
         symtable.arguments.push(pos);
     }
@@ -270,6 +272,7 @@ pub(crate) fn resolve_function_definition(
             VariableInitializer::Yul(false),
             VariableUsage::YulLocalVariable,
             None,
+            &mut context,
         ) {
             // If exclusive add returns None, the return variable's name cannot be used.
             symtable.returns.push(pos);
@@ -288,6 +291,8 @@ pub(crate) fn resolve_function_definition(
         &mut symtable,
         ns,
     );
+
+    context.leave_scope(&mut symtable, func_def.loc);
 
     Ok(YulFunction {
         loc: func_def.loc,

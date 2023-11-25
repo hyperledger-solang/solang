@@ -46,6 +46,7 @@ pub fn resolve_function_body(
         function_no: Some(function_no),
         ..Default::default()
     };
+    context.enter_scope();
 
     let mut unresolved_annotation: Vec<UnresolvedAnnotation> = Vec::new();
     // first add function parameters
@@ -59,6 +60,7 @@ pub fn resolve_function_body(
                 VariableInitializer::Solidity(None),
                 VariableUsage::Parameter,
                 p.storage.clone(),
+                &mut context,
             ) {
                 ns.check_shadowing(file_no, contract_no, name);
                 if p.annotation.is_some() {
@@ -164,7 +166,7 @@ pub fn resolve_function_body(
                 // does the contract require arguments
                 if ns.contracts[base.contract_no].constructor_needs_arguments(ns) {
                     ns.diagnostics.push(Diagnostic::error(
-                        def.loc,
+                        def.loc_prototype,
                         format!(
                             "missing arguments to contract '{}' constructor",
                             ns.contracts[base.contract_no].id
@@ -186,7 +188,7 @@ pub fn resolve_function_body(
             if let pt::FunctionAttribute::BaseOrModifier(_, modifier) = attr {
                 if modifier.name.identifiers.len() != 1 {
                     ns.diagnostics.push(Diagnostic::error(
-                        def.loc,
+                        def.loc_prototype,
                         format!("unknown modifier '{}' on function", modifier.name),
                     ));
                 } else {
@@ -241,6 +243,7 @@ pub fn resolve_function_body(
                 VariableInitializer::Solidity(None),
                 VariableUsage::ReturnVariable,
                 p.1.as_ref().unwrap().storage.clone(),
+                &mut context,
             ) {
                 ns.check_shadowing(file_no, contract_no, name);
                 symtable.returns.push(pos);
@@ -264,6 +267,7 @@ pub fn resolve_function_body(
                     VariableInitializer::Solidity(None),
                     VariableUsage::AnonymousReturnVariable,
                     p.1.as_ref().unwrap().storage.clone(),
+                    &mut context,
                 )
                 .unwrap();
 
@@ -325,6 +329,8 @@ pub fn resolve_function_body(
         }
     }
 
+    context.leave_scope(&mut symtable, ns.functions[function_no].loc);
+
     ns.functions[function_no].body = res;
 
     std::mem::swap(&mut ns.functions[function_no].symtable, &mut symtable);
@@ -381,6 +387,7 @@ fn statement(
                 VariableInitializer::Solidity(initializer.clone()),
                 VariableUsage::LocalVariable,
                 decl.storage.clone(),
+                context,
             ) {
                 ns.check_shadowing(
                     context.file_no,
@@ -413,7 +420,7 @@ fn statement(
             unchecked,
             loc,
         } => {
-            symtable.enter_scope();
+            context.enter_scope();
             let mut reachable = true;
             let mut already_unreachable = false;
 
@@ -444,7 +451,7 @@ fn statement(
                 )?;
             }
 
-            symtable.leave_scope();
+            context.leave_scope(symtable, *loc);
 
             res.push(Statement::Block {
                 loc: *loc,
@@ -490,11 +497,11 @@ fn statement(
             used_variable(ns, &expr, symtable);
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.enter_scope();
+            context.enter_scope();
             let mut body_stmts = Vec::new();
             context.loops.enter_scope();
             statement(body, &mut body_stmts, context, symtable, ns, diagnostics)?;
-            symtable.leave_scope();
+            context.leave_scope(symtable, *loc);
             context.loops.leave_scope();
 
             res.push(Statement::While(*loc, true, cond, body_stmts));
@@ -512,11 +519,11 @@ fn statement(
             used_variable(ns, &expr, symtable);
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.enter_scope();
+            context.enter_scope();
             let mut body_stmts = Vec::new();
             context.loops.enter_scope();
             statement(body, &mut body_stmts, context, symtable, ns, diagnostics)?;
-            symtable.leave_scope();
+            context.leave_scope(symtable, *loc);
             context.loops.leave_scope();
 
             res.push(Statement::DoWhile(*loc, true, body_stmts, cond));
@@ -535,18 +542,18 @@ fn statement(
 
             let cond = expr.cast(&expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
-            symtable.enter_scope();
+            context.enter_scope();
             let mut then_stmts = Vec::new();
             let mut reachable =
                 statement(then, &mut then_stmts, context, symtable, ns, diagnostics)?;
-            symtable.leave_scope();
+            context.leave_scope(symtable, *loc);
 
             let mut else_stmts = Vec::new();
             if let Some(stmts) = else_ {
-                symtable.enter_scope();
+                context.enter_scope();
                 reachable |= statement(stmts, &mut else_stmts, context, symtable, ns, diagnostics)?;
 
-                symtable.leave_scope();
+                context.leave_scope(symtable, *loc);
             } else {
                 reachable = true;
             }
@@ -563,7 +570,7 @@ fn statement(
             Err(())
         }
         pt::Statement::For(loc, init_stmt, None, next_expr, body_stmt) => {
-            symtable.enter_scope();
+            context.enter_scope();
 
             let mut init = Vec::new();
 
@@ -594,7 +601,7 @@ fn statement(
                 )?);
             }
 
-            symtable.leave_scope();
+            context.leave_scope(symtable, *loc);
 
             res.push(Statement::For {
                 loc: *loc,
@@ -607,7 +614,7 @@ fn statement(
             Ok(reachable)
         }
         pt::Statement::For(loc, init_stmt, Some(cond_expr), next_expr, body_stmt) => {
-            symtable.enter_scope();
+            context.enter_scope();
 
             let mut init = Vec::new();
             let mut body = Vec::new();
@@ -657,7 +664,7 @@ fn statement(
                 }
             }
 
-            symtable.leave_scope();
+            context.leave_scope(symtable, *loc);
 
             res.push(Statement::For {
                 loc: *loc,
@@ -1580,6 +1587,7 @@ fn destructure(
                     VariableInitializer::Solidity(None),
                     VariableUsage::DestructureVariable,
                     storage.clone(),
+                    &mut context,
                 ) {
                     ns.check_shadowing(context.file_no, context.contract_no, name);
 
@@ -2296,7 +2304,7 @@ fn try_catch(
         }
     };
 
-    symtable.enter_scope();
+    context.enter_scope();
 
     let mut params = Vec::new();
     let mut broken = false;
@@ -2337,6 +2345,7 @@ fn try_catch(
                         VariableInitializer::Solidity(None),
                         VariableUsage::TryCatchReturns,
                         storage.clone(),
+                        context,
                     ) {
                         ns.check_shadowing(context.file_no, context.contract_no, name);
                         params.push((
@@ -2390,7 +2399,7 @@ fn try_catch(
     let mut finally_reachable =
         statement(ok, &mut ok_resolved, context, symtable, ns, diagnostics)?;
 
-    symtable.leave_scope();
+    context.leave_scope(symtable, *loc);
 
     let mut clauses_unique = HashSet::new();
     let mut errors_resolved = Vec::new();
@@ -2415,8 +2424,8 @@ fn try_catch(
         }
 
         match clause_stmt {
-            CatchClause::Simple(_, param, stmt) => {
-                symtable.enter_scope();
+            CatchClause::Simple(catch_loc, param, stmt) => {
+                context.enter_scope();
 
                 let mut catch_param = None;
                 let mut catch_param_pos = None;
@@ -2459,6 +2468,7 @@ fn try_catch(
                             VariableInitializer::Solidity(None),
                             VariableUsage::TryCatchErrorBytes,
                             param.storage.clone(),
+                            context,
                         ) {
                             ns.check_shadowing(context.file_no, context.contract_no, name);
                             catch_param_pos = Some(pos);
@@ -2480,7 +2490,7 @@ fn try_catch(
 
                 finally_reachable |= reachable;
 
-                symtable.leave_scope();
+                context.leave_scope(symtable, *catch_loc);
 
                 catch_all = Some(super::ast::CatchClause {
                     param: catch_param,
@@ -2490,7 +2500,7 @@ fn try_catch(
 
                 Ok(())
             }
-            CatchClause::Named(_, id, param, stmt) => {
+            CatchClause::Named(catch_loc, id, param, stmt) => {
                 if id.name != "Error" && id.name != "Panic" {
                     let message = format!(
                         "only catch 'Error' and 'Panic' are supported, not '{}'",
@@ -2526,7 +2536,7 @@ fn try_catch(
                     ));
                 }
 
-                symtable.enter_scope();
+                context.enter_scope();
 
                 let mut error_pos = None;
                 let mut error_stmt_resolved = Vec::new();
@@ -2550,6 +2560,7 @@ fn try_catch(
                         VariableInitializer::Solidity(None),
                         VariableUsage::TryCatchErrorString,
                         param.storage.clone(),
+                        context,
                     ) {
                         ns.check_shadowing(context.file_no, context.contract_no, name);
 
@@ -2569,7 +2580,7 @@ fn try_catch(
 
                 finally_reachable |= reachable;
 
-                symtable.leave_scope();
+                context.leave_scope(symtable, *catch_loc);
 
                 errors_resolved.push((error_pos, error_param, error_stmt_resolved));
 

@@ -130,7 +130,7 @@ impl Dot {
     fn add_function(&mut self, func: &Function, ns: &Namespace, parent: usize) {
         let mut labels = vec![
             format!("{} {}", func.ty, func.id),
-            ns.loc_to_string(PathDisplay::FullPath, &func.loc),
+            ns.loc_to_string(PathDisplay::FullPath, &func.loc_prototype),
         ];
 
         if let Some(contract) = func.contract_no {
@@ -1392,7 +1392,7 @@ impl Dot {
                     format!(
                         "function {} {}",
                         user_func.id,
-                        ns.loc_to_string(PathDisplay::FullPath, &user_func.loc)
+                        ns.loc_to_string(PathDisplay::FullPath, &user_func.loc_prototype)
                     ),
                 ];
 
@@ -2611,12 +2611,12 @@ impl Namespace {
         if self
             .functions
             .iter()
-            .any(|func| func.contract_no.is_none() && func.loc != pt::Loc::Builtin)
+            .any(|func| func.contract_no.is_none() && func.loc_prototype != pt::Loc::Builtin)
         {
             let functions = dot.add_node(Node::new("free_functions", Vec::new()), None, None);
 
             for func in &self.functions {
-                if func.contract_no.is_none() && func.loc != pt::Loc::Builtin {
+                if func.contract_no.is_none() && func.loc_prototype != pt::Loc::Builtin {
                     dot.add_function(func, self, functions);
                 }
             }
@@ -2699,7 +2699,7 @@ impl Namespace {
                             let mut label = format!(
                                 "function {} {}",
                                 func.id,
-                                self.loc_to_string(PathDisplay::FullPath, &func.loc)
+                                self.loc_to_string(PathDisplay::FullPath, &func.loc_prototype)
                             );
 
                             if let Some(oper) = &using.oper {

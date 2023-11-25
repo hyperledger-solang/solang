@@ -2705,7 +2705,7 @@ pub fn emit_function_call(
 
                 let ftype = &ns.functions[function_no];
 
-                let call = if ns.functions[function_no].loc == pt::Loc::Builtin {
+                let call = if ns.functions[function_no].loc_prototype == pt::Loc::Builtin {
                     InternalCallTy::Builtin {
                         ast_func_no: function_no,
                     }
