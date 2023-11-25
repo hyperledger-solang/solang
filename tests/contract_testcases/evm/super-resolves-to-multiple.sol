@@ -26,5 +26,5 @@ contract a is b1, b2 {
 
 // ---- Expect: diagnostics ----
 // error: 19:16-28: function call can be resolved to multiple functions
-// 	note 2:5-56: candidate function
-// 	note 11:5-58: candidate function
+// 	note 2:5-4:6: candidate function
+// 	note 11:5-13:6: candidate function

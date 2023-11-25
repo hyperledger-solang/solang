@@ -72,8 +72,8 @@ pub struct ExprContext {
     pub loops: LoopScopes,
     /// Stack of currently active variable scopes
     pub active_scopes: Vec<VarScope>,
-    /// In Solidity v0.5 and earlier, don't complain about overloading resolving to multiple
-    pub allow_multi: bool,
+    /// Solidity v0.5 and earlier don't complain about emit resolving to multiple events
+    pub ambiguous_emit: bool,
 }
 
 impl ExprContext {

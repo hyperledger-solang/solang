@@ -44,7 +44,7 @@ pub fn resolve_function_body(
         file_no,
         contract_no,
         function_no: Some(function_no),
-        allow_multi: ns.solidity_minor_version(file_no, 5),
+        ambiguous_emit: ns.solidity_minor_version(file_no, 5),
         ..Default::default()
     };
     context.enter_scope();
@@ -1310,7 +1310,7 @@ fn emit_event(
 
             if count == 0 {
                 diagnostics.extend(emit_diagnostics);
-            } else if context.allow_multi || count == 1 {
+            } else if context.ambiguous_emit || count == 1 {
                 let (event_no, candidate_diagnostics, stmt) = resolved_events.remove(0);
 
                 let event = &mut ns.events[event_no];
@@ -1484,7 +1484,7 @@ fn emit_event(
 
             if count == 0 {
                 diagnostics.extend(emit_diagnostics);
-            } else if count == 1 || context.allow_multi {
+            } else if count == 1 || context.ambiguous_emit {
                 let (event_no, candidate_diagnostics, stmt) = resolved_events.remove(0);
 
                 diagnostics.extend(candidate_diagnostics);

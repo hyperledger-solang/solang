@@ -1,4 +1,3 @@
-pragma solidity <=0.5.12;
 
         contract base {
             function foo(uint64 a) public returns (uint64) {
@@ -17,5 +16,8 @@ pragma solidity <=0.5.12;
         }
         
 // ---- Expect: diagnostics ----
-// error: 4:13-59: function 'foo' with this signature already defined
-// 	note 10:13-59: previous definition of function 'foo'
+// error: 3:13-59: function 'foo' with this signature already defined
+// 	note 9:13-59: previous definition of function 'foo'
+// error: 14:24-35: function call can be resolved to multiple functions
+// 	note 3:13-5:14: candidate function
+// 	note 9:13-11:14: candidate function

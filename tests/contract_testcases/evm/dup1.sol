@@ -12,5 +12,5 @@ contract C {
 // warning: 3:21-22: function parameter 'a' is unused
 // warning: 3:29-30: function parameter 'b' is unused
 // error: 5:3-12: function call can be resolved to multiple functions
-// 	note 2:2-37: candidate function
-// 	note 3:2-38: candidate function
+// 	note 2:2-40: candidate function
+// 	note 3:2-41: candidate function
