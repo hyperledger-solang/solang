@@ -190,7 +190,7 @@ impl ast::VersionReq {
                     let mut version = version.clone();
                     version.minor = None;
                     version.patch = None;
-                    return vec![version];
+                    vec![version]
                 }
                 pt::VersionOp::Tilde => {
                     if let Some(m) = version.minor {

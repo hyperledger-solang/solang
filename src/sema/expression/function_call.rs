@@ -366,45 +366,46 @@ pub fn function_call_pos_args(
     }
 
     let id = id.identifiers.last().unwrap();
-    match resolved_calls.len() {
-        0 => {
-            diagnostics.extend(call_diagnostics);
 
-            if function_nos.is_empty() {
-                if func_ty == pt::FunctionTy::Modifier {
-                    diagnostics.push(Diagnostic::error(
-                        id.loc,
-                        format!("unknown modifier '{}'", id.name),
-                    ));
-                } else {
-                    diagnostics.push(Diagnostic::error(
-                        id.loc,
-                        format!("unknown {} or type '{}'", func_ty, id.name),
-                    ));
-                }
+    let count = resolved_calls.len();
+
+    if count == 0 {
+        diagnostics.extend(call_diagnostics);
+
+        if function_nos.is_empty() {
+            if func_ty == pt::FunctionTy::Modifier {
+                diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    format!("unknown modifier '{}'", id.name),
+                ));
+            } else {
+                diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    format!("unknown {} or type '{}'", func_ty, id.name),
+                ));
             }
-
-            Err(())
         }
-        1 => Ok(resolved_calls[0].1.clone()),
-        _ => {
-            diagnostics.push(Diagnostic::error_with_notes(
-                *loc,
-                "function call can be resolved to multiple functions".into(),
-                resolved_calls
-                    .iter()
-                    .map(|(func_no, _)| {
-                        let func = &ns.functions[*func_no];
 
-                        Note {
-                            loc: func.loc,
-                            message: "candidate function".into(),
-                        }
-                    })
-                    .collect(),
-            ));
-            Err(())
-        }
+        Err(())
+    } else if count == 1 || context.allow_multi {
+        Ok(resolved_calls[0].1.clone())
+    } else {
+        diagnostics.push(Diagnostic::error_with_notes(
+            *loc,
+            "function call can be resolved to multiple functions".into(),
+            resolved_calls
+                .iter()
+                .map(|(func_no, _)| {
+                    let func = &ns.functions[*func_no];
+
+                    Note {
+                        loc: func.loc,
+                        message: "candidate function".into(),
+                    }
+                })
+                .collect(),
+        ));
+        Err(())
     }
 }
 
@@ -564,39 +565,39 @@ pub(super) fn function_call_named_args(
         call_diagnostics.extend(candidate_diagnostics);
     }
 
-    match resolved_calls.len() {
-        0 => {
-            diagnostics.extend(call_diagnostics);
+    let count = resolved_calls.len();
 
-            if function_nos.is_empty() {
-                let id = id.identifiers.last().unwrap();
-                diagnostics.push(Diagnostic::error(
-                    id.loc,
-                    format!("unknown function or type '{}'", id.name),
-                ));
-            }
+    if count == 0 {
+        diagnostics.extend(call_diagnostics);
 
-            Err(())
-        }
-        1 => Ok(resolved_calls[0].1.clone()),
-        _ => {
-            diagnostics.push(Diagnostic::error_with_notes(
-                *loc,
-                "function call can be resolved to multiple functions".into(),
-                resolved_calls
-                    .iter()
-                    .map(|(func_no, _)| {
-                        let func = &ns.functions[*func_no];
-
-                        Note {
-                            loc: func.loc,
-                            message: "candidate function".into(),
-                        }
-                    })
-                    .collect(),
+        if function_nos.is_empty() {
+            let id = id.identifiers.last().unwrap();
+            diagnostics.push(Diagnostic::error(
+                id.loc,
+                format!("unknown function or type '{}'", id.name),
             ));
-            Err(())
         }
+
+        Err(())
+    } else if count == 1 || context.allow_multi {
+        Ok(resolved_calls[0].1.clone())
+    } else {
+        diagnostics.push(Diagnostic::error_with_notes(
+            *loc,
+            "function call can be resolved to multiple functions".into(),
+            resolved_calls
+                .iter()
+                .map(|(func_no, _)| {
+                    let func = &ns.functions[*func_no];
+
+                    Note {
+                        loc: func.loc,
+                        message: "candidate function".into(),
+                    }
+                })
+                .collect(),
+        ));
+        Err(())
     }
 }
 
