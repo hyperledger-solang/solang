@@ -1401,24 +1401,30 @@ pub(super) fn resolve_method_call(
         .iter()
         .filter(|func| func.name == id.name && func.method.contains(deref_ty))
         .collect();
-    let mut errors = Diagnostics::default();
+
+    // try to resolve the arguments, give up if there are any errors
+    if args.iter().fold(false, |acc, arg| {
+        acc | expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown).is_err()
+    }) {
+        return Err(());
+    }
+
+    let mut call_diagnostics = Diagnostics::default();
 
     for func in &funcs {
-        let mut matches = true;
+        let mut candidate_diagnostics = Diagnostics::default();
+        let mut cast_args = Vec::new();
 
         if context.constant && !func.constant {
-            diagnostics.push(Diagnostic::cast_error(
+            candidate_diagnostics.push(Diagnostic::cast_error(
                 id.loc,
                 format!(
                     "cannot call function '{}' in constant expression",
                     func.name
                 ),
             ));
-            matches = false;
-        }
-
-        if func.params.len() != args.len() {
-            errors.push(Diagnostic::cast_error(
+        } else if func.params.len() != args.len() {
+            candidate_diagnostics.push(Diagnostic::cast_error(
                 id.loc,
                 format!(
                     "builtin function '{}' expects {} arguments, {} provided",
@@ -1427,45 +1433,31 @@ pub(super) fn resolve_method_call(
                     args.len()
                 ),
             ));
-            matches = false;
-        }
+        } else {
+            // check if arguments can be implicitly casted
+            for (i, arg) in args.iter().enumerate() {
+                // we may have arguments that parameters
+                let ty = func.params[i].clone();
 
-        let mut cast_args = Vec::new();
-
-        // check if arguments can be implicitly casted
-        for (i, arg) in args.iter().enumerate() {
-            // we may have arguments that parameters
-            let ty = func.params.get(i);
-
-            let arg = match expression(
-                arg,
-                context,
-                ns,
-                symtable,
-                &mut errors,
-                ty.map(ResolveTo::Type).unwrap_or(ResolveTo::Unknown),
-            ) {
-                Ok(e) => e,
-                Err(()) => {
-                    matches = false;
-                    continue;
-                }
-            };
-
-            if let Some(ty) = ty {
-                match arg.cast(&arg.loc(), ty, true, ns, &mut errors) {
-                    Ok(expr) => cast_args.push(expr),
-                    Err(()) => {
-                        matches = false;
-                        continue;
-                    }
-                }
+                evaluate_argument(
+                    arg,
+                    context,
+                    ns,
+                    symtable,
+                    &ty,
+                    &mut candidate_diagnostics,
+                    &mut cast_args,
+                );
             }
         }
 
-        if !matches {
-            if funcs.len() > 1 && diagnostics.extend_non_casting(&errors) {
-                return Err(());
+        if candidate_diagnostics.any_errors() {
+            if funcs.len() != 1 {
+                // will be de-duped
+                candidate_diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    format!("cannot find overloaded builtin which matches signature"),
+                ));
             }
         } else {
             cast_args.insert(
@@ -1479,6 +1471,8 @@ pub(super) fn resolve_method_call(
                 func.ret.to_vec()
             };
 
+            diagnostics.extend(candidate_diagnostics);
+
             return Ok(Some(Expression::Builtin {
                 loc: id.loc,
                 tys: returns,
@@ -1486,23 +1480,15 @@ pub(super) fn resolve_method_call(
                 args: cast_args,
             }));
         }
+
+        call_diagnostics.extend(candidate_diagnostics);
     }
 
-    match funcs.len() {
-        0 => Ok(None),
-        1 => {
-            diagnostics.extend(errors);
-
-            Err(())
-        }
-        _ => {
-            diagnostics.push(Diagnostic::error(
-                id.loc,
-                "cannot find overloaded function which matches signature".to_string(),
-            ));
-
-            Err(())
-        }
+    if funcs.is_empty() {
+        Ok(None)
+    } else {
+        diagnostics.extend(call_diagnostics);
+        Err(())
     }
 }
 
