@@ -169,7 +169,7 @@ fn instructions_and_types() {
     }
 
     modifier doSomething() {
-        require(msg.value >= 50);
+        require(102 >= 50);
         _;
     }
 

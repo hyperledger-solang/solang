@@ -2612,7 +2612,7 @@ pub(crate) fn function_type(func: &Function, external: bool, resolve_to: Resolve
 
 /// This function evaluates the arguments of a function call with either positional arguments or
 /// named arguments.
-fn evaluate_argument(
+pub(crate) fn evaluate_argument(
     arg: &pt::Expression,
     context: &mut ExprContext,
     ns: &mut Namespace,
