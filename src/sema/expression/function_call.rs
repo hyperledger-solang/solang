@@ -2711,7 +2711,7 @@ fn contract_call_named_args(
     let mut arguments = HashMap::new();
 
     // check if the arguments are not garbage
-    for arg in args {
+    if args.iter().fold(false, |mut acc, arg| {
         if arguments.contains_key(arg.name.name.as_str()) {
             diagnostics.push(Diagnostic::error(
                 arg.name.loc,
@@ -2726,11 +2726,23 @@ fn contract_call_named_args(
                 diagnostics,
                 ResolveTo::Unknown,
             );
-
-            continue;
+        } else {
+            acc |= expression(
+                &arg.expr,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            )
+            .is_err()
         }
 
         arguments.insert(arg.name.name.as_str(), &arg.expr);
+
+        acc
+    }) {
+        return Err(());
     }
 
     let (call_args, name_matches) = match preprocess_contract_call(
@@ -2752,18 +2764,20 @@ fn contract_call_named_args(
         PreProcessedCall::Error => return Err(()),
     };
 
-    let mut errors = Diagnostics::default();
+    let mut call_diagnostics = Diagnostics::default();
+    let mut resolved_calls = Vec::new();
 
     for function_no in &name_matches {
         let func = &ns.functions[*function_no];
 
+        let mut candidate_diagnostics = Diagnostics::default();
+
         let unnamed_params = func.params.iter().filter(|p| p.id.is_none()).count();
         let params_len = func.params.len();
-
-        let mut matches = true;
+        let mut cast_args = Vec::new();
 
         if unnamed_params > 0 {
-            errors.push(Diagnostic::cast_error_with_note(
+            candidate_diagnostics.push(Diagnostic::cast_error_with_note(
                 *loc,
                 format!(
                     "function cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
@@ -2771,9 +2785,8 @@ fn contract_call_named_args(
                 func.loc_prototype,
                 format!("definition of {}", func.id),
             ));
-            matches = false;
         } else if params_len != args.len() {
-            errors.push(Diagnostic::cast_error(
+            candidate_diagnostics.push(Diagnostic::cast_error(
                 *loc,
                 format!(
                     "function expects {} arguments, {} provided",
@@ -2781,9 +2794,7 @@ fn contract_call_named_args(
                     args.len()
                 ),
             ));
-            matches = false;
         }
-        let mut cast_args = Vec::new();
 
         for i in 0..params_len {
             let param = ns.functions[*function_no].params[i].clone();
@@ -2794,8 +2805,7 @@ fn contract_call_named_args(
             let arg = match arguments.get(param.name_as_str()) {
                 Some(a) => a,
                 None => {
-                    matches = false;
-                    diagnostics.push(Diagnostic::cast_error(
+                    candidate_diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "missing argument '{}' to function '{}'",
@@ -2807,67 +2817,91 @@ fn contract_call_named_args(
                 }
             };
 
-            let arg = match expression(
+            let ty = param.ty.clone();
+
+            evaluate_argument(
                 arg,
                 context,
                 ns,
                 symtable,
-                &mut errors,
-                ResolveTo::Type(&param.ty),
-            ) {
-                Ok(e) => e,
-                Err(()) => {
-                    matches = false;
-                    continue;
-                }
-            };
-
-            match arg.cast(&arg.loc(), &param.ty, true, ns, &mut errors) {
-                Ok(expr) => cast_args.push(expr),
-                Err(()) => {
-                    matches = false;
-                    break;
-                }
-            }
-        }
-
-        if matches {
-            return contract_call_match(
-                loc,
-                func_name,
-                *function_no,
-                external_contract_no,
-                call_args,
-                cast_args,
-                var_expr.as_ref(),
-                ns,
-                diagnostics,
-                resolve_to,
+                &ty,
+                &mut candidate_diagnostics,
+                &mut cast_args,
             );
-        } else if name_matches.len() > 1 && diagnostics.extend_non_casting(&errors) {
-            return Err(());
         }
+
+        if candidate_diagnostics.any_errors() {
+            if name_matches.len() != 1 {
+                // will be de-duped
+                candidate_diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find overloaded function which matches signature".into(),
+                ));
+
+                let func = &ns.functions[*function_no];
+
+                candidate_diagnostics.iter_mut().for_each(|diagnostic| {
+                    diagnostic.notes.push(Note {
+                        loc: func.loc,
+                        message: "candidate function".into(),
+                    })
+                });
+            }
+        } else if let Ok(resolved_call) = contract_call_match(
+            loc,
+            func_name,
+            *function_no,
+            external_contract_no,
+            call_args.clone(),
+            cast_args,
+            var_expr.as_ref(),
+            ns,
+            &mut candidate_diagnostics,
+            resolve_to,
+        ) {
+            resolved_calls.push((*function_no, resolved_call));
+            continue;
+        }
+
+        call_diagnostics.extend(candidate_diagnostics);
     }
 
-    match name_matches.len() {
+    match resolved_calls.len() {
         0 => {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                format!(
-                    "contract '{}' does not have function '{}'",
-                    ns.contracts[external_contract_no].id, func_name.name
-                ),
-            ));
+            diagnostics.extend(call_diagnostics);
+
+            if name_matches.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "contract '{}' does not have function '{}'",
+                        ns.contracts[external_contract_no].id, func_name.name
+                    ),
+                ));
+            }
+
+            Err(())
         }
-        1 => diagnostics.extend(errors),
+        1 => Ok(resolved_calls[0].1.clone()),
         _ => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error_with_notes(
                 *loc,
-                "cannot find overloaded function which matches signature".to_string(),
+                "function call can be resolved to multiple functions".into(),
+                resolved_calls
+                    .iter()
+                    .map(|(func_no, _)| {
+                        let func = &ns.functions[*func_no];
+
+                        Note {
+                            loc: func.loc,
+                            message: "candidate function".into(),
+                        }
+                    })
+                    .collect(),
             ));
+            Err(())
         }
     }
-    Err(())
 }
 
 /// Resolve call to contract with positional arguments
@@ -2903,13 +2937,24 @@ fn contract_call_pos_args(
         PreProcessedCall::Error => return Err(()),
     };
 
-    let mut errors = Diagnostics::default();
+    let mut call_diagnostics = Diagnostics::default();
+    let mut resolved_calls = Vec::new();
+
+    // try to resolve the arguments, give up if there are any errors
+    if args.iter().fold(false, |acc, arg| {
+        acc | expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown).is_err()
+    }) {
+        return Err(());
+    }
 
     for function_no in &name_matches {
+        let mut candidate_diagnostics = Diagnostics::default();
+        let mut cast_args = Vec::new();
+
         let params_len = ns.functions[*function_no].params.len();
 
         if params_len != args.len() {
-            errors.push(Diagnostic::error(
+            candidate_diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "function expects {} arguments, {} provided",
@@ -2917,92 +2962,116 @@ fn contract_call_pos_args(
                     args.len()
                 ),
             ));
-            continue;
-        }
+        } else {
+            // check if arguments can be implicitly casted
+            for (i, arg) in args.iter().enumerate() {
+                let ty = ns.functions[*function_no].params[i].ty.clone();
 
-        let mut matches = true;
-        let mut cast_args = Vec::new();
-
-        // check if arguments can be implicitly casted
-        for (i, arg) in args.iter().enumerate() {
-            let ty = ns.functions[*function_no].params[i].ty.clone();
-
-            let arg = match expression(
-                arg,
-                context,
-                ns,
-                symtable,
-                &mut errors,
-                ResolveTo::Type(&ty),
-            ) {
-                Ok(e) => e,
-                Err(_) => {
-                    matches = false;
-                    continue;
-                }
-            };
-
-            match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
-                Ok(expr) => cast_args.push(expr),
-                Err(()) => {
-                    matches = false;
-                    continue;
-                }
+                evaluate_argument(
+                    arg,
+                    context,
+                    ns,
+                    symtable,
+                    &ty,
+                    &mut candidate_diagnostics,
+                    &mut cast_args,
+                );
             }
-        }
 
-        if matches {
-            let resolved_call = contract_call_match(
+            if candidate_diagnostics.any_errors() {
+                if name_matches.len() != 1 {
+                    // will be de-duped
+                    candidate_diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "cannot find overloaded function which matches signature".into(),
+                    ));
+                }
+                candidate_diagnostics.iter_mut().for_each(|diagnostic| {
+                    diagnostic.notes.push(Note {
+                        loc: func.loc,
+                        message: "candidate function".into(),
+                    })
+                });
+            } else if let Ok(resolved_call) = contract_call_match(
                 loc,
                 func,
                 *function_no,
                 external_contract_no,
-                call_args,
+                call_args.clone(),
                 cast_args,
                 var_expr,
                 ns,
-                diagnostics,
+                &mut candidate_diagnostics,
                 resolve_to,
-            )?;
-            return Ok(Some(resolved_call));
-        } else if name_matches.len() > 1 && diagnostics.extend_non_casting(&errors) {
+            ) {
+                resolved_calls.push((*function_no, resolved_call));
+                continue;
+            }
+        }
+
+        call_diagnostics.extend(candidate_diagnostics);
+    }
+
+    match resolved_calls.len() {
+        0 => {
+            if let Some(var) = var_expr {
+                // what about call args
+                match using::try_resolve_using_call(
+                    loc,
+                    func,
+                    var,
+                    context,
+                    args,
+                    symtable,
+                    diagnostics,
+                    ns,
+                    resolve_to,
+                ) {
+                    Ok(Some(expr)) => {
+                        return Ok(Some(expr));
+                    }
+                    Ok(None) => (),
+                    Err(_) => {
+                        return Err(());
+                    }
+                }
+            }
+
+            diagnostics.extend(call_diagnostics);
+
+            if name_matches.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    format!("unknown function '{}'", func.name),
+                ));
+            }
+
+            Err(())
+        }
+        1 => {
+            return Ok(Some(resolved_calls[0].1.clone()));
+        }
+        _ => {
+            diagnostics.extend(call_diagnostics);
+
+            diagnostics.push(Diagnostic::error_with_notes(
+                *loc,
+                "function call can be resolved to multiple functions".into(),
+                resolved_calls
+                    .iter()
+                    .map(|(func_no, _)| {
+                        let func = &ns.functions[*func_no];
+
+                        Note {
+                            loc: func.loc,
+                            message: "candidate function".into(),
+                        }
+                    })
+                    .collect(),
+            ));
             return Err(());
         }
     }
-
-    if let Some(var) = var_expr {
-        // what about call args
-        match using::try_resolve_using_call(
-            loc,
-            func,
-            var,
-            context,
-            args,
-            symtable,
-            diagnostics,
-            ns,
-            resolve_to,
-        ) {
-            Ok(Some(expr)) => {
-                return Ok(Some(expr));
-            }
-            Ok(None) => (),
-            Err(_) => {
-                return Err(());
-            }
-        }
-    }
-
-    if name_matches.len() == 1 {
-        diagnostics.extend(errors);
-    } else if name_matches.len() != 1 {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            "cannot find overloaded function which matches signature".to_string(),
-        ));
-    }
-
-    Err(())
 }
 
 /// Checks if an identifier path is an external call on Solana.
