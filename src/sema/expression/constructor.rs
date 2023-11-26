@@ -306,20 +306,42 @@ pub fn constructor_named_args(
 
     let mut arguments: BTreeMap<&str, &pt::Expression> = BTreeMap::new();
 
-    for arg in args {
+    if args.iter().fold(false, |mut acc, arg| {
         if let Some(prev) = arguments.get(arg.name.name.as_str()) {
             diagnostics.push(Diagnostic::error_with_note(
-                *loc,
-                format!("duplicate argument name '{}'", arg.name.name),
+                arg.name.loc,
+                format!("duplicate argument with name '{}'", arg.name.name),
                 prev.loc(),
-                String::from("location of previous argument"),
+                "location of previous argument".into(),
             ));
-            return Err(());
-        }
-        arguments.insert(&arg.name.name, &arg.expr);
-    }
 
-    let mut errors = Diagnostics::default();
+            let _ = expression(
+                &arg.expr,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            );
+            acc = true;
+        } else {
+            acc |= expression(
+                &arg.expr,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            )
+            .is_err()
+        }
+
+        arguments.insert(arg.name.name.as_str(), &arg.expr);
+
+        acc
+    }) {
+        return Err(());
+    }
 
     // constructor call
     let function_nos: Vec<usize> = ns.contracts[no]
@@ -329,17 +351,23 @@ pub fn constructor_named_args(
         .copied()
         .collect();
 
+    let mut call_diagnostics = Diagnostics::default();
+    let mut resolved_calls = Vec::new();
+
     // constructor call
     for function_no in &function_nos {
         let func = &ns.functions[*function_no];
         let params_len = func.params.len();
 
-        let mut matches = true;
+        let mut candidate_diagnostics = Diagnostics::default();
 
         let unnamed_params = func.params.iter().filter(|p| p.id.is_none()).count();
+        let func_loc = ns.functions[*function_no].loc_prototype;
+
+        let mut cast_args = Vec::new();
 
         if unnamed_params > 0 {
-            errors.push(Diagnostic::cast_error_with_note(
+            candidate_diagnostics.push(Diagnostic::cast_error_with_note(
                 *loc,
                 format!(
                     "constructor cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
@@ -347,9 +375,8 @@ pub fn constructor_named_args(
                 func.loc_prototype,
                 format!("definition of {}", func.ty),
             ));
-            matches = false;
         } else if params_len != args.len() {
-            errors.push(Diagnostic::cast_error_with_note(
+            candidate_diagnostics.push(Diagnostic::cast_error_with_note(
                 *loc,
                 format!(
                     "constructor expects {} arguments, {} provided",
@@ -359,86 +386,107 @@ pub fn constructor_named_args(
                 func.loc_prototype,
                 "definition of constructor".to_owned(),
             ));
-            matches = false;
-        }
+        } else {
+            // check if arguments can be implicitly casted
+            for i in 0..params_len {
+                let param = ns.functions[*function_no].params[i].clone();
 
-        let mut cast_args = Vec::new();
+                let arg = match arguments.get(param.name_as_str()) {
+                    Some(a) => a,
+                    None => {
+                        candidate_diagnostics.push(Diagnostic::cast_error_with_note(
+                            *loc,
+                            format!("missing argument '{}' to constructor", param.name_as_str()),
+                            func_loc,
+                            "definition of constructor".to_owned(),
+                        ));
+                        continue;
+                    }
+                };
 
-        let func_loc = ns.functions[*function_no].loc_prototype;
-
-        // check if arguments can be implicitly casted
-        for i in 0..params_len {
-            let param = ns.functions[*function_no].params[i].clone();
-
-            let arg = match arguments.get(param.name_as_str()) {
-                Some(a) => a,
-                None => {
-                    matches = false;
-                    errors.push(Diagnostic::cast_error_with_note(
-                        *loc,
-                        format!("missing argument '{}' to constructor", param.name_as_str()),
-                        func_loc,
-                        "definition of constructor".to_owned(),
-                    ));
-                    break;
-                }
-            };
-
-            let arg = match expression(
-                arg,
-                context,
-                ns,
-                symtable,
-                &mut errors,
-                ResolveTo::Type(&param.ty),
-            ) {
-                Ok(e) => e,
-                Err(()) => {
-                    matches = false;
-                    continue;
-                }
-            };
-
-            match arg.cast(&arg.loc(), &param.ty, true, ns, &mut errors) {
-                Ok(expr) => cast_args.push(expr),
-                Err(()) => {
-                    matches = false;
-                }
+                evaluate_argument(
+                    arg,
+                    context,
+                    ns,
+                    symtable,
+                    &param.ty,
+                    &mut candidate_diagnostics,
+                    &mut cast_args,
+                );
             }
         }
 
-        if matches {
-            return Ok(Expression::Constructor {
+        if candidate_diagnostics.any_errors() {
+            if function_nos.len() != 1 {
+                // will be de-duped
+                candidate_diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find overloaded constructor which matches signature".into(),
+                ));
+
+                let func = &ns.functions[*function_no];
+
+                candidate_diagnostics.iter_mut().for_each(|diagnostic| {
+                    diagnostic.notes.push(Note {
+                        loc: func.loc,
+                        message: "candidate constructor".into(),
+                    })
+                });
+            }
+        } else {
+            resolved_calls.push(Expression::Constructor {
                 loc: *loc,
                 contract_no: no,
                 constructor_no: Some(*function_no),
                 args: cast_args,
-                call_args,
+                call_args: call_args.clone(),
             });
-        } else if function_nos.len() > 1 && diagnostics.extend_non_casting(&errors) {
-            return Err(());
+            continue;
         }
+
+        call_diagnostics.extend(candidate_diagnostics);
     }
 
-    match function_nos.len() {
-        0 if args.is_empty() => Ok(Expression::Constructor {
+    match resolved_calls.len() {
+        0 if function_nos.is_empty() && args.is_empty() => Ok(Expression::Constructor {
             loc: *loc,
             contract_no: no,
             constructor_no: None,
             args: Vec::new(),
             call_args,
         }),
-        0 | 1 => {
-            diagnostics.extend(errors);
+        0 => {
+            diagnostics.extend(call_diagnostics);
+
+            if function_nos.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find matching constructor".into(),
+                ));
+            }
 
             Err(())
         }
+        1 => Ok(resolved_calls.remove(0)),
         _ => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error_with_notes(
                 *loc,
-                "cannot find overloaded constructor which matches signature".to_string(),
-            ));
+                "function call can be resolved to multiple functions".into(),
+                resolved_calls
+                    .iter()
+                    .map(|expr| {
+                        let Expression::Constructor { constructor_no, .. } = expr else {
+                            unreachable!()
+                        };
+                        let func = &ns.functions[constructor_no.unwrap()];
 
+                        Note {
+                            loc: func.loc,
+                            message: "candidate function".into(),
+                        }
+                    })
+                    .collect(),
+            ));
             Err(())
         }
     }
