@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sema::ast::{ArrayLength, CallArgs, Expression, Namespace, RetrieveType, Type};
+use crate::sema::ast::{ArrayLength, CallArgs, Expression, Namespace, Note, RetrieveType, Type};
 use crate::sema::diagnostics::Diagnostics;
-use crate::sema::expression::function_call::{collect_call_args, parse_call_args};
+use crate::sema::expression::function_call::{
+    collect_call_args, evaluate_argument, parse_call_args,
+};
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
 use crate::sema::namespace::ResolveTypeContext;
@@ -98,8 +100,6 @@ pub fn match_constructor_to_args(
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<(Option<usize>, Vec<Expression>), ()> {
-    let mut errors = Diagnostics::default();
-
     // constructor call
     let function_nos: Vec<usize> = ns.contracts[contract_no]
         .functions
@@ -108,13 +108,23 @@ pub fn match_constructor_to_args(
         .copied()
         .collect();
 
-    for function_no in &function_nos {
-        let mut matches = true;
+    // try to resolve the arguments, give up if there are any errors
+    if args.iter().fold(false, |acc, arg| {
+        acc | expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown).is_err()
+    }) {
+        return Err(());
+    }
 
+    let mut call_diagnostics = Diagnostics::default();
+    let mut resolved_calls = Vec::new();
+
+    for function_no in &function_nos {
         let params_len = ns.functions[*function_no].params.len();
+        let mut candidate_diagnostics = Diagnostics::default();
+        let mut cast_args = Vec::new();
 
         if params_len != args.len() {
-            errors.push(Diagnostic::cast_error(
+            candidate_diagnostics.push(Diagnostic::cast_error(
                 *loc,
                 format!(
                     "constructor expects {} arguments, {} provided",
@@ -122,70 +132,75 @@ pub fn match_constructor_to_args(
                     args.len()
                 ),
             ));
-            matches = false;
-        }
+        } else {
+            // resolve arguments for this constructor
+            for (i, arg) in args.iter().enumerate() {
+                let ty = ns.functions[*function_no].params[i].ty.clone();
 
-        let mut cast_args = Vec::new();
-
-        // resolve arguments for this constructor
-        for (i, arg) in args.iter().enumerate() {
-            let ty = ns.functions[*function_no]
-                .params
-                .get(i)
-                .map(|p| p.ty.clone());
-
-            let arg = match expression(
-                arg,
-                context,
-                ns,
-                symtable,
-                &mut errors,
-                if let Some(ty) = &ty {
-                    ResolveTo::Type(ty)
-                } else {
-                    ResolveTo::Unknown
-                },
-            ) {
-                Ok(v) => v,
-                Err(()) => {
-                    matches = false;
-                    continue;
-                }
-            };
-
-            if let Some(ty) = &ty {
-                match arg.cast(&arg.loc(), ty, true, ns, &mut errors) {
-                    Ok(expr) => cast_args.push(expr),
-                    Err(()) => {
-                        matches = false;
-                    }
-                }
+                evaluate_argument(
+                    arg,
+                    context,
+                    ns,
+                    symtable,
+                    &ty,
+                    &mut candidate_diagnostics,
+                    &mut cast_args,
+                );
             }
         }
 
-        if matches {
-            return Ok((Some(*function_no), cast_args));
-        } else if function_nos.len() > 1 && diagnostics.extend_non_casting(&errors) {
-            return Err(());
+        if candidate_diagnostics.any_errors() {
+            if function_nos.len() != 1 {
+                // will be de-duped
+                candidate_diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find overloaded constructor which matches signature".into(),
+                ));
+
+                let func = &ns.functions[*function_no];
+
+                candidate_diagnostics.iter_mut().for_each(|diagnostic| {
+                    diagnostic.notes.push(Note {
+                        loc: func.loc,
+                        message: "candidate constructor".into(),
+                    })
+                });
+            }
+        } else {
+            resolved_calls.push((Some(*function_no), cast_args));
+            continue;
         }
+
+        call_diagnostics.extend(candidate_diagnostics);
     }
 
-    match function_nos.len() {
-        0 if args.is_empty() => {
-            return Ok((None, Vec::new()));
+    match resolved_calls.len() {
+        0 if function_nos.is_empty() && args.is_empty() => Ok((None, Vec::new())),
+        0 => {
+            diagnostics.extend(call_diagnostics);
+
+            Err(())
         }
-        0 | 1 => {
-            diagnostics.extend(errors);
-        }
+        1 => Ok(resolved_calls.remove(0)),
         _ => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(Diagnostic::error_with_notes(
                 *loc,
-                "cannot find overloaded constructor which matches signature".to_string(),
+                "constructor can be resolved to multiple functions".into(),
+                resolved_calls
+                    .iter()
+                    .map(|(func_no, _)| {
+                        let func = &ns.functions[func_no.unwrap()];
+
+                        Note {
+                            loc: func.loc,
+                            message: "candidate constructor".into(),
+                        }
+                    })
+                    .collect(),
             ));
+            Err(())
         }
     }
-
-    Err(())
 }
 
 /// check if from creates to, recursively
