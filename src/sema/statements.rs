@@ -1187,7 +1187,7 @@ fn emit_event(
 ) -> Result<Statement, ()> {
     let function_no = context.function_no.unwrap();
     let to_stmt =
-        |ns: &mut Namespace, event_no: usize, event_loc: pt::Loc, cast_args: Vec<Expression>| {
+        |ns: &mut Namespace, event_no: usize, event_loc: pt::Loc, args: Vec<Expression>| {
             if !ns.functions[function_no].emits_events.contains(&event_no) {
                 ns.functions[function_no].emits_events.push(event_no);
             }
@@ -1195,7 +1195,7 @@ fn emit_event(
                 loc: *loc,
                 event_no,
                 event_loc,
-                args: cast_args,
+                args,
             }
         };
 
@@ -1203,6 +1203,7 @@ fn emit_event(
         pt::Expression::FunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
             let mut emit_diagnostics = Diagnostics::default();
+            let mut valid_args = Vec::new();
 
             for arg in args {
                 if let Ok(exp) = expression(
@@ -1214,6 +1215,7 @@ fn emit_event(
                     ResolveTo::Unknown,
                 ) {
                     used_variable(ns, &exp, symtable);
+                    valid_args.push(exp);
                 };
             }
 
@@ -1229,7 +1231,7 @@ fn emit_event(
 
             if emit_diagnostics.any_errors() {
                 diagnostics.extend(emit_diagnostics);
-                return Err(());
+                return Ok(to_stmt(ns, event_nos[0], event_loc, valid_args));
             }
 
             let mut resolved_events = Vec::new();
@@ -1343,6 +1345,7 @@ fn emit_event(
             let mut emit_diagnostics = Diagnostics::default();
             let mut arguments = HashMap::new();
             let mut resolved_events = Vec::new();
+            let mut valid_args = Vec::new();
 
             for arg in args {
                 if let Ok(expr) = expression(
@@ -1354,6 +1357,7 @@ fn emit_event(
                     ResolveTo::Unknown,
                 ) {
                     used_variable(ns, &expr, symtable);
+                    valid_args.push(expr);
                 };
 
                 if arguments.contains_key(arg.name.name.as_str()) {
@@ -1379,7 +1383,7 @@ fn emit_event(
 
             if emit_diagnostics.any_errors() {
                 diagnostics.extend(emit_diagnostics);
-                return Err(());
+                return Ok(to_stmt(ns, event_nos[0], event_loc, valid_args));
             }
 
             for event_no in &event_nos {
