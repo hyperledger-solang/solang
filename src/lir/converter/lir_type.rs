@@ -24,7 +24,7 @@ impl Converter<'_> {
             ),
             // Bytes is a Ptr of an array of Bytes with fixed length
             //
-            // endians is different: in llvm level, bytes - big-endian, int is little-endian
+            // endianness is different: in llvm level, bytes - big-endian, int is little-endian
             // so they cannot be converted here without switching the endianess
             ast::Type::Bytes(width) => Type::Bytes(*width),
             // String is equivalent to dynamic bytes
