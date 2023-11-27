@@ -932,7 +932,10 @@ impl Display for pt::Statement {
                 f.write_str(") ")?;
                 block.fmt(f)
             }
-            Self::Expression(_, expr) => expr.fmt(f),
+            Self::Expression(_, expr) => {
+                expr.fmt(f)?;
+                f.write_char(';')
+            }
             Self::VariableDefinition(_, var, expr) => {
                 var.fmt(f)?;
                 write_opt!(f, " = ", expr);
@@ -2419,7 +2422,7 @@ mod tests {
 
                 pt::Statement::While(loc!(), expr!(true), Box::new(stmt!({}))) => "while (true) {}",
 
-                pt::Statement::Expression(loc!(), expr!(true)) => "true",
+                pt::Statement::Expression(loc!(), expr!(true)) => "true;",
 
                 pt::Statement::VariableDefinition(loc!(), pt::VariableDeclaration {
                     loc: loc!(),
