@@ -298,11 +298,13 @@ impl Converter<'_> {
             } => {
                 let cond_op = self.to_operand_and_insns(cond, vartable, results);
 
-                let mut case_ops = vec![];
-                for (case, block_no) in cases {
-                    let case_op = self.to_operand_and_insns(case, vartable, results);
-                    case_ops.push((case_op, *block_no));
-                }
+                let case_ops = cases
+                    .iter()
+                    .map(|(case, block_no)| {
+                        let case_op = self.to_operand_and_insns(case, vartable, results);
+                        (case_op, *block_no)
+                    })
+                    .collect::<Vec<(Operand, usize)>>();
 
                 results.push(Instruction::Switch {
                     loc: /*missing from cfg*/ Loc::Codegen,
