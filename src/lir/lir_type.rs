@@ -6,6 +6,9 @@ use crate::lir::expressions::Operand;
 use crate::sema::ast;
 use crate::sema::ast::ArrayLength;
 
+/// A struct type definition that is similar to the one in ast.rs,
+/// extended with a Vector type, as we need a lower level representation of
+/// String and DynamicBytes
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StructType {
     UserDefined(usize),
@@ -13,6 +16,7 @@ pub enum StructType {
     SolAccountMeta,
     SolParameters,
     ExternalFunction,
+    /// Vector is used here to represent String and DynamicBytes
     Vector(Box<Type>),
 }
 

@@ -8,7 +8,7 @@ use solang_parser::pt::Loc;
 
 use super::lir_type::PhiInput;
 
-/// Statements using three-address code format
+/// Instructions using three-address code format
 #[derive(Debug)]
 pub enum Instruction {
     Nop,

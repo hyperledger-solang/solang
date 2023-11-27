@@ -21,9 +21,11 @@ mod instruction;
 mod lir_type;
 mod vartable;
 
+/// A Converter converts a ControlFlowGraph into a Lower Intermediate Representation.
 pub struct Converter<'a> {
-    // namespace
+    /// a reference to the Namespace is used to retrieve useful information like enum types, address length, etc.
     ns: &'a Namespace,
+    /// a reference to the ControlFlowGraph is used to retrieve the instructions.
     cfg: &'a ControlFlowGraph,
 }
 
