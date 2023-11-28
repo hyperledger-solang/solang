@@ -136,4 +136,49 @@ fn version_match() {
             patch: None
         })
     );
+
+    let ns = test_solidity("pragma solidity 0.5.0 - 0.5.18;");
+
+    assert_eq!(
+        ns.highest_solidty_version(0),
+        Some(ast::Version {
+            major: 0,
+            minor: Some(5),
+            patch: Some(18)
+        })
+    );
+
+    assert!(ns.solidity_minor_version(0, 5));
+
+    let ns = test_solidity("pragma solidity 0.4 - 0.5 ^0;");
+
+    assert_eq!(
+        ns.highest_solidty_version(0),
+        Some(ast::Version {
+            major: 0,
+            minor: Some(5),
+            patch: None
+        })
+    );
+
+    assert!(ns.solidity_minor_version(0, 5));
+
+    let ns = test_solidity("pragma solidity 0.4 - 0.5 ~0;");
+
+    assert_eq!(
+        ns.highest_solidty_version(0),
+        Some(ast::Version {
+            major: 0,
+            minor: Some(5),
+            patch: None
+        })
+    );
+
+    assert!(ns.solidity_minor_version(0, 5));
+
+    let ns = test_solidity("pragma solidity ~0;");
+
+    assert_eq!(ns.highest_solidty_version(0), None);
+
+    assert!(!ns.solidity_minor_version(0, 5));
 }

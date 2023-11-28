@@ -3048,9 +3048,7 @@ fn contract_call_pos_args(
 
             Err(())
         }
-        1 => {
-            return Ok(Some(resolved_calls[0].1.clone()));
-        }
+        1 => Ok(Some(resolved_calls[0].1.clone())),
         _ => {
             diagnostics.extend(call_diagnostics);
 
@@ -3069,7 +3067,8 @@ fn contract_call_pos_args(
                     })
                     .collect(),
             ));
-            return Err(());
+
+            Err(())
         }
     }
 }

@@ -1005,7 +1005,7 @@ pub(super) fn resolve_call(
             if funcs.len() != 1 {
                 candidate_diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!("cannot find overloaded builtin which matches signature"),
+                    "cannot find overloaded builtin which matches signature".into(),
                 ));
             }
             call_diagnostics.extend(candidate_diagnostics);
@@ -1456,7 +1456,7 @@ pub(super) fn resolve_method_call(
                 // will be de-duped
                 candidate_diagnostics.push(Diagnostic::error(
                     id.loc,
-                    format!("cannot find overloaded builtin which matches signature"),
+                    "cannot find overloaded builtin which matches signature".into(),
                 ));
             }
         } else {
