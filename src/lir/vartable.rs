@@ -27,7 +27,7 @@ pub struct Var {
 /// It holds a map of variables, a map of function arguments, and the next variable identifier.
 #[derive(Debug, Clone)]
 pub struct Vartable {
-    /// The map of variables 
+    /// The map of variables
     /// that contains the variable's unique identifier, its type, and its name.
     pub vars: IndexMap<usize, Var>,
     /// The map of function arguments
