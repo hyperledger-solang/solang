@@ -217,7 +217,7 @@ fn resolve_base_args(contracts: &[ContractDefinition], file_no: usize, ns: &mut 
                     .position(|e| e.contract_no == base_no)
                 {
                     if let Some(args) = &base.args {
-                        let mut symtable = Symtable::new();
+                        let mut symtable = Symtable::default();
 
                         // find constructor which matches this
                         if let Ok((Some(constructor_no), args)) = match_constructor_to_args(

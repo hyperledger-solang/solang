@@ -457,7 +457,7 @@ impl Function {
             has_body: false,
             is_override: None,
             body: Vec::new(),
-            symtable: Symtable::new(),
+            symtable: Symtable::default(),
             emits_events: Vec::new(),
             mangled_name,
             annotations: ConstructorAnnotations::default(),

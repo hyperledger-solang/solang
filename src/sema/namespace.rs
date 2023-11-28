@@ -35,7 +35,7 @@ impl Namespace {
     /// Create a namespace and populate with the parameters for the target
     pub fn new(target: Target) -> Self {
         let (address_length, value_length) = match target {
-            Target::EVM => (20, 16),
+            Target::EVM => (20, 32),
             Target::Polkadot {
                 address_length,
                 value_length,
@@ -1310,7 +1310,7 @@ impl Namespace {
             }
         }
 
-        if let Some(contract_name) = namespace.get(0) {
+        if let Some(contract_name) = namespace.first() {
             contract_no = match self
                 .variable_symbols
                 .get(&(import_file_no, None, contract_name.name.clone()))
@@ -1524,7 +1524,7 @@ impl Namespace {
         expr: &pt::Expression,
         diagnostics: &mut Diagnostics,
     ) -> Result<ArrayDimension, ()> {
-        let mut symtable = Symtable::new();
+        let mut symtable = Symtable::default();
         let mut context = ExprContext {
             file_no,
             unchecked: true,

@@ -1125,7 +1125,7 @@ fn create_program_address(program_id: &Account, seeds: &[&[u8]]) -> Pubkey {
 
     let hash = hasher.finalize();
 
-    let new_address: [u8; 32] = hash.try_into().unwrap();
+    let new_address: [u8; 32] = hash.into();
 
     // the real runtime does checks if this address exists on the ed25519 curve
 
@@ -1268,7 +1268,7 @@ fn sol_invoke_signed_c(
 
                     let hash = hasher.finalize();
 
-                    let new_address: [u8; 32] = hash.try_into().unwrap();
+                    let new_address: [u8; 32] = hash.into();
 
                     println!(
                         "creating account {} with space {} owner {}",

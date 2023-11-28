@@ -326,7 +326,7 @@ pub(super) fn revert(
         .collect::<Vec<_>>();
 
     if opt.log_runtime_errors {
-        match (error_no, exprs.get(0)) {
+        match (error_no, exprs.first()) {
             // In the case of Error(string), we can print the reason
             (None, Some(expr)) => {
                 let prefix = b"runtime_error: ";
@@ -369,7 +369,7 @@ pub(super) fn revert(
         }
     }
 
-    let error = match (*error_no, exprs.get(0)) {
+    let error = match (*error_no, exprs.first()) {
         // Having an error number requires a custom error
         (Some(error_no), _) => SolidityError::Custom { error_no, exprs },
         // No error number but an expression requires Error(String)

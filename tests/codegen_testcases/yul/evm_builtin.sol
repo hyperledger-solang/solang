@@ -11,16 +11,16 @@ contract Testing {
             // CHECK: (sext uint256 uint160((load (builtin GetAddress ()))))
             let b := address()
 
-            // CHECK: ty:uint256 %c = (sext uint256 (builtin Balance (address((trunc uint160 (arg #0))))))
+            // CHECK: ty:uint256 %c = uint256((builtin Balance (address((trunc uint160 (arg #0))))))
             let c := balance(arg1)
 
-            // CHECK: ty:uint256 %d = (sext uint256 (builtin Balance ((load (builtin GetAddress ())))))
+            // CHECK: ty:uint256 %d = uint256((builtin Balance ((load (builtin GetAddress ())))))
             let d := selfbalance()
 
             // CHECK: ty:uint256 %e = (sext uint256 uint160((builtin Sender ())))
             let e := caller()
 
-            // CHECK: ty:uint256 %f = (sext uint256 (builtin Value ()))
+            // CHECK: ty:uint256 %f = uint256((builtin Value ()))
             let f := callvalue()
 
             // CHECK: ty:uint256 %g = (zext uint256 (builtin Gasprice ()))

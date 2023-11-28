@@ -38,7 +38,7 @@ pub fn resolve_function_body(
     function_no: usize,
     ns: &mut Namespace,
 ) -> Result<(), ()> {
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut res = Vec::new();
     let mut context = ExprContext {
         file_no,

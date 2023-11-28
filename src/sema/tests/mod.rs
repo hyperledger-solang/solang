@@ -640,7 +640,7 @@ fn get_import_path() {
 
     let ns = parse_and_resolve(OsStr::new("example.sol"), &mut cache, Target::EVM);
 
-    let file = ns.files.get(0);
+    let file = ns.files.first();
     assert!(file.is_some());
     if let Some(file) = file {
         let import_path = cache.get_import_path(file.import_no.unwrap());
@@ -648,7 +648,7 @@ fn get_import_path() {
     }
 
     let ns = parse_and_resolve(OsStr::new("incrementer.sol"), &mut cache, Target::EVM);
-    let file = ns.files.get(0);
+    let file = ns.files.first();
     assert!(file.is_some());
     if let Some(file) = file {
         let import_path = cache.get_import_path(file.import_no.unwrap());

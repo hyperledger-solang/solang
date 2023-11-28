@@ -290,7 +290,7 @@ fn exec_try(
             call_args,
             ..
         } => {
-            let address_res = match try_stmt.returns.get(0) {
+            let address_res = match try_stmt.returns.first() {
                 Some((Some(pos), _)) => *pos,
                 _ => vartab.temp_anonymous(&Type::Contract(*contract_no)),
             };

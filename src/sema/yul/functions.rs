@@ -239,7 +239,7 @@ pub(crate) fn resolve_function_definition(
     context: &mut ExprContext,
     ns: &mut Namespace,
 ) -> Result<YulFunction, ()> {
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     context.enter_scope();
 
     let prev_yul_function = context.yul_function;

@@ -159,7 +159,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
                     &item.doccomments,
                     None,
                     ns,
-                    &mut Symtable::new(),
+                    &mut Symtable::default(),
                 );
             }
             _ => (),
