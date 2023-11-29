@@ -1451,15 +1451,7 @@ pub(super) fn resolve_method_call(
             }
         }
 
-        if candidate_diagnostics.any_errors() {
-            if funcs.len() != 1 {
-                // will be de-duped
-                candidate_diagnostics.push(Diagnostic::error(
-                    id.loc,
-                    "cannot find overloaded builtin which matches signature".into(),
-                ));
-            }
-        } else {
+        if !candidate_diagnostics.any_errors() {
             cast_args.insert(
                 0,
                 expr.cast(&id.loc, deref_ty, true, ns, diagnostics).unwrap(),

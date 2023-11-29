@@ -71,6 +71,14 @@ fn version_match() {
         })
     );
 
+    let ns = test_solidity("pragma solidity <0;");
+
+    assert_eq!(ns.highest_solidty_version(0), None);
+
+    let ns = test_solidity("pragma solidity ~0.0;");
+
+    assert_eq!(ns.highest_solidty_version(0), None);
+
     let ns = test_solidity("pragma solidity <0.5.0;");
 
     assert_eq!(

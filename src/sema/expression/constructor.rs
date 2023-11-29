@@ -151,12 +151,6 @@ pub fn match_constructor_to_args(
 
         if candidate_diagnostics.any_errors() {
             if function_nos.len() != 1 {
-                // will be de-duped
-                candidate_diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot find overloaded constructor which matches signature".into(),
-                ));
-
                 let func = &ns.functions[*function_no];
 
                 candidate_diagnostics.iter_mut().for_each(|diagnostic| {
@@ -165,6 +159,12 @@ pub fn match_constructor_to_args(
                         message: "candidate constructor".into(),
                     })
                 });
+
+                // will be de-duped
+                candidate_diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find overloaded constructor which matches signature".into(),
+                ));
             }
         } else {
             resolved_calls.push((Some(*function_no), cast_args));
@@ -418,12 +418,6 @@ pub fn constructor_named_args(
 
         if candidate_diagnostics.any_errors() {
             if function_nos.len() != 1 {
-                // will be de-duped
-                candidate_diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot find overloaded constructor which matches signature".into(),
-                ));
-
                 let func = &ns.functions[*function_no];
 
                 candidate_diagnostics.iter_mut().for_each(|diagnostic| {
@@ -432,6 +426,12 @@ pub fn constructor_named_args(
                         message: "candidate constructor".into(),
                     })
                 });
+
+                // will be de-duped
+                candidate_diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find overloaded constructor which matches signature".into(),
+                ));
             }
         } else {
             resolved_calls.push(Expression::Constructor {

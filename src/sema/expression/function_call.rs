@@ -38,6 +38,14 @@ pub(super) fn call_function_type(
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
+    if context.constant {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot call function in constant expression".to_string(),
+        ));
+        return Err(());
+    }
+
     let mut function = expression(expr, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
 
     let mut ty = function.ty();
@@ -2436,14 +2444,6 @@ pub fn function_call_expr(
                         Ok(expr)
                     }
                 };
-            }
-
-            if context.constant {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot call function in constant expression".to_string(),
-                ));
-                return Err(());
             }
 
             // is there a local variable or contract variable with this name
