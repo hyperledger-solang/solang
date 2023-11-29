@@ -32,7 +32,7 @@ pub fn contract_variables<'a>(
     file_no: usize,
     ns: &mut Namespace,
 ) -> Vec<DelayedResolveInitializer<'a>> {
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut delayed = Vec::new();
 
     for part in &def.parts {
@@ -447,7 +447,7 @@ pub fn variable_decl<'a>(
 
             // If the variable is an array or mapping, the accessor function takes mapping keys
             // or array indices as arguments, and returns the dereferenced value
-            let mut symtable = Symtable::new();
+            let mut symtable = Symtable::default();
             let mut context = ExprContext::default();
             context.enter_scope();
             let mut params = Vec::new();
@@ -784,7 +784,7 @@ pub fn resolve_initializers(
     file_no: usize,
     ns: &mut Namespace,
 ) {
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut diagnostics = Diagnostics::default();
 
     for DelayedResolveInitializer {

@@ -93,15 +93,6 @@ pub struct Symtable {
 }
 
 impl Symtable {
-    pub fn new() -> Self {
-        Symtable {
-            vars: IndexMap::new(),
-            arguments: Vec::new(),
-            returns: Vec::new(),
-            scopes: Vec::new(),
-        }
-    }
-
     pub fn add(
         &mut self,
         id: &pt::Identifier,

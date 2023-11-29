@@ -754,7 +754,7 @@ impl StorageSlot for PolkadotTarget {
                 }
             }
             Type::Struct(str_ty) => {
-                for (_, field) in str_ty.definition(ns).fields.iter().enumerate() {
+                for field in &str_ty.definition(ns).fields {
                     self.storage_delete_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
                     if !field.ty.is_reference_type(ns)

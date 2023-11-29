@@ -235,13 +235,13 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Diagnostics {
             SolanaAccount {
                 loc: Loc::Codegen,
                 is_writer: true,
-                /// With a @payer annotation, the account is created on-chain and needs a signer. The client
-                /// provides an address that does not exist yet, so SystemProgram.CreateAccount is called
-                /// on-chain.
-                ///
-                /// However, if a @seed is also provided, the program can sign for the account
-                /// with the seed using program derived address (pda) when SystemProgram.CreateAccount is called,
-                /// so no signer is required from the client.
+                // With a @payer annotation, the account is created on-chain and needs a signer. The client
+                // provides an address that does not exist yet, so SystemProgram.CreateAccount is called
+                // on-chain.
+                //
+                // However, if a @seed is also provided, the program can sign for the account
+                // with the seed using program derived address (pda) when SystemProgram.CreateAccount is called,
+                // so no signer is required from the client.
                 is_signer: func.has_payer_annotation() && !func.has_seed_annotation(),
                 generated: true,
             },

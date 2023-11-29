@@ -25,7 +25,7 @@ use std::sync::Arc;
 fn resolve_bool_literal() {
     let mut ctx = ExprContext::default();
     ctx.enter_scope();
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut function_table = FunctionsTable::new(0);
 
     let mut ns = Namespace::new(Target::Solana);
@@ -66,7 +66,7 @@ fn resolve_bool_literal() {
 fn resolve_number_literal() {
     let mut ctx = ExprContext::default();
     ctx.enter_scope();
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut function_table = FunctionsTable::new(0);
 
     let loc = Loc::File(0, 3, 5);
@@ -124,7 +124,7 @@ fn resolve_number_literal() {
 fn resolve_hex_number_literal() {
     let mut ctx = ExprContext::default();
     ctx.enter_scope();
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut function_table = FunctionsTable::new(0);
 
     let mut ns = Namespace::new(Target::EVM);
@@ -170,7 +170,7 @@ fn resolve_hex_number_literal() {
 fn resolve_hex_string_literal() {
     let mut ctx = ExprContext::default();
     ctx.enter_scope();
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut function_table = FunctionsTable::new(0);
 
     let mut ns = Namespace::new(Target::EVM);
@@ -237,7 +237,7 @@ fn resolve_hex_string_literal() {
 fn resolve_string_literal() {
     let mut ctx = ExprContext::default();
     ctx.enter_scope();
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut function_table = FunctionsTable::new(0);
 
     let mut ns = Namespace::new(Target::Solana);
@@ -268,7 +268,7 @@ fn resolve_string_literal() {
 fn resolve_variable_local() {
     let mut context = ExprContext::default();
     context.enter_scope();
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut function_table = FunctionsTable::new(0);
     let mut ns = Namespace::new(Target::EVM);
     let loc = Loc::File(1, 2, 3);
@@ -346,7 +346,7 @@ fn resolve_variable_contract() {
     };
     context.enter_scope();
 
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut function_table = FunctionsTable::new(0);
     let mut ns = Namespace::new(Target::EVM);
     let loc = Loc::File(0, 2, 3);
@@ -543,7 +543,7 @@ fn resolve_variable_contract() {
 fn function_call() {
     let mut context = ExprContext::default();
     context.enter_scope();
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut function_table = FunctionsTable::new(0);
     function_table.enter_scope();
     let mut ns = Namespace::new(Target::EVM);
@@ -739,7 +739,7 @@ fn function_call() {
 fn check_arguments() {
     let mut context = ExprContext::default();
     context.enter_scope();
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut function_table = FunctionsTable::new(0);
     function_table.enter_scope();
     let mut ns = Namespace::new(Target::EVM);
@@ -896,7 +896,7 @@ fn test_member_access() {
     };
     context.enter_scope();
 
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     let mut function_table = FunctionsTable::new(0);
     let mut ns = Namespace::new(Target::EVM);
     let loc = Loc::File(0, 2, 3);
@@ -1045,7 +1045,7 @@ fn test_check_types() {
         read: false,
     });
     ns.contracts.push(contract);
-    let mut symtable = Symtable::new();
+    let mut symtable = Symtable::default();
     symtable.add(
         &Identifier {
             loc,

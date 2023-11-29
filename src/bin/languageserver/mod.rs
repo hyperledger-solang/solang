@@ -1644,7 +1644,7 @@ impl<'a> Builder<'a> {
         }
 
         for (i, constant) in self.ns.constants.iter().enumerate() {
-            let samptb = symtable::Symtable::new();
+            let samptb = symtable::Symtable::default();
             self.contract_variable(constant, &samptb, None, i);
         }
 
@@ -1676,7 +1676,7 @@ impl<'a> Builder<'a> {
             }
 
             for (i, variable) in contract.variables.iter().enumerate() {
-                let symtable = symtable::Symtable::new();
+                let symtable = symtable::Symtable::default();
                 self.contract_variable(variable, &symtable, Some(ci), i);
             }
 
