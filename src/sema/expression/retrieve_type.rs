@@ -16,7 +16,6 @@ impl RetrieveType for Expression {
             | Expression::NotEqual { .. }
             | Expression::Not { .. }
             | Expression::StringCompare { .. } => Type::Bool,
-            Expression::CodeLiteral { .. } => Type::DynamicBytes,
             Expression::BytesLiteral { ty, .. }
             | Expression::NumberLiteral { ty, .. }
             | Expression::RationalNumberLiteral { ty, .. }
@@ -78,8 +77,8 @@ impl RetrieveType for Expression {
                 list[0].ty()
             }
             Expression::Constructor { contract_no, .. } => Type::Contract(*contract_no),
-            Expression::InterfaceId { .. } => Type::FunctionSelector,
             Expression::FormatString { .. } => Type::String,
+            Expression::TypeOperator { .. } => Type::Void,
         }
     }
 }

@@ -284,6 +284,37 @@ pub fn function_call_pos_args(
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
+    // type(..) expression
+    if id.identifiers.len() == 1 && id.identifiers[0].name == "type" {
+        match args.len() {
+            0 => {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "missing type argument to type() operator".to_string(),
+                ));
+                return Err(());
+            }
+            1 => (),
+            _ => {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "type() operator takes a single argument".to_string(),
+                ));
+                return Err(());
+            }
+        }
+
+        let ty = ns.resolve_type(
+            context.file_no,
+            context.contract_no,
+            ResolveTypeContext::FunctionType,
+            &args[0],
+            diagnostics,
+        )?;
+
+        return Ok(Expression::TypeOperator { loc: *loc, ty });
+    }
+
     if context.constant {
         diagnostics.push(Diagnostic::error(
             *loc,

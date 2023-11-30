@@ -888,12 +888,6 @@ pub enum Expression {
         ty: Type,
         value: Vec<u8>,
     },
-    CodeLiteral {
-        loc: pt::Loc,
-        contract_no: usize,
-        // runtime code rather than deployer (evm only)
-        runtime: bool,
-    },
     NumberLiteral {
         loc: pt::Loc,
         ty: Type,
@@ -1248,10 +1242,6 @@ pub enum Expression {
         kind: Builtin,
         args: Vec<Expression>,
     },
-    InterfaceId {
-        loc: pt::Loc,
-        contract_no: usize,
-    },
     List {
         loc: pt::Loc,
         list: Vec<Expression>,
@@ -1267,6 +1257,10 @@ pub enum Expression {
         loc: pt::Loc,
         ty: Type,
         event_no: usize,
+    },
+    TypeOperator {
+        loc: pt::Loc,
+        ty: Type,
     },
 }
 
@@ -1508,16 +1502,15 @@ impl Recurse for Expression {
                 }
 
                 Expression::NumberLiteral { .. }
-                | Expression::InterfaceId { .. }
                 | Expression::InternalFunction { .. }
                 | Expression::ConstantVariable { .. }
                 | Expression::StorageVariable { .. }
                 | Expression::Variable { .. }
                 | Expression::RationalNumberLiteral { .. }
-                | Expression::CodeLiteral { .. }
                 | Expression::BytesLiteral { .. }
                 | Expression::BoolLiteral { .. }
-                | Expression::EventSelector { .. } => (),
+                | Expression::EventSelector { .. }
+                | Expression::TypeOperator { .. } => (),
             }
         }
     }
@@ -1528,7 +1521,6 @@ impl CodeLocation for Expression {
         match self {
             Expression::BoolLiteral { loc, .. }
             | Expression::BytesLiteral { loc, .. }
-            | Expression::CodeLiteral { loc, .. }
             | Expression::NumberLiteral { loc, .. }
             | Expression::RationalNumberLiteral { loc, .. }
             | Expression::StructLiteral { loc, .. }
@@ -1587,11 +1579,11 @@ impl CodeLocation for Expression {
             | Expression::Assign { loc, .. }
             | Expression::List { loc, list: _ }
             | Expression::FormatString { loc, format: _ }
-            | Expression::InterfaceId { loc, .. }
             | Expression::And { loc, .. }
             | Expression::NamedMember { loc, .. }
             | Expression::UserDefinedOperator { loc, .. }
-            | Expression::EventSelector { loc, .. } => *loc,
+            | Expression::EventSelector { loc, .. }
+            | Expression::TypeOperator { loc, .. } => *loc,
         }
     }
 }
@@ -1777,6 +1769,13 @@ pub enum Builtin {
     ECRecover,
     StringConcat,
     BytesConcat,
+    TypeMin,
+    TypeMax,
+    TypeName,
+    TypeProgramId,
+    TypeInterfaceId,
+    TypeRuntimeCode,
+    TypeCreatorCode,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
