@@ -41,13 +41,15 @@ impl SorobanTarget {
             None,
         );
 
-        Self::emit_public_functions(contract, &mut binary, ns, context, contract_no);
+        Self::emit_functions_with_spec(contract, &mut binary, ns, context, contract_no);
         Self::emit_env_meta_entries(context, &mut binary);
 
         binary
     }
 
-    fn emit_public_functions<'a>(
+    // In Soroban, the public functions specifications is embeded in the contract binary.
+    // for each function, emit both the function spec entry and the function body.
+    fn emit_functions_with_spec<'a>(
         contract: &'a ast::Contract,
         binary: &mut Binary<'a>,
         ns: &'a ast::Namespace,
@@ -57,7 +59,6 @@ impl SorobanTarget {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
-            println!("cfg name {}", cfg.name);
             let ftype = binary.function_type(
                 &cfg.params.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
                 &cfg.returns.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),

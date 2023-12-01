@@ -60,14 +60,14 @@ fn math_same_name() {
     let addr = src.contracts.last().unwrap();
     let res = src.invoke_contract(
         addr,
-        "max__uint64_uint64",
+        "max_uint64_uint64",
         vec![*Val::from_u32(4).as_val(), *Val::from_u32(5).as_val()],
     );
     assert!(Val::from_u32(5).as_val().shallow_eq(&res));
 
     let res = src.invoke_contract(
         addr,
-        "max__uint64_uint64_uint64",
+        "max_uint64_uint64_uint64",
         vec![
             *Val::from_u32(4).as_val(),
             *Val::from_u32(5).as_val(),
