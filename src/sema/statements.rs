@@ -340,7 +340,6 @@ pub fn resolve_function_body(
 }
 
 /// Resolve a statement
-#[allow(clippy::ptr_arg)]
 fn statement(
     stmt: &pt::Statement,
     res: &mut Vec<Statement>,

@@ -23,7 +23,6 @@ mod tests;
     clippy::needless_lifetimes,
     clippy::type_complexity,
     clippy::ptr_arg,
-    clippy::redundant_clone,
     clippy::just_underscores_and_digits
 )]
 mod solidity {
