@@ -4,7 +4,7 @@ contract c {
 		return (a/b) >= 0.05;
 	}
 	function foo2(uint64 a, uint64 b) public returns (bool) {
-		return 002.2 > a;
+		return 2.2 > a;
 	}
 	function foo3(uint64 a, uint64 b) public returns (bool) {
 		return 1 == 0.05;
@@ -22,7 +22,7 @@ contract c {
 
 // ---- Expect: diagnostics ----
 // error: 4:10-23: cannot use rational numbers with '>=' operator
-// error: 7:10-19: cannot use rational numbers with '>' operator
+// error: 7:10-17: cannot use rational numbers with '>' operator
 // error: 10:10-19: cannot use rational numbers with '==' operator
 // error: 13:10-11: expression not allowed in constant rational number expression
 // error: 16:10-26: cannot use rational numbers with '<=' operator
