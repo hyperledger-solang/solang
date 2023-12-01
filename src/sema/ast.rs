@@ -356,6 +356,8 @@ pub struct Function {
     /// This indexmap stores the accounts this functions needs to be called on Solana
     /// The string is the account's name
     pub solana_accounts: RefCell<IndexMap<String, SolanaAccount>>,
+    /// List of contracts this function creates
+    pub creates: Vec<(pt::Loc, usize)>,
 }
 
 /// This struct represents a Solana account. There is no name field, because
@@ -463,6 +465,7 @@ impl Function {
             annotations: ConstructorAnnotations::default(),
             mangled_name_contracts: HashSet::new(),
             solana_accounts: IndexMap::new().into(),
+            creates: Vec::new(),
         }
     }
 

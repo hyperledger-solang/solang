@@ -14,6 +14,7 @@ use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, Visibility};
 use std::collections::BTreeMap;
+use std::mem::swap;
 
 /// Resolve an new contract expression with positional arguments
 fn constructor(
@@ -26,30 +27,6 @@ fn constructor(
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    // The current contract cannot be constructed with new. In order to create
-    // the contract, we need the code hash of the contract. Part of that code
-    // will be code we're emitted here. So we end up with a crypto puzzle.
-    let context_contract_no = match context.contract_no {
-        Some(n) if n == no => {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                format!(
-                    "new cannot construct current contract '{}'",
-                    ns.contracts[no].id
-                ),
-            ));
-            return Err(());
-        }
-        Some(n) => n,
-        None => {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                "new contract not allowed in this context".to_string(),
-            ));
-            return Err(());
-        }
-    };
-
     if !ns.contracts[no].instantiable {
         diagnostics.push(Diagnostic::error(
             *loc,
@@ -62,20 +39,44 @@ fn constructor(
         return Err(());
     }
 
-    // check for circular references
-    if circular_reference(no, context_contract_no, ns) {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            format!(
-                "circular reference creating contract '{}'",
-                ns.contracts[no].id
-            ),
-        ));
-        return Err(());
+    // The current contract cannot be constructed with new. In order to create
+    // the contract, we need the code hash of the contract. Part of that code
+    // will be code we're emitted here. So we end up with a crypto puzzle.
+    if let Some(context_contract_no) = context.contract_no {
+        if context_contract_no == no {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "new cannot construct current contract '{}'",
+                    ns.contracts[no].id
+                ),
+            ));
+            return Err(());
+        }
+
+        // check for circular references
+        if circular_reference(no, context_contract_no, ns) {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "circular reference creating contract '{}'",
+                    ns.contracts[no].id
+                ),
+            ));
+            return Err(());
+        }
+
+        if !ns.contracts[context_contract_no].creates.contains(&no) {
+            ns.contracts[context_contract_no].creates.push(no);
+        }
     }
 
-    if !ns.contracts[context_contract_no].creates.contains(&no) {
-        ns.contracts[context_contract_no].creates.push(no);
+    // This is not always in a function: e.g. contract variable:
+    // contract C {
+    //      D code = new D();
+    // }
+    if let Some(function_no) = context.function_no {
+        ns.functions[function_no].creates.push((*loc, no));
     }
 
     match match_constructor_to_args(loc, args, no, context, ns, symtable, diagnostics) {
@@ -262,30 +263,6 @@ pub fn constructor_named_args(
         diagnostics,
     )?;
 
-    // The current contract cannot be constructed with new. In order to create
-    // the contract, we need the code hash of the contract. Part of that code
-    // will be code we're emitted here. So we end up with a crypto puzzle.
-    let context_contract_no = match context.contract_no {
-        Some(n) if n == no => {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                format!(
-                    "new cannot construct current contract '{}'",
-                    ns.contracts[no].id
-                ),
-            ));
-            return Err(());
-        }
-        Some(n) => n,
-        None => {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                "new contract not allowed in this context".to_string(),
-            ));
-            return Err(());
-        }
-    };
-
     if !ns.contracts[no].instantiable {
         diagnostics.push(Diagnostic::error(
             *loc,
@@ -298,20 +275,45 @@ pub fn constructor_named_args(
         return Err(());
     }
 
-    // check for circular references
-    if circular_reference(no, context_contract_no, ns) {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            format!(
-                "circular reference creating contract '{}'",
-                ns.contracts[no].id
-            ),
-        ));
-        return Err(());
+    // The current contract cannot be constructed with new. In order to create
+    // the contract, we need the code hash of the contract. Part of that code
+    // will be code we're emitted here. So we end up with a crypto puzzle.
+
+    if let Some(context_contract_no) = context.contract_no {
+        if context_contract_no == no {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "new cannot construct current contract '{}'",
+                    ns.contracts[no].id
+                ),
+            ));
+            return Err(());
+        }
+
+        // check for circular references
+        if circular_reference(no, context_contract_no, ns) {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "circular reference creating contract '{}'",
+                    ns.contracts[no].id
+                ),
+            ));
+            return Err(());
+        }
+
+        if !ns.contracts[context_contract_no].creates.contains(&no) {
+            ns.contracts[context_contract_no].creates.push(no);
+        }
     }
 
-    if !ns.contracts[context_contract_no].creates.contains(&no) {
-        ns.contracts[context_contract_no].creates.push(no);
+    // This is not always in a function: e.g. contract variable:
+    // contract C {
+    //      D code = new D({});
+    // }
+    if let Some(function_no) = context.function_no {
+        ns.functions[function_no].creates.push((*loc, no));
     }
 
     let mut arguments: BTreeMap<&str, &pt::Expression> = BTreeMap::new();
@@ -671,6 +673,48 @@ pub(super) fn deprecated_constructor_arguments(
     }
 
     Ok(())
+}
+
+/// Check that we are not creating contracts where we cannot
+pub(crate) fn check_circular_reference(contract_no: usize, ns: &mut Namespace) {
+    let mut creates = Vec::new();
+    let mut diagnostics = Diagnostics::default();
+
+    swap(&mut creates, &mut ns.contracts[contract_no].creates);
+
+    for function_no in ns.contracts[contract_no].all_functions.keys() {
+        for (loc, no) in &ns.functions[*function_no].creates {
+            if contract_no == *no {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "cannot construct current contract '{}'",
+                        ns.contracts[*no].id
+                    ),
+                ));
+                continue;
+            }
+
+            // check for circular references
+            if circular_reference(*no, contract_no, ns) {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "circular reference creating contract '{}'",
+                        ns.contracts[*no].id
+                    ),
+                ));
+                continue;
+            }
+
+            if !creates.contains(no) {
+                creates.push(*no);
+            }
+        }
+    }
+
+    swap(&mut creates, &mut ns.contracts[contract_no].creates);
+    ns.diagnostics.extend(diagnostics);
 }
 
 /// When calling a constructor on Solana, we must verify it the contract we are instantiating has

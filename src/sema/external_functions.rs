@@ -150,7 +150,9 @@ fn check_statement(stmt: &Statement, call_list: &mut CallList) -> bool {
             cond.recurse(call_list, check_expression);
         }
         Statement::Expression(_, _, expr) => {
-            expr.recurse(call_list, check_expression);
+            if !matches!(expr, Expression::InternalFunction { .. }) {
+                expr.recurse(call_list, check_expression);
+            }
         }
         Statement::Delete(_, _, expr) => {
             expr.recurse(call_list, check_expression);

@@ -777,7 +777,7 @@ fn type_name_expr(
                 };
             }
         }
-        "program_id" => {
+        "program_id" if ns.target == Target::Solana => {
             if let Type::Contract(no) = ty {
                 let contract = &ns.contracts[*no];
 
@@ -802,48 +802,84 @@ fn type_name_expr(
         }
         "creationCode" | "runtimeCode" => {
             if let Type::Contract(no) = ty {
-                let contract_no = match context.contract_no {
-                    Some(contract_no) => contract_no,
-                    None => {
+                if !ns.contracts[*no].instantiable {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "cannot construct '{}' of type '{}'",
+                            ns.contracts[*no].id, ns.contracts[*no].ty
+                        ),
+                    ));
+
+                    return Err(());
+                }
+
+                // This is not always in a function: e.g. contract constant:
+                // contract C {
+                //      bytes constant code = type(D).runtimeCode;
+                // }
+                if let Some(function_no) = context.function_no {
+                    ns.functions[function_no].creates.push((*loc, *no));
+                }
+
+                if let Some(contract_no) = context.contract_no {
+                    // check for circular references
+                    if *no == contract_no {
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
-                                "type().{} not permitted outside of contract code",
-                                field.name
+                                "cannot construct current contract '{}'",
+                                ns.contracts[*no].id
                             ),
                         ));
                         return Err(());
                     }
-                };
 
-                // check for circular references
-                if *no == contract_no {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "containing our own contract code for '{}' would generate infinite size contract",
-                            ns.contracts[*no].id
-                        ),
-                    ));
-                    return Err(());
-                }
+                    if circular_reference(*no, contract_no, ns) {
+                        diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!(
+                                "circular reference creating contract code for '{}'",
+                                ns.contracts[*no].id
+                            ),
+                        ));
+                        return Err(());
+                    }
 
-                if circular_reference(*no, contract_no, ns) {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "circular reference creating contract code for '{}'",
-                            ns.contracts[*no].id
-                        ),
-                    ));
-                    return Err(());
-                }
-
-                if !ns.contracts[contract_no].creates.contains(no) {
-                    ns.contracts[contract_no].creates.push(*no);
+                    if !ns.contracts[contract_no].creates.contains(no) {
+                        ns.contracts[contract_no].creates.push(*no);
+                    }
                 }
 
                 let kind = if field.name == "runtimeCode" {
+                    if ns.target == Target::EVM {
+                        let notes: Vec<_> = ns.contracts[*no]
+                            .variables
+                            .iter()
+                            .filter_map(|v| {
+                                if v.immutable {
+                                    Some(Note {
+                                        loc: v.loc,
+                                        message: format!("immutable variable {}", v.name),
+                                    })
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+
+                        if !notes.is_empty() {
+                            diagnostics.push(Diagnostic::error_with_notes(
+                                *loc,
+                                format!(
+                                    "runtimeCode is not available for contract '{}' with immutuables",
+                                    ns.contracts[*no].id
+                                ),
+                                notes,
+                            ));
+                        }
+                    }
+
                     Builtin::TypeRuntimeCode
                 } else {
                     Builtin::TypeCreatorCode
