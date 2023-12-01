@@ -42,6 +42,17 @@ pub fn resolve_pragma(pragma: &pt::PragmaDirective, ns: &mut ast::Namespace) {
                     res.push(v);
                 }
 
+                if res.len() > 1
+                    && res
+                        .iter()
+                        .any(|v| matches!(v, ast::VersionReq::Range { .. }))
+                {
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        *loc,
+                        "version ranges can only be combined with the || operator".into(),
+                    ));
+                }
+
                 ns.pragmas.push(ast::Pragma::SolidityVersion {
                     loc: *loc,
                     versions: res,
@@ -63,15 +74,15 @@ fn plain_pragma(loc: &pt::Loc, name: &str, value: &str, ns: &mut ast::Namespace)
             *loc,
             "experimental solidity features are not supported".to_string(),
         ));
-    } else if name == "abicoder" && value == "v2" {
+    } else if name == "abicoder" && (value == "v1" || value == "v2") {
         ns.diagnostics.push(ast::Diagnostic::debug(
             *loc,
-            "pragma 'abicoder' with value 'v2' is ignored".to_string(),
+            "pragma 'abicoder' ignored".to_string(),
         ));
     } else {
-        ns.diagnostics.push(ast::Diagnostic::warning(
+        ns.diagnostics.push(ast::Diagnostic::error(
             *loc,
-            format!("unknown pragma '{}' with value '{}' ignored", name, value),
+            format!("unknown pragma '{}' with value '{}'", name, value),
         ));
     }
 }
@@ -219,7 +230,7 @@ impl ast::VersionReq {
 impl ast::Namespace {
     /// Return the highest supported version of Solidity according the solidity
     /// version pragmas
-    pub fn highest_solidty_version(&self, file_no: usize) -> Option<ast::Version> {
+    pub fn highest_solidity_version(&self, file_no: usize) -> Option<ast::Version> {
         let mut v = Vec::new();
 
         for pragma in &self.pragmas {
@@ -248,8 +259,8 @@ impl ast::Namespace {
     }
 
     /// Are we supporting minor_version at most?
-    pub fn solidity_minor_version(&self, file_no: usize, minor_version: u64) -> bool {
-        if let Some(version) = self.highest_solidty_version(file_no) {
+    pub fn solidity_minor_version(&self, file_no: usize, minor_version: u32) -> bool {
+        if let Some(version) = self.highest_solidity_version(file_no) {
             if version.major == 0 {
                 if let Some(minor) = version.minor {
                     if minor <= minor_version {

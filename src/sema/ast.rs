@@ -744,9 +744,9 @@ pub enum VersionReq {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Version {
-    pub major: u64,
-    pub minor: Option<u64>,
-    pub patch: Option<u64>,
+    pub major: u32,
+    pub minor: Option<u32>,
+    pub patch: Option<u32>,
 }
 
 impl fmt::Display for Version {

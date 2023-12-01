@@ -1,12 +1,15 @@
 pragma foo bar;
-pragma abicode v2;
-pragma abicode "v2";
-pragma solidity ^0.5.16 0.4 - 1 =0.8.22 || >=0.8.21 <=2 ~1 0.6.2;
+pragma abicoder v2;
+pragma solidity ^4294967296;
+pragma solidity 0 - 1 0 - 2;
+pragma abicoder "v2";
+pragma solidity ^0.5.16 =0.8.22 || >=0.8.21 <=2 ~1 0.6.2;
+pragma solidity 0.4 - 1 || 0.3 - 0.5.16;
 
 contract C {}
 
 // ---- Expect: dot ----
 // ---- Expect: diagnostics ----
-// warning: 1:1-15: unknown pragma 'foo' with value 'bar' ignored
-// warning: 2:1-18: unknown pragma 'abicode' with value 'v2' ignored
-// warning: 3:1-20: unknown pragma 'abicode' with value 'v2' ignored
+// error: 1:1-15: unknown pragma 'foo' with value 'bar'
+// error: 3:17-28: '4294967296' is not a valid number
+// error: 4:1-28: version ranges can only be combined with the || operator
