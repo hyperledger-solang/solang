@@ -405,7 +405,7 @@ fn contract_results(
 
     let context = inkwell::context::Context::create();
 
-    let binary = resolved_contract.binary(ns, &context, opt);
+    let binary = resolved_contract.binary(ns, &context, opt, contract_no);
 
     if save_intermediates(&binary, compiler_output) {
         return;

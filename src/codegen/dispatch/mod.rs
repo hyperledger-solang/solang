@@ -17,5 +17,6 @@ pub(super) fn function_dispatch(
         Target::Polkadot { .. } | Target::EVM => {
             polkadot::function_dispatch(contract_no, all_cfg, ns, opt)
         }
+        Target::Soroban => vec![],
     }
 }

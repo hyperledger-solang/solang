@@ -1707,6 +1707,9 @@ impl Namespace {
         ));
     }
 
+    pub fn add_soroban_builtins(&mut self) {
+        // TODO: add soroban builtins
+    }
     pub fn add_polkadot_builtins(&mut self) {
         let loc = pt::Loc::Builtin;
         let identifier = |name: &str| Identifier {

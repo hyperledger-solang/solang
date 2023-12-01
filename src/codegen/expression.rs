@@ -3651,7 +3651,7 @@ fn array_literal_to_memory_array(
 fn code(loc: &Loc, contract_no: usize, ns: &Namespace, opt: &Options) -> Expression {
     let contract = &ns.contracts[contract_no];
 
-    let code = contract.emit(ns, opt);
+    let code = contract.emit(ns, opt, contract_no);
 
     let size = Expression::NumberLiteral {
         loc: *loc,
