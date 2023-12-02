@@ -27,6 +27,10 @@ contract B is C {
 	function test4(C c) public {
 		c.foo({a: 1, b: true});
 	}
+
+	function test5(C c) public {
+		c.bar({a: 1, b: true});
+	}
 }
 
 // ---- Expect: diagnostics ----
@@ -94,3 +98,4 @@ contract B is C {
 // error: 28:3-25: function call can be resolved to multiple functions
 // 	note 3:2-39: candidate function
 // 	note 4:2-39: candidate function
+// error: 32:3-25: contract 'C' does not have function 'bar'

@@ -2977,36 +2977,37 @@ fn contract_call_pos_args(
                     &mut cast_args,
                 );
             }
+        }
 
-            if candidate_diagnostics.any_errors() {
-                if name_matches.len() != 1 {
-                    // will be de-duped
-                    candidate_diagnostics.push(Diagnostic::error(
-                        *loc,
-                        "cannot find overloaded function which matches signature".into(),
-                    ));
-                }
+        if candidate_diagnostics.any_errors() {
+            if name_matches.len() != 1 {
                 candidate_diagnostics.iter_mut().for_each(|diagnostic| {
                     diagnostic.notes.push(Note {
-                        loc: func.loc,
+                        loc: ns.functions[*function_no].loc_prototype,
                         message: "candidate function".into(),
                     })
                 });
-            } else if let Ok(resolved_call) = contract_call_match(
-                loc,
-                func,
-                *function_no,
-                external_contract_no,
-                call_args.clone(),
-                cast_args,
-                var_expr,
-                ns,
-                &mut candidate_diagnostics,
-                resolve_to,
-            ) {
-                resolved_calls.push((*function_no, resolved_call));
-                continue;
+
+                // will be de-duped
+                candidate_diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find overloaded function which matches signature".into(),
+                ));
             }
+        } else if let Ok(resolved_call) = contract_call_match(
+            loc,
+            func,
+            *function_no,
+            external_contract_no,
+            call_args.clone(),
+            cast_args,
+            var_expr,
+            ns,
+            &mut candidate_diagnostics,
+            resolve_to,
+        ) {
+            resolved_calls.push((*function_no, resolved_call));
+            continue;
         }
 
         call_diagnostics.extend(candidate_diagnostics);

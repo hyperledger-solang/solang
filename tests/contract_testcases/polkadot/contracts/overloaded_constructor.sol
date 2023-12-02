@@ -54,6 +54,6 @@ contract T {
 // error: 19:3-12: constructor expects 2 arguments, 0 provided
 // 	note 4:2-29: definition of constructor
 // 	note 4:2-31: candidate constructor
-// error: 23:3-25: function call can be resolved to multiple functions
-// 	note 3:2-31: candidate function
-// 	note 4:2-31: candidate function
+// error: 23:3-25: can be resolved to multiple constructors
+// 	note 3:2-31: candidate constructor
+// 	note 4:2-31: candidate constructor

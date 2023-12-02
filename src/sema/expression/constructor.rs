@@ -175,7 +175,17 @@ pub fn match_constructor_to_args(
     }
 
     match resolved_calls.len() {
-        0 if function_nos.is_empty() && args.is_empty() => Ok((None, Vec::new())),
+        0 if function_nos.is_empty() => {
+            if args.is_empty() {
+                Ok((None, Vec::new()))
+            } else {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "default constructor does not take arguments".into(),
+                ));
+                Err(())
+            }
+        }
         0 => {
             diagnostics.extend(call_diagnostics);
 
@@ -471,7 +481,7 @@ pub fn constructor_named_args(
         _ => {
             diagnostics.push(Diagnostic::error_with_notes(
                 *loc,
-                "function call can be resolved to multiple functions".into(),
+                "can be resolved to multiple constructors".into(),
                 resolved_calls
                     .iter()
                     .map(|expr| {
@@ -482,7 +492,7 @@ pub fn constructor_named_args(
 
                         Note {
                             loc: func.loc,
-                            message: "candidate function".into(),
+                            message: "candidate constructor".into(),
                         }
                     })
                     .collect(),
