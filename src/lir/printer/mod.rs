@@ -9,12 +9,12 @@ use std::io::Write;
 pub mod expression;
 pub mod instruction;
 
-pub struct Printer {
-    vartable: Box<Vartable>,
+pub struct Printer<'a> {
+    vartable: &'a Vartable,
 }
 
-impl Printer {
-    pub fn new(vartable: Box<Vartable>) -> Self {
+impl<'a> Printer<'a> {
+    pub fn new(vartable: &'a Vartable) -> Self {
         Self { vartable }
     }
 

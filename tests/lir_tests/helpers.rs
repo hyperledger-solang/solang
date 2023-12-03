@@ -86,7 +86,7 @@ macro_rules! num_literal {
 #[macro_export]
 macro_rules! new_printer {
     () => {
-        new_printer(new_vartable())
+        new_printer(&new_vartable())
     };
 }
 
@@ -104,8 +104,8 @@ pub(crate) fn identifier(id: usize) -> Operand {
     }
 }
 
-pub fn new_printer(v: Vartable) -> Printer {
-    Printer::new(Box::new(v))
+pub fn new_printer(v: &Vartable) -> Printer {
+    Printer::new(v)
 }
 
 pub fn new_vartable() -> Vartable {

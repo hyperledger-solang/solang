@@ -6,7 +6,7 @@ use crate::lir::printer::Printer;
 use crate::sema::ast;
 use std::io::Write;
 
-impl Printer {
+impl Printer<'_> {
     pub fn print_phi(&self, f: &mut dyn Write, phi: &PhiInput) {
         write!(f, "[").unwrap();
         self.print_rhs_operand(f, &phi.operand);

@@ -442,7 +442,7 @@ impl Converter<'_> {
             expr: Expression::ZeroExt {
                 loc: *loc,
                 operand: Box::new(from_op),
-                to_ty: self.lowering_ast_type(ty),
+                to_ty: self.lower_ast_type(ty),
             },
         });
     }
@@ -463,7 +463,7 @@ impl Converter<'_> {
             expr: Expression::Trunc {
                 loc: *loc,
                 operand: Box::new(from_op),
-                to_ty: self.lowering_ast_type(ty),
+                to_ty: self.lower_ast_type(ty),
             },
         });
     }
@@ -530,7 +530,7 @@ impl Converter<'_> {
             res: dest.get_id(),
             expr: Expression::StructLiteral {
                 loc: *loc,
-                ty: self.lowering_ast_type(ty),
+                ty: self.lower_ast_type(ty),
                 values: value_ops,
             },
         });
@@ -591,7 +591,7 @@ impl Converter<'_> {
         let sext = Expression::SignExt {
             loc: *loc,
             operand: Box::new(tmp),
-            to_ty: self.lowering_ast_type(ty),
+            to_ty: self.lower_ast_type(ty),
         };
         results.push(Instruction::Set {
             loc: *loc,
@@ -670,7 +670,7 @@ impl Converter<'_> {
         vartable: &mut Vartable,
         results: &mut Vec<Instruction>,
     ) {
-        let arg_ty = self.lowering_ast_type(ty);
+        let arg_ty = self.lower_ast_type(ty);
         let expr = Expression::FunctionArg {
             loc: *loc,
             ty: arg_ty,
@@ -728,7 +728,7 @@ impl Converter<'_> {
             res: dest.get_id(),
             expr: Expression::ConstArrayLiteral {
                 loc: *loc,
-                ty: self.lowering_ast_type(ty),
+                ty: self.lower_ast_type(ty),
                 dimensions: dimensions.to_owned(),
                 values: value_ops,
             },
@@ -751,7 +751,7 @@ impl Converter<'_> {
             expr: Expression::Cast {
                 loc: *loc,
                 operand: Box::new(from_op),
-                to_ty: self.lowering_ast_type(ty),
+                to_ty: self.lower_ast_type(ty),
             },
         });
     }
@@ -772,7 +772,7 @@ impl Converter<'_> {
             expr: Expression::BytesCast {
                 loc: *loc,
                 operand: Box::new(from_op),
-                to_ty: self.lowering_ast_type(ty),
+                to_ty: self.lower_ast_type(ty),
             },
         });
     }
@@ -864,7 +864,7 @@ impl Converter<'_> {
             res: dest.get_id(),
             expr: Expression::AllocDynamicBytes {
                 loc: *loc,
-                ty: self.lowering_ast_type(ty),
+                ty: self.lower_ast_type(ty),
                 size: Box::new(size_op),
                 initializer: initializer.clone(),
             },
@@ -881,7 +881,7 @@ impl Converter<'_> {
     ) {
         let expr = Expression::BytesLiteral {
             loc: *loc,
-            ty: self.lowering_ast_type(ty),
+            ty: self.lower_ast_type(ty),
             value: value.to_owned(),
         };
         results.push(Instruction::Set {
@@ -949,7 +949,7 @@ impl Converter<'_> {
             res: dest.get_id(),
             expr: Expression::ArrayLiteral {
                 loc: *loc,
-                ty: self.lowering_ast_type(ty),
+                ty: self.lower_ast_type(ty),
                 dimensions: dimensions.to_owned(),
                 values: value_ops,
             },

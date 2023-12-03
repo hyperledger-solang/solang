@@ -12,7 +12,7 @@ use solang_parser::pt::Loc;
 
 #[test]
 fn test_stringfy_nop_insn() {
-    assert_eq!(stringfy_insn!(&new_printer!(), &Instruction::Nop), "nop;");
+    assert_eq!(stringfy_insn!(&new_printer(&new_vartable()), &Instruction::Nop), "nop;");
 }
 
 // ReturnData
@@ -20,7 +20,7 @@ fn test_stringfy_nop_insn() {
 fn test_stringfy_returndata_insn() {
     let mut v = new_vartable();
     set_tmp(&mut v, 0, Type::Bytes(1));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
 
     assert_eq!(
         stringfy_insn!(
@@ -40,7 +40,7 @@ fn test_stringfy_returndata_insn() {
 fn test_stringfy_returncode_insn() {
     assert_eq!(
         stringfy_insn!(
-            &new_printer!(),
+            &new_printer(&new_vartable()),
             &Instruction::ReturnCode {
                 loc: /*missing from cfg*/ Loc::Codegen,
                 code: cfg::ReturnCode::AbiEncodingInvalid,
@@ -51,7 +51,7 @@ fn test_stringfy_returncode_insn() {
 
     assert_eq!(
         stringfy_insn!(
-            &new_printer!(),
+            &new_printer(&new_vartable()),
             &Instruction::ReturnCode {
                 loc: /*missing from cfg*/ Loc::Codegen,
                 code: cfg::ReturnCode::AccountDataTooSmall,
@@ -68,7 +68,7 @@ fn test_stringfy_set_insn() {
 
     set_tmp(&mut v, 121, Type::Uint(8));
     set_tmp(&mut v, 122, Type::Uint(8));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -94,7 +94,7 @@ fn test_stringfy_store_insn() {
 
     set_tmp(&mut v, 0, Type::Ptr(Box::new(Type::Uint(8))));
     set_tmp(&mut v, 1, Type::Uint(8));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -135,7 +135,7 @@ fn test_stringfy_push_memory_insn() {
         ))),
     );
     set_tmp(&mut v, 101, Type::Uint(32));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -163,7 +163,7 @@ fn test_stringfy_pop_memory_insn() {
         ))),
     );
     set_tmp(&mut v, 101, Type::Uint(32));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
 
     assert_eq!(
         stringfy_insn!(
@@ -185,7 +185,7 @@ fn test_stringfy_load_storage_insn() {
 
     set_tmp(&mut v, 101, Type::Uint(32));
     set_tmp(&mut v, 3, Type::StoragePtr(false, Box::new(Type::Uint(32))));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -204,7 +204,7 @@ fn test_stringfy_clear_storage_insn() {
     let mut v = new_vartable();
 
     set_tmp(&mut v, 3, Type::StoragePtr(false, Box::new(Type::Uint(32))));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -226,7 +226,7 @@ fn test_stringfy_set_storage_insn() {
         1,
         Type::StoragePtr(false, Box::new(Type::Uint(256))),
     );
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -250,7 +250,7 @@ fn test_stringfy_set_storage_bytes_insn() {
         2,
         Type::StoragePtr(false, Box::new(Type::Bytes(32))),
     );
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -281,7 +281,7 @@ fn test_stringfy_push_storage_insn() {
             )),
         ),
     );
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -312,7 +312,7 @@ fn test_stringfy_pop_storage_insn() {
             )),
         ),
     );
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -354,7 +354,7 @@ fn test_stringfy_call_insn() {
             returns: vec![Type::Uint(8), Type::Uint(64), Type::Uint(8)],
         })),
     );
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -408,7 +408,7 @@ fn test_stringfy_external_call_insn() {
     set_tmp(&mut v, 4, Type::Uint(64));
     // gas
     set_tmp(&mut v, 7, Type::Uint(64));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -435,7 +435,7 @@ fn test_stringfy_print_insn() {
     let mut v = new_vartable();
 
     set_tmp(&mut v, 3, Type::Uint(8));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -454,7 +454,7 @@ fn test_stringfy_memcopy_insn() {
 
     set_tmp(&mut v, 3, Type::Bytes(32));
     set_tmp(&mut v, 4, Type::Bytes(16));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -483,7 +483,7 @@ fn test_stringfy_value_transfer_insn() {
         ),
     );
     set_tmp(&mut v, 3, Type::Uint(8));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -507,7 +507,7 @@ fn test_stringfy_selfdestruct_insn() {
         3,
         Type::Ptr(Box::new(Type::Struct(StructType::UserDefined(0)))),
     );
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -527,7 +527,7 @@ fn test_stringfy_emit_event_insn() {
     set_tmp(&mut v, 1, Type::Bytes(32));
     set_tmp(&mut v, 2, Type::Bytes(32));
     set_tmp(&mut v, 3, Type::Bytes(32));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -546,7 +546,7 @@ fn test_stringfy_emit_event_insn() {
 fn test_stringfy_branch_insn() {
     assert_eq!(
         stringfy_insn!(
-            &new_printer!(),
+            &new_printer(&new_vartable()),
             &Instruction::Branch {
                 loc: /*missing from cfg*/ Loc::Codegen,
                 block: 3
@@ -561,7 +561,7 @@ fn test_stringfy_branch_cond_insn() {
     let mut v = new_vartable();
 
     set_tmp(&mut v, 3, Type::Bool);
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -584,7 +584,7 @@ fn test_stringfy_switch_insn() {
     set_tmp(&mut v, 4, Type::Uint(8));
     set_tmp(&mut v, 5, Type::Uint(8));
     set_tmp(&mut v, 6, Type::Uint(8));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     let s = stringfy_insn!(
         &printer,
         &Instruction::Switch {
@@ -614,7 +614,7 @@ fn test_stringfy_return_insn() {
 
     set_tmp(&mut v, 1, Type::Uint(8));
     set_tmp(&mut v, 2, Type::Bytes(32));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -632,7 +632,7 @@ fn test_stringfy_assert_failure_insn() {
     let mut v = new_vartable();
 
     set_tmp(&mut v, 3, Type::Bytes(32));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,
@@ -646,7 +646,7 @@ fn test_stringfy_assert_failure_insn() {
 
     assert_eq!(
         stringfy_insn!(
-            &new_printer!(),
+            &new_printer(&new_vartable()),
             &Instruction::AssertFailure {
                 loc: /*missing from cfg*/ Loc::Codegen,
                 encoded_args: None
@@ -663,7 +663,7 @@ fn test_stringfy_phi_insn() {
     set_tmp(&mut v, 1, Type::Uint(8));
     set_tmp(&mut v, 2, Type::Uint(8));
     set_tmp(&mut v, 12, Type::Uint(8));
-    let printer = new_printer(v);
+    let printer = new_printer(&v);
     assert_eq!(
         stringfy_insn!(
             &printer,

@@ -43,7 +43,7 @@ fn assert_lir_str_eq(src: &str, cfg_no: usize, expected: &str) {
     // let printer = Printer {
     //     vartable: Box::new(new_cfg.vartable.clone()),
     // };
-    let printer = Printer::new(Box::new(lir.vartable.clone()));
+    let printer = Printer::new(&lir.vartable);
 
     // printer.print_cfg(&mut std::io::stdout(), &new_cfg).unwrap();
     let result = stringfy_lir!(printer, &lir);

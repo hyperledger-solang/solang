@@ -5,7 +5,7 @@ use crate::lir::printer::Printer;
 use crate::sema::ast::StringLocation;
 use std::io::Write;
 
-impl Printer {
+impl Printer<'_> {
     pub fn print_lhs_operand(&self, f: &mut dyn Write, operand: &Operand) {
         match operand {
             Operand::Id { id, .. } => {

@@ -17,7 +17,7 @@ impl Converter<'_> {
                 *id,
                 Var {
                     id: *id,
-                    ty: self.lowering_ast_type(&var.ty),
+                    ty: self.lower_ast_type(&var.ty),
                     ast_ty: var.ty.clone(),
                     name: var.id.name.clone(),
                 },
