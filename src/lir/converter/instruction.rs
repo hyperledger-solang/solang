@@ -9,6 +9,11 @@ use crate::lir::instructions::Instruction;
 use crate::lir::vartable::Vartable;
 
 impl Converter<'_> {
+    /// lower the `codegen::cfg::Instr` into a list of `Instruction`s.
+    /// Input:
+    /// - `instr`: the `codegen::cfg::Instr` to be lowered.
+    /// - `vartable`: the `Vartable` that stores the variables and their types.
+    /// - `results`: the list of `Instruction`s that the lowered instructions will be appended to.
     pub(crate) fn lower_instr(
         &self,
         instr: &Instr,

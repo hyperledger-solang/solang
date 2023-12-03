@@ -21,49 +21,52 @@ mod instruction;
 mod lir_type;
 mod vartable;
 
-/// A Converter converts a ControlFlowGraph into a Lower Intermediate Representation.
+/// A Converter converts a control flow graph into a Lower Intermediate Representation
+/// that has three-address code format.
 pub struct Converter<'a> {
-    /// a reference to the Namespace is used to retrieve useful information like enum types, address length, etc.
+    /// a reference to the Namespace is used to retrieve useful information
+    /// like enum types, address length, etc.
     ns: &'a Namespace,
     /// a reference to the ControlFlowGraph is used to retrieve the instructions.
     cfg: &'a ControlFlowGraph,
 }
 
 impl<'input> Converter<'input> {
+    /// Create a new Converter with a reference to the Namespace and the ControlFlowGraph.
     pub fn new(ns: &'input Namespace, cfg: &'input ControlFlowGraph) -> Self {
         Self { ns, cfg }
     }
 
+    /// get the selector length from the Namespace.
     pub fn fn_selector_length(&self) -> u8 {
         self.ns.target.selector_length()
     }
 
+    /// get the address length from the Namespace.
     pub fn address_length(&self) -> usize {
         self.ns.address_length
     }
 
+    /// lower the ast::Type into a lir::lir_type::Type.
     pub fn lower_user_type(&self, user_ty: &ast::Type) -> Type {
         // clone happens here because function unwrap_user_type takes ownership
         let real_ty = user_ty.clone().unwrap_user_type(self.ns);
         self.lower_ast_type(&real_ty)
     }
 
+    /// retrieve the enum type by enum_no and lower it into a lir::lir_type::Type.
     pub fn lower_enum_type(&self, enum_no: usize) -> Type {
         let ty = &self.ns.enums[enum_no].ty;
         self.lower_ast_type(ty)
     }
 
+    /// get the value length from the Namespace.
     pub fn value_length(&self) -> usize {
         self.ns.value_length
     }
 
-    pub fn get_ast_type_by_id(&self, id: &usize) -> ast::Type {
-        match self.cfg.vars.get(id) {
-            Some(var) => var.ty.clone(),
-            None => panic!("Cannot find type for id {}", id),
-        }
-    }
-
+    /// if the expression is a variable or a literial value, return an Operand.
+    /// otherwise, return None.
     pub fn to_operand(
         &self,
         expr: &codegen::Expression,
@@ -87,6 +90,17 @@ impl<'input> Converter<'input> {
         }
     }
 
+    /**<pre>
+    This function will expand a single codegen::Expression into a list Instructions and an Operand.
+    For example:
+        celcius * 9 / 5 + 32;
+    will be expanded into something like:
+        int32 temp1 = celcius * 9;
+        int32 temp2 = temp1 / 5;
+        int32 temp3 = temp2 + 32;
+    and temp3 will be returned as an Operand.
+    </pre>
+    */
     pub fn to_operand_and_insns(
         &self,
         expr: &codegen::Expression,
@@ -104,6 +118,8 @@ impl<'input> Converter<'input> {
         }
     }
 
+    /// this functio essentially does the same thing as to_operand_and_insns, but it returns a
+    /// Option<Operand> instead of Operand, because the expression might be None.
     pub fn to_operand_option_and_insns(
         &self,
         expr: &Option<codegen::Expression>,
@@ -111,14 +127,17 @@ impl<'input> Converter<'input> {
         result: &mut Vec<Instruction>,
     ) -> Option<Operand> {
         match expr {
-            Some(address) => {
-                let tmp = self.to_operand_and_insns(address, vartable, result);
+            Some(expr) => {
+                let tmp = self.to_operand_and_insns(expr, vartable, result);
                 Some(tmp)
             }
             None => None,
         }
     }
 
+    /// this function is similar to the to_operand_and_insns function,
+    /// but it takes a `ast::StringLocation<codegen::Expression>`
+    /// and returns a `ast::StringLocation<Operand>` instead.
     pub fn to_string_location_and_insns(
         &self,
         location: &ast::StringLocation<codegen::Expression>,
@@ -136,6 +155,9 @@ impl<'input> Converter<'input> {
         }
     }
 
+    /// this function is similar to the to_operand_and_insns function,
+    /// but it takes a `ast::ExternalCallAccounts<codegen::Expression>`
+    /// and returns a `ast::ExternalCallAccounts<Operand>` instead.
     pub fn to_external_call_accounts_and_insns(
         &self,
         accounts: &ast::ExternalCallAccounts<codegen::Expression>,
@@ -156,6 +178,11 @@ impl<'input> Converter<'input> {
         }
     }
 
+    /// this function is similar to the to_operand_and_insns function,
+    /// but it takes a `cfg::InternalCallTy`
+    /// and returns a `InternalCallTy` instead.
+    /// If the `cfg::InternalCallTy` is a `cfg::InternalCallTy::Dynamic`,
+    /// then the `cfg::Expression` will be expanded into a list of `Instruction`s and an `Operand`.
     pub fn to_internal_call_ty_and_insns(
         &self,
         call: &cfg::InternalCallTy,
@@ -174,6 +201,8 @@ impl<'input> Converter<'input> {
         }
     }
 
+    /// This is the entry point of the Converter.
+    /// It will lower the control flow graph into a Lower Intermediate Representation `LIR`.
     pub fn get_lir(&self) -> LIR {
         let mut vartable = self.to_vartable(&self.cfg.vars);
 
@@ -181,7 +210,7 @@ impl<'input> Converter<'input> {
             .cfg
             .blocks
             .iter()
-            .map(|block| self.lowering_basic_block(block, &mut vartable))
+            .map(|block| self.lower_basic_block(block, &mut vartable))
             .collect::<Vec<Block>>();
 
         let params = self
@@ -212,7 +241,7 @@ impl<'input> Converter<'input> {
         }
     }
 
-    fn lowering_basic_block(&self, basic_block: &BasicBlock, vartable: &mut Vartable) -> Block {
+    fn lower_basic_block(&self, basic_block: &BasicBlock, vartable: &mut Vartable) -> Block {
         let mut instructions = vec![];
         for insn in &basic_block.instr {
             self.lower_instr(insn, vartable, &mut instructions);

@@ -23,33 +23,22 @@ fn assert_lir_str_eq(src: &str, cfg_no: usize, expected: &str) {
     let mut resolver = new_file_resolver(src);
     let mut ns: Namespace =
         parse_and_resolve(OsStr::new("test.sol"), &mut resolver, Target::Solana);
-    // check errors
-    // if !ns.diagnostics.is_empty() {
-    //     ns.print_diagnostics_in_plain(&resolver, true);
-    // panic!("compile error");
-    // }
+    // print diagnostics
+    if !ns.diagnostics.is_empty() {
+        ns.print_diagnostics_in_plain(&resolver, false);
+    }
     codegen(&mut ns, &Default::default());
     let contract = ns.contracts.get(0).unwrap();
     let cfg = contract.cfg.get(cfg_no).unwrap();
 
-    // let str = &cfg.to_string(&contract, &ns);
-    // println!("=====================");
-    // println!("cfg: {}", str);
-    // println!("=====================cfg no: {}", cfg_no);
-
     let converter = Converter::new(&ns, cfg);
     let lir = converter.get_lir();
 
-    // let printer = Printer {
-    //     vartable: Box::new(new_cfg.vartable.clone()),
-    // };
     let printer = Printer::new(&lir.vartable);
 
-    // printer.print_cfg(&mut std::io::stdout(), &new_cfg).unwrap();
     let result = stringfy_lir!(printer, &lir);
     assert_eq!(result.trim(), expected);
 
-    // use '%temp\.ssa_ir\.\d+ =' to get all the temp variables in the cfg and check if they are duplicated
     let re = regex::Regex::new(r"%temp\.ssa_ir\.\d+ =").unwrap();
     let mut temp_vars = Vec::new();
     for cap in re.captures_iter(result.as_str()) {
@@ -361,7 +350,7 @@ block#7 endif:
 }
 
 #[test]
-fn test_test_more_() {
+fn test_nested_if_blocks() {
     let cfg_no = 0;
 
     // read the example.sol file

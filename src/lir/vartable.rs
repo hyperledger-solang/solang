@@ -37,6 +37,7 @@ pub struct Vartable {
 }
 
 impl Vartable {
+    /// Get the type of a variable by its unique identifier.
     pub(crate) fn get_type(&self, id: &usize) -> &Type {
         self.vars
             .get(id)
@@ -45,6 +46,7 @@ impl Vartable {
             .unwrap()
     }
 
+    /// Get the name of a variable by its unique identifier.
     pub(crate) fn get_name(&self, id: &usize) -> &str {
         self.vars
             .get(id)
@@ -53,6 +55,7 @@ impl Vartable {
             .unwrap()
     }
 
+    /// Get the operand of a variable by its unique identifier.
     pub(crate) fn get_operand(&self, id: &usize, loc: Loc) -> Operand {
         self.vars
             .get(id)
@@ -61,6 +64,7 @@ impl Vartable {
             .unwrap()
     }
 
+    /// Set a temporary variable by its unique identifier.
     pub fn set_tmp(&mut self, id: usize, ty: Type, ast_ty: ast::Type) {
         let var = Var {
             id,
@@ -72,6 +76,7 @@ impl Vartable {
         self.vars.insert(id, var);
     }
 
+    /// Create a new temporary variable.
     pub(crate) fn new_temp(&mut self, ty: Type, ast_ty: ast::Type) -> Operand {
         let name = format!("{}{}", TEMP_PREFIX, self.next_id);
         let var = Var {
@@ -89,6 +94,7 @@ impl Vartable {
         op
     }
 
+    /// Get the Operand of a function argument by its argument number.
     pub(crate) fn get_function_arg(&self, arg_no: usize, loc: Loc) -> Option<Operand> {
         match self.args.get(&arg_no) {
             Some(id) => {
@@ -99,6 +105,7 @@ impl Vartable {
         }
     }
 
+    /// Add a function argument to the Vartable.
     pub(crate) fn add_function_arg(&mut self, arg_no: usize, var_id: usize) {
         self.args.insert(arg_no, var_id);
     }

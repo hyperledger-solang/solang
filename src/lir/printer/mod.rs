@@ -14,18 +14,22 @@ pub struct Printer<'a> {
 }
 
 impl<'a> Printer<'a> {
+    /// Create a new Printer with a reference to the Vartable.
     pub fn new(vartable: &'a Vartable) -> Self {
         Self { vartable }
     }
 
+    /// get a variable name by its unique identifier.
     pub(crate) fn get_var_name(&self, id: &usize) -> &str {
         self.vartable.get_name(id)
     }
 
+    /// get a variable type by its unique identifier.
     pub(crate) fn get_var_type(&self, id: &usize) -> &Type {
         self.vartable.get_type(id)
     }
 
+    /// get a variable operand by its unique identifier.
     pub(crate) fn get_var_operand(&self, id: &usize) -> Operand {
         self.vartable.get_operand(
             id,
@@ -76,7 +80,7 @@ impl<'a> Printer<'a> {
     pub fn print_block(&self, f: &mut dyn Write, block: &Block) {
         for insn in &block.instructions {
             write!(f, "    ").unwrap();
-            self.print_insn(f, insn);
+            self.print_instruction(f, insn);
             writeln!(f).unwrap();
         }
     }

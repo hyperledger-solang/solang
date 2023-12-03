@@ -12,6 +12,24 @@ use crate::lir::vartable::Vartable;
 use crate::sema::ast;
 
 impl Converter<'_> {
+    /**
+    <pre>
+    This function lowers an expression (tree) into a list of three-address code
+    instructions and assign the last expression with maxmum two operands to the
+    <code>dest</code> operand.
+
+    For example, suppose <code>a</code> and <code>b</code> and <code>c</code> all have <code>int32</code> type in the <code>Vartable</code>,
+    the expression <code>a + b + c</code> will be lowered into the following:
+    <code>int32 temp1 = a + b</code>
+    <code>int32 dest = temp1 + c</code>
+
+    Input:
+    <li><code>dest</code>: the destination operand for the last expression
+    <li><code>expr</code>: the expression to be lowered
+    <li><code>vartable</code>: the variable table storing all the variables and their types
+    <li><code>results</code>: the list of instructions to be appended with the lowered instructions
+    </pre>
+    */
     pub(crate) fn lower_expression(
         &self,
         dest: &Operand,
@@ -417,7 +435,7 @@ impl Converter<'_> {
         let bytes_offset_op = self.to_operand_and_insns(bytes_offset, vartable, results);
         results.push(Instruction::Set {
             loc: Loc::Codegen,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::AdvancePointer {
                 loc: /*missing from cfg*/ Loc::Codegen,
                 pointer: Box::new(pointer_op),
@@ -438,7 +456,7 @@ impl Converter<'_> {
         let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::ZeroExt {
                 loc: *loc,
                 operand: Box::new(from_op),
@@ -459,7 +477,7 @@ impl Converter<'_> {
         let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::Trunc {
                 loc: *loc,
                 operand: Box::new(from_op),
@@ -481,7 +499,7 @@ impl Converter<'_> {
         let index_op = self.to_operand_and_insns(index, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::Subscript {
                 loc: *loc,
                 arr: Box::new(array_op),
@@ -502,7 +520,7 @@ impl Converter<'_> {
         let struct_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::StructMember {
                 loc: *loc,
                 operand: Box::new(struct_op),
@@ -527,7 +545,7 @@ impl Converter<'_> {
 
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::StructLiteral {
                 loc: *loc,
                 ty: self.lower_ast_type(ty),
@@ -550,7 +568,7 @@ impl Converter<'_> {
 
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::StringCompare {
                 loc: *loc,
                 left: left_string_loc,
@@ -570,7 +588,7 @@ impl Converter<'_> {
         let array_op = self.to_operand_and_insns(array, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::StorageArrayLength {
                 loc: *loc,
                 array: Box::new(array_op),
@@ -595,7 +613,7 @@ impl Converter<'_> {
         };
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: sext,
         });
     }
@@ -611,7 +629,7 @@ impl Converter<'_> {
         let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::Load {
                 loc: *loc,
                 operand: Box::new(from_op),
@@ -634,7 +652,7 @@ impl Converter<'_> {
         }
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::Keccak256 {
                 loc: *loc,
                 args: expr_ops,
@@ -653,7 +671,7 @@ impl Converter<'_> {
         let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::GetRef {
                 loc: *loc,
                 operand: Box::new(from_op),
@@ -676,7 +694,7 @@ impl Converter<'_> {
             ty: arg_ty,
             arg_no: *arg_no,
         };
-        let res = dest.get_id();
+        let res = dest.get_id_or_error();
         vartable.add_function_arg(*arg_no, res);
         results.push(Instruction::Set {
             loc: *loc,
@@ -700,7 +718,7 @@ impl Converter<'_> {
         }
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::FormatString {
                 loc: *loc,
                 args: arg_ops,
@@ -725,7 +743,7 @@ impl Converter<'_> {
 
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::ConstArrayLiteral {
                 loc: *loc,
                 ty: self.lower_ast_type(ty),
@@ -747,7 +765,7 @@ impl Converter<'_> {
         let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::Cast {
                 loc: *loc,
                 operand: Box::new(from_op),
@@ -768,7 +786,7 @@ impl Converter<'_> {
         let from_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::BytesCast {
                 loc: *loc,
                 operand: Box::new(from_op),
@@ -793,7 +811,7 @@ impl Converter<'_> {
         }
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::Builtin {
                 loc: *loc,
                 kind: *kind,
@@ -817,7 +835,7 @@ impl Converter<'_> {
         let right_op = self.to_operand_and_insns(right, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::BinaryExpr {
                 loc: *loc,
                 operator,
@@ -839,7 +857,7 @@ impl Converter<'_> {
         let expr_op = self.to_operand_and_insns(expr, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::UnaryExpr {
                 loc: *loc,
                 operator,
@@ -861,7 +879,7 @@ impl Converter<'_> {
         let size_op = self.to_operand_and_insns(size, vartable, results);
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::AllocDynamicBytes {
                 loc: *loc,
                 ty: self.lower_ast_type(ty),
@@ -886,7 +904,7 @@ impl Converter<'_> {
         };
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr,
         });
     }
@@ -904,7 +922,7 @@ impl Converter<'_> {
         };
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr,
         });
     }
@@ -920,7 +938,7 @@ impl Converter<'_> {
             // assign the constant value to the destination
             Instruction::Set {
                 loc: *loc,
-                res: dest.get_id(),
+                res: dest.get_id_or_error(),
                 expr: Expression::NumberLiteral {
                     loc: *loc,
                     value: value.clone(),
@@ -946,7 +964,7 @@ impl Converter<'_> {
 
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::ArrayLiteral {
                 loc: *loc,
                 ty: self.lower_ast_type(ty),
@@ -965,7 +983,7 @@ impl Converter<'_> {
         let expr = Expression::InternalFunctionCfg { loc: /*missing from cfg*/ Loc::Codegen, cfg_no: *cfg_no };
         results.push(Instruction::Set {
             loc: Loc::Codegen,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr,
         });
     }
@@ -977,7 +995,7 @@ impl Converter<'_> {
         };
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr,
         });
     }
@@ -985,7 +1003,7 @@ impl Converter<'_> {
     fn return_data(&self, dest: &Operand, loc: &Loc, results: &mut Vec<Instruction>) {
         results.push(Instruction::Set {
             loc: *loc,
-            res: dest.get_id(),
+            res: dest.get_id_or_error(),
             expr: Expression::ReturnData { loc: *loc },
         });
     }

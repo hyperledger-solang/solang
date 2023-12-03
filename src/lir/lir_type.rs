@@ -20,43 +20,26 @@ pub enum StructType {
     Vector(Box<Type>),
 }
 
+/// Types for LIR. Some types present in the AST are not present here, as they
+/// are lowered to other types. See the `lower_ast_type` function in the `lir::converter::Converter`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
-    // a UserType will be lower into a primitive type it is representing
     Bool,
-    // Value is a integer, but width is platform dependent.
-    // FunctionSelector is an integer, 4bytes on Polkadot and 8bytes on Solana
     Int(u16),
-    /// Enum can be represented by Uint here.
     Uint(u16),
-    /// bytes and string are encoded identically. In general, the encoding is similar to bytes1[].
     Bytes(u8),
-
-    // Array can be represented as Ptr(Box<Array>)
-    // Struct can be represented as Ptr(Box<Struct>)
-    // Slice can be represented as Ptr(Box<Slice(Box<Type>)>)
-    // BufferPointer is a Ptr to u8 (a byte)
-    // DynamicBytes is a Ptr of Bytes
-    // address is a ptr to bytes1[], representing the location of another contract. The length is platform dependent.
-    // string is a ptr to bytes1[]
-    /// pointer to another address space
     Ptr(Box<Type>),
-    /// pointer to another storage address space, first bool is true for immutables
     StoragePtr(bool, Box<Type>),
-
     Function {
         params: Vec<Type>,
         returns: Vec<Type>,
     },
-
     Mapping {
         key_ty: Box<Type>,
         value_ty: Box<Type>,
     },
-
     Array(Box<Type>, Vec<ArrayLength>),
     Struct(StructType),
-    // a slice is a ptr to struct that contains the ptr to data and the length
     Slice(Box<Type>),
 }
 

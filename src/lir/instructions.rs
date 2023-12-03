@@ -13,7 +13,7 @@ use super::lir_type::PhiInput;
 pub enum Instruction {
     Nop,
 
-    // Return data to the outside callers
+    /// Return data to the outside callers
     ReturnData {
         loc: Loc,
         data: Operand,
@@ -24,7 +24,6 @@ pub enum Instruction {
         code: codegen::cfg::ReturnCode,
     },
 
-    // Set variable
     Set {
         loc: Loc,
         res: usize,
@@ -93,14 +92,13 @@ pub enum Instruction {
         storage: Operand,
     },
 
-    // Call internal function, either static dispatch or dynamic dispatch
     Call {
         loc: Loc,
         res: Vec<usize>,
         call: InternalCallTy,
         args: Vec<Operand>,
     },
-    // Print to log message
+    /// Print to log message
     Print {
         loc: Loc,
         operand: Operand,
@@ -114,31 +112,30 @@ pub enum Instruction {
 
     ExternalCall {
         loc: Loc,
-        // Polkadot specific
+        /// Polkadot specific
         success: Option<usize>,
         address: Option<Operand>,
         accounts: ExternalCallAccounts<Operand>,
-        // Solana specific
-        // for deriving and proving the ownership of an account
+        /// Solana specific:
+        /// for deriving and proving the ownership of an account
         seeds: Option<Operand>,
         payload: Operand,
-        // Polkadot specific
-        // holding tokens
+        /// Polkadot specific:
+        /// holding tokens
         value: Operand,
-        // Polkadot specific
-        // On Solana, charged by transaction
+        /// Polkadot specific.
+        /// On Solana, charged by transaction
         gas: Operand,
-        // delegate/regular/static
-        // CallTy is polkadot specific.
-        // It involves difference code generation in emit.
+        /// CallTy is polkadot specific:
+        /// It involves difference code generation in emit.
         callty: CallTy,
-        // only used for analysis passes
+        /// only used for analysis passes
         contract_function_no: Option<(usize, usize)>,
-        // Polkadot specific
+        /// Polkadot specific
         flags: Option<Operand>,
     },
     /// Value transfer; either address.send() or address.transfer()
-    // transfer tokens from one addr to another
+    /// transfer tokens from one addr to another
     ValueTransfer {
         loc: Loc,
         success: Option<usize>,
@@ -146,8 +143,8 @@ pub enum Instruction {
         value: Operand,
     },
     /// Self destruct
-    // for destructing the contract from inside
-    // Note: only available on Polkadot
+    /// for destructing the contract from inside.
+    /// Note: only available on Polkadot
     SelfDestruct {
         loc: Loc,
         recipient: Operand,

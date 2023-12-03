@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::lir_tests::helpers::{identifier, new_printer, new_vartable, num_literal, set_tmp};
-use crate::{new_printer, num_literal, stringfy_insn};
+use crate::{num_literal, stringfy_insn};
 use num_bigint::BigInt;
 use solang::codegen::cfg;
 use solang::lir::expressions::{BinaryOperator, Expression};
@@ -12,7 +12,10 @@ use solang_parser::pt::Loc;
 
 #[test]
 fn test_stringfy_nop_insn() {
-    assert_eq!(stringfy_insn!(&new_printer(&new_vartable()), &Instruction::Nop), "nop;");
+    assert_eq!(
+        stringfy_insn!(&new_printer(&new_vartable()), &Instruction::Nop),
+        "nop;"
+    );
 }
 
 // ReturnData

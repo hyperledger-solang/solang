@@ -6,6 +6,7 @@ use crate::lir::lir_type::{StructType, Type};
 use crate::sema::ast::{self, ArrayLength};
 
 impl Converter<'_> {
+    /// lower the `ast::Type` into a `lir::lir_type::Type`.
     pub fn lower_ast_type(&self, ty: &ast::Type) -> Type {
         self.lower_ast_type_by_depth(ty, 0)
     }
@@ -16,16 +17,10 @@ impl Converter<'_> {
             ast::Type::Int(width) => Type::Int(*width),
             ast::Type::Uint(width) => Type::Uint(*width),
             ast::Type::Value => Type::Uint(self.value_length() as u16 * 8),
-            // DynamicBytes is a Ptr of an array of Bytes with dynamic length
-            // an address is an array of byte
             ast::Type::Address(_) | ast::Type::Contract(_) => Type::Array(
                 Box::new(Type::Uint(8)),
                 vec![ArrayLength::Fixed(BigInt::from(self.address_length()))],
             ),
-            // Bytes is a Ptr of an array of Bytes with fixed length
-            //
-            // endianness is different: in llvm level, bytes - big-endian, int is little-endian
-            // so they cannot be converted here without switching the endianess
             ast::Type::Bytes(width) => Type::Bytes(*width),
             // String is equivalent to dynamic bytes
             ast::Type::String | ast::Type::DynamicBytes => self.wrap_ptr_by_depth(
@@ -91,6 +86,7 @@ impl Converter<'_> {
         }
     }
 
+    /// This function is used when only the first level of the type should be wrapped by a pointer.
     fn wrap_ptr_by_depth(&self, ty: Type, depth: u8) -> Type {
         if depth == 0 {
             Type::Ptr(Box::new(ty))

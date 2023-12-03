@@ -55,7 +55,7 @@ macro_rules! stringfy_expr {
 macro_rules! stringfy_insn {
     ($printer:expr, $insn:expr) => {{
         let mut buf = Vec::new();
-        $printer.print_insn(&mut buf, $insn);
+        $printer.print_instruction(&mut buf, $insn);
         String::from_utf8(buf).unwrap()
     }};
 }

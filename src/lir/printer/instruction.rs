@@ -13,7 +13,7 @@ impl Printer<'_> {
         write!(f, ", block#{}]", phi.block_no).unwrap();
     }
 
-    pub fn print_insn(&self, f: &mut dyn Write, insn: &Instruction) {
+    pub fn print_instruction(&self, f: &mut dyn Write, insn: &Instruction) {
         match insn {
             Instruction::Nop => write!(f, "nop;").unwrap(),
             Instruction::ReturnData { data, data_len, .. } => {

@@ -6,6 +6,7 @@ use crate::sema::ast::StringLocation;
 use std::io::Write;
 
 impl Printer<'_> {
+    /// print left-hand-side operand
     pub fn print_lhs_operand(&self, f: &mut dyn Write, operand: &Operand) {
         match operand {
             Operand::Id { id, .. } => {
@@ -17,6 +18,7 @@ impl Printer<'_> {
         }
     }
 
+    /// print right-hand-side operand
     pub fn print_rhs_operand(&self, f: &mut dyn Write, operand: &Operand) {
         match operand {
             Operand::Id { id, .. } => {

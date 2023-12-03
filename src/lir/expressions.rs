@@ -16,8 +16,7 @@ pub enum Operand {
     NumberLiteral { loc: Loc, value: BigInt, ty: Type },
 }
 
-/// binary operators
-// LLVM doesn't diff signed and unsigned
+/// Binary operators
 #[derive(Debug, Clone)]
 pub enum BinaryOperator {
     Add { overflowing: bool },
@@ -55,14 +54,15 @@ pub enum BinaryOperator {
     UShr,
 }
 
+/// Unary operators
 #[derive(Debug, Clone)]
-/// unary operators
 pub enum UnaryOperator {
     Not,
     Neg { overflowing: bool },
     BitNot,
 }
 
+/// Expressions
 #[derive(Debug, Clone)]
 pub enum Expression {
     BinaryExpr {
@@ -92,7 +92,6 @@ pub enum Expression {
     },
     ArrayLiteral {
         loc: Loc,
-        // Dynamic type in array literal is impossible
         ty: Type,
         dimensions: Vec<u32>,
         values: Vec<Operand>,
@@ -124,20 +123,19 @@ pub enum Expression {
         operand: Box<Operand>,
         to_ty: Type,
     },
-    // Used for signed integers: int8 -> int16
-    // https://en.wikipedia.org/wiki/Sign_extension
+    /// Sign extending the length, only for signed int
     SignExt {
         loc: Loc,
         operand: Box<Operand>,
         to_ty: Type,
     },
-    // extending the length, only for unsigned int
+    /// Extending the length, only for unsigned int
     ZeroExt {
         loc: Loc,
         operand: Box<Operand>,
         to_ty: Type,
     },
-    // truncating integer into a shorter one
+    // Truncating integer into a shorter one
     Trunc {
         loc: Loc,
         operand: Box<Operand>,
@@ -151,35 +149,34 @@ pub enum Expression {
         initializer: Option<Vec<u8>>,
     },
 
-    // address-of
+    /// address-of
     GetRef {
         loc: Loc,
         operand: Box<Operand>,
     },
-    // value-of-address
+    /// value-of-address
     Load {
         loc: Loc,
         operand: Box<Operand>,
     },
-    // Used for accessing struct member
+    /// Used for accessing struct member
     StructMember {
         loc: Loc,
         operand: Box<Operand>,
         member: usize,
     },
-    // Array subscripting: <array>[<index>]
+    /// Array subscripting: <array>[<index>]
     Subscript {
         loc: Loc,
         arr: Box<Operand>,
         index: Box<Operand>,
     },
-    // [b1, b2, b3]
     AdvancePointer {
         loc: Loc,
         pointer: Box<Operand>,
         bytes_offset: Box<Operand>,
     },
-    // get the nth param in the current function call stack
+    // Get the nth param in the current function call stack
     FunctionArg {
         loc: Loc,
         ty: Type,
@@ -194,7 +191,7 @@ pub enum Expression {
         loc: Loc,
         cfg_no: usize,
     },
-    // hash function
+    /// Keccak256 hash
     Keccak256 {
         loc: Loc,
         args: Vec<Operand>,
@@ -215,13 +212,11 @@ pub enum Expression {
         args: Vec<Operand>,
     },
 
-    // a storage array is in the account
-    // this func is a len() function
     StorageArrayLength {
         loc: Loc,
         array: Box<Operand>,
     },
-    // External call: represents a hard coded mem location
+    // This is designed for external calls: represents a hard coded mem location.
     ReturnData {
         loc: Loc,
     },
@@ -280,21 +275,25 @@ impl fmt::Display for UnaryOperator {
 }
 
 impl Operand {
-    pub fn get_id(&self) -> usize {
+    /// Get id from operand, panic if operand is not an id
+    pub fn get_id_or_error(&self) -> usize {
         match self {
             Operand::Id { id, .. } => *id,
             _ => panic!("Operand is not an id"),
         }
     }
 
+    /// Create a new operand from an id
     pub fn new_id(id: usize, loc: Loc) -> Self {
         Operand::Id { id, loc }
     }
 
+    /// Create a new operand from a bool literal
     pub fn new_bool_literal(value: bool, loc: Loc) -> Self {
         Operand::BoolLiteral { value, loc }
     }
 
+    /// Create a new operand from a number literal
     pub fn new_number_literal(value: &BigInt, ty: Type, loc: Loc) -> Self {
         Operand::NumberLiteral {
             loc,

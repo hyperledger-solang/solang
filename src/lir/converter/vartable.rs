@@ -9,6 +9,8 @@ use crate::{
 use super::Converter;
 
 impl Converter<'_> {
+    /// Converts a `codegen::vartable::Vars` into a `lir::vartable::Vartable`.
+    /// The types are lowered into `lir::lir_type::Type`.
     pub fn to_vartable(&self, tab: &Vars) -> Vartable {
         let mut vars = IndexMap::new();
         let mut max_id = 0;
