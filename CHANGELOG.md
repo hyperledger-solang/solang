@@ -5,6 +5,8 @@ will be documented here.
 ## Unreleased
 
 ### Added
+- **Soroban** Work on adding support for [Stellar's Soroban](https://soroban.stellar.org/docs) contracts platforms started, by adding a skeleton that supports the Soroban runtime. [Salaheldin Soliman](https://github.com/salaheldinsoliman)
+
 - The `string.concat()` and `bytes.concat()` builtin functions are supported. [seanyoung](https://github.com/seanyoung)
 
 ### Changed
