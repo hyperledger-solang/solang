@@ -71,7 +71,7 @@ forge-fmt = { version = "0.2.0", optional = true }
 # We don't use ethers-core directly, but need the correct version for the
 # build to work.
 ethers-core = { version = "2.0.10", optional = true }
-soroban-sdk = { version = "20.0.0-rc2", features = ["testutils"] }
+soroban-sdk = { version = "20.0.0-rc2", features = ["testutils"], optional = true }
 
 [dev-dependencies]
 num-derive = "0.4"
@@ -100,7 +100,8 @@ no-default-features = true
 lto = true
 
 [features]
-default = ["llvm", "wasm_opt", "language_server"]
+soroban = ["soroban-sdk"]
+default = ["llvm", "wasm_opt", "language_server", "soroban"]
 llvm = ["inkwell", "libc"]
 wasm_opt = ["llvm", "wasm-opt", "contract-build"]
 language_server = ["tower-lsp", "forge-fmt", "ethers-core", "tokio", "rust-lapper"]

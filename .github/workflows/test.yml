@@ -73,9 +73,11 @@ jobs:
     - name: Run cargo clippy
       run: cargo clippy --workspace --tests --bins -- -D warnings
     - name: Run cargo clippy without wasm_opt feature
-      run: cargo clippy --workspace --no-default-features --features language_server,llvm --bins -- -D warnings
+      run: cargo clippy --workspace --no-default-features --features language_server,llvm,soroban --bins -- -D warnings
     - name: Run cargo clippy without llvm feature
       run: cargo clippy --workspace --no-default-features --lib -- -D warnings
+    - name: Run cargo clippy with only soroban feature
+      run: cargo clippy --workspace --no-default-features --features soroban,llvm --lib -- -D warnings
     - name: Run cargo doc
       run: cargo doc --workspace --bins
     - name: Run cargo fmt
@@ -181,7 +183,7 @@ jobs:
     - name: Run tests
       run: cargo test --verbose --workspace
     - name: Run tests without wasm_opt
-      run: cargo test --verbose --workspace --no-default-features --features language_server,llvm
+      run: cargo test --verbose --workspace --no-default-features --features language_server,llvm,soroban
     - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-mac-arm

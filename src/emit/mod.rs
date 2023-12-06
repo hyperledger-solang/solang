@@ -23,6 +23,8 @@ mod loop_builder;
 mod math;
 pub mod polkadot;
 pub mod solana;
+
+#[cfg(feature = "soroban")]
 pub mod soroban;
 mod storage;
 mod strings;

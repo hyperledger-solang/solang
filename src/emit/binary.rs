@@ -39,6 +39,7 @@ use inkwell::OptimizationLevel;
 use once_cell::sync::OnceCell;
 use solang_parser::pt;
 
+#[cfg(feature = "soroban")]
 use super::soroban;
 
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
@@ -170,7 +171,7 @@ impl<'a> Binary<'a> {
         contract: &'a Contract,
         ns: &'a Namespace,
         opt: &'a Options,
-        contract_no: usize,
+        _contract_no: usize,
     ) -> Self {
         let std_lib = load_stdlib(context, &ns.target);
         match ns.target {
@@ -178,10 +179,11 @@ impl<'a> Binary<'a> {
                 polkadot::PolkadotTarget::build(context, &std_lib, contract, ns, opt)
             }
             Target::Solana => solana::SolanaTarget::build(context, &std_lib, contract, ns, opt),
-            Target::EVM => unimplemented!(),
+            #[cfg(feature = "soroban")]
             Target::Soroban => {
-                soroban::SorobanTarget::build(context, &std_lib, contract, ns, opt, contract_no)
+                soroban::SorobanTarget::build(context, &std_lib, contract, ns, opt, _contract_no)
             }
+            _ => unimplemented!("target not implemented"),
         }
     }
 
