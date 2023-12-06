@@ -18,6 +18,10 @@ contract D is C {
 	function test3(C c) public {
 		c.foo(1);
 	}
+
+	function test4(C c) public {
+		c.foo(x, y);
+	}
 }
 
 // ---- Expect: diagnostics ----
@@ -39,3 +43,5 @@ contract D is C {
 // 	note 2:2-37: candidate function
 // error: 19:3-11: function expects 2 arguments, 1 provided
 // 	note 3:2-38: candidate function
+// error: 23:9-10: 'x' not found
+// error: 23:12-13: 'y' not found

@@ -59,6 +59,7 @@ pub fn resolve_pragma(pragma: &pt::PragmaDirective, ns: &mut ast::Namespace) {
                 });
             }
         }
+        // only occurs when there is a parse error, name or value is None
         pt::PragmaDirective::Identifier { .. } => (),
     }
 }
