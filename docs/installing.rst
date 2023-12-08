@@ -126,40 +126,40 @@ Linux
 ~~~~~
 
 A pre-built version of LLVM, specifically configured for Solang, is available at
-`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-2/llvm15.0-linux-x86-64.tar.xz>`_ for x86 processors
-and at `<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-2/llvm15.0-linux-arm64.tar.xz>`_ for ARM.
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm16-0/llvm16.0-linux-x86-64.tar.xz>`_ for x86 processors
+and at `<https://github.com/hyperledger/solang-llvm/releases/download/llvm16-0/llvm16.0-linux-arm64.tar.xz>`_ for ARM.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
 
-	tar Jxf llvm15.0-linux-x86-64.tar.xz
-	export PATH=$(pwd)/llvm15.0/bin:$PATH
+	tar Jxf llvm16.0-linux-x86-64.tar.xz
+	export PATH=$(pwd)/llvm16.0/bin:$PATH
 
 Windows
 ~~~~~~~
 
 A pre-built version of LLVM, specifically configured for Solang, is available at
-`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-2/llvm15.0-win.zip>`_.
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm16-0/llvm16.0-win.zip>`_.
 
 After unzipping the file, add the bin directory to your path.
 
 .. code-block:: batch
 
-	set PATH=%PATH%;C:\llvm15.0\bin
+	set PATH=%PATH%;C:\llvm16.0\bin
 
 Mac
 ~~~
 
 A pre-built version of LLVM for intel macs, is available at
-`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-2/llvm15.0-mac-intel.tar.xz>`_ and for arm macs there is
-`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-2/llvm15.0-mac-arm.tar.xz>`_. After downloading,
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-intel.tar.xz>`_ and for arm macs there is
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-arm.tar.xz>`_. After downloading,
 untar the file in a terminal and add it to your path like so:
 
 .. code-block:: bash
 
-	tar Jxf llvm15.0-mac-arm.tar.xz
-	xattr -rd com.apple.quarantine llvm15.0
-	export PATH=$(pwd)/llvm15.0/bin:$PATH
+	tar Jxf llvm16.0-mac-arm.tar.xz
+	xattr -rd com.apple.quarantine llvm16.0
+	export PATH=$(pwd)/llvm16.0/bin:$PATH
 
 .. _llvm-from-source:
 
