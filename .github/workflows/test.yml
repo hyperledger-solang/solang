@@ -49,7 +49,7 @@ jobs:
   linux-x86-64:
     name: Linux x86-64
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-6
+    container: ghcr.io/hyperledger/solang-llvm:ci-7
     env:
       RUSTFLAGS: -C instrument-coverage -C llvm-args=--instrprof-atomic-counter-update-all --cfg=coverage --cfg=trybuild_no_target
       CARGO_INCREMENTAL: 0
@@ -111,7 +111,7 @@ jobs:
     name: Linux Arm
     runs-on: linux-arm64
     if: ${{ github.repository_owner == 'hyperledger' }}
-    container: ghcr.io/hyperledger/solang-llvm:ci-6
+    container: ghcr.io/hyperledger/solang-llvm:ci-7
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -137,11 +137,11 @@ jobs:
       with:
         submodules: recursive
     - name: Download LLVM
-      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-win.zip
+      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang-llvm/releases/download/llvm16-0/llvm16.0-win.zip
     - name: Extract LLVM
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
-      run: echo "c:\llvm15.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+      run: echo "c:\llvm16.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
     # Use C:\ as D:\ might run out of space
     - name: "Use C: for rust temporary files"
       run: echo "CARGO_TARGET_DIR=C:\target" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
@@ -173,11 +173,11 @@ jobs:
         submodules: recursive
     - uses: dtolnay/rust-toolchain@1.72.0
     - name: Get LLVM
-      run: curl -sSL --output llvm15.0-mac-arm.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-mac-arm.tar.xz
+      run: curl -sSL --output llvm16.0-mac-arm.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-arm.tar.xz
     - name: Extract LLVM
-      run: tar Jxf llvm15.0-mac-arm.tar.xz
+      run: tar Jxf llvm16.0-mac-arm.tar.xz
     - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm15.0/bin" >> $GITHUB_PATH
+      run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -199,11 +199,11 @@ jobs:
         submodules: recursive
     - uses: dtolnay/rust-toolchain@1.72.0
     - name: Get LLVM
-      run: wget -q -O llvm15.0-mac-intel.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-mac-intel.tar.xz
+      run: wget -q -O llvm16.0-mac-intel.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-intel.tar.xz
     - name: Extract LLVM
-      run: tar Jxf llvm15.0-mac-intel.tar.xz
+      run: tar Jxf llvm16.0-mac-intel.tar.xz
     - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm15.0/bin" >> $GITHUB_PATH
+      run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -254,7 +254,7 @@ jobs:
   anchor:
     name: Anchor Integration test
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-6
+    container: ghcr.io/hyperledger/solang-llvm:ci-7
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -306,7 +306,7 @@ jobs:
   solana:
     name: Solana Integration test
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-6
+    container: ghcr.io/hyperledger/solang-llvm:ci-7
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -477,7 +477,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     name: Coverage report
-    container: ghcr.io/hyperledger/solang-llvm:ci-6
+    container: ghcr.io/hyperledger/solang-llvm:ci-7
     needs: [linux-x86-64, solana, anchor, polkadot, polkadot-subxt, vscode]
     env:
       RUSTFLAGS: -C instrument-coverage -C llvm-args=--instrprof-atomic-counter-update-all --cfg=coverage --cfg=trybuild_no_target
