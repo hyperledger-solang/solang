@@ -9,7 +9,7 @@
                 emit foo(true, 1);
             }
         }
+
 // ---- Expect: diagnostics ----
-// error: 9:17-34: emit can be resolved to multiple events
-// 	note 2:15-18: candidate event
-// 	note 3:15-18: candidate event
+// warning: 3:15-18: event 'foo' has never been emitted
+// warning: 6:19-22: event 'foo' has never been emitted

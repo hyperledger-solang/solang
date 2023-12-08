@@ -1307,11 +1307,13 @@ fn emit_event(
                 }
             }
 
+            remove_duplicate_events(loc, &mut resolved_events, context, diagnostics, ns);
+
             let count = resolved_events.len();
 
             if count == 0 {
                 diagnostics.extend(emit_diagnostics);
-            } else if context.ambiguous_emit || count == 1 {
+            } else if count == 1 {
                 let (event_no, candidate_diagnostics, stmt) = resolved_events.remove(0);
 
                 let event = &mut ns.events[event_no];
@@ -1483,11 +1485,13 @@ fn emit_event(
                 }
             }
 
+            remove_duplicate_events(loc, &mut resolved_events, context, diagnostics, ns);
+
             let count = resolved_events.len();
 
             if count == 0 {
                 diagnostics.extend(emit_diagnostics);
-            } else if count == 1 || context.ambiguous_emit {
+            } else if count == 1 {
                 let (event_no, candidate_diagnostics, stmt) = resolved_events.remove(0);
 
                 diagnostics.extend(candidate_diagnostics);
@@ -1526,6 +1530,65 @@ fn emit_event(
     }
 
     Err(())
+}
+
+fn remove_duplicate_events(
+    loc: &pt::Loc,
+    resolved_events: &mut Vec<(usize, Diagnostics, Statement)>,
+    context: &ExprContext,
+    diagnostics: &mut Diagnostics,
+    ns: &Namespace,
+) {
+    resolved_events.dedup_by(|a, b| ns.events[a.0].identical(&ns.events[b.0]));
+
+    if context.ambiguous_emit
+        && resolved_events.len() > 1
+        && resolved_events
+            .windows(2)
+            .all(|slice| ns.events[slice[0].0].identical_v0_5(&ns.events[slice[1].0]))
+    {
+        diagnostics.push(Diagnostic::warning_with_notes(
+            *loc,
+            "emit can be resolved to multiple incompatible events. This is permitted in Solidity v0.5 and earlier, however it could indicate a bug.".into(),
+            resolved_events
+                .iter()
+                .map(|(event_no, _, _)| {
+                    let event = &ns.events[*event_no];
+
+                    Note {
+                        loc: event.id.loc,
+                        message: "candidate event".into(),
+                    }
+                })
+                .collect(),
+        ));
+
+        resolved_events.truncate(1);
+    }
+}
+
+impl EventDecl {
+    // Are two events Identical?
+    pub fn identical(&self, other: &Self) -> bool {
+        self.id.name == other.id.name
+            && self.anonymous == other.anonymous
+            && self
+                .fields
+                .iter()
+                .zip(other.fields.iter())
+                .all(|(l, r)| l.indexed == r.indexed && l.ty == r.ty)
+    }
+
+    // Are two events Identical in Solidity v0.5?
+    // Solidity v0.5 erronously does not compare indexed-ness and anonymous-ness
+    pub fn identical_v0_5(&self, other: &Self) -> bool {
+        self.id.name == other.id.name
+            && self
+                .fields
+                .iter()
+                .zip(other.fields.iter())
+                .all(|(l, r)| l.ty == r.ty)
+    }
 }
 
 /// Resolve destructuring assignment

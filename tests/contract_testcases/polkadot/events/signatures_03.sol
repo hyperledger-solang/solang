@@ -1,5 +1,5 @@
 
-        event foo(bool a, int b);
+        event foo(bool a, int32 b);
 
         contract c {
             event foo(bool x, int y);
