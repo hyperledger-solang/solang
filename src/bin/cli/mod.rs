@@ -277,7 +277,7 @@ pub struct TargetArg {
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
 pub struct CompileTargetArg {
-    #[arg(name = "TARGET", long = "target", value_parser = ["solana", "polkadot", "evm"], help = "Target to build for [possible values: solana, polkadot]", num_args = 1, hide_possible_values = true)]
+    #[arg(name = "TARGET", long = "target", value_parser = ["solana", "polkadot", "evm", "soroban"], help = "Target to build for [possible values: solana, polkadot]", num_args = 1, hide_possible_values = true)]
     pub name: Option<String>,
 
     #[arg(name = "ADDRESS_LENGTH", help = "Address length on the Polkadot Parachain", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
@@ -463,6 +463,7 @@ pub(crate) fn target_arg<T: TargetArgTrait>(target_arg: &T) -> Target {
             value_length: target_arg.get_value_length().unwrap_or(16) as usize,
         },
         "evm" => solang::Target::EVM,
+        "soroban" => solang::Target::Soroban,
         _ => unreachable!(),
     };
 

@@ -36,11 +36,11 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 ) {
     match ins {
         Instr::Nop => (),
-        Instr::Return { value } if value.is_empty() => {
+        Instr::Return { value } if value.is_empty() && ns.target != Target::Soroban => {
             bin.builder
                 .build_return(Some(&bin.return_values[&ReturnCode::Success]));
         }
-        Instr::Return { value } => {
+        Instr::Return { value } if ns.target != Target::Soroban => {
             let returns_offset = cfg.params.len();
             for (i, val) in value.iter().enumerate() {
                 let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
@@ -52,6 +52,15 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder
                 .build_return(Some(&bin.return_values[&ReturnCode::Success]));
         }
+        Instr::Return { value } => match value.iter().next() {
+            Some(val) => {
+                let retval = expression(target, bin, val, &w.vars, function, ns);
+                bin.builder.build_return(Some(&retval));
+            }
+            None => {
+                bin.builder.build_return(None);
+            }
+        },
         Instr::Set { res, expr, .. } => {
             if let Expression::Undefined { ty: expr_type } = expr {
                 // If the variable has been declared as undefined, but we can

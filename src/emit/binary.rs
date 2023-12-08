@@ -39,6 +39,9 @@ use inkwell::OptimizationLevel;
 use once_cell::sync::OnceCell;
 use solang_parser::pt;
 
+#[cfg(feature = "soroban")]
+use super::soroban;
+
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
 
 #[macro_export]
@@ -168,6 +171,7 @@ impl<'a> Binary<'a> {
         contract: &'a Contract,
         ns: &'a Namespace,
         opt: &'a Options,
+        _contract_no: usize,
     ) -> Self {
         let std_lib = load_stdlib(context, &ns.target);
         match ns.target {
@@ -175,7 +179,11 @@ impl<'a> Binary<'a> {
                 polkadot::PolkadotTarget::build(context, &std_lib, contract, ns, opt)
             }
             Target::Solana => solana::SolanaTarget::build(context, &std_lib, contract, ns, opt),
-            Target::EVM => unimplemented!(),
+            #[cfg(feature = "soroban")]
+            Target::Soroban => {
+                soroban::SorobanTarget::build(context, &std_lib, contract, ns, opt, _contract_no)
+            }
+            _ => unimplemented!("target not implemented"),
         }
     }
 
@@ -758,6 +766,12 @@ impl<'a> Binary<'a> {
             .map(|ty| self.llvm_var_ty(ty, ns).into())
             .collect::<Vec<BasicMetadataTypeEnum>>();
 
+        if ns.target == Target::Soroban {
+            match returns.iter().next() {
+                Some(ret) => return self.llvm_type(ret, ns).fn_type(&args, false),
+                None => return self.context.void_type().fn_type(&args, false),
+            }
+        }
         // add return values
         for ty in returns {
             args.push(if ty.is_reference_type(ns) && !ty.is_contract_storage() {

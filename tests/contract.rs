@@ -99,9 +99,12 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
             if contract.instantiable {
                 let code = match ns.target {
                     Target::Solana | Target::Polkadot { .. } => {
-                        contract.emit(&ns, &Default::default())
+                        contract.emit(&ns, &Default::default(), contract_no)
                     }
                     Target::EVM => b"beep".to_vec(),
+                    Target::Soroban => {
+                        todo!()
+                    }
                 };
 
                 let _ = generate_abi(contract_no, &ns, &code, false, &["unknown".into()], "0.1.0");

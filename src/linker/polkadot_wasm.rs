@@ -31,7 +31,6 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
         CString::new("--gc-sections").unwrap(),
         CString::new("--global-base=0").unwrap(),
     ];
-
     command_line.push(CString::new("--export").unwrap());
     command_line.push(CString::new("deploy").unwrap());
     command_line.push(CString::new("--export").unwrap());
@@ -40,7 +39,6 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     command_line.push(CString::new("--import-memory").unwrap());
     command_line.push(CString::new("--initial-memory=1048576").unwrap());
     command_line.push(CString::new("--max-memory=1048576").unwrap());
-
     command_line.push(
         CString::new(
             object_filename

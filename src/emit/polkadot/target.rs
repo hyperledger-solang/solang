@@ -815,7 +815,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         let created_contract = &ns.contracts[contract_no];
 
-        let code = created_contract.emit(ns, binary.options);
+        let code = created_contract.emit(ns, binary.options, contract_no);
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
