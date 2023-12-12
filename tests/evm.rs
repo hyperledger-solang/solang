@@ -9,6 +9,8 @@ use std::{
 };
 use walkdir::WalkDir;
 
+mod evm_tests;
+
 fn test_solidity(src: &str) -> ast::Namespace {
     let mut cache = FileResolver::default();
 
@@ -253,7 +255,7 @@ fn ethereum_solidity_tests() {
         })
         .sum();
 
-    assert_eq!(errors, 933);
+    assert_eq!(errors, 916);
 }
 
 fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {

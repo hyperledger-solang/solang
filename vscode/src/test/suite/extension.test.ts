@@ -48,14 +48,14 @@ suite('Extension Test Suite', function () {
   test('Testing for diagnostics warnings.', async () => {
     await testdiagnos(diagnosdoc4, [
       {
-        message: `unknown pragma 'foo' with value 'bar' ignored`,
-        range: toRange(0, 0, 0, 14),
+        message: `function can be declared 'pure'`,
+        range: toRange(1, 5, 1, 48),
         severity: vscode.DiagnosticSeverity.Warning,
         source: `solidity`,
       },
       {
-        message: `function can be declared 'pure'`,
-        range: toRange(3, 5, 3, 40),
+        message: `function parameter 'b' is unused`,
+        range: toRange(1, 22, 1, 23),
         severity: vscode.DiagnosticSeverity.Warning,
         source: `solidity`,
       },
@@ -548,7 +548,7 @@ async function testcompletion(docUri: vscode.Uri) {
   const labels1 = get_labels(suggestions1);
   labels1.includes('second');
   assert.ok(labels1.includes('VAL') && labels1.includes('value') && !labels1.includes('first') && labels1.includes('second'));
-  
+
   const pos2 = new vscode.Position(11, 10);
   const suggestions2 = (await vscode.commands.executeCommand(
     'vscode.executeCompletionItemProvider',
@@ -566,8 +566,8 @@ async function testcompletion(docUri: vscode.Uri) {
     '.'
   )) as vscode.CompletionList;
   const labels3 = get_labels(suggestions3);
-  assert.ok(labels3.includes('field1') && labels3.includes('field2') && !labels3.includes('value')&& !labels3.includes('first') && !labels3.includes('second') && !labels3.includes('VAL'));
-  
+  assert.ok(labels3.includes('field1') && labels3.includes('field2') && !labels3.includes('value') && !labels3.includes('first') && !labels3.includes('second') && !labels3.includes('VAL'));
+
   const pos4 = new vscode.Position(18, 36);
   const suggestions4 = (await vscode.commands.executeCommand(
     'vscode.executeCompletionItemProvider',
@@ -576,7 +576,7 @@ async function testcompletion(docUri: vscode.Uri) {
     '.'
   )) as vscode.CompletionList;
   const labels4 = get_labels(suggestions4);
-  assert.ok(labels4.includes('aaa') && labels4.includes('bbbb') && !labels4.includes('field1') && !labels4.includes('field2') && !labels4.includes('value')&& !labels4.includes('first') && !labels4.includes('second') && !labels4.includes('VAL'));
+  assert.ok(labels4.includes('aaa') && labels4.includes('bbbb') && !labels4.includes('field1') && !labels4.includes('field2') && !labels4.includes('value') && !labels4.includes('first') && !labels4.includes('second') && !labels4.includes('VAL'));
 }
 
 async function testhover(docUri: vscode.Uri) {

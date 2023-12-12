@@ -732,8 +732,8 @@ pub(super) fn addition(
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
-    let mut left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
-    let mut right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
+    let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
+    let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
@@ -797,33 +797,6 @@ pub(super) fn addition(
                 Err(())
             }
         };
-    }
-
-    // If we don't know what type the result is going to be
-    if resolve_to == ResolveTo::Unknown {
-        let bits = std::cmp::min(256, ty.bits(ns) * 2);
-        let resolve_to = if ty.is_signed_int(ns) {
-            Type::Int(bits)
-        } else {
-            Type::Uint(bits)
-        };
-
-        left = expression(
-            l,
-            context,
-            ns,
-            symtable,
-            diagnostics,
-            ResolveTo::Type(&resolve_to),
-        )?;
-        right = expression(
-            r,
-            context,
-            ns,
-            symtable,
-            diagnostics,
-            ResolveTo::Type(&resolve_to),
-        )?;
     }
 
     Ok(Expression::Add {

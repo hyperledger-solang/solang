@@ -1,7 +1,5 @@
-pragma foo bar;
-
 contract a {
-     function foo() public returns (int) {
+     function foo(int b) public returns (int256) {
           return 1;
      }
 }

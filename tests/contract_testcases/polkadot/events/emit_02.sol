@@ -7,3 +7,4 @@
         }
 // ---- Expect: diagnostics ----
 // error: 5:17-32: event type 'foo' has 2 fields, 1 provided
+// 	note 3:19-22: definition of foo

@@ -18,3 +18,6 @@
 // ---- Expect: diagnostics ----
 // error: 3:13-59: function 'foo' with this signature already defined
 // 	note 9:13-59: previous definition of function 'foo'
+// error: 14:24-35: function call can be resolved to multiple functions
+// 	note 3:13-5:14: candidate function
+// 	note 9:13-11:14: candidate function

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::ast::{Diagnostic, ErrorType, Level, Namespace};
+use super::ast::{Diagnostic, Level, Namespace};
 use crate::file_resolver::FileResolver;
 use crate::standard_json::{LocJson, OutputJson};
 use codespan_reporting::{diagnostic, files, term};
@@ -8,7 +8,7 @@ use itertools::Itertools;
 use solang_parser::pt::Loc;
 use std::{
     collections::HashMap,
-    slice::Iter,
+    slice::{Iter, IterMut},
     {io, sync::Arc},
 };
 
@@ -31,6 +31,10 @@ impl Diagnostics {
         self.contents.iter()
     }
 
+    pub fn iter_mut(&mut self) -> IterMut<Diagnostic> {
+        self.contents.iter_mut()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.contents.is_empty()
     }
@@ -45,24 +49,6 @@ impl Diagnostics {
     pub fn extend(&mut self, diagnostics: Diagnostics) {
         self.has_error |= diagnostics.has_error;
         self.contents.extend(diagnostics.contents);
-    }
-
-    /// Filter out all the diagnostics which are not the result of casting problems
-    pub fn extend_non_casting(&mut self, other: &Diagnostics) -> bool {
-        let others: Vec<_> = other
-            .iter()
-            .filter(|diag| diag.ty != ErrorType::CastError)
-            .cloned()
-            .collect();
-        if others.is_empty() {
-            false
-        } else {
-            if !self.has_error {
-                self.has_error = others.iter().any(|m| m.level == Level::Error);
-            }
-            self.contents.extend(others);
-            true
-        }
     }
 
     pub fn append(&mut self, diagnostics: &mut Vec<Diagnostic>) {
