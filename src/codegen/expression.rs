@@ -1156,12 +1156,9 @@ pub fn expression(
                 ty,
             }
         }
-        // Stray type operator which is unused, can return anything here
-        ast::Expression::TypeOperator { loc, .. } => Expression::BoolLiteral {
-            loc: *loc,
-            value: false,
-        },
-        ast::Expression::List { .. } => unreachable!("List shall not appear in the CFG"),
+        ast::Expression::TypeOperator { .. } | ast::Expression::List { .. } => {
+            unreachable!("List shall not appear in the CFG")
+        }
     }
 }
 

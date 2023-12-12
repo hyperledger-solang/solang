@@ -38,6 +38,12 @@ fn weekdays() {
 
                 x = Weekday(2);
                 assert(x == Weekday.Wednesday);
+
+                assert(type(Weekday).max == 6);
+                assert(type(Weekday).min == 0);
+
+                // stray type() does not do anything.
+                type(Weekday);
             }
         }",
     );
