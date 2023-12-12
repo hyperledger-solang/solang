@@ -1775,7 +1775,6 @@ pub enum Builtin {
     TypeMin,
     TypeMax,
     TypeName,
-    TypeProgramId,
     TypeInterfaceId,
     TypeRuntimeCode,
     TypeCreatorCode,

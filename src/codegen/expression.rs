@@ -2270,24 +2270,6 @@ fn expr_builtin(
                 value,
             }
         }
-        ast::Builtin::TypeProgramId => {
-            let ast::Expression::TypeOperator {
-                ty: Type::Contract(no),
-                ..
-            } = &args[0]
-            else {
-                unreachable!();
-            };
-
-            let value =
-                BigInt::from_bytes_be(Sign::Plus, ns.contracts[*no].program_id.as_ref().unwrap());
-
-            Expression::NumberLiteral {
-                loc: *loc,
-                ty: Type::Address(false),
-                value,
-            }
-        }
         ast::Builtin::TypeInterfaceId => {
             let ast::Expression::TypeOperator {
                 ty: Type::Contract(contract_no),

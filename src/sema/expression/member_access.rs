@@ -777,29 +777,6 @@ fn type_name_expr(
                 };
             }
         }
-        "program_id" if ns.target == Target::Solana => {
-            if let Type::Contract(no) = ty {
-                let contract = &ns.contracts[*no];
-
-                return if contract.program_id.is_some() {
-                    Ok(Expression::Builtin {
-                        loc: *loc,
-                        tys: vec![Type::Address(false)],
-                        kind: Builtin::TypeProgramId,
-                        args: vec![expr],
-                    })
-                } else {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "{} '{}' has no declared program_id",
-                            contract.ty, contract.id
-                        ),
-                    ));
-                    Err(())
-                };
-            }
-        }
         "creationCode" | "runtimeCode" => {
             if let Type::Contract(no) = ty {
                 if !ns.contracts[*no].instantiable {
