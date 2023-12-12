@@ -20,6 +20,13 @@ pub enum StructType {
     Vector(Box<Type>),
 }
 
+/// A struct that contains the AST type and the LIR type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LIRType {
+    pub ast_type: ast::Type,
+    pub lir_type: Type,
+}
+
 /// Types for LIR. Some types present in the AST are not present here, as they
 /// are lowered to other types. See the `lower_ast_type` function in the `lir::converter::Converter`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,6 +85,12 @@ impl fmt::Display for StructType {
             StructType::SolParameters => write!(f, "SolParameters"),
             StructType::Vector(elem_ty) => write!(f, "vector<{}>", elem_ty),
         }
+    }
+}
+
+impl fmt::Display for LIRType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.lir_type)
     }
 }
 

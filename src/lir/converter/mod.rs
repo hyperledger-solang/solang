@@ -9,11 +9,9 @@ use crate::{
     sema::ast::{self, Namespace, Parameter, RetrieveType},
 };
 
+use super::lir_type::LIRType;
 use super::{
-    expressions::Operand,
-    instructions::Instruction,
-    lir_type::{InternalCallTy, Type},
-    vartable::Vartable,
+    expressions::Operand, instructions::Instruction, lir_type::InternalCallTy, vartable::Vartable,
 };
 
 mod expression;
@@ -45,19 +43,6 @@ impl<'input> Converter<'input> {
     /// get the address length from the Namespace.
     pub fn address_length(&self) -> usize {
         self.ns.address_length
-    }
-
-    /// lower the ast::Type into a lir::lir_type::Type.
-    pub fn lower_user_type(&self, user_ty: &ast::Type) -> Type {
-        // clone happens here because function unwrap_user_type takes ownership
-        let real_ty = user_ty.clone().unwrap_user_type(self.ns);
-        self.lower_ast_type(&real_ty)
-    }
-
-    /// retrieve the enum type by enum_no and lower it into a lir::lir_type::Type.
-    pub fn lower_enum_type(&self, enum_no: usize) -> Type {
-        let ty = &self.ns.enums[enum_no].ty;
-        self.lower_ast_type(ty)
     }
 
     /// get the value length from the Namespace.
@@ -111,7 +96,7 @@ impl<'input> Converter<'input> {
             Some(op) => op,
             None => {
                 let ast_ty = expr.ty();
-                let tmp = vartable.new_temp(self.lower_ast_type(&ast_ty), ast_ty);
+                let tmp = vartable.new_temp(self.lower_ast_type(&ast_ty));
                 self.lower_expression(&tmp, expr, vartable, result);
                 tmp
             }
@@ -218,14 +203,14 @@ impl<'input> Converter<'input> {
             .params
             .iter()
             .map(|p| self.to_lir_typed_parameter(p))
-            .collect::<Vec<Parameter<Type>>>();
+            .collect::<Vec<Parameter<LIRType>>>();
 
         let returns = self
             .cfg
             .returns
             .iter()
             .map(|p| self.to_lir_typed_parameter(p))
-            .collect::<Vec<Parameter<Type>>>();
+            .collect::<Vec<Parameter<LIRType>>>();
 
         LIR {
             name: self.cfg.name.clone(),
@@ -253,7 +238,7 @@ impl<'input> Converter<'input> {
         }
     }
 
-    fn to_lir_typed_parameter(&self, param: &Parameter<ast::Type>) -> Parameter<Type> {
+    fn to_lir_typed_parameter(&self, param: &Parameter<ast::Type>) -> Parameter<LIRType> {
         Parameter {
             loc: param.loc,
             id: param.id.clone(),

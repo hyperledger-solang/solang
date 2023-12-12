@@ -2,13 +2,16 @@
 use super::Converter;
 use num_bigint::BigInt;
 
-use crate::lir::lir_type::{StructType, Type};
+use crate::lir::lir_type::{LIRType, StructType, Type};
 use crate::sema::ast::{self, ArrayLength};
 
 impl Converter<'_> {
-    /// lower the `ast::Type` into a `lir::lir_type::Type`.
-    pub fn lower_ast_type(&self, ty: &ast::Type) -> Type {
-        self.lower_ast_type_by_depth(ty, 0)
+    /// lower the `ast::Type` into a `lir::lir_type::LIRType`.
+    pub fn lower_ast_type(&self, ty: &ast::Type) -> LIRType {
+        LIRType {
+            ast_type: ty.clone(),
+            lir_type: self.lower_ast_type_by_depth(ty, 0),
+        }
     }
 
     fn lower_ast_type_by_depth(&self, ty: &ast::Type, depth: u8) -> Type {
@@ -82,7 +85,10 @@ impl Converter<'_> {
                 self.wrap_ptr_by_depth(Type::Slice(Box::new(ty)), depth)
             }
             ast::Type::FunctionSelector => Type::Uint(self.fn_selector_length() as u16 * 8),
-            _ => unreachable!(),
+            ast::Type::Rational => unreachable!(),
+            ast::Type::Void => unreachable!(),
+            ast::Type::Unreachable => unreachable!(),
+            ast::Type::Unresolved => unreachable!(),
         }
     }
 
@@ -93,5 +99,17 @@ impl Converter<'_> {
         } else {
             ty
         }
+    }
+
+    /// retrieve the enum type by enum_no and lower it into a lir::lir_type::Type.
+    fn lower_enum_type(&self, enum_no: usize) -> Type {
+        let ty = &self.ns.enums[enum_no].ty;
+        self.lower_ast_type_by_depth(ty, 0)
+    }
+
+    fn lower_user_type(&self, user_ty: &ast::Type) -> Type {
+        // clone happens here because function unwrap_user_type takes ownership
+        let real_ty = user_ty.clone().unwrap_user_type(self.ns);
+        self.lower_ast_type_by_depth(&real_ty, 0)
     }
 }

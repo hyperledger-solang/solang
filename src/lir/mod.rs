@@ -13,7 +13,7 @@ use crate::lir::vartable::Vartable;
 use crate::pt::FunctionTy;
 use crate::sema::ast::Parameter;
 
-use self::lir_type::Type;
+use self::lir_type::LIRType;
 
 /// The `LIR` struct represents the Lower Intermediate Representation of a function,
 /// which uses three-address code for instructions.
@@ -24,9 +24,9 @@ pub struct LIR {
     /// The unique identifier of the function.
     pub function_no: ASTFunction,
     /// The parameters of the function, with their types.
-    pub params: Vec<Parameter<Type>>,
+    pub params: Vec<Parameter<LIRType>>,
     /// The return values of the function, with their types.
-    pub returns: Vec<Parameter<Type>>,
+    pub returns: Vec<Parameter<LIRType>>,
     /// A table of variables used in the function.
     pub vartable: Vartable,
     /// The blocks of instructions in the function.

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::lir::expressions::Operand;
-use crate::lir::lir_type::Type;
-use crate::sema::ast;
 use indexmap::IndexMap;
 use solang_parser::pt::Loc;
+
+use super::lir_type::LIRType;
 
 /// a constant prefix for temporary variables
 pub const TEMP_PREFIX: &str = "temp.ssa_ir.";
@@ -16,9 +16,7 @@ pub struct Var {
     /// The unique identifier of the variable.
     pub id: usize,
     /// The type of the variable.
-    pub ty: Type,
-    /// The AST type of the variable.
-    pub ast_ty: ast::Type,
+    pub ty: LIRType,
     /// The name of the variable.
     pub name: String,
 }
@@ -38,7 +36,7 @@ pub struct Vartable {
 
 impl Vartable {
     /// Get the type of a variable by its unique identifier.
-    pub(crate) fn get_type(&self, id: &usize) -> &Type {
+    pub(crate) fn get_type(&self, id: &usize) -> &LIRType {
         self.vars
             .get(id)
             .map(|var| &var.ty)
@@ -65,11 +63,10 @@ impl Vartable {
     }
 
     /// Set a temporary variable by its unique identifier.
-    pub fn set_tmp(&mut self, id: usize, ty: Type, ast_ty: ast::Type) {
+    pub fn set_tmp(&mut self, id: usize, ty: LIRType) {
         let var = Var {
             id,
             ty,
-            ast_ty,
             name: format!("{}{}", TEMP_PREFIX, id),
         };
         self.next_id = self.next_id.max(id + 1);
@@ -77,12 +74,11 @@ impl Vartable {
     }
 
     /// Create a new temporary variable.
-    pub(crate) fn new_temp(&mut self, ty: Type, ast_ty: ast::Type) -> Operand {
+    pub(crate) fn new_temp(&mut self, ty: LIRType) -> Operand {
         let name = format!("{}{}", TEMP_PREFIX, self.next_id);
         let var = Var {
             id: self.next_id,
             ty,
-            ast_ty,
             name: name.clone(),
         };
         self.vars.insert(self.next_id, var);

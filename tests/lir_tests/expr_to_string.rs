@@ -2,7 +2,7 @@
 
 use crate::lir_tests::helpers::{
     binop_expr, bool_literal, identifier, new_printer, new_vartable, num_literal, set_tmp,
-    unop_expr,
+    unop_expr, new_lir_type,
 };
 use crate::num_literal;
 use crate::stringfy_expr;
@@ -362,10 +362,10 @@ fn test_stringfy_array_literal_expr() {
             &printer,
             &Expression::ArrayLiteral {
                 loc: Loc::Codegen,
-                ty: Type::Array(
+                ty: new_lir_type(Type::Array(
                     Box::new(Type::Bool),
                     vec![ast::ArrayLength::Fixed(BigInt::from(2))]
-                ),
+                )),
                 dimensions: vec![2],
                 values: vec![bool_literal(true), bool_literal(false)],
             }
@@ -379,10 +379,10 @@ fn test_stringfy_array_literal_expr() {
             &printer,
             &Expression::ArrayLiteral {
                 loc: Loc::Codegen,
-                ty: Type::Array(
+                ty: new_lir_type(Type::Array(
                     Box::new(Type::Int(8)),
                     vec![ast::ArrayLength::Fixed(BigInt::from(2))]
-                ),
+                )),
                 dimensions: vec![2],
                 values: vec![num_literal(1, true, 8), num_literal(2, true, 8)],
             }
@@ -396,10 +396,10 @@ fn test_stringfy_array_literal_expr() {
             &printer,
             &Expression::ArrayLiteral {
                 loc: Loc::Codegen,
-                ty: Type::Array(
+                ty: new_lir_type(Type::Array(
                     Box::new(Type::Uint(8)),
                     vec![ast::ArrayLength::Fixed(BigInt::from(2))]
-                ),
+                )),
                 dimensions: vec![2],
                 values: vec![num_literal!(1), num_literal!(2)],
             }
@@ -413,13 +413,13 @@ fn test_stringfy_array_literal_expr() {
             &printer,
             &Expression::ArrayLiteral {
                 loc: Loc::Codegen,
-                ty: Type::Array(
+                ty: new_lir_type(Type::Array(
                     Box::new(Type::Int(8)),
                     vec![
                         ast::ArrayLength::Fixed(BigInt::from(2)),
                         ast::ArrayLength::Fixed(BigInt::from(2))
                     ]
-                ),
+                )),
                 dimensions: vec![2, 2],
                 values: vec![
                     num_literal(1, true, 8),
@@ -439,14 +439,14 @@ fn test_stringfy_array_literal_expr() {
             &printer,
             &Expression::ArrayLiteral {
                 loc: Loc::Codegen,
-                ty: Type::Array(
+                ty: new_lir_type(Type::Array(
                     Box::new(Type::Int(8)),
                     vec![
                         ast::ArrayLength::Fixed(BigInt::from(2)),
                         ast::ArrayLength::Fixed(BigInt::from(2)),
                         ast::ArrayLength::Fixed(BigInt::from(2))
                     ]
-                ),
+                )),
                 dimensions: vec![2, 2, 2],
                 values: vec![
                     num_literal(1, true, 8),
@@ -466,14 +466,14 @@ fn test_stringfy_array_literal_expr() {
     assert_eq!(
         stringfy_expr!(&printer, &Expression::ConstArrayLiteral {
             loc: Loc::Codegen,
-            ty: Type::Array(
+            ty: new_lir_type(Type::Array(
                 Box::new(Type::Int(8)),
                 vec![
                     ast::ArrayLength::Fixed(BigInt::from(2)),
                     ast::ArrayLength::Fixed(BigInt::from(2)),
                     ast::ArrayLength::Fixed(BigInt::from(2))
                 ]
-            ),
+            )),
             dimensions: vec![2, 2, 2],
             values: vec![
                 num_literal(1, true, 8),
@@ -499,7 +499,7 @@ fn test_stringfy_bytes_literal_expr() {
             &new_printer(&new_vartable()),
             &Expression::BytesLiteral {
                 loc: Loc::Codegen,
-                ty: Type::Bytes(4),
+                ty: new_lir_type(Type::Bytes(4)),
                 value: vec![0x41, 0x42, 0x43, 0x44],
             }
         ),
@@ -525,7 +525,7 @@ fn test_stringfy_struct_literal_expr() {
             &new_printer(&new_vartable()),
             &Expression::StructLiteral {
                 loc: Loc::Codegen,
-                ty: Type::Struct(StructType::UserDefined(0)),
+                ty: new_lir_type(Type::Struct(StructType::UserDefined(0))),
                 values: vec![num_literal!(1, 8), num_literal!(2, 8)],
             }
         ),
@@ -537,7 +537,7 @@ fn test_stringfy_struct_literal_expr() {
             &new_printer(&new_vartable()),
             &Expression::StructLiteral {
                 loc: Loc::Codegen,
-                ty: Type::Struct(StructType::UserDefined(0)),
+                ty: new_lir_type(Type::Struct(StructType::UserDefined(0))),
                 values: vec![num_literal!(1, 8), bool_literal(false)],
             }
         ),
@@ -558,7 +558,7 @@ fn test_stringfy_cast_expr() {
             &Expression::Cast {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
-                to_ty: Type::Uint(16),
+                to_ty: new_lir_type(Type::Uint(16)),
             }
         ),
         "(cast uint8(%temp.ssa_ir.1) to uint16)"
@@ -577,7 +577,7 @@ fn test_stringfy_bytes_cast_expr() {
             &Expression::BytesCast {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
-                to_ty: Type::Bytes(4),
+                to_ty: new_lir_type(Type::Bytes(4)),
             }
         ),
         "(cast bytes2(%temp.ssa_ir.1) to bytes4)"
@@ -599,7 +599,7 @@ fn test_stringfy_sext_expr() {
             &Expression::SignExt {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
-                to_ty: Type::Int(16),
+                to_ty: new_lir_type(Type::Int(16)),
             }
         ),
         "(sext int8(%temp.ssa_ir.1) to int16)"
@@ -621,7 +621,7 @@ fn test_stringfy_zext_expr() {
             &Expression::ZeroExt {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
-                to_ty: Type::Uint(16),
+                to_ty: new_lir_type(Type::Uint(16)),
             }
         ),
         "(zext uint8(%temp.ssa_ir.1) to uint16)"
@@ -643,7 +643,7 @@ fn test_stringfy_trunc_expr() {
             &Expression::Trunc {
                 loc: Loc::Codegen,
                 operand: Box::new(identifier(1)),
-                to_ty: Type::Uint(8),
+                to_ty: new_lir_type(Type::Uint(8)),
             }
         ),
         "(trunc uint16(%temp.ssa_ir.1) to uint8)"
@@ -660,7 +660,7 @@ fn test_stringfy_alloc_dyn_bytes() {
             &new_printer(&new_vartable()),
             &Expression::AllocDynamicBytes {
                 loc: Loc::Codegen,
-                ty: Type::Bytes(1),
+                ty: new_lir_type(Type::Bytes(1)),
                 size: Box::new(num_literal!(10)),
                 initializer: None,
             }
@@ -676,7 +676,7 @@ fn test_stringfy_alloc_dyn_bytes() {
             &new_printer(&new_vartable()),
             &Expression::AllocDynamicBytes {
                 loc: Loc::Codegen,
-                ty: Type::Bytes(1),
+                ty: new_lir_type(Type::Bytes(1)),
                 size: Box::new(num_literal!(3)),
                 initializer: Some(vec![b'\x01', b'\x02', b'\x03']),
             }
@@ -870,7 +870,7 @@ fn test_stringfy_function_arg_expr() {
             &new_printer(&new_vartable()),
             &Expression::FunctionArg {
                 loc: Loc::Codegen,
-                ty: Type::Uint(8),
+                ty: new_lir_type(Type::Uint(8)),
                 arg_no: 2,
             }
         ),

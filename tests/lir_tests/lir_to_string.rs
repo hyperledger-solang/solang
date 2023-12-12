@@ -3,9 +3,10 @@
 use crate::lir_tests::helpers::{identifier, num_literal};
 use crate::{num_literal, stringfy_lir};
 use indexmap::IndexMap;
+use solang::lir::lir_type::{LIRType, Type};
 use solang::lir::printer::Printer;
 use solang::lir::vartable::Var;
-use solang::lir::{instructions::Instruction, lir_type::Type, vartable::Vartable, Block, LIR};
+use solang::lir::{instructions::Instruction, vartable::Vartable, Block, LIR};
 use solang::sema::ast::{self, Parameter};
 use solang_parser::pt::{Identifier, Loc};
 
@@ -69,8 +70,10 @@ fn test_stringfy_cfg() {
         0,
         Var {
             id: 0,
-            ty: Type::Int(32),
-            ast_ty: ast::Type::Int(32),
+            ty: LIRType {
+                lir_type: Type::Int(32),
+                ast_type: ast::Type::Int(32),
+            },
             name: String::from("x"),
         },
     );
@@ -78,8 +81,10 @@ fn test_stringfy_cfg() {
         3,
         Var {
             id: 1,
-            ty: Type::StoragePtr(false, Box::new(Type::Int(32))),
-            ast_ty: ast::Type::Int(32),
+            ty: LIRType {
+                lir_type: Type::StoragePtr(false, Box::new(Type::Int(32))),
+                ast_type: ast::Type::Int(32),
+            },
             name: String::from("st"),
         },
     );
@@ -121,16 +126,34 @@ fn new_cfg(blocks: Vec<Block>) -> LIR {
         nonpayable: false,
         vartable: new_vartable(),
         params: vec![
-            new_parameter(String::from("a"), Type::Int(32)),
-            new_parameter(String::from("b"), Type::Int(32)),
+            new_parameter(
+                String::from("a"),
+                LIRType {
+                    ast_type: ast::Type::Int(32),
+                    lir_type: Type::Int(32),
+                },
+            ),
+            new_parameter(
+                String::from("b"),
+                LIRType {
+                    ast_type: ast::Type::Int(32),
+                    lir_type: Type::Int(32),
+                },
+            ),
         ],
-        returns: vec![new_parameter(String::from("c"), Type::Int(32))],
+        returns: vec![new_parameter(
+            String::from("c"),
+            LIRType {
+                ast_type: ast::Type::Int(32),
+                lir_type: Type::Int(32),
+            },
+        )],
         blocks,
         selector: vec![],
     }
 }
 
-fn new_parameter(name: String, ty: Type) -> Parameter<Type> {
+fn new_parameter(name: String, ty: LIRType) -> Parameter<LIRType> {
     Parameter {
         loc: Loc::Codegen,
         id: Some(Identifier::new(name)),

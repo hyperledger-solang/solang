@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen;
-use crate::lir::lir_type::Type;
 use crate::sema::ast::{FormatArg, StringLocation};
 use num_bigint::BigInt;
 use solang_parser::pt::Loc;
 use std::fmt;
 use std::fmt::Formatter;
 
+use super::lir_type::LIRType;
+
 /// Operand: including variables and literals
 #[derive(Clone, Debug)]
 pub enum Operand {
     Id { loc: Loc, id: usize },
     BoolLiteral { loc: Loc, value: bool },
-    NumberLiteral { loc: Loc, value: BigInt, ty: Type },
+    NumberLiteral { loc: Loc, value: BigInt, ty: LIRType },
 }
 
 /// Binary operators
@@ -92,59 +93,59 @@ pub enum Expression {
     },
     ArrayLiteral {
         loc: Loc,
-        ty: Type,
+        ty: LIRType,
         dimensions: Vec<u32>,
         values: Vec<Operand>,
     },
     ConstArrayLiteral {
         loc: Loc,
-        ty: Type,
+        ty: LIRType,
         dimensions: Vec<u32>,
         values: Vec<Operand>,
     },
     BytesLiteral {
         loc: Loc,
-        ty: Type,
+        ty: LIRType,
         value: Vec<u8>,
     },
     StructLiteral {
         loc: Loc,
-        ty: Type,
+        ty: LIRType,
         values: Vec<Operand>,
     },
 
     Cast {
         loc: Loc,
         operand: Box<Operand>,
-        to_ty: Type,
+        to_ty: LIRType,
     },
     BytesCast {
         loc: Loc,
         operand: Box<Operand>,
-        to_ty: Type,
+        to_ty: LIRType,
     },
     /// Sign extending the length, only for signed int
     SignExt {
         loc: Loc,
         operand: Box<Operand>,
-        to_ty: Type,
+        to_ty: LIRType,
     },
     /// Extending the length, only for unsigned int
     ZeroExt {
         loc: Loc,
         operand: Box<Operand>,
-        to_ty: Type,
+        to_ty: LIRType,
     },
     // Truncating integer into a shorter one
     Trunc {
         loc: Loc,
         operand: Box<Operand>,
-        to_ty: Type,
+        to_ty: LIRType,
     },
 
     AllocDynamicBytes {
         loc: Loc,
-        ty: Type,
+        ty: LIRType,
         size: Box<Operand>,
         initializer: Option<Vec<u8>>,
     },
@@ -179,7 +180,7 @@ pub enum Expression {
     // Get the nth param in the current function call stack
     FunctionArg {
         loc: Loc,
-        ty: Type,
+        ty: LIRType,
         arg_no: usize,
     },
 
@@ -294,7 +295,7 @@ impl Operand {
     }
 
     /// Create a new operand from a number literal
-    pub fn new_number_literal(value: &BigInt, ty: Type, loc: Loc) -> Self {
+    pub fn new_number_literal(value: &BigInt, ty: LIRType, loc: Loc) -> Self {
         Operand::NumberLiteral {
             loc,
             value: value.clone(),

@@ -5,7 +5,7 @@ use num_bigint::BigInt;
 use solang::{
     lir::{
         expressions::{BinaryOperator, Expression, Operand, UnaryOperator},
-        lir_type::Type,
+        lir_type::{LIRType, Type},
         printer::Printer,
         vartable::Vartable,
     },
@@ -34,9 +34,9 @@ pub(crate) fn num_literal(value: i32, signed: bool, width: u16) -> Operand {
     Operand::NumberLiteral {
         value: BigInt::from(value),
         ty: if signed {
-            Type::Int(width)
+            new_lir_type(Type::Int(width))
         } else {
-            Type::Uint(width)
+            new_lir_type(Type::Uint(width))
         },
         loc: Loc::Codegen,
     }
@@ -117,5 +117,18 @@ pub fn new_vartable() -> Vartable {
 }
 
 pub fn set_tmp(v: &mut Vartable, id: usize, ty: Type) {
-    v.set_tmp(id, ty, /*mock value*/ ast::Type::Void);
+    v.set_tmp(
+        id,
+        LIRType {
+        lir_type: ty,
+        ast_type: /*mock value*/ ast::Type::Void,
+    },
+    );
+}
+
+pub fn new_lir_type(ty: Type) -> LIRType {
+    LIRType {
+        lir_type: ty,
+        ast_type: /*mock value*/ ast::Type::Void,
+    }
 }

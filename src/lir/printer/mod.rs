@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{expressions::Operand, lir_type::Type};
+use super::expressions::Operand;
+use super::lir_type::LIRType;
 use crate::codegen::cfg::ASTFunction;
 use crate::lir::vartable::Vartable;
 use crate::lir::{Block, LIR};
@@ -25,7 +26,7 @@ impl<'a> Printer<'a> {
     }
 
     /// get a variable type by its unique identifier.
-    pub(crate) fn get_var_type(&self, id: &usize) -> &Type {
+    pub(crate) fn get_var_type(&self, id: &usize) -> &LIRType {
         self.vartable.get_type(id)
     }
 
