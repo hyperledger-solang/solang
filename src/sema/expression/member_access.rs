@@ -722,12 +722,7 @@ fn type_name_expr(
     };
 
     match field.name.as_str() {
-        "min" | "max"
-            if matches!(
-                ty,
-                Type::Uint(_) | Type::Int(_) | Type::Value | Type::Enum(..)
-            ) =>
-        {
+        "min" | "max" if matches!(ty, Type::Uint(_) | Type::Int(_) | Type::Enum(..)) => {
             let ty = if matches!(ty, Type::Enum(..)) {
                 Type::Uint(8)
             } else {

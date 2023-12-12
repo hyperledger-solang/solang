@@ -6,7 +6,10 @@ pragma abicoder "v2";
 pragma solidity ^0.5.16 =0.8.22 || >=0.8.21 <=2 ~1 0.6.2;
 pragma solidity 0.4 - 1 || 0.3 - 0.5.16;
 
-contract C {}
+contract C {
+	enum E { a, b, c }
+	uint8 constant maxE = type(E).max;
+}
 
 // ---- Expect: dot ----
 // ---- Expect: diagnostics ----

@@ -229,7 +229,6 @@ pub fn eval_const_number(
             let value = match ty {
                 Type::Uint(bits) => BigInt::one().shl(*bits as usize).sub(1),
                 Type::Int(bits) => BigInt::one().shl(*bits as usize - 1).sub(1),
-                Type::Value => BigInt::one().shl(ns.value_length * 8 - 1).sub(1),
                 Type::Enum(no) => (ns.enums[*no].values.len() - 1).into(),
                 _ => unreachable!(),
             };
