@@ -920,6 +920,20 @@ impl ControlFlowGraph {
                     }
                 )
             }
+            Expression::FromBufferPointer { ty, ptr, size, .. } => {
+                let ty = if let Type::Slice(ty) = ty {
+                    format!("slice {}", ty.to_string(ns))
+                } else {
+                    ty.to_string(ns)
+                };
+
+                format!(
+                    "(alloc {} ptr {} size {})",
+                    ty,
+                    self.expr_to_string(contract, ns, ptr),
+                    self.expr_to_string(contract, ns, size)
+                )
+            }
             Expression::StringCompare { left, right, .. } => format!(
                 "(strcmp ({}) ({}))",
                 self.location_to_string(contract, ns, left),

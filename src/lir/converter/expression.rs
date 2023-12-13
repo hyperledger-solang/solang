@@ -164,6 +164,9 @@ impl Converter<'_> {
             codegen::Expression::GetRef { loc, expr, .. } => {
                 self.get_ref(dest, loc, expr, vartable, results)
             }
+            codegen::Expression::FromBufferPointer { loc, ptr, size, .. } => {
+                self.buffer_pointer(dest, loc, ptr, size, vartable, results)
+            }
             codegen::Expression::InternalFunctionCfg { cfg_no, .. } => {
                 self.internal_function_cfg(dest, cfg_no, results)
             }
@@ -675,6 +678,28 @@ impl Converter<'_> {
             expr: Expression::GetRef {
                 loc: *loc,
                 operand: Box::new(from_op),
+            },
+        });
+    }
+
+    fn buffer_pointer(
+        &self,
+        dest: &Operand,
+        loc: &Loc,
+        ptr: &codegen::Expression,
+        size: &codegen::Expression,
+        vartable: &mut Vartable,
+        results: &mut Vec<Instruction>,
+    ) {
+        let ptr_op = self.to_operand_and_insns(ptr, vartable, results);
+        let size_op = self.to_operand_and_insns(size, vartable, results);
+        results.push(Instruction::Set {
+            loc: *loc,
+            res: dest.get_id_or_error(),
+            expr: Expression::FromBufferPointer {
+                loc: *loc,
+                ptr: Box::new(ptr_op),
+                size: Box::new(size_op),
             },
         });
     }

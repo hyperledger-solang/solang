@@ -8,5 +8,6 @@
                 i = 2;
             }
         }
+
 // ---- Expect: diagnostics ----
-// error: 7:13-40: fallback function must not be declare payable, use 'receive() external payable' instead
+// warning: 5:13-24: storage variable 'i' has been assigned, but never read

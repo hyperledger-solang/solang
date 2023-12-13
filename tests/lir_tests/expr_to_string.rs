@@ -705,6 +705,28 @@ fn test_stringfy_get_ref_expr() {
     );
 }
 
+// GetRef
+#[test]
+fn test_stringfy_from_buffer_pointer() {
+    let mut v = new_vartable();
+    set_tmp(&mut v, 1, Type::Ptr(Type::Uint(8).into()));
+    set_tmp(&mut v, 2, Type::Uint(32));
+    let printer = new_printer(&v);
+
+    // example: &ptr<uint8>(%temp.ssa_ir.1)
+    assert_eq!(
+        stringfy_expr!(
+            &printer,
+            &Expression::FromBufferPointer {
+                loc: Loc::Codegen,
+                ptr: Box::new(identifier(1)),
+                size: Box::new(identifier(2)),
+            }
+        ),
+        "frombufferpointer {ptr<uint8>(%temp.ssa_ir.1), uint32(%temp.ssa_ir.2)}"
+    );
+}
+
 // Load
 #[test]
 fn test_stringfy_load_expr() {

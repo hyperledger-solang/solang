@@ -231,6 +231,11 @@ pub enum Expression {
     ReturnData {
         loc: Loc,
     },
+    FromBufferPointer {
+        loc: Loc,
+        ptr: Box<Operand>,
+        size: Box<Operand>,
+    },
 }
 
 impl fmt::Display for BinaryOperator {

@@ -159,6 +159,37 @@ fn fallback() {
 }
 
 #[test]
+fn fallback_with_args() {
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
+    struct Val(u64);
+
+    // parse
+    let mut runtime = build_solidity(
+        "
+        contract test {
+            int64 result = 102;
+
+            function get() public returns (int64) {
+                return result;
+            }
+
+            fallback(bytes foo) external returns (bytes) {
+                print(string(foo));
+                result = 356;
+                return bytes.concat(foo, ' to me');
+            }
+        }",
+    );
+
+    runtime.raw_function(b"to you".to_vec());
+    println!("go: {}", String::from_utf8_lossy(&runtime.output()));
+    assert_eq!(runtime.output(), b"to you to me");
+    runtime.function("get", Vec::new());
+
+    assert_eq!(runtime.output(), Val(356).encode());
+}
+
+#[test]
 fn function_wrong_selector() {
     let mut runtime = build_solidity(
         "
@@ -607,7 +638,7 @@ fn virtual_function_member_access() {
             @selector([1, 2, 3, 4])
             function onERC1155Received() external returns (bytes4);
         }
-    
+
         abstract contract ERC1155 {
             function _doSafeTransferAcceptanceCheck() internal pure returns (bytes4) {
                 return IERC1155Receiver.onERC1155Received.selector;

@@ -398,6 +398,12 @@ pub enum Expression {
         size: Box<Expression>,
         initializer: Option<Vec<u8>>,
     },
+    FromBufferPointer {
+        loc: pt::Loc,
+        ty: Type,
+        ptr: Box<Expression>,
+        size: Box<Expression>,
+    },
     ArrayLiteral {
         loc: pt::Loc,
         ty: Type,
@@ -708,6 +714,7 @@ impl CodeLocation for Expression {
             | Expression::ShiftLeft { loc, .. }
             | Expression::RationalNumberLiteral { loc, .. }
             | Expression::AllocDynamicBytes { loc, .. }
+            | Expression::FromBufferPointer { loc, .. }
             | Expression::BytesCast { loc, .. }
             | Expression::More { loc, .. }
             | Expression::ZeroExt { loc, .. } => *loc,
@@ -850,6 +857,7 @@ impl RetrieveType for Expression {
             | Expression::StructMember { ty, .. }
             | Expression::FunctionArg { ty, .. }
             | Expression::AllocDynamicBytes { ty, .. }
+            | Expression::FromBufferPointer { ty, .. }
             | Expression::BytesCast { ty, .. }
             | Expression::RationalNumberLiteral { ty, .. }
             | Expression::Subscript { ty, .. }

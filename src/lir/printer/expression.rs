@@ -157,6 +157,13 @@ impl Printer<'_> {
                 write!(f, "&").unwrap();
                 self.print_rhs_operand(f, operand)
             }
+            Expression::FromBufferPointer { ptr, size, .. } => {
+                write!(f, "frombufferpointer {{").unwrap();
+                self.print_rhs_operand(f, ptr);
+                write!(f, ", ").unwrap();
+                self.print_rhs_operand(f, size);
+                write!(f, "}}").unwrap();
+            }
             Expression::Load { operand, .. } => {
                 write!(f, "*").unwrap();
                 self.print_rhs_operand(f, operand)

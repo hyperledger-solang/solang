@@ -347,11 +347,11 @@ The difference to a regular ``call`` is that  ``delegatecall`` executes the call
 * ``value`` can't be specified for ``delegatecall``; instead it will always stay the same in the callee.
 * ``msg.sender`` does not change; it stays the same as in the callee.
 
-Refer to the `contracts pallet <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.delegate_call>`_ 
+Refer to the `contracts pallet <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.delegate_call>`_
 and `Ethereum Solidity <https://docs.soliditylang.org/en/latest/introduction-to-smart-contracts.html#delegatecall-and-libraries>`_
 documentations for more information.
 
-``delegatecall`` is commonly used to implement re-usable libraries and 
+``delegatecall`` is commonly used to implement re-usable libraries and
 `upgradeable contracts <https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable>`_.
 
 .. code-block:: solidity
@@ -383,6 +383,11 @@ is executed. This made clear in the declarations; ``receive()`` must be declared
 ``payable``, and ``fallback()`` must not be declared ``payable``. If a call is made
 with value and no ``receive()`` function is defined, then the call reverts, likewise if
 call is made without value and no ``fallback()`` is defined, then the call also reverts.
+
+The fallback function can defined in two ways. First, it can have no parameters or return
+values. Alternatively, it must have a ``bytes`` parameter and ``bytes`` return value. In this
+case, the parameter contains the undecoded input (also known as calldata or instruction data),
+and the return value is the raw return data for the contact.
 
 Both functions must be declared ``external``.
 

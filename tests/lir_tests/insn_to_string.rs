@@ -604,8 +604,8 @@ fn test_stringfy_switch_insn() {
     assert_eq!(
         s,
         r#"switch uint8(%temp.ssa_ir.1):
-    case:    uint8(%temp.ssa_ir.4) => block#11, 
-    case:    uint8(%temp.ssa_ir.5) => block#12, 
+    case:    uint8(%temp.ssa_ir.4) => block#11,
+    case:    uint8(%temp.ssa_ir.5) => block#12,
     case:    uint8(%temp.ssa_ir.6) => block#13
     default: block#14;"#
     )

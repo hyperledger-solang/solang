@@ -13,4 +13,4 @@ contract Seed1 {
 
 // ---- Expect: diagnostics ----
 // error: 5:17-18: unrecognised token '@'
-// error: 5:24-29: unrecognised token 'bytes', expected "(", ")", "++", ",", "--", ".", "[", "calldata", "case", "default", "leave", "memory", "revert", "storage", "switch", "{", identifier
+// error: 5:24-29: unrecognised token 'bytes', expected "(", ")", "++", ",", "--", ".", "[", "calldata", "case", "default", "fallback", "leave", "memory", "receive", "revert", "storage", "switch", "{", identifier
