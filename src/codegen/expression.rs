@@ -1157,7 +1157,7 @@ pub fn expression(
             }
         }
         ast::Expression::TypeOperator { .. } | ast::Expression::List { .. } => {
-            unreachable!("List shall not appear in the CFG")
+            unreachable!("List and Type Operator shall not appear in the CFG")
         }
     }
 }
