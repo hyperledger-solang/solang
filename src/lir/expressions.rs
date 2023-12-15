@@ -12,9 +12,19 @@ use super::lir_type::LIRType;
 /// Operand: including variables and literals
 #[derive(Clone, Debug)]
 pub enum Operand {
-    Id { loc: Loc, id: usize },
-    BoolLiteral { loc: Loc, value: bool },
-    NumberLiteral { loc: Loc, value: BigInt, ty: LIRType },
+    Id {
+        loc: Loc,
+        id: usize,
+    },
+    BoolLiteral {
+        loc: Loc,
+        value: bool,
+    },
+    NumberLiteral {
+        loc: Loc,
+        value: BigInt,
+        ty: LIRType,
+    },
 }
 
 /// Binary operators

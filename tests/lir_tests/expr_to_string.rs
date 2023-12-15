@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::lir_tests::helpers::{
-    binop_expr, bool_literal, identifier, new_printer, new_vartable, num_literal, set_tmp,
-    unop_expr, new_lir_type,
+    binop_expr, bool_literal, identifier, new_lir_type, new_printer, new_vartable, num_literal,
+    set_tmp, unop_expr,
 };
 use crate::num_literal;
 use crate::stringfy_expr;
