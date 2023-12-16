@@ -1443,6 +1443,8 @@ impl Namespace {
         let mut dimensions = vec![];
 
         loop {
+            expr = expr.strip_parentheses();
+
             expr = match expr {
                 pt::Expression::ArraySubscript(_, r, None) => {
                     dimensions.push(None);

@@ -5,4 +5,4 @@
             }
         }
 // ---- Expect: diagnostics ----
-// error: 4:52: missing type
+// error: 4:52: stray comma

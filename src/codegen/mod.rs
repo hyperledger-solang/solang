@@ -1671,7 +1671,7 @@ impl Expression {
 
     fn external_function_selector(&self) -> Expression {
         debug_assert!(
-            matches!(self.ty(), Type::ExternalFunction { .. }),
+            matches!(self.ty().deref_any(), Type::ExternalFunction { .. }),
             "This is not an external function"
         );
         let loc = self.loc();

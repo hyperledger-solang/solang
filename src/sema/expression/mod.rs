@@ -843,17 +843,7 @@ impl Expression {
             }
             // Lengthing or shorting a fixed bytes array
             (Type::Bytes(from_len), Type::Bytes(to_len)) => {
-                if implicit {
-                    diagnostics.push(Diagnostic::cast_error(
-                        *loc,
-                        format!(
-                            "implicit conversion would truncate from {} to {}",
-                            from.to_string(ns),
-                            to.to_string(ns)
-                        ),
-                    ));
-                    Err(())
-                } else if to_len > from_len {
+                if to_len > from_len {
                     let shift = (to_len - from_len) * 8;
 
                     Ok(Expression::ShiftLeft {
@@ -870,6 +860,16 @@ impl Expression {
                             value: BigInt::from_u8(shift).unwrap(),
                         }),
                     })
+                } else if implicit {
+                    diagnostics.push(Diagnostic::cast_error(
+                        *loc,
+                        format!(
+                            "implicit conversion would truncate from {} to {}",
+                            from.to_string(ns),
+                            to.to_string(ns)
+                        ),
+                    ));
+                    Err(())
                 } else {
                     let shift = (from_len - to_len) * 8;
 

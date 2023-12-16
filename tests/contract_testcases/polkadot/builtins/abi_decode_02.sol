@@ -5,4 +5,4 @@
             }
         }
 // ---- Expect: diagnostics ----
-// error: 4:52-55: unexpected identifier 'feh' in type
+// error: 4:52-55: unexpected identifier 'feh'
