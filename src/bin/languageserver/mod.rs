@@ -662,16 +662,6 @@ impl<'a> Builder<'a> {
                     },
                 ));
             }
-            ast::Expression::CodeLiteral { loc, .. } => {
-                self.hovers.push((
-                    loc.file_no(),
-                    HoverEntry {
-                        start: loc.start(),
-                        stop: loc.exclusive_end(),
-                        val: make_code_block("bytes"),
-                    },
-                ));
-            }
             ast::Expression::NumberLiteral { loc, ty, value,.. } => {
                 if let Type::Enum(id) = ty {
                     self.references.push((

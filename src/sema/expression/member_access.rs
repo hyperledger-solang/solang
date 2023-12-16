@@ -10,17 +10,15 @@ use crate::sema::expression::function_call::function_type;
 use crate::sema::expression::integers::bigint_to_expression;
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
-use crate::sema::namespace::ResolveTypeContext;
 use crate::sema::solana_accounts::BuiltinAccounts;
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::{assigned_variable, used_variable};
 use crate::Target;
-use num_bigint::{BigInt, Sign};
-use num_traits::{FromPrimitive, One, Zero};
+use num_bigint::BigInt;
+use num_traits::FromPrimitive;
 use solang_parser::diagnostics::{Diagnostic, Note};
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
-use std::ops::{Shl, Sub};
 
 /// Resolve an member access expression
 pub(super) fn member_access(
@@ -146,16 +144,12 @@ pub(super) fn member_access(
         }
     }
 
-    // is of the form "type(x).field", like type(c).min
-    if let pt::Expression::FunctionCall(_, name, args) = e {
-        if let pt::Expression::Variable(func_name) = name.as_ref() {
-            if func_name.name == "type" {
-                return type_name_expr(loc, args, id, context, ns, diagnostics, resolve_to);
-            }
-        }
+    let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
+
+    if let Expression::TypeOperator { .. } = &expr {
+        return type_name_expr(loc, expr, id, context, ns, diagnostics);
     }
 
-    let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
     let expr_ty = expr.ty();
 
     if let Type::Struct(struct_ty) = expr_ty.deref_memory() {
@@ -717,155 +711,170 @@ fn event_selector(
 /// Resolve type(x).foo
 fn type_name_expr(
     loc: &pt::Loc,
-    args: &[pt::Expression],
+    expr: Expression,
     field: &pt::Identifier,
     context: &mut ExprContext,
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
-    resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
-    if args.is_empty() {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            "missing argument to type()".to_string(),
-        ));
-        return Err(());
-    }
+    let Expression::TypeOperator { ty, .. } = &expr else {
+        unreachable!();
+    };
 
-    if args.len() > 1 {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            format!("got {} arguments to type(), only one expected", args.len(),),
-        ));
-        return Err(());
-    }
-
-    let ty = ns.resolve_type(
-        context.file_no,
-        context.contract_no,
-        ResolveTypeContext::FunctionType,
-        &args[0],
-        diagnostics,
-    )?;
-
-    match (&ty, field.name.as_str()) {
-        (Type::Uint(_), "min") => {
-            bigint_to_expression(loc, &BigInt::zero(), ns, diagnostics, resolve_to, None)
-        }
-        (Type::Uint(bits), "max") => {
-            let max = BigInt::one().shl(*bits as usize).sub(1);
-            bigint_to_expression(loc, &max, ns, diagnostics, resolve_to, None)
-        }
-        (Type::Int(bits), "min") => {
-            let min = BigInt::zero().sub(BigInt::one().shl(*bits as usize - 1));
-            bigint_to_expression(loc, &min, ns, diagnostics, resolve_to, None)
-        }
-        (Type::Int(bits), "max") => {
-            let max = BigInt::one().shl(*bits as usize - 1).sub(1);
-            bigint_to_expression(loc, &max, ns, diagnostics, resolve_to, None)
-        }
-        (Type::Contract(n), "name") => Ok(Expression::BytesLiteral {
-            loc: *loc,
-            ty: Type::String,
-            value: ns.contracts[*n].id.name.as_bytes().to_vec(),
-        }),
-        (Type::Contract(n), "interfaceId") => {
-            let contract = &ns.contracts[*n];
-
-            if !contract.is_interface() {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "type(…).interfaceId is permitted on interface, not {} {}",
-                        contract.ty, contract.id
-                    ),
-                ));
-                Err(())
+    match field.name.as_str() {
+        "min" | "max" if matches!(ty, Type::Uint(_) | Type::Int(_) | Type::Enum(..)) => {
+            let ty = if matches!(ty, Type::Enum(..)) {
+                Type::Uint(8)
             } else {
-                Ok(Expression::InterfaceId {
-                    loc: *loc,
-                    contract_no: *n,
-                })
-            }
-        }
-        (Type::Contract(no), "program_id") => {
-            let contract = &ns.contracts[*no];
-
-            if let Some(v) = &contract.program_id {
-                Ok(Expression::NumberLiteral {
-                    loc: *loc,
-                    ty: Type::Address(false),
-                    value: BigInt::from_bytes_be(Sign::Plus, v),
-                })
+                ty.clone()
+            };
+            let kind = if field.name == "min" {
+                Builtin::TypeMin
             } else {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "{} '{}' has no declared program_id",
-                        contract.ty, contract.id
-                    ),
-                ));
-                Err(())
-            }
+                Builtin::TypeMax
+            };
+
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![ty],
+                kind,
+                args: vec![expr],
+            });
         }
-        (Type::Contract(no), "creationCode") | (Type::Contract(no), "runtimeCode") => {
-            let contract_no = match context.contract_no {
-                Some(contract_no) => contract_no,
-                None => {
+        "name" if matches!(ty, Type::Contract(..)) => {
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![Type::String],
+                kind: Builtin::TypeName,
+                args: vec![expr],
+            })
+        }
+        "interfaceId" => {
+            if let Type::Contract(no) = ty {
+                let contract = &ns.contracts[*no];
+
+                return if !contract.is_interface() {
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
-                            "type().{} not permitted outside of contract code",
-                            field.name
+                            "type(…).interfaceId is permitted on interface, not {} {}",
+                            contract.ty, contract.id
                         ),
                     ));
+                    Err(())
+                } else {
+                    Ok(Expression::Builtin {
+                        loc: *loc,
+                        tys: vec![Type::FunctionSelector],
+                        kind: Builtin::TypeInterfaceId,
+                        args: vec![expr],
+                    })
+                };
+            }
+        }
+        "creationCode" | "runtimeCode" => {
+            if let Type::Contract(no) = ty {
+                if !ns.contracts[*no].instantiable {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "cannot construct '{}' of type '{}'",
+                            ns.contracts[*no].id, ns.contracts[*no].ty
+                        ),
+                    ));
+
                     return Err(());
                 }
-            };
 
-            // check for circular references
-            if *no == contract_no {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "containing our own contract code for '{}' would generate infinite size contract",
-                        ns.contracts[*no].id
-                    ),
-                ));
-                return Err(());
+                // This is not always in a function: e.g. contract constant:
+                // contract C {
+                //      bytes constant code = type(D).runtimeCode;
+                // }
+                if let Some(function_no) = context.function_no {
+                    ns.functions[function_no].creates.push((*loc, *no));
+                }
+
+                if let Some(contract_no) = context.contract_no {
+                    // check for circular references
+                    if *no == contract_no {
+                        diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!(
+                                "cannot construct current contract '{}'",
+                                ns.contracts[*no].id
+                            ),
+                        ));
+                        return Err(());
+                    }
+
+                    if circular_reference(*no, contract_no, ns) {
+                        diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!(
+                                "circular reference creating contract code for '{}'",
+                                ns.contracts[*no].id
+                            ),
+                        ));
+                        return Err(());
+                    }
+
+                    if !ns.contracts[contract_no].creates.contains(no) {
+                        ns.contracts[contract_no].creates.push(*no);
+                    }
+                }
+
+                let kind = if field.name == "runtimeCode" {
+                    if ns.target == Target::EVM {
+                        let notes: Vec<_> = ns.contracts[*no]
+                            .variables
+                            .iter()
+                            .filter_map(|v| {
+                                if v.immutable {
+                                    Some(Note {
+                                        loc: v.loc,
+                                        message: format!("immutable variable {}", v.name),
+                                    })
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+
+                        if !notes.is_empty() {
+                            diagnostics.push(Diagnostic::error_with_notes(
+                                *loc,
+                                format!(
+                                    "runtimeCode is not available for contract '{}' with immutuables",
+                                    ns.contracts[*no].id
+                                ),
+                                notes,
+                            ));
+                        }
+                    }
+
+                    Builtin::TypeRuntimeCode
+                } else {
+                    Builtin::TypeCreatorCode
+                };
+
+                return Ok(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![Type::DynamicBytes],
+                    kind,
+                    args: vec![expr],
+                });
             }
-
-            if circular_reference(*no, contract_no, ns) {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "circular reference creating contract code for '{}'",
-                        ns.contracts[*no].id
-                    ),
-                ));
-                return Err(());
-            }
-
-            if !ns.contracts[contract_no].creates.contains(no) {
-                ns.contracts[contract_no].creates.push(*no);
-            }
-
-            Ok(Expression::CodeLiteral {
-                loc: *loc,
-                contract_no: *no,
-                runtime: field.name == "runtimeCode",
-            })
         }
-        _ => {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                format!(
-                    "type '{}' does not have type function {}",
-                    ty.to_string(ns),
-                    field.name
-                ),
-            ));
-            Err(())
-        }
-    }
+        _ => (),
+    };
+
+    diagnostics.push(Diagnostic::error(
+        *loc,
+        format!(
+            "type '{}' does not have type function {}",
+            ty.to_string(ns),
+            field.name
+        ),
+    ));
+    Err(())
 }

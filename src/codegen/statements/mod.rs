@@ -170,37 +170,45 @@ pub(crate) fn statement(
             }
         }
         Statement::Expression(_, _, expr) => {
-            if let ast::Expression::Assign { left, right, .. } = &expr {
-                if should_remove_assignment(left, func, opt, ns) {
-                    let mut params = SideEffectsCheckParameters {
-                        cfg,
-                        contract_no,
-                        func: Some(func),
-                        ns,
-                        vartab,
-                        opt,
-                    };
-                    right.recurse(&mut params, process_side_effects_expressions);
+            match expr {
+                ast::Expression::Assign { left, right, .. } => {
+                    if should_remove_assignment(left, func, opt, ns) {
+                        let mut params = SideEffectsCheckParameters {
+                            cfg,
+                            contract_no,
+                            func: Some(func),
+                            ns,
+                            vartab,
+                            opt,
+                        };
+                        right.recurse(&mut params, process_side_effects_expressions);
 
-                    return;
-                }
-            } else if let ast::Expression::Builtin { args, .. } = expr {
-                // When array pop and push are top-level expressions, they can be removed
-                if should_remove_assignment(expr, func, opt, ns) {
-                    let mut params = SideEffectsCheckParameters {
-                        cfg,
-                        contract_no,
-                        func: Some(func),
-                        ns,
-                        vartab,
-                        opt,
-                    };
-                    for arg in args {
-                        arg.recurse(&mut params, process_side_effects_expressions);
+                        return;
                     }
+                }
+                ast::Expression::Builtin { args, .. } => {
+                    // When array pop and push are top-level expressions, they can be removed
+                    if should_remove_assignment(expr, func, opt, ns) {
+                        let mut params = SideEffectsCheckParameters {
+                            cfg,
+                            contract_no,
+                            func: Some(func),
+                            ns,
+                            vartab,
+                            opt,
+                        };
+                        for arg in args {
+                            arg.recurse(&mut params, process_side_effects_expressions);
+                        }
 
+                        return;
+                    }
+                }
+                ast::Expression::TypeOperator { .. } => {
+                    // just a stray type(int), no code to generate
                     return;
                 }
+                _ => (),
             }
 
             let _ = expression(expr, cfg, contract_no, Some(func), ns, vartab, opt);

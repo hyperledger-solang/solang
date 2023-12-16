@@ -293,26 +293,6 @@ impl Dot {
                     Some(parent_rel),
                 );
             }
-            Expression::CodeLiteral {
-                loc,
-                contract_no,
-                runtime,
-            } => {
-                let labels = vec![
-                    format!(
-                        "code {}literal contract {}",
-                        if *runtime { "runtime " } else { "" },
-                        ns.contracts[*contract_no].id,
-                    ),
-                    ns.loc_to_string(PathDisplay::FullPath, loc),
-                ];
-
-                self.add_node(
-                    Node::new("code_literal", labels),
-                    Some(parent),
-                    Some(parent_rel),
-                );
-            }
             Expression::NumberLiteral { loc, ty, value } => {
                 let labels = vec![
                     format!("{} literal: {}", ty.to_string(ns), value),
@@ -1362,18 +1342,6 @@ impl Dot {
                     self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
             }
-            Expression::InterfaceId { loc, contract_no } => {
-                let labels = vec![
-                    format!("interfaceid contract {}", ns.contracts[*contract_no].id),
-                    ns.loc_to_string(PathDisplay::FullPath, loc),
-                ];
-
-                self.add_node(
-                    Node::new("interfaceid", labels),
-                    Some(parent),
-                    Some(parent_rel),
-                );
-            }
             Expression::UserDefinedOperator {
                 loc,
                 oper,
@@ -1443,6 +1411,18 @@ impl Dot {
 
                 self.add_node(
                     Node::new("event_selector", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+            }
+            Expression::TypeOperator { loc, ty } => {
+                let labels = vec![
+                    format!("type({})", ty.to_string(ns)),
+                    ns.loc_to_string(PathDisplay::FullPath, loc),
+                ];
+
+                self.add_node(
+                    Node::new("type_operator", labels),
                     Some(parent),
                     Some(parent_rel),
                 );

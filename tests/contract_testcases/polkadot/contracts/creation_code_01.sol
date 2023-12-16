@@ -5,4 +5,4 @@
             }
         }
 // ---- Expect: diagnostics ----
-// error: 4:34-53: containing our own contract code for 'a' would generate infinite size contract
+// error: 4:34-53: cannot construct current contract 'a'

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    ast::{Diagnostic, Expression, Namespace, Type},
+    ast::{Builtin, Diagnostic, Expression, Namespace, Type},
     diagnostics::Diagnostics,
     Recurse,
 };
@@ -197,6 +197,43 @@ pub fn eval_const_number(
                 // we should have errored about this already
                 Err(EvaluationError::NotAConstant)
             }
+        }
+        Expression::Builtin {
+            loc,
+            kind: Builtin::TypeMin,
+            args,
+            ..
+        } => {
+            let Expression::TypeOperator { ty, .. } = &args[0] else {
+                unreachable!();
+            };
+
+            let value = if let Type::Int(bits) = ty {
+                BigInt::zero().sub(BigInt::one().shl(*bits as usize - 1))
+            } else {
+                BigInt::zero()
+            };
+
+            Ok((*loc, value))
+        }
+        Expression::Builtin {
+            loc,
+            kind: Builtin::TypeMax,
+            args,
+            ..
+        } => {
+            let Expression::TypeOperator { ty, .. } = &args[0] else {
+                unreachable!();
+            };
+
+            let value = match ty {
+                Type::Uint(bits) => BigInt::one().shl(*bits as usize).sub(1),
+                Type::Int(bits) => BigInt::one().shl(*bits as usize - 1).sub(1),
+                Type::Enum(no) => (ns.enums[*no].values.len() - 1).into(),
+                _ => unreachable!(),
+            };
+
+            Ok((*loc, value))
         }
         _ => {
             diagnostics.push(Diagnostic::error(

@@ -32,8 +32,7 @@ use crate::sema::{
 use crate::Target;
 use num_bigint::{BigInt, Sign};
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
-use solang_parser::pt;
-use solang_parser::pt::{CodeLocation, Loc};
+use solang_parser::pt::{self, CodeLocation, Loc};
 use std::{cmp::Ordering, ops::Mul};
 
 pub fn expression(
@@ -1009,6 +1008,22 @@ pub fn expression(
         ast::Expression::Builtin {
             loc,
             tys,
+            kind: ast::Builtin::TypeMin | ast::Builtin::TypeMax,
+            ..
+        } => {
+            let Ok((_, value)) = eval_const_number(expr, ns, &mut Diagnostics::default()) else {
+                unreachable!();
+            };
+
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: tys[0].clone(),
+                value,
+            }
+        }
+        ast::Expression::Builtin {
+            loc,
+            tys,
             kind,
             args,
         } => expr_builtin(
@@ -1051,7 +1066,6 @@ pub fn expression(
             right,
             opt,
         ),
-        ast::Expression::InterfaceId { loc, contract_no } => interfaceid(ns, *contract_no, loc),
         ast::Expression::BoolLiteral { loc, value } => Expression::BoolLiteral {
             loc: *loc,
             value: *value,
@@ -1061,9 +1075,6 @@ pub fn expression(
             ty: ty.clone(),
             value: value.clone(),
         },
-        ast::Expression::CodeLiteral {
-            loc, contract_no, ..
-        } => code(loc, *contract_no, ns, opt),
         ast::Expression::NumberLiteral { loc, ty, value } => Expression::NumberLiteral {
             loc: *loc,
             ty: ty.clone(),
@@ -1145,8 +1156,9 @@ pub fn expression(
                 ty,
             }
         }
-
-        ast::Expression::List { .. } => unreachable!("List shall not appear in the CFG"),
+        ast::Expression::TypeOperator { .. } | ast::Expression::List { .. } => {
+            unreachable!("List and Type Operator shall not appear in the CFG")
+        }
     }
 }
 
@@ -2237,6 +2249,45 @@ fn expr_builtin(
                 ty: Type::Bool,
                 value: 0.into(),
             }
+        }
+        ast::Builtin::TypeName => {
+            let ast::Expression::TypeOperator {
+                ty: Type::Contract(no),
+                ..
+            } = &args[0]
+            else {
+                unreachable!();
+            };
+
+            let value = ns.contracts[*no].id.name.as_bytes().to_owned();
+
+            Expression::BytesLiteral {
+                loc: *loc,
+                ty: Type::String,
+                value,
+            }
+        }
+        ast::Builtin::TypeInterfaceId => {
+            let ast::Expression::TypeOperator {
+                ty: Type::Contract(contract_no),
+                ..
+            } = &args[0]
+            else {
+                unreachable!();
+            };
+
+            interfaceid(ns, *contract_no, loc)
+        }
+        ast::Builtin::TypeRuntimeCode | ast::Builtin::TypeCreatorCode => {
+            let ast::Expression::TypeOperator {
+                ty: Type::Contract(contract_no),
+                ..
+            } = &args[0]
+            else {
+                unreachable!();
+            };
+
+            code(loc, *contract_no, ns, opt)
         }
         _ => {
             let arguments: Vec<Expression> = args

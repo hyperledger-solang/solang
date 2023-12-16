@@ -434,7 +434,8 @@ impl Expression {
                         }
                     }
 
-                    diagnostics.push(Diagnostic::cast_error(
+                    // solc does not detect this problem, just warn about it
+                    diagnostics.push(Diagnostic::warning(
                         *loc,
                         format!(
                             "enum {} has no value with ordinal {}",
@@ -442,7 +443,6 @@ impl Expression {
                             big_number
                         ),
                     ));
-                    return Err(());
                 }
 
                 let to_width = enum_ty.ty.bits(ns);

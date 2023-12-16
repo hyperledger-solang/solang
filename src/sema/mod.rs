@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use self::{
-    expression::strings::unescape,
+    expression::{constructor::check_circular_reference, strings::unescape},
     functions::{resolve_params, resolve_returns},
     symtable::Symtable,
     unused_variable::check_unused_errors,
+    unused_variable::{check_unused_events, check_unused_namespace_variables},
     variables::variable_decl,
 };
 use crate::file_resolver::{FileResolver, ResolvedFile};
-use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_variables};
 use num_bigint::BigInt;
 use solang_parser::{
     doccomment::{parse_doccomments, DocComment},
@@ -26,6 +26,7 @@ pub mod diagnostics;
 mod dotgraphviz;
 pub(crate) mod eval;
 pub(crate) mod expression;
+mod external_functions;
 pub mod file;
 mod format;
 mod function_annotation;
@@ -184,6 +185,13 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     // now we can resolve the body of functions outside of contracts
     for (func_no, func) in resolve_bodies {
         let _ = statements::resolve_function_body(func, &[], file_no, None, func_no, ns);
+    }
+
+    if !ns.diagnostics.any_errors() {
+        for contract_no in 0..ns.contracts.len() {
+            external_functions::add_external_functions(contract_no, ns);
+            check_circular_reference(contract_no, ns);
+        }
     }
 
     // check for stray semi colons
