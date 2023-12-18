@@ -31,7 +31,7 @@ pub struct LIR {
     pub vartable: Vartable,
     /// The blocks of instructions in the function.
     pub blocks: Vec<Block>,
-    /// A flag indicating whether the function is non-payable (in the context of smart contracts).
+    /// A flag indicating whether the function is non-payable.
     pub nonpayable: bool,
     /// A flag indicating whether the function is public.
     pub public: bool,
