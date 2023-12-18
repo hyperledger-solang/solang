@@ -144,7 +144,7 @@ impl fmt::Display for Type {
                 Ok(())
             }
             Type::Mapping { key_ty, value_ty } => {
-                write!(f, "mapping<{} -> {}>", key_ty, value_ty)
+                write!(f, "mapping({} => {})", key_ty, value_ty)
             }
         }
     }
