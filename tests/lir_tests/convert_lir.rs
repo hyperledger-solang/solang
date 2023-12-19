@@ -933,12 +933,12 @@ block#0 entry:
     ptr<struct.vector<uint8>> %name = ptr<struct.vector<uint8>>(arg#0);
     uint8[32] %addr = uint8[32](arg#1);
     bool %temp.2 = true;
-    storage_ptr<mapping<struct.vector<uint8> -> struct.0>> %temp.ssa_ir.5 = keccak256(uint256(0), ptr<struct.vector<uint8>>(%name));
-    uint256 %temp.ssa_ir.4 = storage_ptr<mapping<struct.vector<uint8> -> struct.0>>(%temp.ssa_ir.5) (of)+ uint256(0);
+    storage_ptr<mapping(struct.vector<uint8> => struct.0)> %temp.ssa_ir.5 = keccak256(uint256(0), ptr<struct.vector<uint8>>(%name));
+    uint256 %temp.ssa_ir.4 = storage_ptr<mapping(struct.vector<uint8> => struct.0)>(%temp.ssa_ir.5) (of)+ uint256(0);
     set_storage uint256(%temp.ssa_ir.4) true;
     uint8[32] %temp.3 = uint8[32](arg#1);
-    storage_ptr<mapping<struct.vector<uint8> -> struct.0>> %temp.ssa_ir.7 = keccak256(uint256(0), ptr<struct.vector<uint8>>(%name));
-    uint256 %temp.ssa_ir.6 = storage_ptr<mapping<struct.vector<uint8> -> struct.0>>(%temp.ssa_ir.7) (of)+ uint256(1);
+    storage_ptr<mapping(struct.vector<uint8> => struct.0)> %temp.ssa_ir.7 = keccak256(uint256(0), ptr<struct.vector<uint8>>(%name));
+    uint256 %temp.ssa_ir.6 = storage_ptr<mapping(struct.vector<uint8> => struct.0)>(%temp.ssa_ir.7) (of)+ uint256(1);
     set_storage uint256(%temp.ssa_ir.6) uint8[32](%temp.3);
     return;"#,
     )
