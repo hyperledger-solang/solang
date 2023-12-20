@@ -356,9 +356,6 @@ jobs:
     - name: Start substrate contracts node
       run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:054bef6 substrate-contracts-node --dev --rpc-external) >> $GITHUB_OUTPUT
       id: substrate
-    - uses: actions/setup-node@v3
-      with:
-        node-version: '16'
     - uses: actions/download-artifact@v3
       with:
         name: solang-linux-x86-64
@@ -366,6 +363,9 @@ jobs:
     - run: |
         chmod 755 ./bin/solang
         echo "$(pwd)/bin" >> $GITHUB_PATH
+    - uses: actions/setup-node@v3
+      with:
+        node-version: '16'
     - run: npm install
       working-directory: ./integration/polkadot
     - name: Build ink! contracts
@@ -398,7 +398,7 @@ jobs:
     - name: Start substrate
       run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:054bef6 substrate-contracts-node --dev --rpc-external) >> $GITHUB_OUTPUT
       id: substrate
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@v3
       with:
         name: solang-linux-x86-64
         path: bin
@@ -497,32 +497,32 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Download Rust coverage files
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@v3
         with:
          name: rust-tests.tar.gz
          path: ./target
       - name: Download Solana coverage files
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@v3
         with:
           name: solana-tests
           path: ./target
       - name: Download Polkadot coverage files
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@v3
         with:
           name: polkadot-tests
           path: ./target
       - name: Download Polkadot subxt coverage files
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@v3
         with:
           name: polkadot-subxt-tests
           path: ./target
       - name: Download Anchor coverage files
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@v3
         with:
           name: anchor-tests
           path: ./target
       - name: Download VSCode coverage files
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@v3
         with:
           name: vscode-tests
           path: ./target

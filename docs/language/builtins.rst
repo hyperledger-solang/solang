@@ -293,7 +293,8 @@ abi.encodeCall(function, ...)
 +++++++++++++++++++++++++++++
 
 ABI encodes the function call to the function which should be specified as ``ContractName.FunctionName``. The arguments
-are cast and checked against the function specified as the first argument.
+are cast and checked against the function specified as the first argument. The arguments must be in a tuple, e.g.
+``(a, b, c)``. If there is a single argument no tuple is required.
 
 .. include:: ../examples/abi_encode_call.sol
   :code: solidity
@@ -340,7 +341,7 @@ looks like in a solidity contract:
 is_contract(address AccountId) returns (bool)
 +++++++++++++++++++++++++++++++++++++++++++++
 
-Only available on Polkadot. Checks whether the given address is a contract address. 
+Only available on Polkadot. Checks whether the given address is a contract address.
 
 set_code_hash(uint8[32] hash) returns (uint32)
 ++++++++++++++++++++++++++++++++++++++++++++++
@@ -351,17 +352,17 @@ A return value of 0 indicates success; a return value of 7 indicates that there 
 
 .. note::
 
-    This is a low level function. We strongly advise consulting the underlying 
-    `API documentation <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.set_code_hash>`_ 
+    This is a low level function. We strongly advise consulting the underlying
+    `API documentation <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.set_code_hash>`_
     to obtain a full understanding of its implications.
 
-This functionality is intended to be used for implementing upgradeable contracts. 
+This functionality is intended to be used for implementing upgradeable contracts.
 Pitfalls generally applying to writing
-`upgradeable contracts <https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable>`_ 
+`upgradeable contracts <https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable>`_
 must be considered whenever using this builtin function, most notably:
 
 * The contract must safeguard access to this functionality, so that it is only callable by priviledged users.
-* The code you are upgrading to must be 
+* The code you are upgrading to must be
   `storage compatible <https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies#storage-collisions-between-implementation-versions>`_
   with the existing code.
 * Constructors and any other initializers, including initial storage value definitions, won't be executed.

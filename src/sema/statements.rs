@@ -2208,7 +2208,7 @@ pub fn parameter_list_to_expr_list<'a>(
                         assert!(annotation.is_none());
                         diagnostics.push(Diagnostic::error(
                             name.loc,
-                            "single value expected".to_string(),
+                            format!("unexpected identifier '{}'", name.name),
                         ));
                         broken = true;
                     }

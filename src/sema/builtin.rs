@@ -8,9 +8,12 @@ use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
 use super::expression::{ExprContext, ResolveTo};
 use super::symtable::Symtable;
-use crate::sema::ast::{RetrieveType, Tag, UserTypeDecl};
-use crate::sema::expression::{function_call::evaluate_argument, resolve_expression::expression};
-use crate::sema::namespace::ResolveTypeContext;
+use crate::sema::{
+    ast::{RetrieveType, Tag, UserTypeDecl},
+    expression::{function_call::evaluate_argument, resolve_expression::expression},
+    namespace::ResolveTypeContext,
+    statements::parameter_list_to_expr_list,
+};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -1132,69 +1135,24 @@ pub(super) fn resolve_namespace_call(
         let mut tys = Vec::new();
         let mut broken = false;
 
-        match &args[1] {
-            pt::Expression::List(_, list) => {
-                for (loc, param) in list {
-                    if let Some(param) = param {
-                        let ty = ns.resolve_type(
-                            context.file_no,
-                            context.contract_no,
-                            ResolveTypeContext::None,
-                            &param.ty,
-                            diagnostics,
-                        )?;
+        for arg in parameter_list_to_expr_list(&args[1], diagnostics)? {
+            let ty = ns.resolve_type(
+                context.file_no,
+                context.contract_no,
+                ResolveTypeContext::None,
+                arg.strip_parentheses(),
+                diagnostics,
+            )?;
 
-                        if let Some(storage) = &param.storage {
-                            diagnostics.push(Diagnostic::error(
-                                storage.loc(),
-                                format!("storage modifier '{storage}' not allowed"),
-                            ));
-                            broken = true;
-                        }
-
-                        if let Some(name) = &param.name {
-                            diagnostics.push(Diagnostic::error(
-                                name.loc,
-                                format!("unexpected identifier '{}' in type", name.name),
-                            ));
-                            broken = true;
-                        }
-
-                        if ty.is_mapping() || ty.is_recursive(ns) {
-                            diagnostics.push(Diagnostic::error(
-                                *loc,
-                        format!("Invalid type '{}': mappings and recursive types cannot be abi decoded or encoded", ty.to_string(ns)))
-                            );
-                            broken = true;
-                        }
-
-                        tys.push(ty);
-                    } else {
-                        diagnostics.push(Diagnostic::error(*loc, "missing type".to_string()));
-
-                        broken = true;
-                    }
-                }
+            if ty.is_mapping() || ty.is_recursive(ns) {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!("Invalid type '{}': mappings and recursive types cannot be abi decoded or encoded", ty.to_string(ns))
+                ));
+                broken = true;
             }
-            _ => {
-                let ty = ns.resolve_type(
-                    context.file_no,
-                    context.contract_no,
-                    ResolveTypeContext::None,
-                    args[1].remove_parenthesis(),
-                    diagnostics,
-                )?;
 
-                if ty.is_mapping() || ty.is_recursive(ns) {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!("Invalid type '{}': mappings and recursive types cannot be abi decoded or encoded", ty.to_string(ns))
-                    ));
-                    broken = true;
-                }
-
-                tys.push(ty);
-            }
+            tys.push(ty);
         }
 
         return if broken {
@@ -1248,82 +1206,102 @@ pub(super) fn resolve_namespace_call(
             }
         }
         Builtin::AbiEncodeCall => {
+            if args.len() != 2 {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!("function expects {} arguments, {} provided", 2, args.len()),
+                ));
+
+                return Err(());
+            }
+
             // first argument is function
-            if let Some(function) = args_iter.next() {
-                let function = expression(
-                    function,
-                    context,
-                    ns,
-                    symtable,
-                    diagnostics,
-                    ResolveTo::Unknown,
-                )?;
+            let function = expression(
+                &args[0],
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            )?;
 
-                match function.ty() {
-                    Type::ExternalFunction { params, .. }
-                    | Type::InternalFunction { params, .. } => {
-                        resolved_args.push(function);
+            let ty = function.ty();
 
-                        if args.len() - 1 != params.len() {
-                            diagnostics.push(Diagnostic::error(
-                                *loc,
-                                format!(
-                                    "function takes {} arguments, {} provided",
-                                    params.len(),
-                                    args.len() - 1
-                                ),
-                            ));
+            match function.cast(&function.loc(), ty.deref_any(), true, ns, diagnostics)? {
+                Expression::ExternalFunction { function_no, .. }
+                | Expression::InternalFunction { function_no, .. } => {
+                    let func = &ns.functions[function_no];
 
-                            return Err(());
-                        }
-
-                        for (arg_no, arg) in args_iter.enumerate() {
-                            let mut expr = expression(
-                                arg,
-                                context,
-                                ns,
-                                symtable,
-                                diagnostics,
-                                ResolveTo::Type(&params[arg_no]),
-                            )?;
-
-                            expr = expr.cast(&arg.loc(), &params[arg_no], true, ns, diagnostics)?;
-
-                            // A string or hex literal should be encoded as a string
-                            if let Expression::BytesLiteral { .. } = &expr {
-                                expr =
-                                    expr.cast(&arg.loc(), &Type::String, true, ns, diagnostics)?;
-                            }
-
-                            resolved_args.push(expr);
-                        }
-
-                        return Ok(Expression::Builtin {
-                            loc: *loc,
-                            tys: vec![Type::DynamicBytes],
-                            kind: builtin,
-                            args: resolved_args,
-                        });
+                    if !func.is_public() {
+                        diagnostics.push(Diagnostic::error_with_note(
+                            function.loc(),
+                            "function is not public or external".into(),
+                            func.loc,
+                            format!("definition of {}", func.id.name),
+                        ));
                     }
-                    ty => {
-                        diagnostics.push(Diagnostic::error(
+
+                    let params = &func.params;
+
+                    resolved_args.push(function);
+
+                    let args = parameter_list_to_expr_list(&args[1], diagnostics)?;
+
+                    if args.len() != params.len() {
+                        diagnostics.push(Diagnostic::error_with_note(
                             *loc,
                             format!(
-                                "first argument should be function, got '{}'",
-                                ty.to_string(ns)
+                                "function takes {} arguments, {} provided",
+                                params.len(),
+                                args.len()
                             ),
+                            func.loc,
+                            format!("definition of {}", func.id.name),
                         ));
 
                         return Err(());
                     }
-                }
-            } else {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "least one function argument required".to_string(),
-                ));
 
-                return Err(());
+                    for (arg_no, arg) in args.iter().enumerate() {
+                        let ty = ns.functions[function_no].params[arg_no].ty.clone();
+
+                        let mut expr = expression(
+                            arg,
+                            context,
+                            ns,
+                            symtable,
+                            diagnostics,
+                            ResolveTo::Type(&ty),
+                        )?;
+
+                        expr = expr.cast(&arg.loc(), &ty, true, ns, diagnostics)?;
+
+                        // A string or hex literal should be encoded as a string
+                        if let Expression::BytesLiteral { .. } = &expr {
+                            expr = expr.cast(&arg.loc(), &Type::String, true, ns, diagnostics)?;
+                        }
+
+                        resolved_args.push(expr);
+                    }
+
+                    return Ok(Expression::Builtin {
+                        loc: *loc,
+                        tys: vec![Type::DynamicBytes],
+                        kind: builtin,
+                        args: resolved_args,
+                    });
+                }
+                expr => {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "first argument should be function, got '{}'",
+                            expr.ty().to_string(ns)
+                        ),
+                    ));
+
+                    return Err(());
+                }
             }
         }
         Builtin::AbiEncodeWithSignature => {

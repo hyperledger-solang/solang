@@ -322,6 +322,7 @@ fn encode_call() {
         r#"
         contract bar0 {
             bytes8 private constant SELECTOR = bytes8(sha256(bytes('global:test_bar')));
+            bytes8 private constant SELECTOR2 = bytes8(sha256(bytes('global:test_baz')));
 
             @account(bar1_pid)
             function test_other() external returns (int64) {
@@ -332,11 +333,24 @@ fn encode_call() {
                 (int64 v) = abi.decode(raw, (int64));
                 return v + 5;
             }
+
+            @account(bar1_pid)
+            function test_other2() external returns (int64) {
+                bytes select = abi.encodeWithSelector(SELECTOR2, int64(7), int64(5));
+                bytes signature = abi.encodeCall(bar1.test_baz, (7, 5));
+                require(select == signature, "must be the same");
+                (, bytes raw) = tx.accounts.bar1_pid.key.call{accounts: []}(signature);
+                (int64 v) = abi.decode(raw, (int64));
+                return v + 5;
+            }
         }
 
         contract bar1 {
             function test_bar(int64 y) public pure returns (int64) {
                 return 3 + y;
+            }
+            function test_baz(int64 y, int64 x) public pure returns (int64) {
+                return 3 + y + x;
             }
         }"#,
     );
@@ -385,6 +399,23 @@ fn encode_call() {
         BorshToken::Int {
             width: 64,
             value: BigInt::from(15u8)
+        }
+    );
+
+    let res = vm
+        .function("test_other2")
+        .accounts(vec![
+            ("bar1_pid", bar1_program_id),
+            ("systemProgram", [0; 32]),
+        ])
+        .call()
+        .unwrap();
+
+    assert_eq!(
+        res,
+        BorshToken::Int {
+            width: 64,
+            value: BigInt::from(20u8)
         }
     );
 }
