@@ -952,7 +952,7 @@ fn test_internal_function_cfg() {
       }
 
       function bar(uint b) public returns (uint) {
-        function(uint) returns (uint) fPtr = foo;
+        function (uint) returns (uint) fPtr = foo;
         return fPtr(b);
       }
     }"#;
@@ -963,9 +963,9 @@ fn test_internal_function_cfg() {
         r#"public function sol#4 A::A::function::bar__uint256 (uint256) returns (uint256):
 block#0 entry:
     uint256 %b = uint256(arg#0);
-    ptr<fn(uint256) -> (uint256)> %temp.ssa_ir.6 = function#0;
-    ptr<fn(uint256) -> (uint256)> %fPtr = (cast ptr<fn(uint256) -> (uint256)>(%temp.ssa_ir.6) to ptr<fn(uint256) -> (uint256)>);
-    uint256 %.temp.5 = call ptr<fn(uint256) -> (uint256)>(%fPtr)(uint256(%b));
+    ptr<function (uint256) returns (uint256)> %temp.ssa_ir.6 = function#0;
+    ptr<function (uint256) returns (uint256)> %fPtr = (cast ptr<function (uint256) returns (uint256)>(%temp.ssa_ir.6) to ptr<function (uint256) returns (uint256)>);
+    uint256 %.temp.5 = call ptr<function (uint256) returns (uint256)>(%fPtr)(uint256(%b));
     return uint256(%.temp.5);"#,
     )
 }

@@ -381,7 +381,7 @@ fn test_stringfy_call_insn() {
                 args: vec![num_literal!(3), identifier(133), num_literal!(6, 64)],
             }
         ),
-        "uint8 %temp.ssa_ir.1, uint64 %temp.ssa_ir.2, uint8 %temp.ssa_ir.3 = call ptr<fn(uint8, uint64, uint64) -> (uint8, uint64, uint8)>(%temp.ssa_ir.123)(uint8(3), uint64(%temp.ssa_ir.133), uint64(6));"
+        "uint8 %temp.ssa_ir.1, uint64 %temp.ssa_ir.2, uint8 %temp.ssa_ir.3 = call ptr<function (uint8, uint64, uint64) returns (uint8, uint64, uint8)>(%temp.ssa_ir.123)(uint8(3), uint64(%temp.ssa_ir.133), uint64(6));"
     );
 
     assert_eq!(

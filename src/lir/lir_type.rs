@@ -121,26 +121,21 @@ impl fmt::Display for Type {
             Type::Slice(ty) => write!(f, "slice<{}>", ty),
             Type::Struct(ty) => write!(f, "struct.{}", ty),
             Type::Function { params, returns } => {
-                write!(f, "fn(")?;
+                write!(f, "function (")?;
                 for (i, param) in params.iter().enumerate() {
                     if i != 0 {
                         write!(f, ", ")?;
                     }
                     write!(f, "{}", param)?;
                 }
-                write!(f, ")")?;
-                if !returns.is_empty() {
-                    write!(f, " -> (")?;
-                    for (i, ret) in returns.iter().enumerate() {
-                        if i != 0 {
-                            write!(f, ", ")?;
-                        }
-                        write!(f, "{}", ret)?;
+                write!(f, ") returns (")?;
+                for (i, ret) in returns.iter().enumerate() {
+                    if i != 0 {
+                        write!(f, ", ")?;
                     }
-                    write!(f, ")")?;
-                } else {
-                    write!(f, " -> ()")?;
+                    write!(f, "{}", ret)?;
                 }
+                write!(f, ")")?;
                 Ok(())
             }
             Type::Mapping { key_ty, value_ty } => {
