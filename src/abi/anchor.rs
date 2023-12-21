@@ -494,7 +494,7 @@ impl Deduplicate {
         }
     }
 
-    fn unique_name(&mut self, param: &Parameter) -> String {
+    fn unique_name(&mut self, param: &Parameter<Type>) -> String {
         if param.id.is_none() || param.id.as_ref().unwrap().name.is_empty() {
             self.try_prefix()
         } else {

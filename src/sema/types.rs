@@ -705,8 +705,8 @@ pub fn struct_decl(
     tags: &[DocComment],
     contract_no: Option<usize>,
     ns: &mut Namespace,
-) -> (Vec<Tag>, Vec<Parameter>) {
-    let mut fields: Vec<Parameter> = Vec::new();
+) -> (Vec<Tag>, Vec<Parameter<Type>>) {
+    let mut fields: Vec<Parameter<Type>> = Vec::new();
 
     for field in &def.fields {
         let mut diagnostics = Diagnostics::default();
@@ -805,8 +805,8 @@ fn event_decl(
     tags: &[DocComment],
     contract_no: Option<usize>,
     ns: &mut Namespace,
-) -> (Vec<Tag>, Vec<Parameter>) {
-    let mut fields: Vec<Parameter> = Vec::new();
+) -> (Vec<Tag>, Vec<Parameter<Type>>) {
+    let mut fields: Vec<Parameter<Type>> = Vec::new();
     let mut indexed_fields = 0;
 
     for field in &def.fields {
@@ -929,8 +929,8 @@ fn error_decl(
     tags: &[DocComment],
     contract_no: Option<usize>,
     ns: &mut Namespace,
-) -> (Vec<Tag>, Vec<Parameter>) {
-    let mut fields: Vec<Parameter> = Vec::new();
+) -> (Vec<Tag>, Vec<Parameter<Type>>) {
+    let mut fields: Vec<Parameter<Type>> = Vec::new();
 
     for field in &def.fields {
         let mut diagnostics = Diagnostics::default();

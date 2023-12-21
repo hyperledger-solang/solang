@@ -1330,7 +1330,7 @@ impl<'a> Builder<'a> {
     }
 
     // Constructs struct fields and stores it in the lookup table.
-    fn field(&mut self, id: usize, field_id: usize, field: &ast::Parameter) {
+    fn field(&mut self, id: usize, field_id: usize, field: &ast::Parameter<Type>) {
         if let Some(loc) = field.ty_loc {
             if let Some(dt) = get_type_definition(&field.ty) {
                 self.references.push((

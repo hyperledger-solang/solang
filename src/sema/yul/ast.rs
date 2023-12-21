@@ -46,7 +46,12 @@ pub enum YulExpression {
     ConstantVariable(pt::Loc, Type, Option<usize>, usize),
     StorageVariable(pt::Loc, Type, usize, usize),
     BuiltInCall(pt::Loc, YulBuiltInFunction, Vec<YulExpression>),
-    FunctionCall(pt::Loc, usize, Vec<YulExpression>, Arc<Vec<Parameter>>),
+    FunctionCall(
+        pt::Loc,
+        usize,
+        Vec<YulExpression>,
+        Arc<Vec<Parameter<Type>>>,
+    ),
     SuffixAccess(pt::Loc, Box<YulExpression>, YulSuffix),
 }
 
@@ -127,8 +132,8 @@ impl CodeLocation for YulExpression {
 pub struct YulFunction {
     pub loc: pt::Loc,
     pub name: String,
-    pub params: Arc<Vec<Parameter>>,
-    pub returns: Arc<Vec<Parameter>>,
+    pub params: Arc<Vec<Parameter<Type>>>,
+    pub returns: Arc<Vec<Parameter<Type>>>,
     pub body: YulBlock,
     pub symtable: Symtable,
     pub parent_sol_func: Option<usize>,
@@ -142,11 +147,11 @@ impl FunctionAttributes for YulFunction {
         &self.symtable
     }
 
-    fn get_parameters(&self) -> &Vec<Parameter> {
+    fn get_parameters(&self) -> &Vec<Parameter<Type>> {
         &self.params
     }
 
-    fn get_returns(&self) -> &Vec<Parameter> {
+    fn get_returns(&self) -> &Vec<Parameter<Type>> {
         &self.returns
     }
 }

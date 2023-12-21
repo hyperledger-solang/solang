@@ -54,7 +54,7 @@ impl Type {
 }
 
 pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
-    fn parameter_to_abi(param: &Parameter, ns: &Namespace) -> ABIParam {
+    fn parameter_to_abi(param: &Parameter<Type>, ns: &Namespace) -> ABIParam {
         let components = if let Some(n) = param.ty.is_struct_or_array_of_struct() {
             ns.structs[n]
                 .fields

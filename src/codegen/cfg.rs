@@ -407,8 +407,8 @@ pub struct BasicBlock {
 pub struct ControlFlowGraph {
     pub name: String,
     pub function_no: ASTFunction,
-    pub params: Arc<Vec<Parameter>>,
-    pub returns: Arc<Vec<Parameter>>,
+    pub params: Arc<Vec<Parameter<Type>>>,
+    pub returns: Arc<Vec<Parameter<Type>>>,
     pub vars: Vars,
     pub blocks: Vec<BasicBlock>,
     pub nonpayable: bool,

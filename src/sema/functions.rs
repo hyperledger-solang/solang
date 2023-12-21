@@ -847,7 +847,7 @@ pub fn resolve_params(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
-) -> (Vec<Parameter>, bool) {
+) -> (Vec<Parameter<Type>>, bool) {
     let mut params = Vec::new();
     let mut success = true;
 
@@ -986,7 +986,7 @@ pub fn resolve_returns(
     contract_no: Option<usize>,
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
-) -> (Vec<Parameter>, bool) {
+) -> (Vec<Parameter<Type>>, bool) {
     let mut resolved_returns = Vec::new();
     let mut success = true;
 

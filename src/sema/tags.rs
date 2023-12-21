@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::ast::{Diagnostic, Namespace, Parameter, Tag};
+use super::ast::{Diagnostic, Namespace, Parameter, Tag, Type};
 use solang_parser::{
     doccomment::{DocComment, DocCommentTag},
     pt,
@@ -12,8 +12,8 @@ pub fn resolve_tags(
     file_no: usize,
     ty: &str,
     tags: &[DocComment],
-    params: Option<&[Parameter]>,
-    returns: Option<&[Parameter]>,
+    params: Option<&[Parameter<Type>]>,
+    returns: Option<&[Parameter<Type>]>,
     bases: Option<Vec<usize>>,
     ns: &mut Namespace,
 ) -> Vec<Tag> {
