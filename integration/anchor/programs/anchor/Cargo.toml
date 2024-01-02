@@ -18,3 +18,5 @@ default = []
 [dependencies]
 anchor-lang = "0.29.0"
 solana-program = "1.16.1"
+# TODO: Remove once https://github.com/solana-labs/solana/issues/33504 is resolved.
+ahash = "=0.8.6"
