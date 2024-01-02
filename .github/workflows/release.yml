@@ -162,7 +162,7 @@ jobs:
       uses: actions/checkout@v3
     - run: |
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-        docker build . \
+        docker buildx build . \
           --push \
           --tag ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF/refs\/tags\//} \
           --label org.opencontainers.image.description="Solidity Compiler for Solana and Polkadot version $(git describe --tags)"
