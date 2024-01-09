@@ -860,7 +860,6 @@ fn log_api_call_return_values_works() {
             }
         }
         "#,
-        true,
         false,
     );
 
@@ -880,7 +879,6 @@ fn selector() {
             function f() public pure {}
             function x() public pure {}
         }"##,
-        false,
         true,
     );
 
@@ -1197,7 +1195,6 @@ fn try_catch_transfer_fail() {
 
         function foo() public pure {}
     }"#,
-        true,
         true,
     );
 

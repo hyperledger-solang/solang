@@ -34,12 +34,11 @@ mod tests {
             assert_eq!(compile_args.optimizations.opt_level.unwrap(), "aggressive");
         }
 
-        command = "solang compile flipper.sol --target polkadot --no-log-runtime-errors --no-prints --no-log-api-return-codes -g --release".split(' ').collect();
+        command = "solang compile flipper.sol --target polkadot --no-log-runtime-errors --no-prints -g --release".split(' ').collect();
         cli = Cli::parse_from(command);
 
         if let Commands::Compile(compile_args) = cli.command {
             assert!(compile_args.debug_features.generate_debug_info);
-            assert!(!compile_args.debug_features.log_api_return_codes);
             assert!(!compile_args.debug_features.log_prints);
             assert!(!compile_args.debug_features.log_runtime_errors);
             assert!(compile_args.debug_features.release);
@@ -201,7 +200,6 @@ mod tests {
                     value_length: None
                 },
                 debug_features: cli::DebugFeatures {
-                    log_api_return_codes: true,
                     log_runtime_errors: true,
                     log_prints: true,
                     generate_debug_info: false,
@@ -256,7 +254,6 @@ mod tests {
                     value_length: Some(31)
                 },
                 debug_features: cli::DebugFeatures {
-                    log_api_return_codes: true,
                     log_runtime_errors: true,
                     log_prints: true,
                     generate_debug_info: false,

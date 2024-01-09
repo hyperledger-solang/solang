@@ -23,7 +23,6 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
         common_subexpression_elimination: false,
         opt_level: OptimizationLevel::Default,
         generate_debug_information: false,
-        log_api_return_codes: false,
         log_runtime_errors: false,
         log_prints: true,
         #[cfg(feature = "wasm_opt")]

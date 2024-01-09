@@ -103,7 +103,6 @@ pub struct Options {
     pub common_subexpression_elimination: bool,
     pub generate_debug_information: bool,
     pub opt_level: OptimizationLevel,
-    pub log_api_return_codes: bool,
     pub log_runtime_errors: bool,
     pub log_prints: bool,
     #[cfg(feature = "wasm_opt")]
@@ -120,7 +119,6 @@ impl Default for Options {
             common_subexpression_elimination: true,
             generate_debug_information: false,
             opt_level: OptimizationLevel::Default,
-            log_api_return_codes: false,
             log_runtime_errors: false,
             log_prints: true,
             #[cfg(feature = "wasm_opt")]

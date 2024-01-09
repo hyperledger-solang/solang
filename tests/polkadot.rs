@@ -1024,14 +1024,14 @@ impl MockSubstrate {
 /// The mock runtime will contain a contract account for each contract in `src`.
 /// Constructors are _not_ called, therefore the storage will not be initialized.
 pub fn build_solidity(src: &str) -> MockSubstrate {
-    build_solidity_with_options(src, false, true)
+    build_solidity_with_options(src, true)
 }
 
 /// A variant of `MockSubstrate::uild_solidity()` with the ability to specify compiler options:
 /// * log_ret: enable logging of host function return codes
 /// * log_err: enable logging of runtime errors
-pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
-    let blobs = build_wasm(src, log_ret, log_err)
+pub fn build_solidity_with_options(src: &str, log_err: bool) -> MockSubstrate {
+    let blobs = build_wasm(src, log_err)
         .iter()
         .map(|(code, abi)| WasmCode::new(abi, code))
         .collect();
@@ -1039,7 +1039,7 @@ pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> M
     MockSubstrate(Store::new(&Engine::default(), Runtime::new(blobs)))
 }
 
-pub fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)> {
+pub fn build_wasm(src: &str, log_err: bool) -> Vec<(Vec<u8>, String)> {
     let tmp_file = OsStr::new("test.sol");
     let mut cache = FileResolver::default();
     cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
@@ -1051,7 +1051,6 @@ pub fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, Stri
         target,
         &Options {
             opt_level: opt.into(),
-            log_api_return_codes: log_ret,
             log_runtime_errors: log_err,
             log_prints: true,
             #[cfg(feature = "wasm_opt")]

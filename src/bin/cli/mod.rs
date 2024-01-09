@@ -180,10 +180,6 @@ impl Compile {
                 }
 
                 // DebugFeatures args
-                "NOLOGAPIRETURNS" => {
-                    self.debug_features.log_api_return_codes =
-                        *matches.get_one::<bool>("NOLOGAPIRETURNS").unwrap()
-                }
                 "NOLOGRUNTIMEERRORS" => {
                     self.debug_features.log_runtime_errors =
                         *matches.get_one::<bool>("NOLOGRUNTIMEERRORS").unwrap()
@@ -329,10 +325,6 @@ pub struct CompilePackage {
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
 pub struct DebugFeatures {
-    #[arg(name = "NOLOGAPIRETURNS", help = "Disable logging the return codes of runtime API calls in the environment", long = "no-log-api-return-codes", action = ArgAction::SetFalse)]
-    #[serde(default, rename(deserialize = "log-api-return-codes"))]
-    pub log_api_return_codes: bool,
-
     #[arg(name = "NOLOGRUNTIMEERRORS", help = "Disable logging runtime errors in the environment", long = "no-log-runtime-errors", action = ArgAction::SetFalse)]
     #[serde(default, rename(deserialize = "log-runtime-errors"))]
     pub log_runtime_errors: bool,
@@ -353,7 +345,6 @@ pub struct DebugFeatures {
 impl Default for DebugFeatures {
     fn default() -> Self {
         DebugFeatures {
-            log_api_return_codes: true,
             log_runtime_errors: true,
             log_prints: true,
             generate_debug_info: false,
@@ -575,7 +566,6 @@ pub fn options_arg(debug: &DebugFeatures, optimizations: &Optimizations) -> Opti
         common_subexpression_elimination: optimizations.common_subexpression_elimination,
         generate_debug_information: debug.generate_debug_info,
         opt_level,
-        log_api_return_codes: debug.log_api_return_codes && !debug.release,
         log_runtime_errors: debug.log_runtime_errors && !debug.release,
         log_prints: debug.log_prints && !debug.release,
         #[cfg(feature = "wasm_opt")]

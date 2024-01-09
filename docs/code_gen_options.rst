@@ -177,21 +177,6 @@ Print Function
 Solang provides a :ref:`print_function` which is enabled by default.
 The ``no-print`` flag will instruct the compiler not to log debugging prints in the environment.
 
-.. _no-log-api-return-codes:
-
-Log runtime API call results
-++++++++++++++++++++++++++++
-
-Runtime API calls are not guaranteed to succeed.
-By design, the low level results of these calls are abstracted away in Solidity.
-For development purposes, it can be desirable to observe the low level return code of such calls.
-The contract will print the return code of runtime calls by default, and this feature can be disabled by providing the 
-``--no-log-api-return-codes`` flag.
-
-.. note::
-
-    This is only implemented for the Polkadot target.
-
 
 .. _no-log-runtime-errors:
 

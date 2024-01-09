@@ -19,7 +19,6 @@ fn debug_buffer_format() {
         }
     "#,
         true,
-        true,
     );
 
     runtime.function("multiple_prints", [].to_vec());
