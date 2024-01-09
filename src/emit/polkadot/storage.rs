@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::emit::binary::Binary;
-use crate::emit::polkadot::{log_return_code, PolkadotTarget};
+use crate::emit::polkadot::PolkadotTarget;
 use crate::emit::storage::StorageSlot;
 use crate::emit::TargetRuntime;
 use crate::emit_context;
@@ -35,14 +35,12 @@ impl StorageSlot for PolkadotTarget {
                 .const_cast(binary.context.i32_type(), false)
         };
 
-        let ret = seal_set_storage!(
+        seal_set_storage!(
             slot.into(),
             i32_const!(32).into(),
             dest.into(),
             dest_size.into()
         );
-
-        log_return_code(binary, "seal_set_storage", ret);
     }
 
     fn get_storage_address<'a>(
@@ -66,9 +64,7 @@ impl StorageSlot for PolkadotTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
-
-        let exists = binary.builder.build_int_compare(
+        let condition = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -78,7 +74,7 @@ impl StorageSlot for PolkadotTarget {
         binary
             .builder
             .build_select(
-                exists,
+                condition,
                 binary
                     .builder
                     .build_load(binary.address_type(ns), scratch_buf, "address")
@@ -92,13 +88,11 @@ impl StorageSlot for PolkadotTarget {
     fn storage_delete_single_slot(&self, binary: &Binary, slot: PointerValue) {
         emit_context!(binary);
 
-        let ret = call!("clear_storage", &[slot.into(), i32_const!(32).into()])
+        call!("clear_storage", &[slot.into(), i32_const!(32).into()])
             .try_as_basic_value()
             .left()
             .unwrap()
             .into_int_value();
-
-        log_return_code(binary, "seal_clear_storage", ret);
     }
 
     fn storage_load_slot<'a>(

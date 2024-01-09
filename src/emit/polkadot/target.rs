@@ -4,7 +4,7 @@ use crate::codegen::cfg::HashTy;
 use crate::codegen::revert::PanicCode;
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
-use crate::emit::polkadot::{log_return_code, PolkadotTarget, SCRATCH_SIZE};
+use crate::emit::polkadot::{PolkadotTarget, SCRATCH_SIZE};
 use crate::emit::storage::StorageSlot;
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
 use crate::sema::ast;
@@ -30,7 +30,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     ) {
         emit_context!(binary);
 
-        let ret = seal_set_storage!(
+        seal_set_storage!(
             slot.into(),
             i32_const!(32).into(),
             dest.into(),
@@ -40,8 +40,6 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .const_cast(binary.context.i32_type(), false)
                 .into()
         );
-
-        log_return_code(binary, "seal_set_storage", ret);
     }
 
     fn get_storage_extfunc(
@@ -75,7 +73,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             binary.context.i64_type().const_int(len as u64, false),
         );
 
-        let ret = call!(
+        call!(
             "get_storage",
             &[
                 slot.into(),
@@ -88,8 +86,6 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         .left()
         .unwrap()
         .into_int_value();
-
-        log_return_code(binary, "seal_get_storage: ", ret);
 
         // TODO: decide behaviour if not exist
 
@@ -124,21 +120,17 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         binary.builder.position_at_end(set_block);
 
-        let ret = seal_set_storage!(slot.into(), i32_const!(32).into(), data.into(), len.into());
-
-        log_return_code(binary, "seal_set_storage", ret);
+        seal_set_storage!(slot.into(), i32_const!(32).into(), data.into(), len.into());
 
         binary.builder.build_unconditional_branch(done_storage);
 
         binary.builder.position_at_end(delete_block);
 
-        let ret = call!("clear_storage", &[slot.into(), i32_const!(32).into()])
+        call!("clear_storage", &[slot.into(), i32_const!(32).into()])
             .try_as_basic_value()
             .left()
             .unwrap()
             .into_int_value();
-
-        log_return_code(binary, "seal_clear_storage", ret);
 
         binary.builder.build_unconditional_branch(done_storage);
 
@@ -166,9 +158,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage: ", exists);
-
-        let exists = binary.builder.build_int_compare(
+        let condition = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -181,7 +171,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         binary
             .builder
-            .build_conditional_branch(exists, retrieve_block, done_storage);
+            .build_conditional_branch(condition, retrieve_block, done_storage);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -223,9 +213,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage: ", exists);
-
-        let exists = binary.builder.build_int_compare(
+        let condition = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -248,7 +236,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         binary
             .builder
-            .build_conditional_branch(exists, retrieve_block, done_storage);
+            .build_conditional_branch(condition, retrieve_block, done_storage);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -316,9 +304,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
-
-        let exists = binary.builder.build_int_compare(
+        let condition = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -328,7 +314,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         let length = binary
             .builder
             .build_select(
-                exists,
+                condition,
                 binary
                     .builder
                     .build_load(binary.context.i32_type(), scratch_len, "string_len"),
@@ -406,9 +392,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
-
-        let exists = binary.builder.build_int_compare(
+        let condition = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -418,7 +402,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         let length = binary
             .builder
             .build_select(
-                exists,
+                condition,
                 binary
                     .builder
                     .build_load(binary.context.i32_type(), scratch_len, "string_len"),
@@ -464,14 +448,12 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         // set the result
         binary.builder.build_store(offset, val);
 
-        let ret = seal_set_storage!(
+        seal_set_storage!(
             slot_ptr.into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             length.into()
         );
-
-        log_return_code(binary, "seal_set_storage", ret);
     }
 
     /// Push a byte onto a bytes string in storage
@@ -506,9 +488,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
-
-        let exists = binary.builder.build_int_compare(
+        let condition = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -518,7 +498,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         let length = binary
             .builder
             .build_select(
-                exists,
+                condition,
                 binary
                     .builder
                     .build_load(binary.context.i32_type(), scratch_len, "string_len"),
@@ -544,14 +524,12 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .builder
             .build_int_add(length, i32_const!(1), "new_length");
 
-        let ret = seal_set_storage!(
+        seal_set_storage!(
             slot_ptr.into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             length.into()
         );
-
-        log_return_code(binary, "seal_set_storage", ret);
 
         val
     }
@@ -585,9 +563,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
-
-        let exists = binary.builder.build_int_compare(
+        let condition = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -597,7 +573,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         let length = binary
             .builder
             .build_select(
-                exists,
+                condition,
                 binary
                     .builder
                     .build_load(binary.context.i32_type(), scratch_len, "string_len"),
@@ -657,14 +633,12 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             None
         };
 
-        let ret = seal_set_storage!(
+        seal_set_storage!(
             slot_ptr.into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             new_length.into()
         );
-
-        log_return_code(binary, "seal_set_storage", ret);
 
         val
     }
@@ -696,9 +670,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
-
-        let exists = binary.builder.build_int_compare(
+        let condition = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -708,7 +680,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         binary
             .builder
             .build_select(
-                exists,
+                condition,
                 binary
                     .builder
                     .build_load(binary.context.i32_type(), scratch_len, "string_len"),
@@ -789,13 +761,11 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
         emit_context!(binary);
 
-        let ret = call!("debug_message", &[string_ptr.into(), string_len.into()])
+        call!("debug_message", &[string_ptr.into(), string_len.into()])
             .try_as_basic_value()
             .left()
             .unwrap()
             .into_int_value();
-
-        log_return_code(binary, "seal_debug_message", ret);
     }
 
     fn create_contract<'b>(
@@ -830,7 +800,6 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .left()
                 .unwrap()
                 .into_int_value();
-            log_return_code(binary, "instantiation_nonce", nonce);
             let i256_t = binary.context.custom_width_int_type(256);
             binary
                 .builder
@@ -868,7 +837,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64 * 32));
 
-        let ret = call!(
+        *success.unwrap() = call!(
             "instantiate",
             &[
                 codehash.into(),
@@ -887,11 +856,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         .try_as_basic_value()
         .left()
         .unwrap()
-        .into_int_value();
-
-        log_return_code(binary, "seal_instantiate", ret);
-
-        *success.unwrap() = ret.into();
+        .into_int_value()
+        .into();
     }
 
     /// Call external binary
@@ -924,7 +890,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 binary
                     .builder
                     .build_store(value_ptr, contract_args.value.unwrap());
-                let ret = call!(
+                call!(
                     "seal_call",
                     &[
                         contract_args.flags.unwrap_or(i32_zero!()).into(),
@@ -940,9 +906,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .try_as_basic_value()
                 .left()
                 .unwrap()
-                .into_int_value();
-                log_return_code(binary, "seal_call", ret);
-                ret.as_basic_value_enum()
+                .into_int_value()
+                .as_basic_value_enum()
             }
             ast::CallTy::Delegate => {
                 // delegate_call asks for a code hash instead of an address
@@ -968,7 +933,6 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .left()
                 .unwrap()
                 .into_int_value();
-                log_return_code(binary, "seal_code_hash", code_hash_ret);
 
                 let code_hash_found = binary.builder.build_int_compare(
                     IntPredicate::EQ,
@@ -1011,7 +975,6 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .left()
                 .unwrap()
                 .into_int_value();
-                log_return_code(binary, "seal_delegate_call", delegate_call_ret);
                 binary.builder.build_unconditional_branch(done_block);
 
                 binary.builder.position_at_end(done_block);
@@ -1045,7 +1008,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         binary.builder.build_store(value_ptr, value);
 
         // do the actual call
-        let ret = call!(
+        *success.unwrap() = call!(
             "transfer",
             &[
                 address.into(),
@@ -1057,10 +1020,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         .try_as_basic_value()
         .left()
         .unwrap()
-        .into_int_value();
-
-        log_return_code(binary, "seal_transfer", ret);
-        *success.unwrap() = ret.into();
+        .into_int_value()
+        .into();
     }
 
     fn return_data<'b>(&self, binary: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {
@@ -1616,7 +1577,6 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 binary
                     .builder
                     .build_store(args[1].into_pointer_value(), ret);
-                log_return_code(binary, "seal_set_code_hash", ret);
                 None
             }
             _ => unimplemented!(),

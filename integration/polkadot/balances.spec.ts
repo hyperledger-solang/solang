@@ -3,6 +3,7 @@ import { weight, createConnection, deploy, transaction, aliceKeypair, daveKeypai
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
+
 describe('Deploy balances contract and test', () => {
     let conn: ApiPromise;
 
@@ -28,7 +29,10 @@ describe('Deploy balances contract and test', () => {
         let { output: contractRpcBal } = await query(conn, alice, contract, "getBalance");
         let { data: { free: contractQueryBalBefore } } = await conn.query.system.account(String(deploy_contract.address));
 
-        expect(contractRpcBal?.toString()).toBe(contractQueryBalBefore.toString());
+        // The "Existential Deposit" (aka. minimum balance) is part of the free balance;
+        // to get the actual free balance from a contracts point of view we substract it.
+        const ED = 1000000000n;
+        expect(contractRpcBal?.toString()).toBe((contractQueryBalBefore.toBigInt() - ED).toString());
 
         let gasLimit = await weight(conn, contract, "payMe", undefined, 1000000n);
         let tx = contract.tx.payMe({ gasLimit, value: 1000000n });
