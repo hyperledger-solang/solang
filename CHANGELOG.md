@@ -12,6 +12,7 @@ will be documented here.
 ### Changed
 - **BREAKING** The non-standard extension of concatenating strings using the `+` operator
   has been removed, use `string.concat()` instead. [seanyoung](https://github.com/seanyoung)
+- Removed the `--no-log-api-return-codes` compile flag as this is now done by the runtime [xermicus](https://github.com/xermicus)
 
 ## v0.3.3 Atlantis
 

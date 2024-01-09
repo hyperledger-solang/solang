@@ -68,7 +68,12 @@ async fn case() -> anyhow::Result<()> {
     let contract_after = free_balance_of(&api, deployed.contract_address.clone()).await?;
 
     assert_eq!(contract_after, 0);
-    assert_eq!(dave_after, dave_before + contract_before);
+
+    let existential_deposit = 1000000000;
+    assert_eq!(
+        dave_after,
+        dave_before + contract_before + existential_deposit
+    );
 
     Ok(())
 }
