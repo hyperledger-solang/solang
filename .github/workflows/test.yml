@@ -117,8 +117,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         submodules: recursive
-    - name: Rust stable
-      run: rustup default 1.72.0
+    - uses: dtolnay/rust-toolchain@1.72.0
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -232,10 +231,9 @@ jobs:
         name: solang-mac
         path: solang-mac
 
-  container-multiarch:
-    name: Multiarch Container Image
-    runs-on: linux-arm64
-    if: ${{ github.repository_owner == 'hyperledger' }}
+  container:
+    name: Container Image
+    runs-on: solang-ubuntu-latest
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -246,9 +244,7 @@ jobs:
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
         docker buildx build . \
           ${{steps.push.outputs.push}} \
-          --provenance=false \
           --tag ghcr.io/${GITHUB_REPOSITORY}:latest \
-          --platform linux/arm64,linux/amd64 \
           --label org.opencontainers.image.description="Solidity Compiler for Solana and Polkadot version $(git describe --tags)"
 
   anchor:
@@ -262,8 +258,7 @@ jobs:
     - uses: actions/setup-node@v3
       with:
         node-version: '16'
-    - name: Rust Stable
-      run: rustup default stable
+    - uses: dtolnay/rust-toolchain@1.72.0
     - name: Setup yarn
       run: npm install -g yarn
     - uses: actions/download-artifact@v3
@@ -314,8 +309,7 @@ jobs:
     - uses: actions/setup-node@v3
       with:
         node-version: '16'
-    - name: Rust Stable
-      run: rustup default stable
+    - uses: dtolnay/rust-toolchain@1.72.0
     - uses: actions/download-artifact@v3
       with:
         name: solang-linux-x86-64
