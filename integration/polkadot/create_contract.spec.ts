@@ -29,7 +29,6 @@ describe('Deploy create_contract contract and test', () => {
 
         let dry = await dry_run(conn, contract, "createChild");
         // Expect the instantiation nonce to be present
-        console.log(dry.debugMessage.toString());
         const current_nonce = dry.debugMessage.split('\n')[2].split('=');
         expect(current_nonce[0]).toContain("seal0::instantiation_nonce");
 
