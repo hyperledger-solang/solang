@@ -348,7 +348,7 @@ jobs:
       # We can't run substrate node as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate contracts node
-      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:054bef6 substrate-contracts-node --dev --rpc-external) >> $GITHUB_OUTPUT
+      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:ad6da01 substrate-contracts-node --dev --rpc-external) >> $GITHUB_OUTPUT
       id: substrate
     - uses: actions/download-artifact@v3
       with:
@@ -390,7 +390,7 @@ jobs:
       # We can't run substrate node as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate
-      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:054bef6 substrate-contracts-node --dev --rpc-external) >> $GITHUB_OUTPUT
+      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:ad6da01 substrate-contracts-node --dev --rpc-external) >> $GITHUB_OUTPUT
       id: substrate
     - uses: actions/download-artifact@v3
       with:
