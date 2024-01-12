@@ -64,7 +64,7 @@ impl StorageSlot for PolkadotTarget {
             scratch_len.into()
         );
 
-        let condition = binary.builder.build_int_compare(
+        let exists_is_zero = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -74,7 +74,7 @@ impl StorageSlot for PolkadotTarget {
         binary
             .builder
             .build_select(
-                condition,
+                exists_is_zero,
                 binary
                     .builder
                     .build_load(binary.address_type(ns), scratch_buf, "address")

@@ -3,7 +3,6 @@ import { weight, createConnection, deploy, transaction, aliceKeypair, daveKeypai
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
-
 describe('Deploy balances contract and test', () => {
     let conn: ApiPromise;
 

@@ -158,7 +158,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let condition = binary.builder.build_int_compare(
+        let exists_is_zero = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -171,7 +171,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         binary
             .builder
-            .build_conditional_branch(condition, retrieve_block, done_storage);
+            .build_conditional_branch(exists_is_zero, retrieve_block, done_storage);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -213,7 +213,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let condition = binary.builder.build_int_compare(
+        let exists_is_zero = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -236,7 +236,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         binary
             .builder
-            .build_conditional_branch(condition, retrieve_block, done_storage);
+            .build_conditional_branch(exists_is_zero, retrieve_block, done_storage);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -304,7 +304,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let condition = binary.builder.build_int_compare(
+        let exists_is_zero = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -314,7 +314,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         let length = binary
             .builder
             .build_select(
-                condition,
+                exists_is_zero,
                 binary
                     .builder
                     .build_load(binary.context.i32_type(), scratch_len, "string_len"),
@@ -392,7 +392,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let condition = binary.builder.build_int_compare(
+        let exists_is_zero = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -402,7 +402,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         let length = binary
             .builder
             .build_select(
-                condition,
+                exists_is_zero,
                 binary
                     .builder
                     .build_load(binary.context.i32_type(), scratch_len, "string_len"),
@@ -488,7 +488,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let condition = binary.builder.build_int_compare(
+        let exists_is_zero = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -498,7 +498,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         let length = binary
             .builder
             .build_select(
-                condition,
+                exists_is_zero,
                 binary
                     .builder
                     .build_load(binary.context.i32_type(), scratch_len, "string_len"),
@@ -563,7 +563,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let condition = binary.builder.build_int_compare(
+        let exists_is_zero = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -573,7 +573,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         let length = binary
             .builder
             .build_select(
-                condition,
+                exists_is_zero,
                 binary
                     .builder
                     .build_load(binary.context.i32_type(), scratch_len, "string_len"),
@@ -670,7 +670,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let condition = binary.builder.build_int_compare(
+        let exists_is_zero = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
             i32_zero!(),
@@ -680,7 +680,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         binary
             .builder
             .build_select(
-                condition,
+                exists_is_zero,
                 binary
                     .builder
                     .build_load(binary.context.i32_type(), scratch_len, "string_len"),
