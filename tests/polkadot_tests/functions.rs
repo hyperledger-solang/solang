@@ -621,7 +621,7 @@ fn virtual_function_member_access() {
         }"##;
 
     // The create function is the only one appearing in the metadata.
-    let abi = load_abi(&build_wasm(src, false, false)[0].1);
+    let abi = load_abi(&build_wasm(src, false)[0].1);
     let messages = abi.spec().messages();
     assert_eq!(messages.len(), 1);
     assert_eq!(messages[0].label(), "create");

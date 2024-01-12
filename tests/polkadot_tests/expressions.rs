@@ -942,7 +942,7 @@ fn test_power_overflow_boundaries() {
         }"#
         .replace("intN", &format!("int{width}"));
 
-        let mut contract = build_solidity_with_options(&src, false, false);
+        let mut contract = build_solidity_with_options(&src, false);
 
         let base = BigUint::from(2_u32);
         let mut base_data = base.to_bytes_le();
@@ -1123,7 +1123,7 @@ fn test_overflow_boundaries() {
             }
         }"#
         .replace("intN", &format!("int{width}"));
-        let mut contract = build_solidity_with_options(&src, false, false);
+        let mut contract = build_solidity_with_options(&src, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
         let upper_boundary = BigInt::from(2_u32).pow(width - 1).sub(1_u32);
@@ -1248,7 +1248,7 @@ fn test_overflow_detect_signed() {
             }
         }"#
         .replace("intN", &format!("int{width}"));
-        let mut contract = build_solidity_with_options(&src, false, false);
+        let mut contract = build_solidity_with_options(&src, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
         let limit = BigInt::from(2_u32).pow(width - 1).sub(1_u32);
@@ -1307,7 +1307,7 @@ fn test_overflow_detect_unsigned() {
             }
         }"#
         .replace("intN", &format!("int{width}"));
-        let mut contract = build_solidity_with_options(&src, false, false);
+        let mut contract = build_solidity_with_options(&src, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1].
         let limit = BigUint::from(2_u32).pow(width).sub(1_u32);
@@ -1660,7 +1660,6 @@ fn addition_overflow() {
         }
         "#,
         false,
-        false,
     );
 
     runtime.function_expect_failure("bar", Vec::new());
@@ -1684,7 +1683,6 @@ fn unchecked_addition_overflow() {
         }
         "#,
         false,
-        false,
     );
 
     runtime.function("bar", Vec::new());
@@ -1705,7 +1703,6 @@ fn subtraction_underflow() {
             }
         }
         "#,
-        false,
         false,
     );
 
@@ -1730,7 +1727,6 @@ fn unchecked_subtraction_underflow() {
         }
         "#,
         false,
-        false,
     );
 
     runtime.function("bar", Vec::new());
@@ -1751,7 +1747,6 @@ fn multiplication_overflow() {
             }
         }
         "#,
-        false,
         false,
     );
 
@@ -1775,7 +1770,6 @@ fn unchecked_multiplication_overflow() {
             }
         }
         "#,
-        false,
         false,
     );
 

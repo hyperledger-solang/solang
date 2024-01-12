@@ -412,7 +412,7 @@ pub async fn free_balance_of(api: &API, addr: AccountId32) -> anyhow::Result<u12
         .fetch_or_default(&key)
         .await?;
 
-    Ok(val.data.free)
+    Ok(val.data.free.saturating_sub(1000000000))
 }
 
 struct Contract {

@@ -19,16 +19,13 @@ fn debug_buffer_format() {
         }
     "#,
         true,
-        true,
     );
 
     runtime.function("multiple_prints", [].to_vec());
     assert_eq!(
         runtime.debug_buffer(),
         r#"print: Hello!,
-call: seal_debug_message=0,
 print: I call seal_debug_message under the hood!,
-call: seal_debug_message=0,
 "#
     );
 
@@ -36,11 +33,8 @@ call: seal_debug_message=0,
     assert_eq!(
         runtime.debug_buffer(),
         r#"print: Hello!,
-call: seal_debug_message=0,
 print: I call seal_debug_message under the hood!,
-call: seal_debug_message=0,
 runtime_error: sesa!!! revert encountered in test.sol:10:17-34,
-call: seal_debug_message=0,
 "#
     );
 }

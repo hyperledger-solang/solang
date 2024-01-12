@@ -6,7 +6,7 @@
   "scripts": {
     "test": "tsc; ts-mocha -t 20000 --exit *.spec.ts",
     "build": "./build.sh",
-    "build-ink": "docker run --rm -v $(pwd)/ink/caller:/opt/contract ghcr.io/hyperledger/solang-substrate-ci:054bef6 cargo contract build --release --manifest-path /opt/contract/Cargo.toml"
+    "build-ink": "docker run --rm -v $(pwd)/ink/caller:/opt/contract ghcr.io/hyperledger/solang-substrate-ci:ad6da01 cargo contract build --release --manifest-path /opt/contract/Cargo.toml"
   },
   "contributors": [
     {
@@ -30,11 +30,11 @@
     "typescript": "^4.7"
   },
   "dependencies": {
-    "@polkadot/api": "^10.9",
-    "@polkadot/api-contract": "^10.9",
-    "@polkadot/keyring": "^12.3",
-    "@polkadot/types": "^10.9",
-    "@polkadot/util-crypto": "^12.3",
+    "@polkadot/api": "^10.11",
+    "@polkadot/api-contract": "^10.11",
+    "@polkadot/keyring": "^12.6",
+    "@polkadot/types": "^10.11",
+    "@polkadot/util-crypto": "^12.6",
     "websnark": "git+https://github.com/tornadocash/websnark.git#4c0af6a8b65aabea3c09f377f63c44e7a58afa6d",
     "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#869181cfaf7526fe8972073d31655493a04326d5",
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",

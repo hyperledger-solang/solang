@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { weight, createConnection, deploy, transaction, aliceKeypair, query, } from './index';
+import { createConnection, deploy, aliceKeypair, query, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { daveKeypair } from './index';
 

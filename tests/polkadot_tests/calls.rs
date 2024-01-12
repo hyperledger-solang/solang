@@ -860,21 +860,12 @@ fn log_api_call_return_values_works() {
             }
         }
         "#,
-        true,
         false,
     );
 
     runtime.constructor(0, vec![]);
     runtime.function("test", vec![]);
-    assert_eq!(
-        &runtime.debug_buffer(),
-        r##"call: instantiation_nonce=2,
-call: seal_instantiate=0,
-print: hi!,
-call: seal_debug_message=0,
-call: seal_call=0,
-"##
-    );
+    assert_eq!(&runtime.debug_buffer(), "print: hi!,\n");
 }
 
 #[test]
@@ -888,7 +879,6 @@ fn selector() {
             function f() public pure {}
             function x() public pure {}
         }"##,
-        false,
         true,
     );
 
@@ -1188,6 +1178,7 @@ fn try_catch_transfer_fail() {
             ) {} catch Error(string x) {
                 return hex"41";
             } catch (bytes raw) {
+                print("caught raw exception data");
                 return raw;
             }
 
@@ -1205,13 +1196,11 @@ fn try_catch_transfer_fail() {
         function foo() public pure {}
     }"#,
         true,
-        true,
     );
 
     // Expect the contract to catch the reverting child constructor
     runtime.function("test", 0u128.encode());
     assert_eq!(runtime.output(), vec![0x41u8].encode());
-    assert!(runtime.debug_buffer().contains("seal_instantiate=2"));
 
     // Trying to instantiate with value while having insufficient funds result in
     // seal_instantiate failing with transfer failed (return code 5).
@@ -1219,7 +1208,7 @@ fn try_catch_transfer_fail() {
     // return data to be decoded.
     runtime.function("test", 1u128.encode());
     assert_eq!(runtime.output(), Vec::<u8>::new().encode());
-    assert!(runtime.debug_buffer().contains("seal_instantiate=5"));
+    assert!(runtime.debug_buffer().contains("caught raw exception data"));
 }
 
 #[test]

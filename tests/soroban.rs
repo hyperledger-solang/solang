@@ -27,7 +27,6 @@ pub fn build_solidity(src: &str) -> SorobanEnv {
         target,
         &Options {
             opt_level: opt.into(),
-            log_api_return_codes: false,
             log_runtime_errors: false,
             log_prints: true,
             #[cfg(feature = "wasm_opt")]

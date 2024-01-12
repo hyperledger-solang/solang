@@ -42,7 +42,7 @@ contract Mother {
     }
 }"#;
 
-    let solang_abi = load_abi(&build_wasm(src, false, false)[0].1);
+    let solang_abi = load_abi(&build_wasm(src, false)[0].1);
     let ink_str = std::fs::read_to_string("testdata/ink/mother.json").unwrap();
     let ink_abi: InkProject = serde_json::from_str(&ink_str).unwrap();
 
@@ -108,7 +108,7 @@ fn inherited_externally_callable_functions() {
     contract MyToken is ERC1155 {}
     "##;
 
-    let abi = load_abi(&build_wasm(src, false, false)[0].1);
+    let abi = load_abi(&build_wasm(src, false)[0].1);
     let messages = abi.spec().messages();
 
     assert_eq!(messages.len(), 1);
@@ -122,7 +122,7 @@ fn error_and_panic_in_lang_error() {
     let src = r##"
     contract Foo { uint public foo; }
     "##;
-    let abi = load_abi(&build_wasm(src, false, false)[0].1);
+    let abi = load_abi(&build_wasm(src, false)[0].1);
 
     // Find them in lang_error
     let (error_ty_id, panic_ty_id) = match &abi
@@ -183,7 +183,7 @@ fn custom_errors_in_metadata() {
         error Unauthorized();
         error ERC721InsufficientApproval(string operator, uint256 tokenId);
         contract VendingMachine { uint public foo; }"#;
-    let abi = load_abi(&build_wasm(src, false, false)[0].1);
+    let abi = load_abi(&build_wasm(src, false)[0].1);
 
     // Find them in lang_error
     let (error_ty_id, custom_ty_id, erc721_ty_id) = match &abi
