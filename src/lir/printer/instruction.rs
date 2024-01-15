@@ -448,7 +448,7 @@ impl Printer<'_> {
                 write!(f, ":").unwrap();
                 for (i, (cond, block)) in cases.iter().enumerate() {
                     if i != 0 {
-                        write!(f, ", ").unwrap();
+                        write!(f, ",").unwrap();
                     }
                     write!(f, "\n    case:    ").unwrap();
                     self.print_rhs_operand(f, cond);

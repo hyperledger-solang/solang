@@ -1763,7 +1763,6 @@ impl<'a, 'b> VmFunction<'a, 'b> {
             assert_eq!(offset, return_data.len());
             Ok(Some(decoded))
         } else {
-            assert_eq!(return_data.len(), 0);
             Ok(None)
         }
     }

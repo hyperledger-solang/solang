@@ -465,24 +465,68 @@ impl<'a> Dispatch<'a> {
 
         self.cfg.set_basic_block(fallback_block);
         if let Some(cfg_no) = fallback_cfg {
-            self.add(Instr::Call {
-                res: vec![],
-                return_tys: vec![],
-                call: InternalCallTy::Static { cfg_no },
-                args: vec![],
-            });
-            let data_len = Expression::NumberLiteral {
-                loc: Codegen,
-                ty: Uint(32),
-                value: 0.into(),
-            };
-            let data = Expression::AllocDynamicBytes {
-                loc: Codegen,
-                ty: Type::DynamicBytes,
-                size: data_len.clone().into(),
-                initializer: None,
-            };
-            self.add(Instr::ReturnData { data, data_len })
+            if self.all_cfg[cfg_no].params.is_empty() {
+                self.add(Instr::Call {
+                    res: vec![],
+                    return_tys: vec![],
+                    call: InternalCallTy::Static { cfg_no },
+                    args: vec![],
+                });
+                let data_len = Expression::NumberLiteral {
+                    loc: Codegen,
+                    ty: Uint(32),
+                    value: 0.into(),
+                };
+                let data = Expression::AllocDynamicBytes {
+                    loc: Codegen,
+                    ty: Type::DynamicBytes,
+                    size: data_len.clone().into(),
+                    initializer: None,
+                };
+                self.add(Instr::ReturnData { data, data_len })
+            } else {
+                let arg = Expression::FromBufferPointer {
+                    loc: Codegen,
+                    ty: Type::DynamicBytes,
+                    ptr: Expression::FunctionArg {
+                        loc: Codegen,
+                        ty: Type::BufferPointer,
+                        arg_no: 0,
+                    }
+                    .into(),
+                    size: Expression::Variable {
+                        loc: Codegen,
+                        ty: Type::Uint(32),
+                        var_no: self.input_len,
+                    }
+                    .into(),
+                };
+
+                let var_no = self
+                    .vartab
+                    .temp_name("fallback_return_data", &Type::DynamicBytes);
+
+                self.add(Instr::Call {
+                    res: vec![var_no],
+                    return_tys: vec![Type::DynamicBytes],
+                    call: InternalCallTy::Static { cfg_no },
+                    args: vec![arg],
+                });
+
+                let data = Expression::Variable {
+                    loc: Codegen,
+                    ty: Type::DynamicBytes,
+                    var_no,
+                };
+                let data_len = Expression::Builtin {
+                    loc: Codegen,
+                    tys: vec![Type::Uint(32)],
+                    kind: Builtin::ArrayLength,
+                    args: vec![data.clone()],
+                };
+
+                self.add(Instr::ReturnData { data, data_len });
+            }
         } else {
             self.selector_invalid();
         }

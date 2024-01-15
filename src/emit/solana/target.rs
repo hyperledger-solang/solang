@@ -2003,7 +2003,17 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     ) {
         binary.builder.build_call(
             binary.module.get_function("sol_set_return_data").unwrap(),
-            &[data.into(), data_len.into()],
+            &[
+                data.into(),
+                binary
+                    .builder
+                    .build_int_z_extend(
+                        data_len.into_int_value(),
+                        binary.context.i64_type(),
+                        "length",
+                    )
+                    .into(),
+            ],
             "",
         );
 

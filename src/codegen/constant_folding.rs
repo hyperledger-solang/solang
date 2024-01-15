@@ -642,6 +642,15 @@ fn expression(
             },
             false,
         ),
+        Expression::FromBufferPointer { loc, ty, ptr, size } => (
+            Expression::FromBufferPointer {
+                loc: *loc,
+                ty: ty.clone(),
+                ptr: Box::new(expression(ptr, vars, cfg, ns).0),
+                size: Box::new(expression(size, vars, cfg, ns).0),
+            },
+            false,
+        ),
 
         Expression::NumberLiteral { .. }
         | Expression::RationalNumberLiteral { .. }

@@ -36,13 +36,18 @@ pub fn contract_function(
     match func.ty {
         pt::FunctionTy::Function => {
             // Function name cannot be the same as the contract name
-            if let Some(n) = &func.name {
-                if n.name == ns.contracts[contract_no].id.name {
+            if let Some(id) = &func.name {
+                if id.name == ns.contracts[contract_no].id.name {
                     ns.diagnostics.push(Diagnostic::error(
                         func.loc_prototype,
                         "function cannot have same name as the contract".to_string(),
                     ));
                     return None;
+                } else if id.name == "fallback" || id.name == "receive" {
+                    ns.diagnostics.push(Diagnostic::warning(
+                        func.loc_prototype,
+                        format!("function named {} is not the {} function of the contract. Remove the function keyword to define the {} function", id.name, id.name, id.name),
+                    ));
                 }
             } else {
                 ns.diagnostics.push(Diagnostic::error(
@@ -70,20 +75,6 @@ pub fn contract_function(
             }
         }
         pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
-            if !func.returns.is_empty() {
-                ns.diagnostics.push(Diagnostic::error(
-                    func.loc_prototype,
-                    format!("{} function cannot have return values", func.ty),
-                ));
-                success = false;
-            }
-            if !func.params.is_empty() {
-                ns.diagnostics.push(Diagnostic::error(
-                    func.loc_prototype,
-                    format!("{} function cannot have parameters", func.ty),
-                ));
-                success = false;
-            }
             if func.name.is_some() {
                 ns.diagnostics.push(Diagnostic::error(
                     func.loc_prototype,
@@ -325,6 +316,45 @@ pub fn contract_function(
         ns,
         &mut diagnostics,
     );
+
+    if params_success && returns_success {
+        match func.ty {
+            pt::FunctionTy::Receive => {
+                if !returns.is_empty() {
+                    diagnostics.push(Diagnostic::error(
+                        func.loc_prototype,
+                        format!("{} function cannot have return values", func.ty),
+                    ));
+                    success = false;
+                }
+                if !params.is_empty() {
+                    diagnostics.push(Diagnostic::error(
+                        func.loc_prototype,
+                        format!("{} function cannot have parameters", func.ty),
+                    ));
+                    success = false;
+                }
+            }
+            pt::FunctionTy::Fallback => {
+                if returns.is_empty() && params.is_empty() {
+                    // fallback is allowed to have no parameters or returns
+                } else if returns.len() != 1
+                    || params.len() != 1
+                    || returns[0].ty != Type::DynamicBytes
+                    || params[0].ty != Type::DynamicBytes
+                {
+                    diagnostics.push(Diagnostic::error(
+                        func.loc_prototype,
+                        format!(
+                        "{} can be defined as \"fallback()\" or alternatively as \"fallback(bytes calldata) returns (bytes memory)\"",
+                        func.ty
+                    ),
+                    ));
+                }
+            }
+            _ => (),
+        }
+    }
 
     ns.diagnostics.extend(diagnostics);
 
@@ -592,15 +622,7 @@ pub fn contract_function(
                 return None;
             }
 
-            if fdecl.is_payable() {
-                if func.ty == pt::FunctionTy::Fallback {
-                    ns.diagnostics.push(Diagnostic::error(
-                    func.loc_prototype,
-                    format!("{} function must not be declare payable, use 'receive() external payable' instead", func.ty),
-                ));
-                    return None;
-                }
-            } else if func.ty == pt::FunctionTy::Receive {
+            if !fdecl.is_payable() && func.ty == pt::FunctionTy::Receive {
                 ns.diagnostics.push(Diagnostic::error(
                     func.loc_prototype,
                     format!("{} function must be declared payable", func.ty),
@@ -773,7 +795,16 @@ pub fn function(
     }
 
     let name = match &func.name {
-        Some(s) => s.to_owned(),
+        Some(id) => {
+            if id.name == "fallback" || id.name == "receive" {
+                ns.diagnostics.push(Diagnostic::warning(
+                    func.loc_prototype,
+                    format!("function named {} is not the {} function of the contract. Remove the function keyword to define the {} function", id.name, id.name, id.name),
+                ));
+            }
+
+            id.to_owned()
+        }
         None => {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc_prototype,

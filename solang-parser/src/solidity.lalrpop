@@ -194,6 +194,8 @@ SolIdentifier: Identifier = {
     <l:@L> "case" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "case".to_string()},
     <l:@L> "default" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "default".to_string()},
     <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
+    <l:@L> "fallback" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "fallback".to_string()},
+    <l:@L> "receive" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "receive".to_string()},
 }
 
 SolAnnotation: Identifier = {

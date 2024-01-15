@@ -366,7 +366,7 @@ fn test_for_loop() {
                         n /= 3;
                     }
                 }
-        
+
                 return State(n % uint64(State.StateCount));
             }
 		}"#;
@@ -778,7 +778,7 @@ fn test_array_type_dynamic_storage() {
     // read the example.sol file
     let src = r#"contract s {
         int64[] a;
-    
+
         function test() public {
             // push takes a single argument with the item to be added
             a.push(128);
@@ -884,8 +884,8 @@ block#0 entry:
     uint256 %y = 5;
     uint256 %temp.ssa_ir.3 = uint256(%x) & uint256(3);
     switch uint256(%temp.ssa_ir.3):
-    case:    uint256(0) => block#2, 
-    case:    uint256(1) => block#3, 
+    case:    uint256(0) => block#2,
+    case:    uint256(1) => block#3,
     case:    uint256(3) => block#4
     default: block#1;
 
@@ -1048,7 +1048,7 @@ fn test_account_meta() {
             AccountMeta[3] metas = [
                 AccountMeta({
                     pubkey: tx.accounts.data_account_to_initialize.key,
-                    is_signer: true, 
+                    is_signer: true,
                     is_writable: true}),
                 AccountMeta({
                     pubkey: tx.accounts.payer.key,
@@ -1059,7 +1059,7 @@ fn test_account_meta() {
                     is_writable: false,
                     is_signer: false})
             ];
-            Child.new{accounts: metas}();        
+            Child.new{accounts: metas}();
             Child.use_metas{accounts: []}();
         }
     }
@@ -1133,7 +1133,7 @@ block#0 entry:
     write_buf ptr<struct.vector<uint8>>(%abi_encoded.temp.18) offset:uint32(4) value:uint256(%a);
     uint32 %success.temp.17, uint8[32] %temp.16 = constructor(no: 5, contract_no:1) salt:_ value:_ gas:uint64(0) address:_ seeds:_ encoded-buffer:ptr<struct.vector<uint8>>(%abi_encoded.temp.18) accounts:absent
     switch uint32(%success.temp.17):
-    case:    uint32(0) => block#1, 
+    case:    uint32(0) => block#1,
     case:    uint32(2) => block#2
     default: block#3;
 
@@ -1356,12 +1356,12 @@ block#0 entry:
 fn test_compare() {
     let src = r#"contract example {
         int16 stored;
-    
+
         function func(int256 x) public {
             if (x < type(int16).min || x > type(int16).max) {
                 revert("value will not fit");
             }
-    
+
             stored = int16(x);
         }
     }
@@ -1489,7 +1489,7 @@ fn test_emit_event() {
     let src = r#"
     contract mytokenEvent {
         event Debugging(int b);
-    
+
         function test() public {
             emit Debugging(1);
         }
@@ -1545,5 +1545,24 @@ block#0 entry:
     bytes14 %a = bytes14(arg#0);
     bytes14 %temp.ssa_ir.2 = ~bytes14(%a);
     return bytes14(%temp.ssa_ir.2);"#,
+    )
+}
+
+#[test]
+fn test_fallback() {
+    let src = r#"contract Test {
+        function fallback(bytes calldata bs) external returns (bytes) {
+            return "x";
+        }
+    }"#;
+
+    assert_solana_lir_str_eq(
+        src,
+        0,
+        r#"public function sol#2 Test::Test::function::fallback__bytes (ptr<struct.vector<uint8>>) returns (ptr<struct.vector<uint8>>):
+block#0 entry:
+    ptr<struct.vector<uint8>> %bs = ptr<struct.vector<uint8>>(arg#0);
+    ptr<struct.vector<uint8>> %temp.ssa_ir.2 = alloc ptr<struct.vector<uint8>>[uint32(1)] {78};
+    return ptr<struct.vector<uint8>>(%temp.ssa_ir.2);"#,
     )
 }

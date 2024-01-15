@@ -126,8 +126,8 @@ pub(crate) fn function_dispatch(
         ],
     };
 
-    let argsdata = Expression::AdvancePointer {
-        pointer: Box::new(argsdata),
+    let argsdata_after_discriminator = Expression::AdvancePointer {
+        pointer: argsdata.clone().into(),
         bytes_offset: Box::new(Expression::NumberLiteral {
             loc: Loc::Codegen,
             ty: Type::Uint(32),
@@ -157,7 +157,7 @@ pub(crate) fn function_dispatch(
             add_function_dispatch_case(
                 cfg_no,
                 func_cfg,
-                &argsdata,
+                &argsdata_after_discriminator,
                 argslen.clone(),
                 contract_no,
                 ns,
@@ -168,7 +168,7 @@ pub(crate) fn function_dispatch(
             add_constructor_dispatch_case(
                 contract_no,
                 cfg_no,
-                &argsdata,
+                &argsdata_after_discriminator,
                 argslen.clone(),
                 func_cfg,
                 ns,
@@ -235,22 +235,57 @@ pub(crate) fn function_dispatch(
                 check_magic(ns.contracts[contract_no].selector(), &mut cfg, &mut vartab);
             }
 
-            cfg.add(
-                &mut vartab,
-                Instr::Call {
-                    res: vec![],
-                    return_tys: vec![],
-                    args: vec![],
-                    call: InternalCallTy::Static { cfg_no },
-                },
-            );
+            if all_cfg[cfg_no].params.len() == 1 {
+                let arg = Expression::FromBufferPointer {
+                    loc: Loc::Codegen,
+                    ty: Type::DynamicBytes,
+                    ptr: argsdata.into(),
+                    size: argslen.into(),
+                };
 
-            cfg.add(
-                &mut vartab,
-                Instr::ReturnCode {
-                    code: ReturnCode::Success,
-                },
-            );
+                let var_no = vartab.temp_name("fallback_return_data", &Type::DynamicBytes);
+
+                cfg.add(
+                    &mut vartab,
+                    Instr::Call {
+                        res: vec![var_no],
+                        return_tys: vec![Type::DynamicBytes],
+                        call: InternalCallTy::Static { cfg_no },
+                        args: vec![arg],
+                    },
+                );
+
+                let data = Expression::Variable {
+                    loc: Loc::Codegen,
+                    ty: Type::DynamicBytes,
+                    var_no,
+                };
+                let data_len = Expression::Builtin {
+                    loc: Loc::Codegen,
+                    tys: vec![Type::Uint(32)],
+                    kind: Builtin::ArrayLength,
+                    args: vec![data.clone()],
+                };
+
+                cfg.add(&mut vartab, Instr::ReturnData { data, data_len });
+            } else {
+                cfg.add(
+                    &mut vartab,
+                    Instr::Call {
+                        res: vec![],
+                        return_tys: vec![],
+                        args: vec![],
+                        call: InternalCallTy::Static { cfg_no },
+                    },
+                );
+
+                cfg.add(
+                    &mut vartab,
+                    Instr::ReturnCode {
+                        code: ReturnCode::Success,
+                    },
+                );
+            }
         }
         None => {
             cfg.add(

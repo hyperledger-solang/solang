@@ -5,8 +5,9 @@ contract test {
         bar = x;
     }
 
-    fallback() external {
+    fallback(bytes calldata input) external returns (bytes memory ret) {
         // execute if function selector does not match "foo(uint32)" and no value sent
+	ret = "testdata";
     }
 
     receive() external payable {

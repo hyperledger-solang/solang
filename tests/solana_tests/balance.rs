@@ -37,3 +37,38 @@ fn fallback() {
 
     assert_eq!(vm.logs, "fallback");
 }
+
+#[test]
+fn fallback_with_args() {
+    let mut vm = build_solidity(
+        r#"
+        contract c {
+            fallback(bytes input) external returns (bytes) {
+                return "secret";
+            }
+        }"#,
+    );
+
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    if let Some(idl) = &vm.stack[0].idl {
+        let mut idl = idl.clone();
+
+        idl.instructions.push(IdlInstruction {
+            name: "extinct".to_string(),
+            docs: None,
+            accounts: vec![],
+            args: vec![],
+            returns: None,
+        });
+
+        vm.stack[0].idl = Some(idl);
+    }
+
+    vm.function("extinct").call();
+
+    assert_eq!(vm.return_data.unwrap().1, b"secret");
+}

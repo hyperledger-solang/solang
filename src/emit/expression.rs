@@ -1428,6 +1428,25 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.vector_new(size, elem_size, initializer.as_ref()).into()
             }
         }
+        Expression::FromBufferPointer { ptr, size, .. } => {
+            let ptr = expression(target, bin, ptr, vartab, function, ns).into_pointer_value();
+            let elem_size = i32_const!(1);
+            let size = bin.builder.build_int_truncate(
+                expression(target, bin, size, vartab, function, ns).into_int_value(),
+                bin.context.i32_type(),
+                "",
+            );
+
+            bin.builder
+                .build_call(
+                    bin.module.get_function("vector_new").unwrap(),
+                    &[size.into(), elem_size.into(), ptr.into()],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+        }
         Expression::Builtin {
             kind: Builtin::ArrayLength,
             args,
