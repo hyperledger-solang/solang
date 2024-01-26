@@ -1,0 +1,1 @@
+ignore = ["solang-parser/src/solidity.rs"]

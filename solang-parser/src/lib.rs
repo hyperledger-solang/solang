@@ -19,15 +19,14 @@ pub mod pt;
 #[cfg(test)]
 mod tests;
 
+#[rustfmt::skip]
 #[allow(
     clippy::needless_lifetimes,
     clippy::type_complexity,
     clippy::ptr_arg,
     clippy::just_underscores_and_digits
 )]
-mod solidity {
-    include!(concat!(env!("OUT_DIR"), "/solidity.rs"));
-}
+mod solidity;
 
 /// Parses a Solidity file.
 pub fn parse(
