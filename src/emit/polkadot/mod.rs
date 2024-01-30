@@ -118,6 +118,7 @@ impl PolkadotTarget {
             "transfer",
             "is_contract",
             "set_code_hash",
+            "caller_is_root",
         ]);
 
         binary
@@ -266,6 +267,7 @@ impl PolkadotTarget {
         external!("deposit_event", void_type, u8_ptr, u32_val, u8_ptr, u32_val);
         external!("is_contract", i32_type, u8_ptr);
         external!("set_code_hash", i32_type, u8_ptr);
+        external!("caller_is_root", i32_type,);
     }
 
     /// Emits the "deploy" function if `storage_initializer` is `Some`, otherwise emits the "call" function.

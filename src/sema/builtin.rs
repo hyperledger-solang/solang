@@ -1826,6 +1826,33 @@ impl Namespace {
                 }],
                 self,
             ),
+            // caller_is_root API
+            Function::new(
+                loc,
+                loc,
+                pt::Identifier {
+                    name: "caller_is_root".to_string(),
+                    loc,
+                },
+                None,
+                Vec::new(),
+                pt::FunctionTy::Function,
+                Some(pt::Mutability::View(loc)),
+                pt::Visibility::Public(Some(loc)),
+                vec![],
+                vec![Parameter {
+                    loc,
+                    id: Some(identifier("caller_is_root")),
+                    ty: Type::Bool,
+                    ty_loc: Some(loc),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                    annotation: None,
+                }],
+                self,
+            ),
         ] {
             func.has_body = true;
             let func_no = self.functions.len();
