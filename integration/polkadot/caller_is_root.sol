@@ -1,7 +1,11 @@
 import "polkadot";
 
 contract CallerIsRoot {
-    function is_root() public view returns (bool) {
-        return caller_is_root();
+    uint64 public balance = 0;
+
+    function admin() public {
+        if (caller_is_root()) {
+            balance = 0xdeadbeef;
+        }
     }
 }
