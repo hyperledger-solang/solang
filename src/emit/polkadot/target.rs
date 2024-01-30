@@ -1501,7 +1501,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         _function: FunctionValue<'a>,
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
-        _first_arg_type: BasicTypeEnum,
+        _first_arg_type: Option<BasicTypeEnum>,
         ns: &Namespace,
     ) -> Option<BasicValueEnum<'a>> {
         emit_context!(binary);
@@ -1587,7 +1587,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                     .into_int_value();
                 binary
                     .builder
-                    .build_store(args[1].into_pointer_value(), is_root);
+                    .build_store(args[0].into_pointer_value(), is_root);
                 None
             }
             _ => unimplemented!(),

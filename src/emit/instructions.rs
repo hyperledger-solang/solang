@@ -519,10 +519,14 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 }
             }
 
-            let first_arg_type = bin.llvm_type(&args[0].ty(), ns);
-            if let Some(ret) =
-                target.builtin_function(bin, function, callee, &parms, first_arg_type, ns)
-            {
+            if let Some(ret) = target.builtin_function(
+                bin,
+                function,
+                callee,
+                &parms,
+                args.first().map(|arg| bin.llvm_type(&arg.ty(), ns)),
+                ns,
+            ) {
                 let success = bin.builder.build_int_compare(
                     IntPredicate::EQ,
                     ret.into_int_value(),

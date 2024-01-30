@@ -1251,9 +1251,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue<'a>,
         builtin_func: &ast::Function,
         args: &[BasicMetadataValueEnum<'a>],
-        first_arg_type: BasicTypeEnum,
+        first_arg_type: Option<BasicTypeEnum>,
         ns: &ast::Namespace,
     ) -> Option<BasicValueEnum<'a>> {
+        let first_arg_type =
+            first_arg_type.expect("solana does not have builtin without any parameter");
+
         if builtin_func.id.name == "create_program_address" {
             let func = binary
                 .module
