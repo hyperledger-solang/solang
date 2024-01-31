@@ -27,7 +27,7 @@ fn print_lir_str(src: &str, cfg_no: usize, target: Target) {
         ns.print_diagnostics_in_plain(&resolver, false);
     }
     codegen(&mut ns, &Default::default());
-    let contract = ns.contracts.first().unwrap();
+    let contract = ns.contracts.get(0).unwrap();
     let cfg = contract.cfg.get(cfg_no).unwrap();
 
     let converter = Converter::new(&ns, cfg);
@@ -47,7 +47,7 @@ fn assert_lir_str_eq_by_name(src: &str, cfg_name: &str, expected: &str, target: 
         ns.print_diagnostics_in_plain(&resolver, false);
     }
     codegen(&mut ns, &Default::default());
-    let contract = ns.contracts.first().unwrap();
+    let contract = ns.contracts.get(0).unwrap();
     let cfg = contract
         .cfg
         .iter()
@@ -84,7 +84,7 @@ fn assert_lir_str_eq(src: &str, cfg_no: usize, expected: &str, target: Target) {
         ns.print_diagnostics_in_plain(&resolver, false);
     }
     codegen(&mut ns, &Default::default());
-    let contract = ns.contracts.first().unwrap();
+    let contract = ns.contracts.get(0).unwrap();
     let cfg = contract.cfg.get(cfg_no).unwrap();
 
     let converter = Converter::new(&ns, cfg);
