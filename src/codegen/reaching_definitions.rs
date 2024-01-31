@@ -193,7 +193,7 @@ pub fn apply_transfers(transfers: &[Transfer], vars: &mut IndexMap<usize, IndexM
     for transfer in transfers {
         match transfer {
             Transfer::Kill { var_no } => {
-                vars.remove(var_no);
+                vars.swap_remove(var_no);
             }
             Transfer::Mod { var_no } => {
                 if let Some(entry) = vars.get_mut(var_no) {

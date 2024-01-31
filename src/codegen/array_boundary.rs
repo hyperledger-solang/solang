@@ -61,7 +61,7 @@ pub(crate) fn handle_array_assign(
                 cfg.array_lengths_temps.insert(pos, to_update);
             } else {
                 // If the right hand side doesn't have a temp, it must be a function parameter or a struct member.
-                cfg.array_lengths_temps.remove(&pos);
+                cfg.array_lengths_temps.swap_remove(&pos);
             }
         }
 

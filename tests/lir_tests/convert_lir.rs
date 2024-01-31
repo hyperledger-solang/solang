@@ -27,7 +27,7 @@ fn print_lir_str(src: &str, cfg_no: usize, target: Target) {
         ns.print_diagnostics_in_plain(&resolver, false);
     }
     codegen(&mut ns, &Default::default());
-    let contract = ns.contracts.get(0).unwrap();
+    let contract = ns.contracts.first().unwrap();
     let cfg = contract.cfg.get(cfg_no).unwrap();
 
     let converter = Converter::new(&ns, cfg);
@@ -47,7 +47,7 @@ fn assert_lir_str_eq_by_name(src: &str, cfg_name: &str, expected: &str, target: 
         ns.print_diagnostics_in_plain(&resolver, false);
     }
     codegen(&mut ns, &Default::default());
-    let contract = ns.contracts.get(0).unwrap();
+    let contract = ns.contracts.first().unwrap();
     let cfg = contract
         .cfg
         .iter()
@@ -84,7 +84,7 @@ fn assert_lir_str_eq(src: &str, cfg_no: usize, expected: &str, target: Target) {
         ns.print_diagnostics_in_plain(&resolver, false);
     }
     codegen(&mut ns, &Default::default());
-    let contract = ns.contracts.get(0).unwrap();
+    let contract = ns.contracts.first().unwrap();
     let cfg = contract.cfg.get(cfg_no).unwrap();
 
     let converter = Converter::new(&ns, cfg);
@@ -660,7 +660,7 @@ fn test_assertion_using_require() {
     assert_polkadot_lir_str_eq(
         src,
         0,
-        r#"public function sol#3 Test::Test::function::test__int32 (int32):
+        r#"public function sol#4 Test::Test::function::test__int32 (int32):
 block#0 entry:
     int32 %num = int32(arg#0);
     bool %temp.ssa_ir.1 = int32(%num) > int32(10);
@@ -690,7 +690,7 @@ fn test_call_1() {
     assert_polkadot_lir_str_eq(
         src,
         0,
-        r#"public function sol#3 Test::Test::function::test__int32 (int32):
+        r#"public function sol#4 Test::Test::function::test__int32 (int32):
 block#0 entry:
     int32 %num = int32(arg#0);
      = call function#1(int32(%num));
@@ -754,7 +754,7 @@ fn test_value_transfer() {
     assert_polkadot_lir_str_eq(
         src,
         0,
-        r#"public function sol#3 Test::Test::function::transfer__address_uint128 (uint8[32], uint128):
+        r#"public function sol#4 Test::Test::function::transfer__address_uint128 (uint8[32], uint128):
 block#0 entry:
     uint8[32] %addr = uint8[32](arg#0);
     uint128 %amount = uint128(arg#1);
@@ -928,7 +928,7 @@ fn test_keccak256() {
     assert_polkadot_lir_str_eq(
         src,
         0,
-        r#"public function sol#3 b::b::function::add__string_address (ptr<struct.vector<uint8>>, uint8[32]):
+        r#"public function sol#4 b::b::function::add__string_address (ptr<struct.vector<uint8>>, uint8[32]):
 block#0 entry:
     ptr<struct.vector<uint8>> %name = ptr<struct.vector<uint8>>(arg#0);
     uint8[32] %addr = uint8[32](arg#1);
@@ -960,7 +960,7 @@ fn test_internal_function_cfg() {
     assert_polkadot_lir_str_eq(
         src,
         1,
-        r#"public function sol#4 A::A::function::bar__uint256 (uint256) returns (uint256):
+        r#"public function sol#5 A::A::function::bar__uint256 (uint256) returns (uint256):
 block#0 entry:
     uint256 %b = uint256(arg#0);
     ptr<function (uint256) returns (uint256)> %temp.ssa_ir.6 = function#0;
@@ -1124,14 +1124,14 @@ fn test_constructor() {
     assert_polkadot_lir_str_eq(
         src,
         0,
-        r#"public function sol#3 B::B::function::test__uint256 (uint256):
+        r#"public function sol#4 B::B::function::test__uint256 (uint256):
 block#0 entry:
     uint256 %a = uint256(arg#0);
     ptr<struct.vector<uint8>> %abi_encoded.temp.18 = alloc ptr<struct.vector<uint8>>[uint32(36)];
     uint32 %temp.ssa_ir.20 = uint32 hex"58_16_c4_25";
     write_buf ptr<struct.vector<uint8>>(%abi_encoded.temp.18) offset:uint32(0) value:uint32(%temp.ssa_ir.20);
     write_buf ptr<struct.vector<uint8>>(%abi_encoded.temp.18) offset:uint32(4) value:uint256(%a);
-    uint32 %success.temp.17, uint8[32] %temp.16 = constructor(no: 5, contract_no:1) salt:_ value:_ gas:uint64(0) address:_ seeds:_ encoded-buffer:ptr<struct.vector<uint8>>(%abi_encoded.temp.18) accounts:absent
+    uint32 %success.temp.17, uint8[32] %temp.16 = constructor(no: 6, contract_no:1) salt:_ value:_ gas:uint64(0) address:_ seeds:_ encoded-buffer:ptr<struct.vector<uint8>>(%abi_encoded.temp.18) accounts:absent
     switch uint32(%success.temp.17):
     case:    uint32(0) => block#1, 
     case:    uint32(2) => block#2
