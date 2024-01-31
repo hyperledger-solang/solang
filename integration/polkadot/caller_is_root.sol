@@ -1,11 +1,13 @@
 import "polkadot";
 
 contract CallerIsRoot {
-    uint64 public balance = 0;
+    uint public balance;
 
-    function admin() public {
+    function covert() public payable {
         if (caller_is_root()) {
             balance = 0xdeadbeef;
+        } else {
+            balance = 1;
         }
     }
 }
