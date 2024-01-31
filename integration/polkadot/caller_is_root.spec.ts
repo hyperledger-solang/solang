@@ -20,22 +20,23 @@ describe('Deploy the caller_is_root contract and test it', () => {
         await conn.disconnect();
     });
 
-    it('is correct on a root caller', async function () {
+    it('is correct on a non-root caller', async function () {
         // Without sudo the caller should not be root
-        let gasLimit = await weight(conn, contract, "covert");
+        const gasLimit = await weight(conn, contract, "covert");
         await transaction(contract.tx.covert({ gasLimit }), alice);
 
         // Calling `covert` as non-root sets the balance to 1
-        let balance = await query(conn, alice, contract, "balance", []);
+        const balance = await query(conn, alice, contract, "balance", []);
         expect(BigInt(balance.output?.toString() ?? "")).toStrictEqual(1n);
+    });
 
-
+    it('is correct on a root caller', async function () {
         // Alice has sudo rights on --dev nodes
-        gasLimit = await weight(conn, contract, "covert");
+        const gasLimit = await weight(conn, contract, "covert");
         await transaction(conn.tx.sudo.sudo(contract.tx.covert({ gasLimit })), alice);
 
         // Calling `covert` as root sets the balance to 0xdeadbeef
-        balance = await query(conn, alice, contract, "balance", []);
+        const balance = await query(conn, alice, contract, "balance", []);
         expect(BigInt(balance.output?.toString() ?? "")).toStrictEqual(0xdeadbeefn);
     });
 });
