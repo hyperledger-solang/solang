@@ -343,6 +343,11 @@ is_contract(address AccountId) returns (bool)
 
 Only available on Polkadot. Checks whether the given address is a contract address.
 
+caller_is_root() returns (bool)
++++++++++++++++++++++++++++++++
+
+Only available on Polkadot. Returns true if the caller of the contract is `root <https://docs.substrate.io/build/origins/>`_.
+
 set_code_hash(uint8[32] hash) returns (uint32)
 ++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -845,3 +845,24 @@ fn set_code_hash() {
     runtime.function("count", vec![]);
     assert_eq!(runtime.output(), 1u32.encode());
 }
+
+#[test]
+fn caller_is_root() {
+    let mut runtime = build_solidity(
+        r#"
+        import { caller_is_root } from "polkadot";
+        contract Test {
+            function test() public view returns (bool) {
+                return caller_is_root();
+            }
+        }"#,
+    );
+
+    runtime.function("test", runtime.0.data().accounts[0].address.to_vec());
+    assert_eq!(runtime.output(), false.encode());
+
+    // Set the caller address to [0; 32] which is the mock VM root account
+    runtime.set_account_address(0, [0; 32]);
+    runtime.function("test", [0; 32].to_vec());
+    assert_eq!(runtime.output(), true.encode());
+}

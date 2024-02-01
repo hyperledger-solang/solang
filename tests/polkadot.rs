@@ -357,6 +357,8 @@ fn read_hash(mem: &[u8], ptr: u32) -> Hash {
 /// Host functions mock the original implementation, refer to the [pallet docs][1] for more information.
 ///
 /// [1]: https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/index.html
+///
+/// Address `[0; u8]` is considered the root account.
 #[wasm_host]
 impl Runtime {
     #[seal(0)]
@@ -788,6 +790,11 @@ impl Runtime {
     }
 
     #[seal(0)]
+    fn caller_is_root() -> Result<u32, Trap> {
+        Ok((vm.accounts[vm.caller_account].address == [0; 32]).into())
+    }
+
+    #[seal(0)]
     fn set_code_hash(code_hash_ptr: u32) -> Result<u32, Trap> {
         let hash = read_hash(mem, code_hash_ptr);
         if let Some(code) = vm.blobs.iter().find(|code| code.hash == hash) {
@@ -816,6 +823,11 @@ impl MockSubstrate {
         self.0.data_mut().transferred_value = 0;
 
         Ok(())
+    }
+
+    /// Overwrites the address at asssociated `account` index with the given `address`.
+    pub fn set_account_address(&mut self, account: usize, address: [u8; 32]) {
+        self.0.data_mut().accounts[account].address = address;
     }
 
     /// Specify the caller account index for the next function or constructor call.
