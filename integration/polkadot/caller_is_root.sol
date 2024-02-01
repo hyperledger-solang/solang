@@ -7,6 +7,7 @@ contract CallerIsRoot {
         if (caller_is_root()) {
             balance = 0xdeadbeef;
         } else {
+            print("burn more gas");
             balance = 1;
         }
     }
