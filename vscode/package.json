@@ -106,8 +106,8 @@
 	"devDependencies": {
 		"@types/glob": "^7.1.1",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^12.12.0",
-		"@types/node-fetch": "^2.5.8",
+		"@types/node": "^18.11.9",
+		"@types/node-fetch": "^2.6.11",
 		"@types/semver": "^7.3.8",
 		"@types/vscode": "^1.43.0 <1.69.0",
 		"@typescript-eslint/eslint-plugin": "^4.15.0",
@@ -116,7 +116,7 @@
 		"eslint": ">=7.0.0",
 		"glob": "^7.1.6",
 		"mocha": "^7.1.2",
-		"typescript": "^3.8.3"
+		"typescript": "^5.3.3"
 	},
 	"__metadata": {
 		"id": "3134b20d-911a-4418-a461-3f2380f4a1c2",

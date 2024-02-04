@@ -40,11 +40,13 @@ impl PolkadotTarget {
             None,
         );
 
-        binary.vector_init_empty = binary.builder.build_int_to_ptr(
-            binary.context.i32_type().const_all_ones(),
-            binary.context.i8_type().ptr_type(AddressSpace::default()),
-            "empty_vector",
-        );
+        let ptr = binary.context.i8_type().ptr_type(AddressSpace::default());
+
+        binary.vector_init_empty = binary
+            .context
+            .i32_type()
+            .const_all_ones()
+            .const_to_pointer(ptr);
         binary.set_early_value_aborts(contract, ns);
 
         let scratch_len = binary.module.add_global(
@@ -137,41 +139,51 @@ impl PolkadotTarget {
         // init our heap
         binary
             .builder
-            .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "");
+            .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "")
+            .unwrap();
 
         // Call the storage initializers on deploy
         if let Some(initializer) = storage_initializer {
-            binary.builder.build_call(initializer, &[], "");
+            binary.builder.build_call(initializer, &[], "").unwrap();
         }
 
         let scratch_buf = binary.scratch.unwrap().as_pointer_value();
         let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
         // copy arguments from input buffer
-        binary.builder.build_store(
-            scratch_len,
-            binary
-                .context
-                .i32_type()
-                .const_int(SCRATCH_SIZE as u64, false),
-        );
+        binary
+            .builder
+            .build_store(
+                scratch_len,
+                binary
+                    .context
+                    .i32_type()
+                    .const_int(SCRATCH_SIZE as u64, false),
+            )
+            .unwrap();
 
-        binary.builder.build_call(
-            binary.module.get_function("input").unwrap(),
-            &[scratch_buf.into(), scratch_len.into()],
-            "",
-        );
+        binary
+            .builder
+            .build_call(
+                binary.module.get_function("input").unwrap(),
+                &[scratch_buf.into(), scratch_len.into()],
+                "",
+            )
+            .unwrap();
 
-        let args_length =
-            binary
-                .builder
-                .build_load(binary.context.i32_type(), scratch_len, "input_len");
+        let args_length = binary
+            .builder
+            .build_load(binary.context.i32_type(), scratch_len, "input_len")
+            .unwrap();
 
         // store the length in case someone wants it via msg.data
-        binary.builder.build_store(
-            binary.calldata_len.as_pointer_value(),
-            args_length.into_int_value(),
-        );
+        binary
+            .builder
+            .build_store(
+                binary.calldata_len.as_pointer_value(),
+                args_length.into_int_value(),
+            )
+            .unwrap();
 
         (scratch_buf, args_length.into_int_value())
     }
@@ -296,8 +308,10 @@ impl PolkadotTarget {
             .unwrap_or(DispatchType::Call)
             .to_string();
         let cfg = bin.module.get_function(dispatch_cfg_name).unwrap();
-        bin.builder.build_call(cfg, &args, dispatch_cfg_name);
+        bin.builder
+            .build_call(cfg, &args, dispatch_cfg_name)
+            .unwrap();
 
-        bin.builder.build_unreachable();
+        bin.builder.build_unreachable().unwrap();
     }
 }

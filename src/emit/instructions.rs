@@ -38,7 +38,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         Instr::Nop => (),
         Instr::Return { value } if value.is_empty() && ns.target != Target::Soroban => {
             bin.builder
-                .build_return(Some(&bin.return_values[&ReturnCode::Success]));
+                .build_return(Some(&bin.return_values[&ReturnCode::Success]))
+                .unwrap();
         }
         Instr::Return { value } if ns.target != Target::Soroban => {
             let returns_offset = cfg.params.len();
@@ -46,19 +47,22 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
                 let retval = expression(target, bin, val, &w.vars, function, ns);
 
-                bin.builder.build_store(arg.into_pointer_value(), retval);
+                bin.builder
+                    .build_store(arg.into_pointer_value(), retval)
+                    .unwrap();
             }
 
             bin.builder
-                .build_return(Some(&bin.return_values[&ReturnCode::Success]));
+                .build_return(Some(&bin.return_values[&ReturnCode::Success]))
+                .unwrap();
         }
         Instr::Return { value } => match value.iter().next() {
             Some(val) => {
                 let retval = expression(target, bin, val, &w.vars, function, ns);
-                bin.builder.build_return(Some(&retval));
+                bin.builder.build_return(Some(&retval)).unwrap();
             }
             None => {
-                bin.builder.build_return(None);
+                bin.builder.build_return(None).unwrap();
             }
         },
         Instr::Set { res, expr, .. } => {
@@ -80,13 +84,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let bb = add_or_retrieve_block(*dest, pos, bin, function, blocks, work, w, cfg, ns);
 
             bin.builder.position_at_end(pos);
-            bin.builder.build_unconditional_branch(bb);
+            bin.builder.build_unconditional_branch(bb).unwrap();
         }
         Instr::Store { dest, data } => {
             let value_ref = expression(target, bin, data, &w.vars, function, ns);
             let dest_ref =
                 expression(target, bin, dest, &w.vars, function, ns).into_pointer_value();
-            bin.builder.build_store(dest_ref, value_ref);
+            bin.builder.build_store(dest_ref, value_ref).unwrap();
         }
         Instr::BranchCond {
             cond,
@@ -105,7 +109,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(pos);
             bin.builder
-                .build_conditional_branch(cond.into_int_value(), bb_true, bb_false);
+                .build_conditional_branch(cond.into_int_value(), bb_true, bb_false)
+                .unwrap();
         }
         Instr::LoadStorage { res, ty, storage } => {
             let mut slot = expression(target, bin, storage, &w.vars, function, ns).into_int_value();
@@ -188,9 +193,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap()
                 .const_cast(bin.context.i32_type(), false);
             let len = bin.vector_len(arr);
-            let new_len =
-                bin.builder
-                    .build_int_add(len, bin.context.i32_type().const_int(1, false), "");
+            let new_len = bin
+                .builder
+                .build_int_add(len, bin.context.i32_type().const_int(1, false), "")
+                .unwrap();
             let vec_size = bin
                 .module
                 .get_struct_type("struct.vector")
@@ -198,8 +204,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .size_of()
                 .unwrap()
                 .const_cast(bin.context.i32_type(), false);
-            let size = bin.builder.build_int_mul(elem_size, new_len, "");
-            let size = bin.builder.build_int_add(size, vec_size, "");
+            let size = bin.builder.build_int_mul(elem_size, new_len, "").unwrap();
+            let size = bin.builder.build_int_add(size, vec_size, "").unwrap();
 
             // Reallocate and reassign the array pointer
             let new = bin
@@ -209,6 +215,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     &[arr.into(), size.into()],
                     "",
                 )
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap()
@@ -217,16 +224,18 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             // Store the value into the last element
             let slot_ptr = unsafe {
-                bin.builder.build_gep(
-                    llvm_ty,
-                    new,
-                    &[
-                        bin.context.i32_type().const_zero(),
-                        bin.context.i32_type().const_int(2, false),
-                        bin.builder.build_int_mul(len, elem_size, ""),
-                    ],
-                    "data",
-                )
+                bin.builder
+                    .build_gep(
+                        llvm_ty,
+                        new,
+                        &[
+                            bin.context.i32_type().const_zero(),
+                            bin.context.i32_type().const_int(2, false),
+                            bin.builder.build_int_mul(len, elem_size, "").unwrap(),
+                        ],
+                        "data",
+                    )
+                    .unwrap()
             };
             let value = expression(target, bin, value, &w.vars, function, ns);
             let value = if elem_ty.is_fixed_reference_type(ns) {
@@ -234,38 +243,43 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 let load_ty = bin.llvm_type(&elem_ty, ns);
                 bin.builder
                     .build_load(load_ty, value.into_pointer_value(), "elem")
+                    .unwrap()
             } else {
                 w.vars.get_mut(res).unwrap().value = value;
                 value
             };
-            bin.builder.build_store(slot_ptr, value);
+            bin.builder.build_store(slot_ptr, value).unwrap();
 
             // Update the len and size field of the vector struct
             let len_ptr = unsafe {
-                bin.builder.build_gep(
-                    llvm_ty,
-                    new,
-                    &[
-                        bin.context.i32_type().const_zero(),
-                        bin.context.i32_type().const_zero(),
-                    ],
-                    "len",
-                )
+                bin.builder
+                    .build_gep(
+                        llvm_ty,
+                        new,
+                        &[
+                            bin.context.i32_type().const_zero(),
+                            bin.context.i32_type().const_zero(),
+                        ],
+                        "len",
+                    )
+                    .unwrap()
             };
-            bin.builder.build_store(len_ptr, new_len);
+            bin.builder.build_store(len_ptr, new_len).unwrap();
 
             let size_ptr = unsafe {
-                bin.builder.build_gep(
-                    llvm_ty,
-                    new,
-                    &[
-                        bin.context.i32_type().const_zero(),
-                        bin.context.i32_type().const_int(1, false),
-                    ],
-                    "size",
-                )
+                bin.builder
+                    .build_gep(
+                        llvm_ty,
+                        new,
+                        &[
+                            bin.context.i32_type().const_zero(),
+                            bin.context.i32_type().const_int(1, false),
+                        ],
+                        "size",
+                    )
+                    .unwrap()
             };
-            bin.builder.build_store(size_ptr, new_len);
+            bin.builder.build_store(size_ptr, new_len).unwrap();
         }
         Instr::PopMemory {
             res,
@@ -275,32 +289,39 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         } => {
             let a = w.vars[array].value.into_pointer_value();
             let len = unsafe {
-                bin.builder.build_gep(
-                    bin.module.get_struct_type("struct.vector").unwrap(),
-                    a,
-                    &[
-                        bin.context.i32_type().const_zero(),
-                        bin.context.i32_type().const_zero(),
-                    ],
-                    "a_len",
-                )
+                bin.builder
+                    .build_gep(
+                        bin.module.get_struct_type("struct.vector").unwrap(),
+                        a,
+                        &[
+                            bin.context.i32_type().const_zero(),
+                            bin.context.i32_type().const_zero(),
+                        ],
+                        "a_len",
+                    )
+                    .unwrap()
             };
             let len = bin
                 .builder
                 .build_load(bin.context.i32_type(), len, "a_len")
+                .unwrap()
                 .into_int_value();
 
             // First check if the array is empty
-            let is_array_empty = bin.builder.build_int_compare(
-                IntPredicate::EQ,
-                len,
-                bin.context.i32_type().const_zero(),
-                "is_array_empty",
-            );
+            let is_array_empty = bin
+                .builder
+                .build_int_compare(
+                    IntPredicate::EQ,
+                    len,
+                    bin.context.i32_type().const_zero(),
+                    "is_array_empty",
+                )
+                .unwrap();
             let error = bin.context.append_basic_block(function, "error");
             let pop = bin.context.append_basic_block(function, "pop");
             bin.builder
-                .build_conditional_branch(is_array_empty, error, pop);
+                .build_conditional_branch(is_array_empty, error, pop)
+                .unwrap();
 
             bin.builder.position_at_end(error);
             bin.log_runtime_error(target, "pop from empty array".to_string(), Some(*loc), ns);
@@ -318,9 +339,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .size_of()
                 .unwrap()
                 .const_cast(bin.context.i32_type(), false);
-            let new_len =
-                bin.builder
-                    .build_int_sub(len, bin.context.i32_type().const_int(1, false), "");
+            let new_len = bin
+                .builder
+                .build_int_sub(len, bin.context.i32_type().const_int(1, false), "")
+                .unwrap();
             let vec_size = bin
                 .module
                 .get_struct_type("struct.vector")
@@ -328,28 +350,31 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .size_of()
                 .unwrap()
                 .const_cast(bin.context.i32_type(), false);
-            let size = bin.builder.build_int_mul(elem_size, new_len, "");
-            let size = bin.builder.build_int_add(size, vec_size, "");
+            let size = bin.builder.build_int_mul(elem_size, new_len, "").unwrap();
+            let size = bin.builder.build_int_add(size, vec_size, "").unwrap();
 
             // Get the pointer to the last element and return it
             let slot_ptr = unsafe {
-                bin.builder.build_gep(
-                    bin.module.get_struct_type("struct.vector").unwrap(),
-                    a,
-                    &[
-                        bin.context.i32_type().const_zero(),
-                        bin.context.i32_type().const_int(2, false),
-                        bin.builder.build_int_mul(new_len, elem_size, ""),
-                    ],
-                    "data",
-                )
+                bin.builder
+                    .build_gep(
+                        bin.module.get_struct_type("struct.vector").unwrap(),
+                        a,
+                        &[
+                            bin.context.i32_type().const_zero(),
+                            bin.context.i32_type().const_int(2, false),
+                            bin.builder.build_int_mul(new_len, elem_size, "").unwrap(),
+                        ],
+                        "data",
+                    )
+                    .unwrap()
             };
             if elem_ty.is_fixed_reference_type(ns) {
                 w.vars.get_mut(res).unwrap().value = slot_ptr.into();
             } else {
                 let ret_val = bin
                     .builder
-                    .build_load(bin.llvm_type(&elem_ty, ns), slot_ptr, "");
+                    .build_load(bin.llvm_type(&elem_ty, ns), slot_ptr, "")
+                    .unwrap();
                 w.vars.get_mut(res).unwrap().value = ret_val;
             }
 
@@ -361,6 +386,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     &[a.into(), size.into()],
                     "",
                 )
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap()
@@ -369,30 +395,34 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             // Update the len and size field of the vector struct
             let len_ptr = unsafe {
-                bin.builder.build_gep(
-                    llvm_ty,
-                    new,
-                    &[
-                        bin.context.i32_type().const_zero(),
-                        bin.context.i32_type().const_zero(),
-                    ],
-                    "len",
-                )
+                bin.builder
+                    .build_gep(
+                        llvm_ty,
+                        new,
+                        &[
+                            bin.context.i32_type().const_zero(),
+                            bin.context.i32_type().const_zero(),
+                        ],
+                        "len",
+                    )
+                    .unwrap()
             };
-            bin.builder.build_store(len_ptr, new_len);
+            bin.builder.build_store(len_ptr, new_len).unwrap();
 
             let size_ptr = unsafe {
-                bin.builder.build_gep(
-                    llvm_ty,
-                    new,
-                    &[
-                        bin.context.i32_type().const_zero(),
-                        bin.context.i32_type().const_int(1, false),
-                    ],
-                    "size",
-                )
+                bin.builder
+                    .build_gep(
+                        llvm_ty,
+                        new,
+                        &[
+                            bin.context.i32_type().const_zero(),
+                            bin.context.i32_type().const_int(1, false),
+                        ],
+                        "size",
+                    )
+                    .unwrap()
             };
-            bin.builder.build_store(size_ptr, new_len);
+            bin.builder.build_store(size_ptr, new_len).unwrap();
         }
         Instr::AssertFailure { encoded_args: None } => {
             target.assert_failure(
@@ -439,6 +469,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     } else {
                         bin.builder
                             .build_alloca(bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
+                            .unwrap()
                             .into()
                     });
                 }
@@ -451,42 +482,52 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let ret = bin
                 .builder
                 .build_call(bin.functions[cfg_no], &parms, "")
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap();
 
-            let success = bin.builder.build_int_compare(
-                IntPredicate::EQ,
-                ret.into_int_value(),
-                bin.return_values[&ReturnCode::Success],
-                "success",
-            );
+            let success = bin
+                .builder
+                .build_int_compare(
+                    IntPredicate::EQ,
+                    ret.into_int_value(),
+                    bin.return_values[&ReturnCode::Success],
+                    "success",
+                )
+                .unwrap();
 
             let success_block = bin.context.append_basic_block(function, "success");
             let bail_block = bin.context.append_basic_block(function, "bail");
             bin.builder
-                .build_conditional_branch(success, success_block, bail_block);
+                .build_conditional_branch(success, success_block, bail_block)
+                .unwrap();
 
             bin.builder.position_at_end(bail_block);
 
-            bin.builder.build_return(Some(&ret));
+            bin.builder.build_return(Some(&ret)).unwrap();
             bin.builder.position_at_end(success_block);
 
             if !res.is_empty() {
                 for (i, v) in f.returns.iter().enumerate() {
                     let load_ty = bin.llvm_var_ty(&v.ty, ns);
-                    let val = bin.builder.build_load(
-                        load_ty,
-                        parms[args.len() + i].into_pointer_value(),
-                        v.name_as_str(),
-                    );
+                    let val = bin
+                        .builder
+                        .build_load(
+                            load_ty,
+                            parms[args.len() + i].into_pointer_value(),
+                            v.name_as_str(),
+                        )
+                        .unwrap();
                     let dest = w.vars[&res[i]].value;
 
                     if dest.is_pointer_value()
                         && !(v.ty.is_reference_type(ns)
                             || matches!(v.ty, Type::ExternalFunction { .. }))
                     {
-                        bin.builder.build_store(dest.into_pointer_value(), val);
+                        bin.builder
+                            .build_store(dest.into_pointer_value(), val)
+                            .unwrap();
                     } else {
                         w.vars.get_mut(&res[i]).unwrap().value = val;
                     }
@@ -514,6 +555,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     } else {
                         bin.builder
                             .build_alloca(bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
+                            .unwrap()
                             .into()
                     });
                 }
@@ -527,19 +569,23 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 args.first().map(|arg| bin.llvm_type(&arg.ty(), ns)),
                 ns,
             ) {
-                let success = bin.builder.build_int_compare(
-                    IntPredicate::EQ,
-                    ret.into_int_value(),
-                    bin.return_values[&ReturnCode::Success],
-                    "success",
-                );
+                let success = bin
+                    .builder
+                    .build_int_compare(
+                        IntPredicate::EQ,
+                        ret.into_int_value(),
+                        bin.return_values[&ReturnCode::Success],
+                        "success",
+                    )
+                    .unwrap();
                 let success_block = bin.context.append_basic_block(function, "success");
                 let bail_block = bin.context.append_basic_block(function, "bail");
                 bin.builder
-                    .build_conditional_branch(success, success_block, bail_block);
+                    .build_conditional_branch(success, success_block, bail_block)
+                    .unwrap();
 
                 bin.builder.position_at_end(bail_block);
-                bin.builder.build_return(Some(&ret));
+                bin.builder.build_return(Some(&ret)).unwrap();
 
                 bin.builder.position_at_end(success_block);
             }
@@ -553,11 +599,14 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     } else {
                         bin.llvm_type(&v.ty, ns)
                     };
-                    let val = bin.builder.build_load(
-                        load_ty,
-                        parms[args.len() + i].into_pointer_value(),
-                        v.name_as_str(),
-                    );
+                    let val = bin
+                        .builder
+                        .build_load(
+                            load_ty,
+                            parms[args.len() + i].into_pointer_value(),
+                            v.name_as_str(),
+                        )
+                        .unwrap();
 
                     let dest = w.vars[&res[i]].value;
 
@@ -565,7 +614,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                         && !(v.ty.is_reference_type(ns)
                             || matches!(v.ty, Type::ExternalFunction { .. }))
                     {
-                        bin.builder.build_store(dest.into_pointer_value(), val);
+                        bin.builder
+                            .build_store(dest.into_pointer_value(), val)
+                            .unwrap();
                     } else {
                         w.vars.get_mut(&res[i]).unwrap().value = val;
                     }
@@ -618,11 +669,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .i8_type()
                 .ptr_type(AddressSpace::default())
                 .const_null();
-            let is_ptr_nil =
-                bin.builder
-                    .build_int_compare(IntPredicate::EQ, nil_ptr, callable, "check_nil_ptr");
+            let is_ptr_nil = bin
+                .builder
+                .build_int_compare(IntPredicate::EQ, nil_ptr, callable, "check_nil_ptr")
+                .unwrap();
             bin.builder
-                .build_conditional_branch(is_ptr_nil, ptr_nil_block, ptr_ok);
+                .build_conditional_branch(is_ptr_nil, ptr_nil_block, ptr_ok)
+                .unwrap();
 
             bin.builder.position_at_end(ptr_nil_block);
             bin.log_runtime_error(
@@ -639,40 +692,46 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let ret = bin
                 .builder
                 .build_indirect_call(llvm_func, callable, &parms, "")
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap();
 
-            let success = bin.builder.build_int_compare(
-                IntPredicate::EQ,
-                ret.into_int_value(),
-                bin.return_values[&ReturnCode::Success],
-                "success",
-            );
+            let success = bin
+                .builder
+                .build_int_compare(
+                    IntPredicate::EQ,
+                    ret.into_int_value(),
+                    bin.return_values[&ReturnCode::Success],
+                    "success",
+                )
+                .unwrap();
 
             let success_block = bin.context.append_basic_block(function, "success");
             let bail_block = bin.context.append_basic_block(function, "bail");
             bin.builder
-                .build_conditional_branch(success, success_block, bail_block);
+                .build_conditional_branch(success, success_block, bail_block)
+                .unwrap();
 
             bin.builder.position_at_end(bail_block);
 
-            bin.builder.build_return(Some(&ret));
+            bin.builder.build_return(Some(&ret)).unwrap();
             bin.builder.position_at_end(success_block);
 
             if !res.is_empty() {
                 for (i, ty) in returns.iter().enumerate() {
                     let load_ty = bin.llvm_var_ty(ty, ns);
-                    let val = bin.builder.build_load(
-                        load_ty,
-                        parms[args.len() + i].into_pointer_value(),
-                        "",
-                    );
+                    let val = bin
+                        .builder
+                        .build_load(load_ty, parms[args.len() + i].into_pointer_value(), "")
+                        .unwrap();
 
                     let dest = w.vars[&res[i]].value;
 
                     if dest.is_pointer_value() && !ty.is_reference_type(ns) {
-                        bin.builder.build_store(dest.into_pointer_value(), val);
+                        bin.builder
+                            .build_store(dest.into_pointer_value(), val)
+                            .unwrap();
                     } else {
                         w.vars.get_mut(&res[i]).unwrap().value = val;
                     }
@@ -712,7 +771,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 let address =
                     expression(target, bin, address, &w.vars, function, ns).into_array_value();
 
-                bin.builder.build_store(address_stack, address);
+                bin.builder.build_store(address_stack, address).unwrap();
             }
 
             let seeds = if let Some(seeds) = seeds {
@@ -743,34 +802,38 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                             .unwrap();
 
                         let dest = unsafe {
-                            bin.builder.build_gep(
-                                seeds_ty,
-                                output_seeds,
-                                &[
-                                    bin.context.i32_type().const_int(i, false),
-                                    bin.context.i32_type().const_zero(),
-                                ],
-                                "dest",
-                            )
+                            bin.builder
+                                .build_gep(
+                                    seeds_ty,
+                                    output_seeds,
+                                    &[
+                                        bin.context.i32_type().const_int(i, false),
+                                        bin.context.i32_type().const_zero(),
+                                    ],
+                                    "dest",
+                                )
+                                .unwrap()
                         };
 
-                        bin.builder.build_store(dest, val);
+                        bin.builder.build_store(dest, val).unwrap();
 
                         let dest = unsafe {
-                            bin.builder.build_gep(
-                                seeds_ty,
-                                output_seeds,
-                                &[
-                                    bin.context.i32_type().const_int(i, false),
-                                    bin.context.i32_type().const_int(1, false),
-                                ],
-                                "dest",
-                            )
+                            bin.builder
+                                .build_gep(
+                                    seeds_ty,
+                                    output_seeds,
+                                    &[
+                                        bin.context.i32_type().const_int(i, false),
+                                        bin.context.i32_type().const_int(1, false),
+                                    ],
+                                    "dest",
+                                )
+                                .unwrap()
                         };
 
                         let val = bin.context.i64_type().const_int(seed_count, false);
 
-                        bin.builder.build_store(dest, val);
+                        bin.builder.build_store(dest, val).unwrap();
                     }
                 }
 
@@ -800,9 +863,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 *loc,
             );
 
-            w.vars.get_mut(res).unwrap().value =
-                bin.builder
-                    .build_load(bin.address_type(ns), address_stack, "address");
+            w.vars.get_mut(res).unwrap().value = bin
+                .builder
+                .build_load(bin.address_type(ns), address_stack, "address")
+                .unwrap();
         }
         Instr::ExternalCall {
             success,
@@ -834,7 +898,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     "address",
                 );
 
-                bin.builder.build_store(addr, address);
+                bin.builder.build_store(addr, address).unwrap();
 
                 Some(addr)
             } else {
@@ -904,7 +968,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let addr = bin.build_alloca(function, bin.address_type(ns), "address");
 
-            bin.builder.build_store(addr, address);
+            bin.builder.build_store(addr, address).unwrap();
             let success = match success {
                 Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
                 None => None,
@@ -936,6 +1000,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let start = unsafe {
                 bin.builder
                     .build_gep(bin.context.i8_type(), data, &[offset], "start")
+                    .unwrap()
             };
 
             let is_bytes = if let Type::Bytes(n) = value.ty().unwrap_user_type(ns) {
@@ -953,21 +1018,24 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     &format!("bytes{is_bytes}"),
                 );
                 bin.builder
-                    .build_store(value_ptr, emit_value.into_int_value());
-                bin.builder.build_call(
-                    bin.module.get_function("__leNtobeN").unwrap(),
-                    &[
-                        value_ptr.into(),
-                        start.into(),
-                        bin.context
-                            .i32_type()
-                            .const_int(is_bytes as u64, false)
-                            .into(),
-                    ],
-                    "",
-                );
+                    .build_store(value_ptr, emit_value.into_int_value())
+                    .unwrap();
+                bin.builder
+                    .build_call(
+                        bin.module.get_function("__leNtobeN").unwrap(),
+                        &[
+                            value_ptr.into(),
+                            start.into(),
+                            bin.context
+                                .i32_type()
+                                .const_int(is_bytes as u64, false)
+                                .into(),
+                        ],
+                        "",
+                    )
+                    .unwrap();
             } else {
-                bin.builder.build_store(start, emit_value);
+                bin.builder.build_store(start, emit_value).unwrap();
             }
         }
         Instr::MemCopy {
@@ -989,11 +1057,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let size = expression(target, bin, bytes, &w.vars, function, ns);
 
-            bin.builder.build_call(
-                bin.module.get_function("__memcpy").unwrap(),
-                &[dest.into(), src.into(), size.into()],
-                "",
-            );
+            bin.builder
+                .build_call(
+                    bin.module.get_function("__memcpy").unwrap(),
+                    &[dest.into(), src.into(), size.into()],
+                    "",
+                )
+                .unwrap();
         }
         Instr::Switch {
             cond,
@@ -1017,7 +1087,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 add_or_retrieve_block(*default, pos, bin, function, blocks, work, w, cfg, ns);
             bin.builder.position_at_end(pos);
             bin.builder
-                .build_switch(cond.into_int_value(), default_bb, cases.as_ref());
+                .build_switch(cond.into_int_value(), default_bb, cases.as_ref())
+                .unwrap();
         }
 
         Instr::ReturnData { data, data_len } => {

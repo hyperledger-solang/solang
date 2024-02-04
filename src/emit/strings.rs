@@ -62,7 +62,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     // will be hex encoded, so double
                     let len = bin.vector_len(val);
 
-                    bin.builder.build_int_add(len, len, "hex_len")
+                    bin.builder.build_int_add(len, len, "hex_len").unwrap()
                 }
                 Type::Uint(bits) if *spec == FormatArg::Hex => {
                     bin.context.i32_type().const_int(bits as u64 / 4 + 2, false)
@@ -91,7 +91,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
             }
         };
 
-        length = bin.builder.build_int_add(length, len, "");
+        length = bin.builder.build_int_add(length, len, "").unwrap();
     }
 
     // allocate the string and
@@ -109,15 +109,18 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                 let s = bin.emit_global_string("format_arg", value, true);
                 let len = bin.context.i32_type().const_int(value.len() as u64, false);
 
-                bin.builder.build_call(
-                    bin.module.get_function("__memcpy").unwrap(),
-                    &[output.into(), s.into(), len.into()],
-                    "",
-                );
+                bin.builder
+                    .build_call(
+                        bin.module.get_function("__memcpy").unwrap(),
+                        &[output.into(), s.into(), len.into()],
+                        "",
+                    )
+                    .unwrap();
 
                 output = unsafe {
                     bin.builder
                         .build_gep(bin.context.i8_type(), output, &[len], "")
+                        .unwrap()
                 };
             }
         } else {
@@ -135,62 +138,77 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             bin.context.i32_type().const_int(5, false),
                             "bool_length",
                         )
+                        .unwrap()
                         .into_int_value();
 
-                    let s = bin.builder.build_select(
-                        val.into_int_value(),
-                        bin.emit_global_string("bool_true", b"true", true),
-                        bin.emit_global_string("bool_false", b"false", true),
-                        "bool_value",
-                    );
+                    let s = bin
+                        .builder
+                        .build_select(
+                            val.into_int_value(),
+                            bin.emit_global_string("bool_true", b"true", true),
+                            bin.emit_global_string("bool_false", b"false", true),
+                            "bool_value",
+                        )
+                        .unwrap();
 
-                    bin.builder.build_call(
-                        bin.module.get_function("__memcpy").unwrap(),
-                        &[output.into(), s.into(), len.into()],
-                        "",
-                    );
+                    bin.builder
+                        .build_call(
+                            bin.module.get_function("__memcpy").unwrap(),
+                            &[output.into(), s.into(), len.into()],
+                            "",
+                        )
+                        .unwrap();
 
                     output = unsafe {
                         bin.builder
                             .build_gep(bin.context.i8_type(), output, &[len], "")
+                            .unwrap()
                     };
                 }
                 Type::String => {
                     let s = bin.vector_bytes(val);
                     let len = bin.vector_len(val);
 
-                    bin.builder.build_call(
-                        bin.module.get_function("__memcpy").unwrap(),
-                        &[output.into(), s.into(), len.into()],
-                        "",
-                    );
+                    bin.builder
+                        .build_call(
+                            bin.module.get_function("__memcpy").unwrap(),
+                            &[output.into(), s.into(), len.into()],
+                            "",
+                        )
+                        .unwrap();
 
                     output = unsafe {
                         bin.builder
                             .build_gep(bin.context.i8_type(), output, &[len], "")
+                            .unwrap()
                     };
                 }
                 Type::DynamicBytes => {
                     let s = bin.vector_bytes(val);
                     let len = bin.vector_len(val);
 
-                    bin.builder.build_call(
-                        bin.module.get_function("hex_encode").unwrap(),
-                        &[output.into(), s.into(), len.into()],
-                        "",
-                    );
+                    bin.builder
+                        .build_call(
+                            bin.module.get_function("hex_encode").unwrap(),
+                            &[output.into(), s.into(), len.into()],
+                            "",
+                        )
+                        .unwrap();
 
-                    let hex_len = bin.builder.build_int_add(len, len, "hex_len");
+                    let hex_len = bin.builder.build_int_add(len, len, "hex_len").unwrap();
 
                     output = unsafe {
                         bin.builder
                             .build_gep(bin.context.i8_type(), output, &[hex_len], "")
+                            .unwrap()
                     };
                 }
                 Type::Address(_) | Type::Contract(_) => {
                     // FIXME: For Polkadot we should encode in the SS58 format
                     let buf = bin.build_alloca(function, bin.address_type(ns), "address");
-                    bin.builder.build_store(buf, val.into_array_value());
+                    bin.builder
+                        .build_store(buf, val.into_array_value())
+                        .unwrap();
 
                     let len = bin
                         .context
@@ -203,20 +221,24 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             .context
                             .i32_type()
                             .const_int(calculated_len as u64, false);
-                        bin.builder.build_call(
-                            bin.module
-                                .get_function("base58_encode_solana_address")
-                                .unwrap(),
-                            &[buf.into(), len.into(), output.into(), base58_len.into()],
-                            "",
-                        );
+                        bin.builder
+                            .build_call(
+                                bin.module
+                                    .get_function("base58_encode_solana_address")
+                                    .unwrap(),
+                                &[buf.into(), len.into(), output.into(), base58_len.into()],
+                                "",
+                            )
+                            .unwrap();
                         base58_len
                     } else {
-                        bin.builder.build_call(
-                            bin.module.get_function("hex_encode").unwrap(),
-                            &[output.into(), buf.into(), len.into()],
-                            "",
-                        );
+                        bin.builder
+                            .build_call(
+                                bin.module.get_function("hex_encode").unwrap(),
+                                &[output.into(), buf.into(), len.into()],
+                                "",
+                            )
+                            .unwrap();
 
                         bin.context
                             .i32_type()
@@ -226,34 +248,41 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     output = unsafe {
                         bin.builder
                             .build_gep(bin.context.i8_type(), output, &[written_len], "")
+                            .unwrap()
                     };
                 }
                 Type::Bytes(size) => {
                     let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "bytesN");
 
-                    bin.builder.build_store(buf, val.into_int_value());
+                    bin.builder.build_store(buf, val.into_int_value()).unwrap();
 
                     let len = bin.context.i32_type().const_int(size as u64, false);
 
-                    bin.builder.build_call(
-                        bin.module.get_function("hex_encode_rev").unwrap(),
-                        &[output.into(), buf.into(), len.into()],
-                        "",
-                    );
+                    bin.builder
+                        .build_call(
+                            bin.module.get_function("hex_encode_rev").unwrap(),
+                            &[output.into(), buf.into(), len.into()],
+                            "",
+                        )
+                        .unwrap();
 
-                    let hex_len = bin.builder.build_int_add(len, len, "hex_len");
+                    let hex_len = bin.builder.build_int_add(len, len, "hex_len").unwrap();
 
                     output = unsafe {
                         bin.builder
                             .build_gep(bin.context.i8_type(), output, &[hex_len], "")
+                            .unwrap()
                     };
                 }
                 Type::Enum(_) => {
-                    let val = bin.builder.build_int_z_extend(
-                        val.into_int_value(),
-                        bin.context.i64_type(),
-                        "val_64bits",
-                    );
+                    let val = bin
+                        .builder
+                        .build_int_z_extend(
+                            val.into_int_value(),
+                            bin.context.i64_type(),
+                            "val_64bits",
+                        )
+                        .unwrap();
 
                     output = bin
                         .builder
@@ -262,6 +291,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             &[output.into(), val.into()],
                             "",
                         )
+                        .unwrap()
                         .try_as_basic_value()
                         .left()
                         .unwrap()
@@ -272,11 +302,13 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         let val = if bits == 64 {
                             val.into_int_value()
                         } else {
-                            bin.builder.build_int_z_extend(
-                                val.into_int_value(),
-                                bin.context.i64_type(),
-                                "val_64bits",
-                            )
+                            bin.builder
+                                .build_int_z_extend(
+                                    val.into_int_value(),
+                                    bin.context.i64_type(),
+                                    "val_64bits",
+                                )
+                                .unwrap()
                         };
 
                         output = bin
@@ -286,6 +318,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                                 &[output.into(), val.into()],
                                 "",
                             )
+                            .unwrap()
                             .try_as_basic_value()
                             .left()
                             .unwrap()
@@ -294,11 +327,13 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         let val = if bits == 128 {
                             val.into_int_value()
                         } else {
-                            bin.builder.build_int_z_extend(
-                                val.into_int_value(),
-                                bin.context.custom_width_int_type(128),
-                                "val_128bits",
-                            )
+                            bin.builder
+                                .build_int_z_extend(
+                                    val.into_int_value(),
+                                    bin.context.custom_width_int_type(128),
+                                    "val_128bits",
+                                )
+                                .unwrap()
                         };
 
                         output = bin
@@ -308,6 +343,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                                 &[output.into(), val.into()],
                                 "",
                             )
+                            .unwrap()
                             .try_as_basic_value()
                             .left()
                             .unwrap()
@@ -316,11 +352,13 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         let val = if bits == 256 {
                             val.into_int_value()
                         } else {
-                            bin.builder.build_int_z_extend(
-                                val.into_int_value(),
-                                bin.context.custom_width_int_type(256),
-                                "val_256bits",
-                            )
+                            bin.builder
+                                .build_int_z_extend(
+                                    val.into_int_value(),
+                                    bin.context.custom_width_int_type(256),
+                                    "val_256bits",
+                                )
+                                .unwrap()
                         };
 
                         let pval = bin.build_alloca(
@@ -329,7 +367,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             "int",
                         );
 
-                        bin.builder.build_store(pval, val);
+                        bin.builder.build_store(pval, val).unwrap();
 
                         output = bin
                             .builder
@@ -338,6 +376,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                                 &[output.into(), pval.into()],
                                 "",
                             )
+                            .unwrap()
                             .try_as_basic_value()
                             .left()
                             .unwrap()
@@ -345,7 +384,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     } else {
                         let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "uint");
 
-                        bin.builder.build_store(buf, val.into_int_value());
+                        bin.builder.build_store(buf, val.into_int_value()).unwrap();
 
                         let len = bin.context.i32_type().const_int(bits as u64 / 8, false);
 
@@ -362,6 +401,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                                 &[output.into(), buf.into(), len.into()],
                                 "",
                             )
+                            .unwrap()
                             .try_as_basic_value()
                             .left()
                             .unwrap()
@@ -371,40 +411,46 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                 Type::Int(bits) => {
                     let val = val.into_int_value();
 
-                    let is_negative = bin.builder.build_int_compare(
-                        IntPredicate::SLT,
-                        val,
-                        val.get_type().const_zero(),
-                        "negative",
-                    );
+                    let is_negative = bin
+                        .builder
+                        .build_int_compare(
+                            IntPredicate::SLT,
+                            val,
+                            val.get_type().const_zero(),
+                            "negative",
+                        )
+                        .unwrap();
 
                     let entry = bin.builder.get_insert_block().unwrap();
                     let positive = bin.context.append_basic_block(function, "int_positive");
                     let negative = bin.context.append_basic_block(function, "int_negative");
 
                     bin.builder
-                        .build_conditional_branch(is_negative, negative, positive);
+                        .build_conditional_branch(is_negative, negative, positive)
+                        .unwrap();
 
                     bin.builder.position_at_end(negative);
 
                     // add "-" to output and negate our val
                     bin.builder
-                        .build_store(output, bin.context.i8_type().const_int('-' as u64, false));
+                        .build_store(output, bin.context.i8_type().const_int('-' as u64, false))
+                        .unwrap();
 
                     let minus_len = bin.context.i32_type().const_int(1, false);
 
                     let neg_data = unsafe {
                         bin.builder
                             .build_gep(bin.context.i8_type(), output, &[minus_len], "")
+                            .unwrap()
                     };
-                    let neg_val = bin.builder.build_int_neg(val, "negative_int");
+                    let neg_val = bin.builder.build_int_neg(val, "negative_int").unwrap();
 
-                    bin.builder.build_unconditional_branch(positive);
+                    bin.builder.build_unconditional_branch(positive).unwrap();
 
                     bin.builder.position_at_end(positive);
 
-                    let data_phi = bin.builder.build_phi(output.get_type(), "data");
-                    let val_phi = bin.builder.build_phi(val.get_type(), "val");
+                    let data_phi = bin.builder.build_phi(output.get_type(), "data").unwrap();
+                    let val_phi = bin.builder.build_phi(val.get_type(), "val").unwrap();
 
                     data_phi.add_incoming(&[(&neg_data, negative), (&output, entry)]);
                     val_phi.add_incoming(&[(&neg_val, negative), (&val, entry)]);
@@ -413,11 +459,13 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         let val = if bits == 64 {
                             val_phi.as_basic_value().into_int_value()
                         } else {
-                            bin.builder.build_int_z_extend(
-                                val_phi.as_basic_value().into_int_value(),
-                                bin.context.i64_type(),
-                                "val_64bits",
-                            )
+                            bin.builder
+                                .build_int_z_extend(
+                                    val_phi.as_basic_value().into_int_value(),
+                                    bin.context.i64_type(),
+                                    "val_64bits",
+                                )
+                                .unwrap()
                         };
 
                         let output_after_minus = data_phi.as_basic_value().into_pointer_value();
@@ -429,6 +477,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                                 &[output_after_minus.into(), val.into()],
                                 "",
                             )
+                            .unwrap()
                             .try_as_basic_value()
                             .left()
                             .unwrap()
@@ -437,11 +486,13 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         let val = if bits == 128 {
                             val_phi.as_basic_value().into_int_value()
                         } else {
-                            bin.builder.build_int_z_extend(
-                                val_phi.as_basic_value().into_int_value(),
-                                bin.context.custom_width_int_type(128),
-                                "val_128bits",
-                            )
+                            bin.builder
+                                .build_int_z_extend(
+                                    val_phi.as_basic_value().into_int_value(),
+                                    bin.context.custom_width_int_type(128),
+                                    "val_128bits",
+                                )
+                                .unwrap()
                         };
 
                         let output_after_minus = data_phi.as_basic_value().into_pointer_value();
@@ -453,6 +504,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                                 &[output_after_minus.into(), val.into()],
                                 "",
                             )
+                            .unwrap()
                             .try_as_basic_value()
                             .left()
                             .unwrap()
@@ -461,11 +513,13 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         let val = if bits == 256 {
                             val_phi.as_basic_value().into_int_value()
                         } else {
-                            bin.builder.build_int_z_extend(
-                                val_phi.as_basic_value().into_int_value(),
-                                bin.context.custom_width_int_type(256),
-                                "val_256bits",
-                            )
+                            bin.builder
+                                .build_int_z_extend(
+                                    val_phi.as_basic_value().into_int_value(),
+                                    bin.context.custom_width_int_type(256),
+                                    "val_256bits",
+                                )
+                                .unwrap()
                         };
 
                         let pval = bin.build_alloca(
@@ -474,7 +528,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             "int",
                         );
 
-                        bin.builder.build_store(pval, val);
+                        bin.builder.build_store(pval, val).unwrap();
 
                         let output_after_minus = data_phi.as_basic_value().into_pointer_value();
 
@@ -485,6 +539,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                                 &[output_after_minus.into(), pval.into()],
                                 "",
                             )
+                            .unwrap()
                             .try_as_basic_value()
                             .left()
                             .unwrap()
@@ -493,7 +548,8 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "int");
 
                         bin.builder
-                            .build_store(buf, val_phi.as_basic_value().into_int_value());
+                            .build_store(buf, val_phi.as_basic_value().into_int_value())
+                            .unwrap();
 
                         let len = bin.context.i32_type().const_int(bits as u64 / 8, false);
 
@@ -512,6 +568,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                                 &[output_after_minus.into(), buf.into(), len.into()],
                                 "",
                             )
+                            .unwrap()
                             .try_as_basic_value()
                             .left()
                             .unwrap()
@@ -524,27 +581,34 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
     }
 
     // write the final length into the vector
-    let length = bin.builder.build_int_sub(
-        bin.builder
-            .build_ptr_to_int(output, bin.context.i32_type(), "end"),
-        bin.builder
-            .build_ptr_to_int(output_start, bin.context.i32_type(), "begin"),
-        "datalength",
-    );
+    let length = bin
+        .builder
+        .build_int_sub(
+            bin.builder
+                .build_ptr_to_int(output, bin.context.i32_type(), "end")
+                .unwrap(),
+            bin.builder
+                .build_ptr_to_int(output_start, bin.context.i32_type(), "begin")
+                .unwrap(),
+            "datalength",
+        )
+        .unwrap();
 
     let data_len = unsafe {
-        bin.builder.build_gep(
-            bin.module.get_struct_type("struct.vector").unwrap(),
-            vector,
-            &[
-                bin.context.i32_type().const_zero(),
-                bin.context.i32_type().const_zero(),
-            ],
-            "data_len",
-        )
+        bin.builder
+            .build_gep(
+                bin.module.get_struct_type("struct.vector").unwrap(),
+                vector,
+                &[
+                    bin.context.i32_type().const_zero(),
+                    bin.context.i32_type().const_zero(),
+                ],
+                "data_len",
+            )
+            .unwrap()
     };
 
-    bin.builder.build_store(data_len, length);
+    bin.builder.build_store(data_len, length).unwrap();
 
     vector.into()
 }
