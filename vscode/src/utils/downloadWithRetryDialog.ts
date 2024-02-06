@@ -5,7 +5,7 @@ export default async function downloadWithRetryDialog<T>(downloadFunc: () => Pro
   while (true) {
     try {
       return await downloadFunc();
-    } catch (e) {
+    } catch (e: any) {
       const selected = await vscode.window.showErrorMessage(
         'Failed to download: ' + e.message,
         {},

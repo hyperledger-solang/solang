@@ -28,7 +28,10 @@ impl<'a> LoopBuilder<'a> {
         let body_block = binary.context.append_basic_block(function, "body");
         let done_block = binary.context.append_basic_block(function, "done");
 
-        binary.builder.build_unconditional_branch(condition_block);
+        binary
+            .builder
+            .build_unconditional_branch(condition_block)
+            .unwrap();
 
         binary.builder.position_at_end(condition_block);
 
@@ -53,7 +56,7 @@ impl<'a> LoopBuilder<'a> {
         ty: T,
         initial_value: BasicValueEnum<'a>,
     ) -> BasicValueEnum<'a> {
-        let phi = binary.builder.build_phi(ty, name);
+        let phi = binary.builder.build_phi(ty, name).unwrap();
 
         phi.add_incoming(&[(&initial_value, self.entry_block)]);
 
@@ -74,22 +77,24 @@ impl<'a> LoopBuilder<'a> {
         to: IntValue<'a>,
     ) -> IntValue<'a> {
         let loop_ty = from.get_type();
-        let loop_phi = binary.builder.build_phi(loop_ty, "index");
+        let loop_phi = binary.builder.build_phi(loop_ty, "index").unwrap();
 
         let loop_var = loop_phi.as_basic_value().into_int_value();
 
-        let next =
-            binary
-                .builder
-                .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
+        let next = binary
+            .builder
+            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index")
+            .unwrap();
 
         let comp = binary
             .builder
-            .build_int_compare(IntPredicate::ULT, loop_var, to, "loop_cond");
+            .build_int_compare(IntPredicate::ULT, loop_var, to, "loop_cond")
+            .unwrap();
 
         binary
             .builder
-            .build_conditional_branch(comp, self.body_block, self.done_block);
+            .build_conditional_branch(comp, self.body_block, self.done_block)
+            .unwrap();
 
         loop_phi.add_incoming(&[(&from, self.entry_block)]);
 
@@ -124,7 +129,8 @@ impl<'a> LoopBuilder<'a> {
 
         binary
             .builder
-            .build_unconditional_branch(self.condition_block);
+            .build_unconditional_branch(self.condition_block)
+            .unwrap();
 
         binary.builder.position_at_end(self.done_block);
     }

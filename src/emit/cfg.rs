@@ -244,7 +244,7 @@ pub(super) fn create_block<'a>(
         for v in cfg_phis {
             let ty = bin.llvm_var_ty(&cfg.vars[v].ty, ns);
 
-            phis.insert(*v, bin.builder.build_phi(ty, &cfg.vars[v].id.name));
+            phis.insert(*v, bin.builder.build_phi(ty, &cfg.vars[v].id.name).unwrap());
         }
     }
 

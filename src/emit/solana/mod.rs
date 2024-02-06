@@ -251,19 +251,22 @@ impl SolanaTarget {
         let parameters = self.sol_parameters(binary);
 
         unsafe {
-            binary.builder.build_gep(
-                binary
-                    .module
-                    .get_struct_type("struct.SolParameters")
-                    .unwrap(),
-                parameters,
-                &[
-                    binary.context.i32_type().const_int(0, false),
-                    binary.context.i32_type().const_int(0, false),
-                    binary.context.i32_type().const_int(0, false),
-                ],
-                "account",
-            )
+            binary
+                .builder
+                .build_gep(
+                    binary
+                        .module
+                        .get_struct_type("struct.SolParameters")
+                        .unwrap(),
+                    parameters,
+                    &[
+                        binary.context.i32_type().const_int(0, false),
+                        binary.context.i32_type().const_int(0, false),
+                        binary.context.i32_type().const_int(0, false),
+                    ],
+                    "account",
+                )
+                .unwrap()
         }
     }
 
@@ -289,23 +292,27 @@ impl SolanaTarget {
             .build_load(
                 binary.context.i8_type().ptr_type(AddressSpace::default()),
                 unsafe {
-                    binary.builder.build_gep(
-                        binary
-                            .module
-                            .get_struct_type("struct.SolParameters")
-                            .unwrap(),
-                        parameters,
-                        &[
-                            binary.context.i32_type().const_int(0, false),
-                            binary.context.i32_type().const_int(0, false),
-                            binary.context.i32_type().const_int(0, false),
-                            binary.context.i32_type().const_int(3, false),
-                        ],
-                        "data",
-                    )
+                    binary
+                        .builder
+                        .build_gep(
+                            binary
+                                .module
+                                .get_struct_type("struct.SolParameters")
+                                .unwrap(),
+                            parameters,
+                            &[
+                                binary.context.i32_type().const_int(0, false),
+                                binary.context.i32_type().const_int(0, false),
+                                binary.context.i32_type().const_int(0, false),
+                                binary.context.i32_type().const_int(3, false),
+                            ],
+                            "data",
+                        )
+                        .unwrap()
                 },
                 "data",
             )
+            .unwrap()
             .into_pointer_value()
     }
 
@@ -330,24 +337,29 @@ impl SolanaTarget {
             binary
                 .builder
                 .build_gep(binary.context.i8_type(), data, &[slot], "data")
+                .unwrap()
         };
 
         if *ty == ast::Type::String || *ty == ast::Type::DynamicBytes {
             let offset = binary
                 .builder
                 .build_load(binary.context.i32_type(), member, "offset")
+                .unwrap()
                 .into_int_value();
 
-            binary.builder.build_call(
-                binary.module.get_function("account_data_free").unwrap(),
-                &[data.into(), offset.into()],
-                "",
-            );
+            binary
+                .builder
+                .build_call(
+                    binary.module.get_function("account_data_free").unwrap(),
+                    &[data.into(), offset.into()],
+                    "",
+                )
+                .unwrap();
 
             // account_data_alloc will return 0 if the string is length 0
             let new_offset = binary.context.i32_type().const_zero();
 
-            binary.builder.build_store(member, new_offset);
+            binary.builder.build_store(member, new_offset).unwrap();
         } else if let ast::Type::Array(elem_ty, dim) = ty {
             // delete the existing storage
             let mut elem_slot = slot;
@@ -363,6 +375,7 @@ impl SolanaTarget {
                     elem_slot = binary
                         .builder
                         .build_load(binary.context.i32_type(), member, "offset")
+                        .unwrap()
                         .into_int_value();
 
                     free_array = Some(elem_slot);
@@ -395,11 +408,14 @@ impl SolanaTarget {
                     ns,
                 );
 
-                let offset_val = binary.builder.build_int_add(
-                    offset_val,
-                    binary.context.i32_type().const_int(elem_size, false),
-                    "new_offset",
-                );
+                let offset_val = binary
+                    .builder
+                    .build_int_add(
+                        offset_val,
+                        binary.context.i32_type().const_int(elem_size, false),
+                        "new_offset",
+                    )
+                    .unwrap();
 
                 // set the offset for the next iteration of the loop
                 builder.set_loop_phi_value(binary, "offset", offset_val.into());
@@ -410,17 +426,20 @@ impl SolanaTarget {
 
             // if the array was dynamic, free the array itself
             if let Some(offset) = free_array {
-                binary.builder.build_call(
-                    binary.module.get_function("account_data_free").unwrap(),
-                    &[data.into(), offset.into()],
-                    "",
-                );
+                binary
+                    .builder
+                    .build_call(
+                        binary.module.get_function("account_data_free").unwrap(),
+                        &[data.into(), offset.into()],
+                        "",
+                    )
+                    .unwrap();
 
                 if zero {
                     // account_data_alloc will return 0 if the string is length 0
                     let new_offset = binary.context.i32_type().const_zero();
 
-                    binary.builder.build_store(member, new_offset);
+                    binary.builder.build_store(member, new_offset).unwrap();
                 }
             }
         } else if let ast::Type::Struct(struct_ty) = ty {
@@ -429,11 +448,14 @@ impl SolanaTarget {
                     .to_u64()
                     .unwrap();
 
-                let offset = binary.builder.build_int_add(
-                    slot,
-                    binary.context.i32_type().const_int(field_offset, false),
-                    "field_offset",
-                );
+                let offset = binary
+                    .builder
+                    .build_int_add(
+                        slot,
+                        binary.context.i32_type().const_int(field_offset, false),
+                        "field_offset",
+                    )
+                    .unwrap();
 
                 self.storage_free(binary, &field.ty, data, offset, function, zero, ns);
             }
@@ -442,13 +464,15 @@ impl SolanaTarget {
 
             binary
                 .builder
-                .build_store(member, ty.into_array_type().const_zero());
+                .build_store(member, ty.into_array_type().const_zero())
+                .unwrap();
         } else {
             let ty = binary.llvm_type(ty, ns);
 
             binary
                 .builder
-                .build_store(member, ty.into_int_type().const_zero());
+                .build_store(member, ty.into_int_type().const_zero())
+                .unwrap();
         }
     }
 
@@ -545,7 +569,8 @@ impl SolanaTarget {
             binary
                 .builder
                 .build_gep(binary.context.i8_type(), data, &[offset], "data")
-        };
+        }
+        .unwrap();
 
         let address = binary.build_alloca(function, binary.address_type(ns), "address");
 
@@ -558,12 +583,13 @@ impl SolanaTarget {
                     &[key.into()],
                     "hash",
                 )
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap()
                 .into_int_value()
         } else if matches!(key_ty, ast::Type::Contract(_) | ast::Type::Address(_)) {
-            binary.builder.build_store(address, key);
+            binary.builder.build_store(address, key).unwrap();
 
             binary
                 .builder
@@ -572,6 +598,7 @@ impl SolanaTarget {
                     &[address.into()],
                     "hash",
                 )
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap()
@@ -580,23 +607,28 @@ impl SolanaTarget {
             binary
                 .builder
                 .build_int_truncate(key.into_int_value(), binary.context.i64_type(), "")
+                .unwrap()
         } else {
             key.into_int_value()
         };
 
-        let bucket = binary.builder.build_int_unsigned_rem(
-            bucket,
-            bucket
-                .get_type()
-                .const_int(crate::sema::SOLANA_BUCKET_SIZE, false),
-            "",
-        );
+        let bucket = binary
+            .builder
+            .build_int_unsigned_rem(
+                bucket,
+                bucket
+                    .get_type()
+                    .const_int(crate::sema::SOLANA_BUCKET_SIZE, false),
+                "",
+            )
+            .unwrap();
 
         let first_offset_ptr = unsafe {
             binary
                 .builder
                 .build_gep(binary.context.i32_type(), member, &[bucket], "bucket_list")
-        };
+        }
+        .unwrap();
 
         // we should now loop until offset is zero or we found it
         let loop_entry = binary.context.append_basic_block(function, "loop_entry");
@@ -608,15 +640,21 @@ impl SolanaTarget {
         let next_entry = binary.context.append_basic_block(function, "next_entry");
 
         // let's enter the loop
-        binary.builder.build_unconditional_branch(loop_entry);
+        binary
+            .builder
+            .build_unconditional_branch(loop_entry)
+            .unwrap();
 
         binary.builder.position_at_end(loop_entry);
 
         // we are walking the bucket list via the offset ptr
-        let offset_ptr_phi = binary.builder.build_phi(
-            binary.context.i32_type().ptr_type(AddressSpace::default()),
-            "offset_ptr",
-        );
+        let offset_ptr_phi = binary
+            .builder
+            .build_phi(
+                binary.context.i32_type().ptr_type(AddressSpace::default()),
+                "offset_ptr",
+            )
+            .unwrap();
 
         offset_ptr_phi.add_incoming(&[(&first_offset_ptr, entry)]);
 
@@ -628,18 +666,23 @@ impl SolanaTarget {
                 offset_ptr_phi.as_basic_value().into_pointer_value(),
                 "offset",
             )
+            .unwrap()
             .into_int_value();
 
-        let is_offset_zero = binary.builder.build_int_compare(
-            IntPredicate::EQ,
-            offset,
-            offset.get_type().const_zero(),
-            "offset_is_zero",
-        );
+        let is_offset_zero = binary
+            .builder
+            .build_int_compare(
+                IntPredicate::EQ,
+                offset,
+                offset.get_type().const_zero(),
+                "offset_is_zero",
+            )
+            .unwrap();
 
         binary
             .builder
-            .build_conditional_branch(is_offset_zero, end_of_bucket, examine_bucket);
+            .build_conditional_branch(is_offset_zero, end_of_bucket, examine_bucket)
+            .unwrap();
 
         binary.builder.position_at_end(examine_bucket);
 
@@ -648,33 +691,41 @@ impl SolanaTarget {
             binary
                 .builder
                 .build_gep(binary.context.i8_type(), data, &[offset], "data")
-        };
+        }
+        .unwrap();
 
         let ptr = unsafe {
-            binary.builder.build_gep(
-                entry_ty,
-                member,
-                &[
-                    binary.context.i32_type().const_zero(),
-                    binary.context.i32_type().const_zero(),
-                ],
-                "key_ptr",
-            )
+            binary
+                .builder
+                .build_gep(
+                    entry_ty,
+                    member,
+                    &[
+                        binary.context.i32_type().const_zero(),
+                        binary.context.i32_type().const_zero(),
+                    ],
+                    "key_ptr",
+                )
+                .unwrap()
         };
 
         let matches = if matches!(key_ty, ast::Type::String | ast::Type::DynamicBytes) {
             let entry_key = binary
                 .builder
-                .build_load(binary.context.i32_type(), ptr, "key");
+                .build_load(binary.context.i32_type(), ptr, "key")
+                .unwrap();
 
             // entry_key is an offset
             let entry_data = unsafe {
-                binary.builder.build_gep(
-                    binary.context.i8_type(),
-                    data,
-                    &[entry_key.into_int_value()],
-                    "data",
-                )
+                binary
+                    .builder
+                    .build_gep(
+                        binary.context.i8_type(),
+                        data,
+                        &[entry_key.into_int_value()],
+                        "data",
+                    )
+                    .unwrap()
             };
             let entry_length = binary
                 .builder
@@ -683,6 +734,7 @@ impl SolanaTarget {
                     &[data.into(), entry_key.into()],
                     "length",
                 )
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap()
@@ -700,6 +752,7 @@ impl SolanaTarget {
                     ],
                     "",
                 )
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap()
@@ -712,6 +765,7 @@ impl SolanaTarget {
                     &[address.into(), ptr.into()],
                     "",
                 )
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap()
@@ -719,34 +773,44 @@ impl SolanaTarget {
         } else {
             let entry_key = binary
                 .builder
-                .build_load(binary.llvm_type(key_ty, ns), ptr, "key");
+                .build_load(binary.llvm_type(key_ty, ns), ptr, "key")
+                .unwrap();
 
-            binary.builder.build_int_compare(
-                IntPredicate::EQ,
-                key.into_int_value(),
-                entry_key.into_int_value(),
-                "matches",
-            )
+            binary
+                .builder
+                .build_int_compare(
+                    IntPredicate::EQ,
+                    key.into_int_value(),
+                    entry_key.into_int_value(),
+                    "matches",
+                )
+                .unwrap()
         };
 
         binary
             .builder
-            .build_conditional_branch(matches, found_entry, next_entry);
+            .build_conditional_branch(matches, found_entry, next_entry)
+            .unwrap();
 
         binary.builder.position_at_end(found_entry);
 
         let ret_offset = function.get_nth_param(2).unwrap().into_pointer_value();
 
-        binary.builder.build_store(
-            ret_offset,
-            binary
-                .builder
-                .build_int_add(offset, value_offset, "value_offset"),
-        );
+        binary
+            .builder
+            .build_store(
+                ret_offset,
+                binary
+                    .builder
+                    .build_int_add(offset, value_offset, "value_offset")
+                    .unwrap(),
+            )
+            .unwrap();
 
         binary
             .builder
-            .build_return(Some(&binary.context.i64_type().const_zero()));
+            .build_return(Some(&binary.context.i64_type().const_zero()))
+            .unwrap();
 
         binary.builder.position_at_end(next_entry);
 
@@ -757,7 +821,10 @@ impl SolanaTarget {
 
         offset_ptr_phi.add_incoming(&[(&offset_ptr, next_entry)]);
 
-        binary.builder.build_unconditional_branch(loop_entry);
+        binary
+            .builder
+            .build_unconditional_branch(loop_entry)
+            .unwrap();
 
         let offset_ptr = offset_ptr_phi.as_basic_value().into_pointer_value();
 
@@ -778,24 +845,29 @@ impl SolanaTarget {
                 &[account.into(), entry_length.into(), offset_ptr.into()],
                 "rc",
             )
+            .unwrap()
             .try_as_basic_value()
             .left()
             .unwrap()
             .into_int_value();
 
-        let is_rc_zero = binary.builder.build_int_compare(
-            IntPredicate::EQ,
-            rc,
-            binary.context.i64_type().const_zero(),
-            "is_rc_zero",
-        );
+        let is_rc_zero = binary
+            .builder
+            .build_int_compare(
+                IntPredicate::EQ,
+                rc,
+                binary.context.i64_type().const_zero(),
+                "is_rc_zero",
+            )
+            .unwrap();
 
         let rc_not_zero = binary.context.append_basic_block(function, "rc_not_zero");
         let rc_zero = binary.context.append_basic_block(function, "rc_zero");
 
         binary
             .builder
-            .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+            .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero)
+            .unwrap();
 
         binary.builder.position_at_end(rc_not_zero);
 
@@ -806,31 +878,42 @@ impl SolanaTarget {
         let offset = binary
             .builder
             .build_load(binary.context.i32_type(), offset_ptr, "new_offset")
+            .unwrap()
             .into_int_value();
 
         let member = unsafe {
             binary
                 .builder
                 .build_gep(binary.context.i8_type(), data, &[offset], "data")
+                .unwrap()
         };
 
         // Clear memory. The length argument to __bzero8 is in lengths of 8 bytes. We round up to the nearest
         // 8 byte, since account_data_alloc also rounds up to the nearest 8 byte when allocating.
-        let length = binary.builder.build_int_unsigned_div(
-            binary.builder.build_int_add(
-                entry_length,
-                binary.context.i32_type().const_int(7, false),
-                "",
-            ),
-            binary.context.i32_type().const_int(8, false),
-            "length_div_8",
-        );
+        let length = binary
+            .builder
+            .build_int_unsigned_div(
+                binary
+                    .builder
+                    .build_int_add(
+                        entry_length,
+                        binary.context.i32_type().const_int(7, false),
+                        "",
+                    )
+                    .unwrap(),
+                binary.context.i32_type().const_int(8, false),
+                "length_div_8",
+            )
+            .unwrap();
 
-        binary.builder.build_call(
-            binary.module.get_function("__bzero8").unwrap(),
-            &[member.into(), length.into()],
-            "zeroed",
-        );
+        binary
+            .builder
+            .build_call(
+                binary.module.get_function("__bzero8").unwrap(),
+                &[member.into(), length.into()],
+                "zeroed",
+            )
+            .unwrap();
 
         // set key
         if matches!(key_ty, ast::Type::String | ast::Type::DynamicBytes) {
@@ -848,17 +931,21 @@ impl SolanaTarget {
                     &[account.into(), new_string_length.into(), offset_ptr.into()],
                     "alloc",
                 )
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap()
                 .into_int_value();
 
-            let is_rc_zero = binary.builder.build_int_compare(
-                IntPredicate::EQ,
-                rc,
-                binary.context.i64_type().const_zero(),
-                "is_rc_zero",
-            );
+            let is_rc_zero = binary
+                .builder
+                .build_int_compare(
+                    IntPredicate::EQ,
+                    rc,
+                    binary.context.i64_type().const_zero(),
+                    "is_rc_zero",
+                )
+                .unwrap();
 
             let rc_not_zero = binary.context.append_basic_block(function, "rc_not_zero");
             let rc_zero = binary.context.append_basic_block(function, "rc_zero");
@@ -866,7 +953,8 @@ impl SolanaTarget {
 
             binary
                 .builder
-                .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+                .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero)
+                .unwrap();
 
             binary.builder.position_at_end(rc_not_zero);
 
@@ -877,60 +965,72 @@ impl SolanaTarget {
 
             binary.builder.position_at_end(rc_zero);
 
-            let new_offset =
-                binary
-                    .builder
-                    .build_load(binary.context.i32_type(), offset_ptr, "new_offset");
+            let new_offset = binary
+                .builder
+                .build_load(binary.context.i32_type(), offset_ptr, "new_offset")
+                .unwrap();
 
-            binary.builder.build_unconditional_branch(memcpy);
+            binary.builder.build_unconditional_branch(memcpy).unwrap();
 
             binary.builder.position_at_end(memcpy);
 
             let offset_phi = binary
                 .builder
-                .build_phi(binary.context.i32_type(), "offset");
+                .build_phi(binary.context.i32_type(), "offset")
+                .unwrap();
 
             offset_phi.add_incoming(&[(&new_offset, rc_zero), (&offset, entry)]);
 
             let dest_string_data = unsafe {
-                binary.builder.build_gep(
-                    binary.context.i8_type(),
-                    data,
-                    &[offset_phi.as_basic_value().into_int_value()],
-                    "dest_string_data",
-                )
+                binary
+                    .builder
+                    .build_gep(
+                        binary.context.i8_type(),
+                        data,
+                        &[offset_phi.as_basic_value().into_int_value()],
+                        "dest_string_data",
+                    )
+                    .unwrap()
             };
 
-            binary.builder.build_call(
-                binary.module.get_function("__memcpy").unwrap(),
-                &[
-                    dest_string_data.into(),
-                    binary.vector_bytes(key).into(),
-                    new_string_length.into(),
-                ],
-                "copied",
-            );
+            binary
+                .builder
+                .build_call(
+                    binary.module.get_function("__memcpy").unwrap(),
+                    &[
+                        dest_string_data.into(),
+                        binary.vector_bytes(key).into(),
+                        new_string_length.into(),
+                    ],
+                    "copied",
+                )
+                .unwrap();
         } else {
             let key_ptr = binary
                 .builder
                 .build_struct_gep(entry_ty, member, 0, "key_ptr")
                 .unwrap();
 
-            binary.builder.build_store(key_ptr, key);
+            binary.builder.build_store(key_ptr, key).unwrap();
         };
 
         let ret_offset = function.get_nth_param(2).unwrap().into_pointer_value();
 
-        binary.builder.build_store(
-            ret_offset,
-            binary
-                .builder
-                .build_int_add(offset, value_offset, "value_offset"),
-        );
+        binary
+            .builder
+            .build_store(
+                ret_offset,
+                binary
+                    .builder
+                    .build_int_add(offset, value_offset, "value_offset")
+                    .unwrap(),
+            )
+            .unwrap();
 
         binary
             .builder
-            .build_return(Some(&binary.context.i64_type().const_zero()));
+            .build_return(Some(&binary.context.i64_type().const_zero()))
+            .unwrap();
 
         function
     }
@@ -963,25 +1063,30 @@ impl SolanaTarget {
                 &[slot.into(), index.into(), offset.into(), parameters.into()],
                 "mapping_lookup_res",
             )
+            .unwrap()
             .try_as_basic_value()
             .left()
             .unwrap()
             .into_int_value();
 
         // either load the result from offset or return failure
-        let is_rc_zero = binary.builder.build_int_compare(
-            IntPredicate::EQ,
-            rc,
-            rc.get_type().const_zero(),
-            "is_rc_zero",
-        );
+        let is_rc_zero = binary
+            .builder
+            .build_int_compare(
+                IntPredicate::EQ,
+                rc,
+                rc.get_type().const_zero(),
+                "is_rc_zero",
+            )
+            .unwrap();
 
         let rc_not_zero = binary.context.append_basic_block(function, "rc_not_zero");
         let rc_zero = binary.context.append_basic_block(function, "rc_zero");
 
         binary
             .builder
-            .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero);
+            .build_conditional_branch(is_rc_zero, rc_zero, rc_not_zero)
+            .unwrap();
 
         binary.builder.position_at_end(rc_not_zero);
 
@@ -992,6 +1097,7 @@ impl SolanaTarget {
         binary
             .builder
             .build_load(binary.context.i32_type(), offset, "offset")
+            .unwrap()
             .into_int_value()
     }
 
@@ -1024,16 +1130,20 @@ impl SolanaTarget {
                             .unwrap(),
                         "data_len",
                     )
+                    .unwrap()
                     .into_int_value();
 
-                let data = binary.builder.build_load(
-                    binary.context.i8_type().ptr_type(AddressSpace::default()),
-                    binary
-                        .builder
-                        .build_struct_gep(account_info_ty, account_info, 3, "data")
-                        .unwrap(),
-                    "data",
-                );
+                let data = binary
+                    .builder
+                    .build_load(
+                        binary.context.i8_type().ptr_type(AddressSpace::default()),
+                        binary
+                            .builder
+                            .build_struct_gep(account_info_ty, account_info, 3, "data")
+                            .unwrap(),
+                        "data",
+                    )
+                    .unwrap();
 
                 let slice_alloca = binary.build_alloca(
                     function,
@@ -1049,7 +1159,7 @@ impl SolanaTarget {
                         "data",
                     )
                     .unwrap();
-                binary.builder.build_store(data_elem, data);
+                binary.builder.build_store(data_elem, data).unwrap();
                 let data_len_elem = binary
                     .builder
                     .build_struct_gep(
@@ -1059,7 +1169,7 @@ impl SolanaTarget {
                         "data_len",
                     )
                     .unwrap();
-                binary.builder.build_store(data_len_elem, data_len);
+                binary.builder.build_store(data_len_elem, data_len).unwrap();
 
                 return slice_alloca.as_basic_value_enum();
             }
@@ -1115,53 +1225,70 @@ impl SolanaTarget {
 
         let instruction = binary.build_alloca(function, instruction_ty, "instruction");
 
-        binary.builder.build_store(
-            binary
-                .builder
-                .build_struct_gep(instruction_ty, instruction, 0, "program_id")
-                .unwrap(),
-            contract_args.program_id.unwrap(),
-        );
+        binary
+            .builder
+            .build_store(
+                binary
+                    .builder
+                    .build_struct_gep(instruction_ty, instruction, 0, "program_id")
+                    .unwrap(),
+                contract_args.program_id.unwrap(),
+            )
+            .unwrap();
 
-        binary.builder.build_store(
-            binary
-                .builder
-                .build_struct_gep(instruction_ty, instruction, 1, "accounts")
-                .unwrap(),
-            contract_args.accounts.unwrap().0,
-        );
+        binary
+            .builder
+            .build_store(
+                binary
+                    .builder
+                    .build_struct_gep(instruction_ty, instruction, 1, "accounts")
+                    .unwrap(),
+                contract_args.accounts.unwrap().0,
+            )
+            .unwrap();
 
-        binary.builder.build_store(
-            binary
-                .builder
-                .build_struct_gep(instruction_ty, instruction, 2, "accounts_len")
-                .unwrap(),
-            binary.builder.build_int_z_extend(
-                contract_args.accounts.unwrap().1,
-                binary.context.i64_type(),
-                "accounts_len",
-            ),
-        );
+        binary
+            .builder
+            .build_store(
+                binary
+                    .builder
+                    .build_struct_gep(instruction_ty, instruction, 2, "accounts_len")
+                    .unwrap(),
+                binary
+                    .builder
+                    .build_int_z_extend(
+                        contract_args.accounts.unwrap().1,
+                        binary.context.i64_type(),
+                        "accounts_len",
+                    )
+                    .unwrap(),
+            )
+            .unwrap();
 
-        binary.builder.build_store(
-            binary
-                .builder
-                .build_struct_gep(instruction_ty, instruction, 3, "data")
-                .unwrap(),
-            payload,
-        );
+        binary
+            .builder
+            .build_store(
+                binary
+                    .builder
+                    .build_struct_gep(instruction_ty, instruction, 3, "data")
+                    .unwrap(),
+                payload,
+            )
+            .unwrap();
 
-        binary.builder.build_store(
-            binary
-                .builder
-                .build_struct_gep(instruction_ty, instruction, 4, "data_len")
-                .unwrap(),
-            binary.builder.build_int_z_extend(
-                payload_len,
-                binary.context.i64_type(),
-                "payload_len",
-            ),
-        );
+        binary
+            .builder
+            .build_store(
+                binary
+                    .builder
+                    .build_struct_gep(instruction_ty, instruction, 4, "data_len")
+                    .unwrap(),
+                binary
+                    .builder
+                    .build_int_z_extend(payload_len, binary.context.i64_type(), "payload_len")
+                    .unwrap(),
+            )
+            .unwrap();
 
         let parameters = self.sol_parameters(binary);
 
@@ -1178,40 +1305,47 @@ impl SolanaTarget {
             )
             .unwrap();
 
-        let account_infos_len = binary.builder.build_int_truncate(
-            binary
-                .builder
-                .build_load(
-                    binary.context.i64_type(),
-                    binary
-                        .builder
-                        .build_struct_gep(
-                            binary
-                                .module
-                                .get_struct_type("struct.SolParameters")
-                                .unwrap(),
-                            parameters,
-                            1,
-                            "ka_num",
-                        )
-                        .unwrap(),
-                    "ka_num",
-                )
-                .into_int_value(),
-            binary.context.i32_type(),
-            "ka_num",
-        );
+        let account_infos_len = binary
+            .builder
+            .build_int_truncate(
+                binary
+                    .builder
+                    .build_load(
+                        binary.context.i64_type(),
+                        binary
+                            .builder
+                            .build_struct_gep(
+                                binary
+                                    .module
+                                    .get_struct_type("struct.SolParameters")
+                                    .unwrap(),
+                                parameters,
+                                1,
+                                "ka_num",
+                            )
+                            .unwrap(),
+                        "ka_num",
+                    )
+                    .unwrap()
+                    .into_int_value(),
+                binary.context.i32_type(),
+                "ka_num",
+            )
+            .unwrap();
 
         let external_call = binary.module.get_function("sol_invoke_signed_c").unwrap();
 
         let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = contract_args.seeds {
             (
                 seeds,
-                binary.builder.build_int_cast(
-                    len,
-                    external_call.get_type().get_param_types()[4].into_int_type(),
-                    "len",
-                ),
+                binary
+                    .builder
+                    .build_int_cast(
+                        len,
+                        external_call.get_type().get_param_types()[4].into_int_type(),
+                        "len",
+                    )
+                    .unwrap(),
             )
         } else {
             (
@@ -1224,16 +1358,19 @@ impl SolanaTarget {
             )
         };
 
-        binary.builder.build_call(
-            external_call,
-            &[
-                instruction.into(),
-                account_infos.into(),
-                account_infos_len.into(),
-                signer_seeds.into(),
-                signer_seeds_len.into(),
-            ],
-            "",
-        );
+        binary
+            .builder
+            .build_call(
+                external_call,
+                &[
+                    instruction.into(),
+                    account_infos.into(),
+                    account_infos_len.into(),
+                    signer_seeds.into(),
+                    signer_seeds_len.into(),
+                ],
+                "",
+            )
+            .unwrap();
     }
 }

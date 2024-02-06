@@ -88,13 +88,17 @@ macro_rules! emit_context {
                 $binary
                     .builder
                     .build_call($binary.module.get_function($name).unwrap(), $args, "")
+                    .unwrap()
             };
             ($name:expr, $args:expr, $call_name:literal) => {
-                $binary.builder.build_call(
-                    $binary.module.get_function($name).unwrap(),
-                    $args,
-                    $call_name,
-                )
+                $binary
+                    .builder
+                    .build_call(
+                        $binary.module.get_function($name).unwrap(),
+                        $args,
+                        $call_name,
+                    )
+                    .unwrap()
             };
         }
 
@@ -517,7 +521,7 @@ impl<'a> Binary<'a> {
             self.builder.position_at_end(entry);
         }
 
-        let res = self.builder.build_alloca(ty, name);
+        let res = self.builder.build_alloca(ty, name).unwrap();
 
         self.builder.position_at_end(current);
 
@@ -542,7 +546,7 @@ impl<'a> Binary<'a> {
             self.builder.position_at_end(entry);
         }
 
-        let res = self.builder.build_array_alloca(ty, length, name);
+        let res = self.builder.build_array_alloca(ty, length, name).unwrap();
 
         self.builder.position_at_end(current);
 
@@ -565,12 +569,12 @@ impl<'a> Binary<'a> {
         let done = self.context.append_basic_block(function, "done");
         let entry = self.builder.get_insert_block().unwrap();
 
-        self.builder.build_unconditional_branch(body);
+        self.builder.build_unconditional_branch(body).unwrap();
         self.builder.position_at_end(body);
 
         let loop_ty = from.get_type();
-        let loop_phi = self.builder.build_phi(loop_ty, "index");
-        let data_phi = self.builder.build_phi(data_ref.get_type(), "data");
+        let loop_phi = self.builder.build_phi(loop_ty, "index").unwrap();
+        let data_phi = self.builder.build_phi(data_ref.get_type(), "data").unwrap();
         let mut data = data_phi.as_basic_value().into_pointer_value();
 
         let loop_var = loop_phi.as_basic_value().into_int_value();
@@ -580,12 +584,16 @@ impl<'a> Binary<'a> {
 
         let next = self
             .builder
-            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
+            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index")
+            .unwrap();
 
         let comp = self
             .builder
-            .build_int_compare(IntPredicate::ULT, next, to, "loop_cond");
-        self.builder.build_conditional_branch(comp, body, done);
+            .build_int_compare(IntPredicate::ULT, next, to, "loop_cond")
+            .unwrap();
+        self.builder
+            .build_conditional_branch(comp, body, done)
+            .unwrap();
 
         let body = self.builder.get_insert_block().unwrap();
         loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
@@ -612,12 +620,12 @@ impl<'a> Binary<'a> {
         let done = self.context.append_basic_block(function, "done");
         let entry = self.builder.get_insert_block().unwrap();
 
-        self.builder.build_unconditional_branch(body);
+        self.builder.build_unconditional_branch(body).unwrap();
         self.builder.position_at_end(body);
 
         let loop_ty = from.get_type();
-        let loop_phi = self.builder.build_phi(loop_ty, "index");
-        let data_phi = self.builder.build_phi(data_ref.get_type(), "data");
+        let loop_phi = self.builder.build_phi(loop_ty, "index").unwrap();
+        let data_phi = self.builder.build_phi(data_ref.get_type(), "data").unwrap();
         let mut data = data_phi.as_basic_value().into_int_value();
 
         let loop_var = loop_phi.as_basic_value().into_int_value();
@@ -627,12 +635,16 @@ impl<'a> Binary<'a> {
 
         let next = self
             .builder
-            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
+            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index")
+            .unwrap();
 
         let comp = self
             .builder
-            .build_int_compare(IntPredicate::ULT, next, to, "loop_cond");
-        self.builder.build_conditional_branch(comp, body, done);
+            .build_int_compare(IntPredicate::ULT, next, to, "loop_cond")
+            .unwrap();
+        self.builder
+            .build_conditional_branch(comp, body, done)
+            .unwrap();
 
         let body = self.builder.get_insert_block().unwrap();
         loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
@@ -659,24 +671,28 @@ impl<'a> Binary<'a> {
         let done = self.context.append_basic_block(function, "done");
         let entry = self.builder.get_insert_block().unwrap();
 
-        self.builder.build_unconditional_branch(cond);
+        self.builder.build_unconditional_branch(cond).unwrap();
         self.builder.position_at_end(cond);
 
         let loop_ty = from.get_type();
-        let loop_phi = self.builder.build_phi(loop_ty, "index");
-        let data_phi = self.builder.build_phi(data_ref.get_type(), "data");
+        let loop_phi = self.builder.build_phi(loop_ty, "index").unwrap();
+        let data_phi = self.builder.build_phi(data_ref.get_type(), "data").unwrap();
         let mut data = data_phi.as_basic_value().into_int_value();
 
         let loop_var = loop_phi.as_basic_value().into_int_value();
 
         let next = self
             .builder
-            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
+            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index")
+            .unwrap();
 
         let comp = self
             .builder
-            .build_int_compare(IntPredicate::ULT, loop_var, to, "loop_cond");
-        self.builder.build_conditional_branch(comp, body, done);
+            .build_int_compare(IntPredicate::ULT, loop_var, to, "loop_cond")
+            .unwrap();
+        self.builder
+            .build_conditional_branch(comp, body, done)
+            .unwrap();
 
         self.builder.position_at_end(body);
         // add loop body
@@ -687,7 +703,7 @@ impl<'a> Binary<'a> {
         loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
         data_phi.add_incoming(&[(&*data_ref, entry), (&data, body)]);
 
-        self.builder.build_unconditional_branch(cond);
+        self.builder.build_unconditional_branch(cond).unwrap();
 
         self.builder.position_at_end(done);
 
@@ -710,24 +726,28 @@ impl<'a> Binary<'a> {
         let done = self.context.append_basic_block(function, "done");
         let entry = self.builder.get_insert_block().unwrap();
 
-        self.builder.build_unconditional_branch(cond);
+        self.builder.build_unconditional_branch(cond).unwrap();
         self.builder.position_at_end(cond);
 
         let loop_ty = from.get_type();
-        let loop_phi = self.builder.build_phi(loop_ty, "index");
-        let data_phi = self.builder.build_phi(data_ref.get_type(), "data");
+        let loop_phi = self.builder.build_phi(loop_ty, "index").unwrap();
+        let data_phi = self.builder.build_phi(data_ref.get_type(), "data").unwrap();
         let mut data = data_phi.as_basic_value().into_pointer_value();
 
         let loop_var = loop_phi.as_basic_value().into_int_value();
 
         let next = self
             .builder
-            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
+            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index")
+            .unwrap();
 
         let comp = self
             .builder
-            .build_int_compare(IntPredicate::ULT, loop_var, to, "loop_cond");
-        self.builder.build_conditional_branch(comp, body, done);
+            .build_int_compare(IntPredicate::ULT, loop_var, to, "loop_cond")
+            .unwrap();
+        self.builder
+            .build_conditional_branch(comp, body, done)
+            .unwrap();
 
         self.builder.position_at_end(body);
         // add loop body
@@ -738,7 +758,7 @@ impl<'a> Binary<'a> {
         loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
         data_phi.add_incoming(&[(&*data_ref, entry), (&data, body)]);
 
-        self.builder.build_unconditional_branch(cond);
+        self.builder.build_unconditional_branch(cond).unwrap();
 
         self.builder.position_at_end(done);
 
@@ -1029,6 +1049,7 @@ impl<'a> Binary<'a> {
                 &[size.into(), elem_size.into(), init.into()],
                 "",
             )
+            .unwrap()
             .try_as_basic_value()
             .left()
             .unwrap()
@@ -1041,40 +1062,48 @@ impl<'a> Binary<'a> {
             // slice
             let slice = vector.into_struct_value();
 
-            self.builder.build_int_truncate(
-                self.builder
-                    .build_extract_value(slice, 1, "slice_len")
-                    .unwrap()
-                    .into_int_value(),
-                self.context.i32_type(),
-                "len",
-            )
+            self.builder
+                .build_int_truncate(
+                    self.builder
+                        .build_extract_value(slice, 1, "slice_len")
+                        .unwrap()
+                        .into_int_value(),
+                    self.context.i32_type(),
+                    "len",
+                )
+                .unwrap()
         } else {
             // field 0 is the length
             let vector = vector.into_pointer_value();
             let vector_type = self.module.get_struct_type("struct.vector").unwrap();
 
             let len = unsafe {
-                self.builder.build_gep(
-                    vector_type,
-                    vector,
-                    &[
-                        self.context.i32_type().const_zero(),
-                        self.context.i32_type().const_zero(),
-                    ],
-                    "vector_len",
-                )
+                self.builder
+                    .build_gep(
+                        vector_type,
+                        vector,
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_zero(),
+                        ],
+                        "vector_len",
+                    )
+                    .unwrap()
             };
 
             self.builder
                 .build_select(
-                    self.builder.build_is_null(vector, "vector_is_null"),
+                    self.builder
+                        .build_is_null(vector, "vector_is_null")
+                        .unwrap(),
                     self.context.i32_type().const_zero(),
                     self.builder
                         .build_load(self.context.i32_type(), len, "vector_len")
+                        .unwrap()
                         .into_int_value(),
                     "length",
                 )
+                .unwrap()
                 .into_int_value()
         }
     }
@@ -1091,15 +1120,17 @@ impl<'a> Binary<'a> {
         } else {
             let vector_type = self.module.get_struct_type("struct.vector").unwrap();
             unsafe {
-                self.builder.build_gep(
-                    vector_type,
-                    vector.into_pointer_value(),
-                    &[
-                        self.context.i32_type().const_zero(),
-                        self.context.i32_type().const_int(2, false),
-                    ],
-                    "data",
-                )
+                self.builder
+                    .build_gep(
+                        vector_type,
+                        vector.into_pointer_value(),
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_int(2, false),
+                        ],
+                        "data",
+                    )
+                    .unwrap()
             }
         }
     }
@@ -1118,40 +1149,47 @@ impl<'a> Binary<'a> {
                     // fixed size array
                     let llvm_ty = self.llvm_type(array_ty, ns);
                     unsafe {
-                        self.builder.build_gep(
-                            llvm_ty,
-                            array,
-                            &[self.context.i32_type().const_zero(), index],
-                            "index_access",
-                        )
+                        self.builder
+                            .build_gep(
+                                llvm_ty,
+                                array,
+                                &[self.context.i32_type().const_zero(), index],
+                                "index_access",
+                            )
+                            .unwrap()
                     }
                 } else {
                     let elem_ty = array_ty.array_deref();
                     let llvm_elem_ty = self.llvm_type(elem_ty.deref_memory(), ns);
 
                     // dynamic length array or vector
-                    let index = self.builder.build_int_mul(
-                        index,
-                        llvm_elem_ty
-                            .size_of()
-                            .unwrap()
-                            .const_cast(self.context.i32_type(), false),
-                        "",
-                    );
+                    let index = self
+                        .builder
+                        .build_int_mul(
+                            index,
+                            llvm_elem_ty
+                                .size_of()
+                                .unwrap()
+                                .const_cast(self.context.i32_type(), false),
+                            "",
+                        )
+                        .unwrap();
 
                     let vector_type = self.module.get_struct_type("struct.vector").unwrap();
 
                     unsafe {
-                        self.builder.build_gep(
-                            vector_type,
-                            array,
-                            &[
-                                self.context.i32_type().const_zero(),
-                                self.context.i32_type().const_int(2, false),
-                                index,
-                            ],
-                            "index_access",
-                        )
+                        self.builder
+                            .build_gep(
+                                vector_type,
+                                array,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_int(2, false),
+                                    index,
+                                ],
+                                "index_access",
+                            )
+                            .unwrap()
                     }
                 }
             }

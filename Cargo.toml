@@ -28,12 +28,12 @@ tiny-keccak = { version = "2.0", features = ["keccak"] }
 serde_json = "1.0"
 serde = "1.0"
 serde_derive = { version = "1.0" }
-inkwell = { version = "0.2.0", features = ["target-webassembly", "no-libffi-linking", "llvm16-0"], optional = true }
+inkwell = { version = "0.4.0", features = ["target-webassembly", "no-libffi-linking", "llvm16-0"], optional = true }
 blake2-rfc = "0.2.18"
-handlebars = "4.4"
+handlebars = "5.1"
 contract-metadata = "3.2"
 semver = { version = "1.0", features = ["serde"] }
-tempfile = "3.8"
+tempfile = "3.9"
 libc = { version = "0.2", optional = true }
 tower-lsp = { version = "0.20", optional = true }
 tokio = { version = "1.27", features = ["rt", "io-std", "macros"], optional = true }
@@ -44,28 +44,28 @@ bitvec = "1"
 funty = "2.0"
 itertools = "0.12"
 num-rational = "0.4"
-indexmap = "2.0"
-once_cell = "1.18"
+indexmap = "2.2"
+once_cell = "1.19"
 solang-parser = { path = "solang-parser", version = "0.3.3" }
 codespan-reporting = "0.11"
 phf = { version = "0.11", features = ["macros"] }
 rust-lapper = { version = "1.1", optional = true }
 anchor-syn = { version = "0.29.0", features = ["idl-build"] }
 convert_case = "0.6"
-parse-display = "0.8"
+parse-display = "0.9"
 parity-scale-codec = "3.6"
 ink_env = "4.3.0"
 ink_metadata = "4.3.0"
-scale-info = "2.9"
+scale-info = "2.10"
 petgraph = "0.6"
-wasmparser = "0.110.0"
-wasm-encoder = "0.31"
+wasmparser = "0.121.0"
+wasm-encoder = "0.41"
 toml = "0.8"
-wasm-opt = { version = "0.112.0", optional = true }
-contract-build = { version = "3.0.1", optional = true }
+wasm-opt = { version = "0.113.0", optional = true }
+contract-build = { version = "3.2", optional = true }
 primitive-types = { version = "0.12", features = ["codec"] }
 normalize-path = "0.2.1"
-bitflags = "2.3.3"
+bitflags = "2.4"
 scopeguard = "1.2.0"
 forge-fmt = { version = "0.2.0", optional = true }
 # We don't use ethers-core directly, but need the correct version for the
