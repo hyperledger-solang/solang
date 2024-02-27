@@ -303,7 +303,7 @@ fn overriden_but_not_overloaded_function_not_mangled() {
 
     for abi in build_wasm(src, false).iter().map(|(_, abi)| load_abi(abi)) {
         assert_eq!(abi.spec().messages().len(), 1);
-        assert_eq!(abi.spec().messages().get(0).unwrap().label(), "test");
+        assert_eq!(abi.spec().messages().first().unwrap().label(), "test");
     }
 }
 
