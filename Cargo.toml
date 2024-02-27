@@ -79,7 +79,9 @@ wasmi = "0.31"
 # solana_rbpf makes api changes in patch versions
 solana_rbpf = "=0.6.1"
 byteorder = "1.5"
-assert_cmd = "2.0"
+# 2.0.14 onwards requires rustc > 1.72
+# As soon as we upgrade our rustc version this no longer needs to be pinned
+assert_cmd = "=2.0.13"
 bincode = "1.3"
 ed25519-dalek = { version = "2", features = ["rand_core"] }
 path-slash = "0.2"
