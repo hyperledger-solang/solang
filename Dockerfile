@@ -4,7 +4,7 @@ COPY . src
 WORKDIR /src/stdlib/
 RUN make
 
-RUN rustup default 1.72.0
+RUN rustup default 1.74.0
 
 WORKDIR /src
 RUN cargo build --release
