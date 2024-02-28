@@ -1258,7 +1258,7 @@ fn compatible_visibility(left: &pt::Visibility, right: &pt::Visibility) -> bool 
 }
 
 /// This function checks which function names must be mangled given a contract.
-/// Mangling happens when there is more than one function with the same name in the given `contract_no``.
+/// Mangling happens when there is more than one function with the same name in the given `contract_no`.
 fn mangle_function_names(contract_no: usize, ns: &mut Namespace) {
     let mut repeated_names: HashMap<String, usize> = HashMap::new();
 
