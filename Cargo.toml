@@ -8,7 +8,7 @@ license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "solana", "polkadot", "substrate" ]
-rust-version = "1.72.0"
+rust-version = "1.74.0"
 edition = "2021"
 exclude = [ "/.*", "/docs",  "/examples", "/solana-library", "/tests", "/integration", "/vscode", "/testdata" ]
 
@@ -21,8 +21,8 @@ rand = "0.8"
 num-bigint = { version = "0.4", features = ["rand"]}
 num-traits = "0.2"
 num-integer = "0.1"
-clap = {version = "4.1", features = ["derive"]}
-clap_complete = "4.1"
+clap = {version = "4.5", features = ["derive"]}
+clap_complete = "4.5"
 hex = "0.4"
 tiny-keccak = { version = "2.0", features = ["keccak"] }
 serde_json = "1.0"
