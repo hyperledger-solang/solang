@@ -386,7 +386,7 @@ fn program_id(idl: &Idl) -> Option<&String> {
 /// There are many keywords in Solidity which are not keywords in Rust, so they may
 /// occur as field name, function name, etc. Rename those fields by prepending
 /// underscores until unique
-fn rename_keywords(name_map: &mut Vec<(String, String)>) {
+fn rename_keywords(name_map: &mut [(String, String)]) {
     for i in 0..name_map.len() {
         let name = &name_map[i].0;
 
