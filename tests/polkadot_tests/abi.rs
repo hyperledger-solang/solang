@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use scale_info::{
     form::PortableForm, Path, TypeDef, TypeDefComposite, TypeDefPrimitive, TypeDefVariant,
 };
-use std::sync::Mutex;
+use std::{collections::HashSet, sync::Mutex};
 
 macro_rules! path {
     ($( $segments:expr ),*) => {
@@ -283,4 +283,58 @@ fn custom_errors_in_metadata() {
         }
         _ => panic!("expected uint256 type"),
     }
+}
+
+#[test]
+fn overriden_but_not_overloaded_function_not_mangled() {
+    let src = r#"abstract contract Base {
+        function test() public pure virtual returns (uint8) {
+            return 42;
+        }
+    }
+    
+    contract TestA is Base {}
+    
+    contract TestB is Base {
+        function test() public pure override returns (uint8) {
+            return 42;
+        }
+    }"#;
+
+    for abi in build_wasm(src, false).iter().map(|(_, abi)| load_abi(abi)) {
+        assert_eq!(abi.spec().messages().len(), 1);
+        assert_eq!(abi.spec().messages().first().unwrap().label(), "test");
+    }
+}
+
+#[test]
+fn overloaded_but_not_overridden_function_is_mangled() {
+    let src = r#"abstract contract Base {
+        function test() public pure virtual returns (uint8) {
+            return 42;
+        }
+    
+    }
+    
+    contract TestA is Base {
+        function test(uint8 foo) public pure returns (uint8) {
+            return foo;
+        }
+    }"#;
+
+    let mut expected_function_names = HashSet::from(["test_", "test_uint8"]);
+
+    for message_spec in build_wasm(src, false)
+        .first()
+        .map(|(_, abi)| load_abi(abi))
+        .expect("there should be a contract")
+        .spec()
+        .messages()
+    {
+        expected_function_names
+            .take(message_spec.label().as_str())
+            .unwrap_or_else(|| panic!("{} should be present", message_spec.label()));
+    }
+
+    assert!(expected_function_names.is_empty());
 }

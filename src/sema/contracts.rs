@@ -1258,21 +1258,22 @@ fn compatible_visibility(left: &pt::Visibility, right: &pt::Visibility) -> bool 
 }
 
 /// This function checks which function names must be mangled given a contract.
-/// Mangling happens when there is more than one function with the same name in a give contract.
+/// Mangling happens when there is more than one function with the same name in the given `contract_no`.
 fn mangle_function_names(contract_no: usize, ns: &mut Namespace) {
     let mut repeated_names: HashMap<String, usize> = HashMap::new();
 
     for func_no in ns.contracts[contract_no].all_functions.keys() {
-        if !ns.functions[*func_no].is_public()
-            && (ns.functions[*func_no].ty != pt::FunctionTy::Function
-                || ns.functions[*func_no].ty != pt::FunctionTy::Constructor)
-        {
+        let function = &ns.functions[*func_no];
+
+        let not_callable = !function.is_public()
+            && (function.ty != pt::FunctionTy::Function
+                || function.ty != pt::FunctionTy::Constructor);
+
+        if function.is_override.is_some() || not_callable {
             continue;
         }
 
-        if let Some(old_no) =
-            repeated_names.insert(ns.functions[*func_no].id.name.clone(), *func_no)
-        {
+        if let Some(old_no) = repeated_names.insert(function.id.name.clone(), *func_no) {
             ns.functions[old_no]
                 .mangled_name_contracts
                 .insert(contract_no);
