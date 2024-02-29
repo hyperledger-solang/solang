@@ -190,9 +190,9 @@ impl<'input> fmt::Display for Token<'input> {
             Token::StringLiteral(true, s) => write!(f, "unicode\"{s}\""),
             Token::HexLiteral(hex) => write!(f, "{hex}"),
             Token::AddressLiteral(address) => write!(f, "{address}"),
-            Token::Number(integer, exp) if exp.is_empty() => write!(f, "{integer}"),
+            Token::Number(integer, "") => write!(f, "{integer}"),
             Token::Number(integer, exp) => write!(f, "{integer}e{exp}"),
-            Token::RationalNumber(integer, fraction, exp) if exp.is_empty() => {
+            Token::RationalNumber(integer, fraction, "") => {
                 write!(f, "{integer}.{fraction}")
             }
             Token::RationalNumber(integer, fraction, exp) => {
