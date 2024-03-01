@@ -227,12 +227,19 @@ pub(super) fn shift_left(
     let (right_length, _) = type_bits_and_sign(&right.ty(), &r.loc(), false, ns, diagnostics)?;
 
     let left_type = left.ty().deref_any().clone();
+    let right_type = right.ty().deref_any().clone();
 
     Ok(Expression::ShiftLeft {
         loc: *loc,
         ty: left_type.clone(),
         left: Box::new(left.cast(loc, &left_type, true, ns, diagnostics)?),
-        right: Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
+        right: Box::new(cast_shift_arg(
+            loc,
+            right.cast(loc, &right_type, true, ns, diagnostics)?,
+            right_length,
+            &left_type,
+            ns,
+        )),
     })
 }
 
@@ -252,6 +259,7 @@ pub(super) fn shift_right(
     check_var_usage_expression(ns, &left, &right, symtable);
 
     let left_type = left.ty().deref_any().clone();
+    let right_type = right.ty().deref_any().clone();
     // left hand side may be bytes/int/uint
     // right hand size may be int/uint
     let _ = type_bits_and_sign(&left_type, &l.loc(), true, ns, diagnostics)?;
@@ -261,7 +269,13 @@ pub(super) fn shift_right(
         loc: *loc,
         ty: left_type.clone(),
         left: Box::new(left.cast(loc, &left_type, true, ns, diagnostics)?),
-        right: Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
+        right: Box::new(cast_shift_arg(
+            loc,
+            right.cast(loc, &right_type, true, ns, diagnostics)?,
+            right_length,
+            &left_type,
+            ns,
+        )),
         sign: left_type.is_signed_int(ns),
     })
 }
