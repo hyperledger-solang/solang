@@ -1075,7 +1075,7 @@ fn test_mul_within_range() {
             let mut limit: BigUint = BigUint::from(2_u32).pow(width as u32);
             limit.sub_assign(1u8);
 
-            // Generate a random number within the the range [0, 2^N -1]
+            // Generate a random number within the range [0, 2^N -1]
             let first_operand_rand = rng.gen_biguint_range(&BigUint::from(1usize), &limit);
 
             // Calculate a number that when multiplied by first_operand_rand, the result will not overflow N bits (the result of this division will cast the float result to int result, therefore lowering it. The result of multiplication will never overflow).
@@ -1135,7 +1135,7 @@ fn test_overflow_detect_signed() {
         let mut limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
         limit.sub_assign(1u8);
 
-        // Generate a random number within the the range [(2^N-1)/2, (2^N-1) -1]
+        // Generate a random number within the range [(2^N-1)/2, (2^N-1) -1]
         let first_operand_rand =
             rng.gen_bigint_range(&(limit.clone().div(2usize)).add(1usize), &limit);
 
@@ -1161,7 +1161,7 @@ fn test_overflow_detect_signed() {
         lower_limit.sub_assign(1usize);
         lower_limit.mul_assign(-1_i32);
 
-        // Generate a random number within the the range [-(2^N-1), -(2^N-1)/2]
+        // Generate a random number within the range [-(2^N-1), -(2^N-1)/2]
         let first_operand_rand =
             rng.gen_bigint_range(&lower_limit, &(lower_limit.clone().div(2usize)).add(1usize));
 
@@ -1229,7 +1229,7 @@ fn test_overflow_detect_unsigned() {
             let mut limit: BigUint = BigUint::from(2_u32).pow(width as u32);
             limit.sub_assign(1u8);
 
-            // Generate a random number within the the range [(2^N-1)/2, 2^N -1]
+            // Generate a random number within the range [(2^N-1)/2, 2^N -1]
             let first_operand_rand =
                 rng.gen_biguint_range(&(limit.clone().div(2usize)).add(1usize), &limit);
 

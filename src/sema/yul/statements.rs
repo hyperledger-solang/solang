@@ -346,7 +346,7 @@ fn resolve_assignment(
     ))
 }
 
-/// Checks the the left hand side of an assignment is compatible with it right hand side
+/// Checks the left hand side of an assignment is compatible with it right hand side
 fn check_assignment_compatibility<T>(
     loc: &pt::Loc,
     lhs: &[T],

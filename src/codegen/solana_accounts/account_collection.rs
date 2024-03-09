@@ -21,7 +21,7 @@ struct RecurseData<'a> {
     cfg_func_no: usize,
     /// The contract the function belongs to
     contract_no: usize,
-    /// The quantity of accounts we have added the the hashmap 'accounts'
+    /// The quantity of accounts we have added the hashmap 'accounts'
     accounts_added: usize,
     /// The number of the AST function we are currently traversing
     ast_no: usize,

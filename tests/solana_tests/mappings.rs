@@ -166,7 +166,7 @@ fn less_simple_mapping() {
                 width: 256,
                 value: BigInt::from(12313132131321312311213131u128)
             },
-            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the abi encoder")),
         ],
     )
         .accounts(vec![("dataAccount", data_account)])
@@ -199,7 +199,7 @@ fn less_simple_mapping() {
     assert_eq!(
         returns,
         BorshToken::Tuple(vec![
-            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the abi encoder")),
             BorshToken::Array(vec![
                 BorshToken::Int{
                     width: 64,
@@ -250,7 +250,7 @@ fn string_mapping() {
         .arguments(
         &[
             BorshToken::String(String::from("a")),
-            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the abi encoder")),
         ],
     )
         .accounts(vec![("dataAccount", data_account)])
@@ -277,7 +277,7 @@ fn string_mapping() {
     assert_eq!(
         returns,
         BorshToken::Tuple(vec![
-            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the abi encoder")),
             BorshToken::Array(vec![
                 BorshToken::Int{
                     width: 64,
@@ -321,7 +321,7 @@ fn contract_mapping() {
         .arguments(
         &[
             index.clone(),
-            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the abi encoder")),
         ], )
         .accounts(vec![("dataAccount", data_account)])
         .call();
@@ -335,7 +335,7 @@ fn contract_mapping() {
 
     assert_eq!(
         returns,
-        BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder"))
+        BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the abi encoder"))
     );
 
     vm.function("rm")
@@ -472,7 +472,7 @@ fn sparse_array() {
                 width: 256,
                 value: BigInt::from(909090909u64)
             },
-            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the abi encoder")),
         ], )
         .accounts(vec![("dataAccount", data_account)])
         .call();
@@ -504,7 +504,7 @@ fn sparse_array() {
     assert_eq!(
         returns,
         BorshToken::Tuple(vec![
-            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the abi encoder")),
             BorshToken::Array(vec![
                 BorshToken::Int{
                     width: 64,
@@ -558,7 +558,7 @@ fn massive_sparse_array() {
                 width: 256,
                 value: BigInt::from(786868768768678687686877u128)
             },
-            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the abi encoder")),
         ], )
         .accounts(vec![("dataAccount", data_account)])
         .call();
@@ -590,7 +590,7 @@ fn massive_sparse_array() {
     assert_eq!(
         returns,
         BorshToken::Tuple(vec![
-            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
+            BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the abi encoder")),
             BorshToken::Array(vec![
                 BorshToken::Int {
                     width: 64,

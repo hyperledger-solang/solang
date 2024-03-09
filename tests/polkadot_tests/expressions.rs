@@ -1253,7 +1253,7 @@ fn test_overflow_detect_signed() {
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
         let limit = BigInt::from(2_u32).pow(width - 1).sub(1_u32);
 
-        // Generate a random number within the the range [(2^N-1)/2, (2^N-1) -1]
+        // Generate a random number within the range [(2^N-1)/2, (2^N-1) -1]
         let first_operand_rand =
             rng.gen_bigint_range(&(limit.clone().div(2usize)).add(1usize), &limit);
 
@@ -1281,7 +1281,7 @@ fn test_overflow_detect_signed() {
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
         let lower_limit = BigInt::from(2_u32).pow(width - 1).sub(1usize).mul(-1_i32);
 
-        // Generate a random number within the the range [-(2^N-1), -(2^N-1)/2]
+        // Generate a random number within the range [-(2^N-1), -(2^N-1)/2]
         let first_operand_rand =
             rng.gen_bigint_range(&lower_limit, &(lower_limit.clone().div(2usize)).add(1usize));
 
@@ -1312,7 +1312,7 @@ fn test_overflow_detect_unsigned() {
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1].
         let limit = BigUint::from(2_u32).pow(width).sub(1_u32);
 
-        // Generate a random number within the the range [(2^N-1)/2, 2^N -1]
+        // Generate a random number within the range [(2^N-1)/2, 2^N -1]
         let first_operand_rand =
             rng.gen_biguint_range(&(limit.clone().div(2usize)).add(1usize), &limit);
 

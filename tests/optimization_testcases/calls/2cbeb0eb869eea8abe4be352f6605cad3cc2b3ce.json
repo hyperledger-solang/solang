@@ -16,7 +16,7 @@
           }
         },
         {
-          "String": "This is a string which should be a little longer than 32 bytes so we the the abi encoder"
+          "String": "This is a string which should be a little longer than 32 bytes so we the abi encoder"
         }
       ]
     ],
