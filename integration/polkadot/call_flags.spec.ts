@@ -54,9 +54,9 @@ describe('Deploy the CallFlags contract and tests for various call flag combinat
         const flags = [CallFlags.TAIL_CALL];
         const answer = await query(conn, alice, contract, "echo", [contract.address, foo, voyager, flags]);
         const { index, error } = answer.result.asErr.asModule;
-        // Module 8 error 0x15 is ReentranceDenied in the contracts pallet
+        // Module 8 error 0x16 is ReentranceDenied in the contracts pallet
         expect(index.toJSON()).toStrictEqual(8);
-        expect(error.toJSON()).toStrictEqual("0x15000000");
+        expect(error.toJSON()).toStrictEqual("0x16000000");
     });
 
     it('fails with the input forwarding flag', async function () {
