@@ -59,7 +59,7 @@ async fn case() -> anyhow::Result<()> {
         .unwrap_err();
     assert!(res
         .to_string()
-        .contains("ModuleError { index: 8, error: [25, 0, 0, 0] }"));
+        .contains("ModuleError { index: 8, error: [26, 0, 0, 0] }"));
 
     // state should not change after failed operation
     let rv = contract
