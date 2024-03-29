@@ -21,8 +21,8 @@ use semver::Version;
 use solang_parser::pt;
 
 use crate::{
+    codegen::polkadot::SCRATCH_SIZE,
     codegen::revert::{SolidityError, ERROR_SELECTOR, PANIC_SELECTOR},
-    emit::polkadot::SCRATCH_SIZE,
     sema::{
         ast::{self, ArrayLength, EventDecl, Function},
         tags::render,

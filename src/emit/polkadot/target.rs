@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::HashTy;
+use crate::codegen::polkadot::SCRATCH_SIZE;
 use crate::codegen::revert::PanicCode;
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
-use crate::emit::polkadot::{PolkadotTarget, SCRATCH_SIZE};
+use crate::emit::polkadot::PolkadotTarget;
 use crate::emit::storage::StorageSlot;
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
 use crate::sema::ast;

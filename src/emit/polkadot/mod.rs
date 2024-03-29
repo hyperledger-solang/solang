@@ -2,6 +2,7 @@
 
 use std::ffi::CString;
 
+use crate::codegen::polkadot::SCRATCH_SIZE;
 use crate::codegen::{Options, STORAGE_INITIALIZER};
 use crate::sema::ast::{Contract, Namespace};
 use inkwell::context::Context;
@@ -15,9 +16,6 @@ use crate::emit::{Binary, TargetRuntime};
 
 mod storage;
 pub(super) mod target;
-
-// When using the seal api, we use our own scratch buffer.
-pub const SCRATCH_SIZE: u32 = 32 * 1024;
 
 pub struct PolkadotTarget;
 
