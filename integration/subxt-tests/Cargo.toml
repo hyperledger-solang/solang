@@ -20,8 +20,8 @@ serde_json = "1.0.96"
 sp-keyring = "24.0.0"
 subxt = { version = "0.31.0", features = ["substrate-compat"] }
 tokio = {version = "1.28.2", features = ["rt-multi-thread", "macros", "time"]}
-contract-metadata = "3.0.1"
-contract-transcode = "3.0.1"
+contract-metadata = "4.0.2"
+contract-transcode = "4.0.2"
 
 [workspace]
 members = []
