@@ -29,62 +29,39 @@ describe('Deploy events contract and test event data, docs and topics', () => {
 
         expect(events.length).toEqual(4);
 
-        expect(events[0].event.identifier).toBe("foo1");
+        expect(events[0].event.identifier).toBe("Events::foo1");
         expect(events[0].event.docs).toEqual(["Ladida tada"]);
         expect(events[0].args.map(a => a.toJSON())).toEqual([254, "hello there"]);
 
-        expect(events[1].event.identifier).toBe("foo2");
+        expect(events[1].event.identifier).toBe("Events::foo2");
         expect(events[1].event.docs).toEqual(["Event Foo2\n\nJust a test\n\nAuthor: them is me"]);
         expect(events[1].args.map(a => a.toJSON())).toEqual(["0x7fffffffffffffff", "minor", deploy_contract.address.toString()]);
 
-        expect(events[2].event.identifier).toBe("ThisEventTopicShouldGetHashed");
+        expect(events[2].event.identifier).toBe("Events::ThisEventTopicShouldGetHashed");
         expect(events[2].args.map(a => a.toJSON())).toEqual([alice.address]);
 
-        // In ink! the 3rd event does look like this:
+        // We expect the 3rd event to yields the following event topics:
         //
-        //  #[ink(event)]
-        //  pub struct ThisEventTopicShouldGetHashed {
-        //      #[ink(topic)]
-        //      caller: AccountId,
-        //  }
-        //
-        // It yields the following event topics:
-        //
-        //  topics: [
-        //      0x5dde952854d38c37cff349bfc574a48a831de385b82457a5c25d9d39c220f3a7
-        //      0xa5af79de4a26a64813f980ffbb64ac0d7c278f67b17721423daed26ec5d3fe51
-        //  ]
-        //
-        // So we expect our solidity contract to produce the exact same topics:
+        // - blake2x256 sum of its signature: 'ThisEventTopicShouldGetHashed(address)'
+        // - Address of the caller
 
-        let hashed_event_topics = await conn.query.system.eventTopics("0x5dde952854d38c37cff349bfc574a48a831de385b82457a5c25d9d39c220f3a7");
-        expect(hashed_event_topics.length).toBe(1);
-        let hashed_topics = await conn.query.system.eventTopics("0xa5af79de4a26a64813f980ffbb64ac0d7c278f67b17721423daed26ec5d3fe51");
-        expect(hashed_topics.length).toBe(1);
+        let field_topic = await conn.query.system.eventTopics(alice.addressRaw);
+        expect(field_topic.length).toBe(1);
 
-        expect(events[3].event.identifier).toBe("Event");
+        let event_topic = await conn.query.system.eventTopics("0x95c29b3e1b835071ab157a22d89cfc81d176add91127a1ee8766abf406a2cbc3");
+        expect(event_topic.length).toBe(1);
+
+        expect(events[3].event.identifier).toBe("Events::Event");
         expect(events[3].args.map(a => a.toJSON())).toEqual([true]);
 
-        // In ink! the 4th event does look like this:
+        // The 4th event yields the following event topics:
         //
-        //  #[ink(event)]
-        //  pub struct Event {
-        //      #[ink(topic)]
-        //      something: bool,
-        //  }
-        //
-        // It yields the following event topics:
-        //
-        //  topics: [
-        //      0x004576656e74733a3a4576656e74000000000000000000000000000000000000
-        //      0x604576656e74733a3a4576656e743a3a736f6d657468696e6701000000000000
-        //  ]
-        //
-        // So we expect our solidity contract to produce the exact same topics:
+        // - blake2x256 sum of its signature: 'Event(bool)'
+        // - unhashed data (because encoded length is <= 32 bytes) of 'true'
 
-        let unhashed_event_topics = await conn.query.system.eventTopics("0x004576656e74733a3a4576656e74000000000000000000000000000000000000");
-        expect(unhashed_event_topics.length).toBe(1);
-        let unhashed_topics = await conn.query.system.eventTopics("0x604576656e74733a3a4576656e743a3a736f6d657468696e6701000000000000");
-        expect(unhashed_topics.length).toBe(1);
+        field_topic = await conn.query.system.eventTopics("0x0100000000000000000000000000000000000000000000000000000000000000");
+        expect(field_topic.length).toBe(1);
+        event_topic = await conn.query.system.eventTopics("0xc2bc7a077121efada8bc6a0af16c1e886406e8c2d1716979cb1b92098d8b49bc");
+        expect(event_topic.length).toBe(1);
     });
 });

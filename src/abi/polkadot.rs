@@ -473,6 +473,7 @@ pub fn gen_project<'a>(contract_no: usize, ns: &'a ast::Namespace) -> InkProject
             .args(args)
             .docs(vec![render(&e.tags).as_str()])
             .signature_topic(topic)
+            .module_path(ns.contracts[contract_no].id.name.as_str())
             .done();
         let signature = e.signature.as_str();
 
