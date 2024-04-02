@@ -32,9 +32,9 @@ syntax.
     be passed for Solana's ``sol_log_data`` system call, regardless if the ``indexed`` keyword is present or not.
     This behavior follows what Solana's Anchor framework does.
 
-In Polkadot, the topic fields are always the hash of the value of the field. Ethereum only hashes fields
-which do not fit in the 32 bytes. Since a cryptographic hash is used, it is only possible to compare the topic against a
-known value.
+In Polkadot, field topics are culculated the same as in `ink! v5.0 <https://use.ink/basics/events/#topics>`_:
+Topic fields are either the encoded value of the field or it's blake2b256 hash
+if the encoded value length exceeds 32 bytes.
 
 An event can be declared in a contract, or outside.
 
@@ -49,8 +49,10 @@ make it clearer which exact event is being emitted.
 .. include:: ../examples/event_positional_fields.sol
   :code: solidity
 
-In the transaction log, the first topic of an event is the keccak256 hash of the signature of the
-event. The signature is the event name, followed by the fields types in a comma separated list in parentheses. So
-the first topic for the second UserModified event would be the keccak256 hash of ``UserModified(address,uint64)``.
+In the transaction log, the topic of an event is the blake2b256 hash of the signature of the
+event. The signature is the event name, followed by the fields types in a comma separated list in parentheses,
+like event signatures in `Ethereum Solidity <https://docs.soliditylang.org/en/v0.8.25/abi-spec.html#events>`_. So
+the first topic for the second UserModified event would be the blake2b256 hash of ``UserModified(address,uint64)``.
 You can leave this topic out by declaring the event ``anonymous``. This makes the event slightly smaller (32 bytes
 less) and makes it possible to have 4 ``indexed`` fields rather than 3.
+

@@ -12,8 +12,10 @@ use crate::sema::ast::{self, Function, Namespace, RetrieveType, Type};
 use ink_env::hash::{Blake2x256, CryptoHash};
 use solang_parser::pt;
 
-/// This struct implements the trait 'EventEmitter' in order to handle the emission of events
-/// for Polkadot
+/// Implements [EventEmitter] to handle the emission of events on Polkadot.
+/// Data and topic encoding follow [ink! v5.0][0].
+///
+/// [0]: https://use.ink/basics/events/#topics
 pub(super) struct PolkadotEventEmitter<'a> {
     /// Arguments passed to the event
     pub(super) args: &'a [ast::Expression],
