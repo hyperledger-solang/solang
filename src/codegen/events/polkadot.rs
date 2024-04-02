@@ -24,23 +24,10 @@ pub(super) struct PolkadotEventEmitter<'a> {
 }
 
 impl EventEmitter for PolkadotEventEmitter<'_> {
-    fn selector(&self, emitting_contract_no: usize) -> Vec<u8> {
-        let event = &self.ns.events[self.event_no];
-        // For freestanding events the name of the emitting contract is used
-        let contract_name = &self.ns.contracts[event.contract.unwrap_or(emitting_contract_no)]
-            .id
-            .name;
-
-        // First byte is 0 because there is no prefix for the event topic
-        let encoded = format!("\0{}::{}", contract_name, &event.id);
-
-        // Takes a scale-encoded topic and makes it into a topic hash.
+    fn selector(&self, _emitting_contract_no: usize) -> Vec<u8> {
+        let signature = self.ns.events[self.event_no].signature.as_bytes();
         let mut buf = [0; 32];
-        if encoded.len() <= 32 {
-            buf[..encoded.len()].copy_from_slice(encoded.as_bytes());
-        } else {
-            <Blake2x256 as CryptoHash>::hash(encoded.as_bytes(), &mut buf);
-        };
+        <Blake2x256 as CryptoHash>::hash(signature, &mut buf);
         buf.into()
     }
 
