@@ -33,7 +33,7 @@ syntax.
     This behavior follows what Solana's Anchor framework does.
 
 In Polkadot, field topics are culculated the same as in `ink! v5.0 <https://use.ink/basics/events/#topics>`_:
-Topic fields are either the encoded value of the field or it's blake2b256 hash
+Topic fields are either the encoded value of the field or its blake2b256 hash
 if the encoded value length exceeds 32 bytes.
 
 An event can be declared in a contract, or outside.
