@@ -82,12 +82,6 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
             }
 
             let (value_encoded, size) = abi_encode(&loc, vec![value], self.ns, vartab, cfg, false);
-            let size_is_greater_than_hash_length = Expression::More {
-                loc,
-                signed: false,
-                left: size.clone().into(),
-                right: hash_len.clone(),
-            };
 
             vartab.new_dirty_tracker();
             let var_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
@@ -107,6 +101,12 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
 
             let hash_topic_block = cfg.new_basic_block("hash_topic".into());
             let done_block = cfg.new_basic_block("done".into());
+            let size_is_greater_than_hash_length = Expression::More {
+                loc,
+                signed: false,
+                left: size.clone().into(),
+                right: hash_len.clone(),
+            };
             cfg.add(
                 vartab,
                 Instr::BranchCond {
