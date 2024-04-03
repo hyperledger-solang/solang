@@ -45,7 +45,7 @@ describe('Deploy mytoken contract and test', () => {
 
         expect(events.length).toEqual(1);
 
-        expect(events[0].event.identifier).toBe("Debugging");
+        expect(events[0].event.identifier).toBe("mytokenEvent::Debugging");
         expect(events[0].args.map(a => a.toJSON())).toEqual([alice.address]);
     });
 });

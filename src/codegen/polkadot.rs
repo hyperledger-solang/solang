@@ -14,6 +14,9 @@ use crate::{
     sema::ast::{Namespace, Type},
 };
 
+// When using the seal api, we use our own scratch buffer.
+pub const SCRATCH_SIZE: u32 = 32 * 1024;
+
 /// Helper to handle error cases from external function and constructor calls.
 pub(crate) struct RetCodeCheck {
     pub success: usize,

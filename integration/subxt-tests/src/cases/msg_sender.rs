@@ -87,10 +87,6 @@ async fn case() -> anyhow::Result<()> {
 
     let mut evt_buffer = evt.data.as_slice();
 
-    let topic_id = evt_buffer.read_byte()?;
-
-    assert_eq!(topic_id, 0);
-
     let addr = <AccountId32>::decode(&mut evt_buffer)?;
 
     assert_eq!(addr, sp_keyring::AccountKeyring::Alice.to_account_id());

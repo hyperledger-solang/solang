@@ -32,9 +32,6 @@ async fn case() -> anyhow::Result<()> {
 
     let e1_buffer = &mut e1.data.as_slice();
 
-    let topic = e1_buffer.read_byte()?;
-    assert_eq!(topic, 0);
-
     // mimic the solidity struct type
     #[derive(Decode)]
     struct Foo1 {
@@ -47,9 +44,6 @@ async fn case() -> anyhow::Result<()> {
 
     let e2 = &rs[1];
     let e2_buffer = &mut e2.data.as_slice();
-
-    let topic = e2_buffer.read_byte()?;
-    assert_eq!(topic, 1);
 
     // mimic the solidity struct type
     #[derive(Decode)]

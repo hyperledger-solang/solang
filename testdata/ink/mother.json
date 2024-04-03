@@ -1,26 +1,27 @@
 {
   "source": {
-    "hash": "0x05cc2edbb7547b2311d2a442aac3c183e055bf1f3faa96568b4a68e3ac5e17f0",
-    "language": "ink! 4.2.0",
-    "compiler": "rustc 1.69.0",
+    "hash": "0xd3f781649eacf23e57a65b0dd8f59142c92e6e2cd4656da874a594431d7399a9",
+    "language": "ink! 5.0.0",
+    "compiler": "rustc 1.73.0",
     "build_info": {
       "build_mode": "Debug",
-      "cargo_contract_version": "3.0.1",
+      "cargo_contract_version": "4.0.2",
       "rust_toolchain": "stable-x86_64-unknown-linux-gnu",
       "wasm_opt_settings": {
         "keep_debug_symbols": false,
-        "optimization_passes": "Zero"
+        "optimization_passes": "Z"
       }
     }
   },
   "contract": {
     "name": "mother",
-    "version": "4.2.0",
+    "version": "5.0.0",
     "authors": [
       "Parity Technologies <admin@parity.io>"
     ],
     "description": "Mother of all contracts"
   },
+  "image": null,
   "spec": {
     "constructors": [
       {
@@ -31,7 +32,7 @@
               "displayName": [
                 "Auction"
               ],
-              "type": 13
+              "type": 24
             }
           }
         ],
@@ -44,7 +45,7 @@
             "ink_primitives",
             "ConstructorResult"
           ],
-          "type": 18
+          "type": 29
         },
         "selector": "0x9bae9d5e"
       },
@@ -59,7 +60,7 @@
             "ink_primitives",
             "ConstructorResult"
           ],
-          "type": 18
+          "type": 29
         },
         "selector": "0x61ef7e3e"
       },
@@ -86,7 +87,7 @@
             "ink_primitives",
             "ConstructorResult"
           ],
-          "type": 21
+          "type": 31
         },
         "selector": "0x87a495f6"
       }
@@ -115,7 +116,7 @@
         "displayName": [
           "ChainExtension"
         ],
-        "type": 27
+        "type": 38
       },
       "hash": {
         "displayName": [
@@ -124,11 +125,12 @@
         "type": 1
       },
       "maxEventTopics": 4,
+      "staticBufferSize": 16384,
       "timestamp": {
         "displayName": [
           "Timestamp"
         ],
-        "type": 26
+        "type": 37
       }
     },
     "events": [
@@ -142,14 +144,16 @@
               "displayName": [
                 "Auction"
               ],
-              "type": 13
+              "type": 24
             }
           }
         ],
         "docs": [
           "Event emitted when an auction being echoed."
         ],
-        "label": "AuctionEchoed"
+        "label": "AuctionEchoed",
+        "module_path": "mother::mother",
+        "signature_topic": "0x9f3c1597e0c1071a300ddb58b0474976b0d066c9a445c8a4677e5cebb5f8980a"
       }
     ],
     "lang_error": {
@@ -157,7 +161,7 @@
         "ink",
         "LangError"
       ],
-      "type": 20
+      "type": 30
     },
     "messages": [
       {
@@ -168,7 +172,7 @@
               "displayName": [
                 "Auction"
               ],
-              "type": 13
+              "type": 24
             }
           }
         ],
@@ -184,7 +188,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 24
+          "type": 34
         },
         "selector": "0xbc7ac4cf"
       },
@@ -196,7 +200,7 @@
               "displayName": [
                 "Option"
               ],
-              "type": 25
+              "type": 35
             }
           }
         ],
@@ -212,7 +216,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 21
+          "type": 31
         },
         "selector": "0xe62a1df5"
       },
@@ -240,9 +244,37 @@
             "ink",
             "MessageResult"
           ],
-          "type": 18
+          "type": 29
         },
         "selector": "0x238582df"
+      },
+      {
+        "args": [
+          {
+            "label": "message",
+            "type": {
+              "displayName": [
+                "String"
+              ],
+              "type": 0
+            }
+          }
+        ],
+        "default": false,
+        "docs": [
+          " Mutates the input string to return \"Hello, { name }\""
+        ],
+        "label": "mut_hello_world",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 36
+        },
+        "selector": "0x23c47128"
       }
     ]
   },
@@ -411,20 +443,37 @@
                 "root": {
                   "layout": {
                     "leaf": {
-                      "key": "0x013a6e2b",
+                      "key": "0x2b6e3a01",
                       "ty": 9
                     }
                   },
-                  "root_key": "0x013a6e2b"
+                  "root_key": "0x2b6e3a01",
+                  "ty": 13
                 }
               },
               "name": "balances"
+            },
+            {
+              "layout": {
+                "root": {
+                  "layout": {
+                    "leaf": {
+                      "key": "0x8482a36e",
+                      "ty": 0
+                    }
+                  },
+                  "root_key": "0x8482a36e",
+                  "ty": 18
+                }
+              },
+              "name": "log"
             }
           ],
           "name": "Mother"
         }
       },
-      "root_key": "0x00000000"
+      "root_key": "0x00000000",
+      "ty": 23
     }
   },
   "types": [
@@ -597,6 +646,258 @@
       "id": 13,
       "type": {
         "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 8
+          },
+          {
+            "name": "V",
+            "type": 9
+          },
+          {
+            "name": "KeyType",
+            "type": 14
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 15
+          },
+          {
+            "name": "R",
+            "type": 16
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "AutoKey"
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 17
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "type": {
+        "def": {
+          "tuple": []
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": {
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "name": "len",
+                "type": 21,
+                "typeName": "Lazy<u32, KeyType>"
+              },
+              {
+                "name": "elements",
+                "type": 22,
+                "typeName": "Mapping<u32, V, KeyType>"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "V",
+            "type": 0
+          },
+          {
+            "name": "KeyType",
+            "type": 19
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "vec",
+          "StorageVec"
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 15
+          },
+          {
+            "name": "R",
+            "type": 20
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 17
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "V",
+            "type": 10
+          },
+          {
+            "name": "KeyType",
+            "type": 19
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "Lazy"
+        ]
+      }
+    },
+    {
+      "id": 22,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 10
+          },
+          {
+            "name": "V",
+            "type": 0
+          },
+          {
+            "name": "KeyType",
+            "type": 19
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 23,
+      "type": {
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "name": "auction",
+                "type": 24,
+                "typeName": "<Auction as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1146968252u32, ()>,>>::Type"
+              },
+              {
+                "name": "balances",
+                "type": 13,
+                "typeName": "<Mapping<AccountId, Balance> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<20606507u32, ()\n>,>>::Type"
+              },
+              {
+                "name": "log",
+                "type": 18,
+                "typeName": "<StorageVec<String> as::ink::storage::traits::AutoStorableHint<\n::ink::storage::traits::ManualKey<1856209540u32, ()>,>>::Type"
+              }
+            ]
+          }
+        },
+        "path": [
+          "mother",
+          "mother",
+          "Mother"
+        ]
+      }
+    },
+    {
+      "id": 24,
+      "type": {
+        "def": {
           "composite": {
             "fields": [
               {
@@ -611,17 +912,17 @@
               },
               {
                 "name": "bids",
-                "type": 14,
+                "type": 25,
                 "typeName": "Bids"
               },
               {
                 "name": "terms",
-                "type": 15,
+                "type": 26,
                 "typeName": "[BlockNumber; 3]"
               },
               {
                 "name": "status",
-                "type": 16,
+                "type": 27,
                 "typeName": "Status"
               },
               {
@@ -645,7 +946,7 @@
       }
     },
     {
-      "id": 14,
+      "id": 25,
       "type": {
         "def": {
           "composite": {
@@ -665,7 +966,7 @@
       }
     },
     {
-      "id": 15,
+      "id": 26,
       "type": {
         "def": {
           "array": {
@@ -676,7 +977,7 @@
       }
     },
     {
-      "id": 16,
+      "id": 27,
       "type": {
         "def": {
           "variant": {
@@ -702,7 +1003,7 @@
               {
                 "fields": [
                   {
-                    "type": 17,
+                    "type": 28,
                     "typeName": "Outline"
                   }
                 ],
@@ -730,7 +1031,7 @@
       }
     },
     {
-      "id": 17,
+      "id": 28,
       "type": {
         "def": {
           "variant": {
@@ -758,7 +1059,7 @@
       }
     },
     {
-      "id": 18,
+      "id": 29,
       "type": {
         "def": {
           "variant": {
@@ -766,7 +1067,7 @@
               {
                 "fields": [
                   {
-                    "type": 19
+                    "type": 17
                   }
                 ],
                 "index": 0,
@@ -775,7 +1076,7 @@
               {
                 "fields": [
                   {
-                    "type": 20
+                    "type": 30
                   }
                 ],
                 "index": 1,
@@ -787,11 +1088,11 @@
         "params": [
           {
             "name": "T",
-            "type": 19
+            "type": 17
           },
           {
             "name": "E",
-            "type": 20
+            "type": 30
           }
         ],
         "path": [
@@ -800,15 +1101,7 @@
       }
     },
     {
-      "id": 19,
-      "type": {
-        "def": {
-          "tuple": []
-        }
-      }
-    },
-    {
-      "id": 20,
+      "id": 30,
       "type": {
         "def": {
           "variant": {
@@ -827,7 +1120,7 @@
       }
     },
     {
-      "id": 21,
+      "id": 31,
       "type": {
         "def": {
           "variant": {
@@ -835,7 +1128,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 32
                   }
                 ],
                 "index": 0,
@@ -844,7 +1137,7 @@
               {
                 "fields": [
                   {
-                    "type": 20
+                    "type": 30
                   }
                 ],
                 "index": 1,
@@ -856,11 +1149,11 @@
         "params": [
           {
             "name": "T",
-            "type": 22
+            "type": 32
           },
           {
             "name": "E",
-            "type": 20
+            "type": 30
           }
         ],
         "path": [
@@ -869,7 +1162,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 32,
       "type": {
         "def": {
           "variant": {
@@ -877,7 +1170,7 @@
               {
                 "fields": [
                   {
-                    "type": 19
+                    "type": 17
                   }
                 ],
                 "index": 0,
@@ -886,7 +1179,7 @@
               {
                 "fields": [
                   {
-                    "type": 23
+                    "type": 33
                   }
                 ],
                 "index": 1,
@@ -898,11 +1191,11 @@
         "params": [
           {
             "name": "T",
-            "type": 19
+            "type": 17
           },
           {
             "name": "E",
-            "type": 23
+            "type": 33
           }
         ],
         "path": [
@@ -911,7 +1204,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 33,
       "type": {
         "def": {
           "variant": {
@@ -941,7 +1234,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 34,
       "type": {
         "def": {
           "variant": {
@@ -949,7 +1242,7 @@
               {
                 "fields": [
                   {
-                    "type": 13
+                    "type": 24
                   }
                 ],
                 "index": 0,
@@ -958,7 +1251,7 @@
               {
                 "fields": [
                   {
-                    "type": 20
+                    "type": 30
                   }
                 ],
                 "index": 1,
@@ -970,11 +1263,11 @@
         "params": [
           {
             "name": "T",
-            "type": 13
+            "type": 24
           },
           {
             "name": "E",
-            "type": 20
+            "type": 30
           }
         ],
         "path": [
@@ -983,7 +1276,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 35,
       "type": {
         "def": {
           "variant": {
@@ -995,7 +1288,7 @@
               {
                 "fields": [
                   {
-                    "type": 23
+                    "type": 33
                   }
                 ],
                 "index": 1,
@@ -1007,7 +1300,7 @@
         "params": [
           {
             "name": "T",
-            "type": 23
+            "type": 33
           }
         ],
         "path": [
@@ -1016,7 +1309,49 @@
       }
     },
     {
-      "id": 26,
+      "id": 36,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 0
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 30
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 0
+          },
+          {
+            "name": "E",
+            "type": 30
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 37,
       "type": {
         "def": {
           "primitive": "u64"
@@ -1024,7 +1359,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 38,
       "type": {
         "def": {
           "variant": {}
@@ -1037,5 +1372,5 @@
       }
     }
   ],
-  "version": "4"
+  "version": 5
 }

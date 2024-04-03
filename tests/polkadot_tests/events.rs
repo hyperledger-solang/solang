@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use ink_env::{
-    hash::{Blake2x256, CryptoHash},
-    topics::PrefixedValue,
-};
+use ink_env::hash::{Blake2x256, CryptoHash};
 use ink_primitives::{AccountId, Hash};
 use parity_scale_codec::Encode;
 use solang::{file_resolver::FileResolver, Target};
@@ -17,6 +14,12 @@ fn topic_hash(encoded: &[u8]) -> Hash {
     } else {
         <Blake2x256 as CryptoHash>::hash(encoded, &mut buf);
     };
+    buf.into()
+}
+
+fn event_topic(signature: &str) -> Hash {
+    let mut buf = [0; 32];
+    <Blake2x256 as CryptoHash>::hash(signature.as_bytes(), &mut buf);
     buf.into()
 }
 
@@ -38,16 +41,15 @@ fn anonymous() {
     assert_eq!(runtime.events().len(), 1);
     let event = &runtime.events()[0];
     assert_eq!(event.topics.len(), 0);
-    assert_eq!(event.data, (0u8, true).encode());
+    assert_eq!(event.data, true.encode());
 }
 
 #[test]
 fn emit() {
     #[derive(Encode)]
-    enum Event {
-        Foo(bool, u32, i64),
-        Bar(u32, u64, String),
-    }
+    struct Foo(bool, u32, i64);
+    #[derive(Encode)]
+    struct Bar(u32, u64, String);
 
     let mut runtime = build_solidity(
         r#"
@@ -67,30 +69,20 @@ fn emit() {
     assert_eq!(runtime.events().len(), 2);
     let event = &runtime.events()[0];
     assert_eq!(event.topics.len(), 2);
-    assert_eq!(event.topics[0], topic_hash(b"\0a::foo"));
-    let topic = PrefixedValue {
-        prefix: b"a::foo::i",
-        value: &1i64,
-    }
-    .encode();
-    assert_eq!(event.topics[1], topic_hash(&topic[..]));
-    assert_eq!(event.data, Event::Foo(true, 102, 1).encode());
+    assert_eq!(event.topics[0], event_topic("foo(bool,uint32,int64)"));
+    assert_eq!(event.topics[1], topic_hash(&1i64.encode()[..]));
+    assert_eq!(event.data, Foo(true, 102, 1).encode());
 
     let event = &runtime.events()[1];
     assert_eq!(event.topics.len(), 2);
     println!("topic hash: {:?}", event.topics[0]);
     println!("topic hash: {:?}", event.topics[0]);
-    assert_eq!(event.topics[0], topic_hash(b"\0a::bar"));
-    let topic = PrefixedValue {
-        prefix: b"a::bar::s",
-        value: &String::from("foobar"),
-    }
-    .encode();
-    assert_eq!(event.topics[1], topic_hash(&topic[..]));
+    assert_eq!(event.topics[0], event_topic("bar(uint32,uint64,string)"));
     assert_eq!(
-        event.data,
-        Event::Bar(0xdeadcafe, 102, "foobar".into()).encode()
+        event.topics[1],
+        topic_hash(&"foobar".to_string().encode()[..])
     );
+    assert_eq!(event.data, Bar(0xdeadcafe, 102, "foobar".into()).encode());
 }
 
 #[test]
@@ -216,16 +208,7 @@ fn event_imported() {
 #[test]
 fn erc20_ink_example() {
     #[derive(Encode)]
-    enum Event {
-        Transfer(AccountId, AccountId, u128),
-    }
-
-    #[derive(Encode)]
-    struct Transfer {
-        from: AccountId,
-        to: AccountId,
-        value: u128,
-    }
+    struct Transfer(AccountId, AccountId, u128);
 
     let mut runtime = build_solidity(
         r##"
@@ -245,26 +228,19 @@ fn erc20_ink_example() {
     let from = AccountId::from([1; 32]);
     let to = AccountId::from([2; 32]);
     let value = 10;
-    runtime.function("emit_event", Transfer { from, to, value }.encode());
+    runtime.function("emit_event", Transfer(from, to, value).encode());
 
     assert_eq!(runtime.events().len(), 1);
     let event = &runtime.events()[0];
-    assert_eq!(event.data, Event::Transfer(from, to, value).encode());
+    assert_eq!(event.data, Transfer(from, to, value).encode());
 
     assert_eq!(event.topics.len(), 3);
-    assert_eq!(event.topics[0], topic_hash(b"\0Erc20::Transfer"));
-
-    let expected_topic = PrefixedValue {
-        prefix: b"Erc20::Transfer::from",
-        value: &from,
-    };
-    assert_eq!(event.topics[1], topic_hash(&expected_topic.encode()));
-
-    let expected_topic = PrefixedValue {
-        prefix: b"Erc20::Transfer::to",
-        value: &to,
-    };
-    assert_eq!(event.topics[2], topic_hash(&expected_topic.encode()));
+    assert_eq!(
+        event.topics[0],
+        event_topic("Transfer(address,address,uint128)")
+    );
+    assert_eq!(event.topics[1], topic_hash(&from.encode()));
+    assert_eq!(event.topics[2], topic_hash(&to.encode()));
 }
 
 #[test]
@@ -287,13 +263,9 @@ fn freestanding() {
 
     assert_eq!(runtime.events().len(), 1);
     let event = &runtime.events()[0];
-    assert_eq!(event.data, (0u8, true).encode());
-    assert_eq!(event.topics[0], topic_hash(b"\0a::A"));
-    let expected_topic = PrefixedValue {
-        prefix: b"a::A::b",
-        value: &true,
-    };
-    assert_eq!(event.topics[1], topic_hash(&expected_topic.encode()));
+    assert_eq!(event.data, true.encode());
+    assert_eq!(event.topics[0], event_topic("A(bool)"));
+    assert_eq!(event.topics[1], topic_hash(&true.encode()));
 }
 
 #[test]
@@ -308,11 +280,7 @@ fn different_contract() {
 
     assert_eq!(runtime.events().len(), 1);
     let event = &runtime.events()[0];
-    assert_eq!(event.data, (0u8, true).encode());
-    assert_eq!(event.topics[0], topic_hash(b"\0A::X"));
-    let expected_topic = PrefixedValue {
-        prefix: b"A::X::foo",
-        value: &true,
-    };
-    assert_eq!(event.topics[1], topic_hash(&expected_topic.encode()));
+    assert_eq!(event.data, true.encode());
+    assert_eq!(event.topics[0], event_topic("X(bool)"));
+    assert_eq!(event.topics[1], topic_hash(&true.encode()));
 }

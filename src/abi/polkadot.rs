@@ -3,6 +3,7 @@ use contract_metadata::{
     CodeHash, Compiler, Contract, ContractMetadata, Language, Source, SourceCompiler,
     SourceLanguage, SourceWasm,
 };
+use ink_env::hash::{Blake2x256, CryptoHash};
 use ink_metadata::{
     layout::{FieldLayout, Layout, LayoutKey, LeafLayout, RootLayout, StructLayout},
     ConstructorSpec, ContractSpec, EnvironmentSpec, EventParamSpec, EventSpec, InkProject,
@@ -21,6 +22,7 @@ use semver::Version;
 use solang_parser::pt;
 
 use crate::{
+    codegen::polkadot::SCRATCH_SIZE,
     codegen::revert::{SolidityError, ERROR_SELECTOR, PANIC_SELECTOR},
     sema::{
         ast::{self, ArrayLength, EventDecl, Function},
@@ -285,7 +287,7 @@ fn type_to_storage_layout(
 }
 
 /// Generate `InkProject` from `ast::Type` and `ast::Namespace`
-pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
+pub fn gen_project<'a>(contract_no: usize, ns: &'a ast::Namespace) -> InkProject {
     let mut registry = PortableRegistryBuilder::new();
 
     // This is only used by off-chain tooling. At the moment there is no such tooling available yet.
@@ -302,6 +304,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                 let root = RootLayout::new(
                     layout_key,
                     type_to_storage_layout(ty, layout_key, &registry),
+                    ty.into(),
                 );
                 Some(FieldLayout::new(var.name.clone(), root))
             } else {
@@ -341,7 +344,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .payable(payable)
         .args(args)
         .docs(vec![render(&f.tags).as_str()])
-        .returns(ReturnTypeSpec::new(None))
+        .returns(ReturnTypeSpec::new(TypeSpec::default()))
         .done()
     };
 
@@ -407,7 +410,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                 Some(TypeSpec::new(ty.into(), path))
             }
         };
-        let ret_type = ReturnTypeSpec::new(ret_spec);
+        let ret_type = ReturnTypeSpec::new(ret_spec.unwrap_or_default());
         let args = f
             .params
             .iter()
@@ -445,7 +448,8 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .map(message_spec)
         .collect::<Vec<MessageSpec<PortableForm>>>();
 
-    let mut event_spec = |e: &EventDecl| -> EventSpec<PortableForm> {
+    // ink! v5 ABI wants declared events to be unique; collect the signature into a HashMap
+    let mut event_spec = |e: &'a EventDecl| -> (&'a str, EventSpec<PortableForm>) {
         let args = e
             .fields
             .iter()
@@ -460,19 +464,29 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     .done()
             })
             .collect::<Vec<_>>();
-        EventSpec::new(e.id.name.clone())
+        let topic = (!e.anonymous).then(|| {
+            let mut buf = [0; 32];
+            <Blake2x256 as CryptoHash>::hash(e.signature.as_bytes(), &mut buf);
+            buf
+        });
+        let event = EventSpec::new(e.id.name.clone())
             .args(args)
             .docs(vec![render(&e.tags).as_str()])
-            .done()
+            .signature_topic(topic)
+            .module_path(ns.contracts[contract_no].id.name.as_str())
+            .done();
+        let signature = e.signature.as_str();
+
+        (signature, event)
     };
 
     let events = ns.contracts[contract_no]
         .emits_events
         .iter()
-        .map(|event_no| {
-            let event = &ns.events[*event_no];
-            event_spec(event)
-        })
+        .map(|event_no| event_spec(&ns.events[*event_no]))
+        .collect::<std::collections::HashMap<&str, EventSpec<PortableForm>>>()
+        .drain()
+        .map(|(_, spec)| spec)
         .collect::<Vec<EventSpec<PortableForm>>>();
 
     let environment: EnvironmentSpec<PortableForm> = EnvironmentSpec::new()
@@ -510,6 +524,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             primitive_to_ty(&ast::Type::Uint(64), &mut registry).into(),
             path!("Timestamp"),
         ))
+        .static_buffer_size(SCRATCH_SIZE as usize)
         .done();
 
     let mut error_definitions = vec![

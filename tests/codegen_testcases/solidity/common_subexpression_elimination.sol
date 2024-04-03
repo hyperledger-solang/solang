@@ -305,8 +305,8 @@ contract c1 {
         int p = a + get(a/(2*b), b);
 
         bool e = (ast == bst) || p < 2;
-        // CHECK: ty:bool %2.cse_temp = (strcmp (%ast) (%bst))
-        // CHECK: branchcond %2.cse_temp, block2, block1
+        // CHECK: ty:bool %3.cse_temp = (strcmp (%ast) (%bst))
+        // CHECK: branchcond %3.cse_temp, block2, block1
         bool e2 = e;
         // CHECK: branchcond (strcmp ((builtin Concat (%ast, %bst))) (%cst)), block3, block4
         if (string.concat(ast, bst) == cst) {
@@ -315,7 +315,7 @@ contract c1 {
             emit testEvent(a + get(a/(2*b) -p, b), p, string.concat(ast, bst));
         }
 
-        // CHECK: branchcond %2.cse_temp, block21, block22
+        // CHECK: branchcond %3.cse_temp, block21, block22
         if (ast == bst) {
             ast = string.concat(ast, "b");
         }
