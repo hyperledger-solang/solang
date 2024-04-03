@@ -89,12 +89,7 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
                 loc,
                 signed: false,
                 left: size.clone().into(),
-                right: Expression::NumberLiteral {
-                    loc,
-                    ty: Type::Uint(32),
-                    value: 32.into(),
-                }
-                .into(),
+                right: hash_len.clone(),
             };
 
             vartab.new_dirty_tracker();
