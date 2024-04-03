@@ -51,14 +51,11 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
         // Events that are not anonymous always have themselves as a topic.
         // This is static and can be calculated at compile time.
         if !event.anonymous {
-            let topic_hash = self.selector(contract_no);
-
-            // First byte is 0 because there is no prefix for the event topic
             topics.push(Expression::AllocDynamicBytes {
                 loc,
                 ty: Type::Slice(Type::Uint(8).into()),
                 size: hash_len.clone(),
-                initializer: Some(topic_hash),
+                initializer: self.selector(contract_no).into(),
             });
         };
 
