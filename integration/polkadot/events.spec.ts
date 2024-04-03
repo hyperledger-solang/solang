@@ -40,8 +40,7 @@ describe('Deploy events contract and test event data, docs and topics', () => {
         expect(events[2].event.identifier).toBe("Events::ThisEventTopicShouldGetHashed");
         expect(events[2].args.map(a => a.toJSON())).toEqual([alice.address]);
 
-        // We expect the 3rd event to yields the following event topics:
-        //
+        // Expect the 3rd event to yield the following event topics:
         // - blake2x256 sum of its signature: 'ThisEventTopicShouldGetHashed(address)'
         // - Address of the caller
 
@@ -55,7 +54,6 @@ describe('Deploy events contract and test event data, docs and topics', () => {
         expect(events[3].args.map(a => a.toJSON())).toEqual([true]);
 
         // The 4th event yields the following event topics:
-        //
         // - blake2x256 sum of its signature: 'Event(bool)'
         // - unhashed data (because encoded length is <= 32 bytes) of 'true'
 
