@@ -58,7 +58,7 @@ describe('UniswapV2Factory', () => {
 
     let events: DecodedEvent[] = res0.contractEvents;
     expect(events.length).toEqual(1)
-    expect(events[0].event.identifier).toBe('PairCreated')
+    expect(events[0].event.identifier).toBe('UniswapV2Factory::PairCreated')
     expect(events[0].args[0].toString()).toBe(TEST_ADDRESSES[0])
     expect(events[0].args[1].toString()).toBe(TEST_ADDRESSES[1])
     expect(events[0].args[3].eq(1)).toBeTruthy();

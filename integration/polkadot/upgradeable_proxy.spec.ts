@@ -21,7 +21,7 @@ describe('Deploy the upgradable proxy and implementations; expect the upgrade me
         let events: DecodedEvent[] = result.contractEvents;
         console.log(events);
         expect(events.length).toEqual(1);
-        expect(events[0].event.identifier).toBe("Upgraded");
+        expect(events[0].event.identifier).toBe("UpgradeableProxy::Upgraded");
         expect(events[0].args.map(a => a.toJSON())[0]).toEqual(params[0].toJSON());
     }
 
