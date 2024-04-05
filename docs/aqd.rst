@@ -265,7 +265,7 @@ Solang Aqd simplifies this process by accepting these parameters as command-line
 Additionally, it ensures the submitted transaction aligns with the expected values in the Interface Description Language (IDL).
 
 .. note::
-  If unsure, you can always check the expected arguements and accounts for a specific function by using the ``show`` subcommand.
+  If unsure, you can always check the expected arguments and accounts for a specific function by using the ``show`` subcommand.
 
 Options specific to the ``call`` subcommand:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
