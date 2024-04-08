@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import expect from 'expect';
 import { loadContractAndCallConstructor } from './setup';
 import crypto from 'crypto';

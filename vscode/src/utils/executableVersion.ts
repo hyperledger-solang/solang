@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { spawnSync } from 'child_process';
 
 export default function executableVersion(path: string): string | undefined {

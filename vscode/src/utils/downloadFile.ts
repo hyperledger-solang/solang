@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import fetch from 'node-fetch';
 import { PathLike, createWriteStream } from 'fs';
 import * as stream from 'stream';

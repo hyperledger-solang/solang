@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import fetch from 'node-fetch';
 
 export default async function fetchLatestRelease() {
