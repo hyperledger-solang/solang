@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import '@polkadot/api-augment';
 import fs, { PathLike } from 'fs';
 import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';

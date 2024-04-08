@@ -31,9 +31,9 @@ serde_derive = { version = "1.0" }
 inkwell = { version = "0.4.0", features = ["target-webassembly", "no-libffi-linking", "llvm16-0"], optional = true }
 blake2-rfc = "0.2.18"
 handlebars = "5.1"
-contract-metadata = "3.2"
+contract-metadata = "4.0.2"
 semver = { version = "1.0", features = ["serde"] }
-tempfile = "3.9"
+tempfile = "3.10"
 libc = { version = "0.2", optional = true }
 tower-lsp = { version = "0.20", optional = true }
 tokio = { version = "1.27", features = ["rt", "io-std", "macros"], optional = true }
@@ -58,11 +58,11 @@ ink_env = "5.0.0"
 ink_metadata = "5.0.0"
 scale-info = "2.10"
 petgraph = "0.6"
-wasmparser = "0.121.0"
-wasm-encoder = "0.41"
+wasmparser = "0.202.0"
+wasm-encoder = "0.202"
 toml = "0.8"
-wasm-opt = { version = "0.113.0", optional = true }
-contract-build = { version = "3.2", optional = true }
+wasm-opt = { version = "0.116.0", default-features = false, optional = true }
+contract-build = { version = "4.0.2", optional = true }
 primitive-types = { version = "0.12", features = ["codec"] }
 normalize-path = "0.2.1"
 bitflags = "2.4"

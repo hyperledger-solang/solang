@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { createConnection, InitializeResult, DefinitionRequest } from 'vscode-languageserver';
 import * as rpc from 'vscode-jsonrpc';
 
