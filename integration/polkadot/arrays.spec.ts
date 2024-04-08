@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import expect from 'expect';
 import crypto from 'crypto';
 import { createConnection, deploy, transaction, aliceKeypair, weight, query, } from './index';

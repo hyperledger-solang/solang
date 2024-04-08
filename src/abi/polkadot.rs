@@ -606,5 +606,5 @@ pub fn metadata(
     let project_json = serde_json::to_value(gen_project(contract_no, ns)).unwrap();
     let abi = serde_json::from_value(project_json).unwrap();
 
-    serde_json::to_value(ContractMetadata::new(source, contract, None, abi)).unwrap()
+    serde_json::to_value(ContractMetadata::new(source, contract, None, None, abi)).unwrap()
 }

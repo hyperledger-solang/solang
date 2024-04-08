@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Tests against the tornado cash core contracts.
 // The tornado contracts used here contain minor mechanical changes to work fine on Polkadot.
 // The ZK-SNARK setup is the same as ETH Tornado on mainnet.
