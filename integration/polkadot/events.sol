@@ -10,6 +10,8 @@ contract Events {
     event ThisEventTopicShouldGetHashed(address indexed caller);
     event Event(bool indexed something);
 
+    event Empty();
+
     function emit_event() public {
         emit foo1(254, "hello there");
 
@@ -18,5 +20,7 @@ contract Events {
         emit ThisEventTopicShouldGetHashed(msg.sender);
 
         emit Event(true);
+
+        emit Empty();
     }
 }
