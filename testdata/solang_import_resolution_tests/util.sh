@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+
 
 function run_solc {
     if [ -z ${SOLC+x} ]; then
