@@ -4,12 +4,17 @@ will be documented here.
 
 ## Unreleased
 
-### Added
-- **Soroban** Work on adding support for [Stellar's Soroban](https://soroban.stellar.org/docs) contracts platforms started, by adding a skeleton that supports the Soroban runtime. [Salaheldin Soliman](https://github.com/salaheldinsoliman)
+## v0.3.4 Athens
 
+### Added
+- **Experimental**: Three address code format IR for the CFG has been implemented (disabled by default).
+  [fanyi-zhao](https://github.com/fanyi-zhao).
+- **Soroban** Work on adding support for [Stellar's Soroban](https://soroban.stellar.org/docs) contracts platforms started, by adding a skeleton that supports the Soroban runtime. [Salaheldin Soliman](https://github.com/salaheldinsoliman)
 - The `string.concat()` and `bytes.concat()` builtin functions are supported. [seanyoung](https://github.com/seanyoung)
+- **Polkadot**: Compatibility with ink! v5.0 metadata and substrate-contracts-node v0.39.0
 
 ### Changed
+- **Polkadot/BREAKING**: Event encoding and topics follow [ink! v5.0](https://use.ink/faq/migrating-from-ink-4-to-5#events-20-1)
 - **BREAKING** The non-standard extension of concatenating strings using the `+` operator
   has been removed, use `string.concat()` instead. [seanyoung](https://github.com/seanyoung)
 - Removed the `--no-log-api-return-codes` compile flag as this is now done by the runtime [xermicus](https://github.com/xermicus)
