@@ -68,7 +68,6 @@ describe('Deploy events contract and test event data, docs and topics', () => {
         // - blake2x256 sum of its signature: 'Empty()'
 
         event_topic = await conn.query.system.eventTopics("0x2c54a2a9a9aa474af5d6e2bb2e5a35b84051acaf95b233f98f96860d36f2b81b");
-        console.log(event_topic.toHuman());
         expect(event_topic.length).toBe(1);
         expect(events[4].args.map(a => a.toJSON())).toEqual([]);
     });
