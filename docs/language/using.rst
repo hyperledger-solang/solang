@@ -21,7 +21,7 @@ The ``using`` declaration can be done on file scope. In this case, the type must
 be specified in place of ``*``. The first argument must match the type that is
 be used in the ``using`` declaration.
 
-If a user-defined type is used, the the ``global`` keyword can be used. This
+If a user-defined type is used, the ``global`` keyword can be used. This
 means the ``using`` binding can be used in any file, even when the type is
 imported.
 

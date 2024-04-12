@@ -59,7 +59,7 @@ Dead Storage pass
 
 Loading from contract storage, or storing to contract storage is expensive. This optimization removes any
 redundant load from and store to contract storage. If the same variable is read twice, then the value from
-the first load is re-used. Similarly, if there is are two successive stores to the same variable, the first
+the first load is re-used. Similarly, if there are two successive stores to the same variable, the first
 one is removed as it is redundant. For example:
 
 .. include:: ./examples/dead_storage_elimination.sol
