@@ -11,11 +11,11 @@ Solidity parser and semantics tests
 In the `tests <https://github.com/hyperledger/solang/tree/main/tests>`_ directory, there are
 a lot of tests which call `fn parse_and_resolve()`. This function parses Solidity, and returns
 the *namespace*: all the resolved contracts, types, functions, etc (as much as could be resolved),
-and all the compiler diagnositics, i.e. compiler warnings and errors. These tests check that
+and all the compiler diagnostics, i.e. compiler warnings and errors. These tests check that
 the compiler parser and semantic analysis work correctly.
 
-Note that Solidity can import other soldity files using the ``import`` statement. There are further
-tests which create a file cache with filenames and and their contents, to ensure that imports
+Note that Solidity can import other solidity files using the ``import`` statement. There are further
+tests which create a file cache with filenames and their contents, to ensure that imports
 work as expected.
 
 
