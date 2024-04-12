@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+
 set -e
 
 dup_contracts=$(grep -r '^contract .* {' | grep -v node_modules | awk '{ print $2 }' | sort | uniq -d)

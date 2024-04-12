@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import expect from 'expect';
 import { weight, createConnection, deploy, transaction, aliceKeypair, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
@@ -27,7 +29,7 @@ describe('Deploy events contract and test event data, docs and topics', () => {
         let res0: any = await transaction(tx, alice);
         let events: DecodedEvent[] = res0.contractEvents;
 
-        expect(events.length).toEqual(4);
+        expect(events.length).toEqual(5);
 
         expect(events[0].event.identifier).toBe("Events::foo1");
         expect(events[0].event.docs).toEqual(["Ladida tada"]);
@@ -61,5 +63,12 @@ describe('Deploy events contract and test event data, docs and topics', () => {
         expect(field_topic.length).toBe(1);
         event_topic = await conn.query.system.eventTopics("0xc2bc7a077121efada8bc6a0af16c1e886406e8c2d1716979cb1b92098d8b49bc");
         expect(event_topic.length).toBe(1);
+
+        // The 5th event yields no data and the following event topic:
+        // - blake2x256 sum of its signature: 'Empty()'
+
+        event_topic = await conn.query.system.eventTopics("0x2c54a2a9a9aa474af5d6e2bb2e5a35b84051acaf95b233f98f96860d36f2b81b");
+        expect(event_topic.length).toBe(1);
+        expect(events[4].args.map(a => a.toJSON())).toEqual([]);
     });
 });

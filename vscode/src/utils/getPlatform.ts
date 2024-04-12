@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 export default function getPlatform(): string | undefined {
   switch (`${process.arch} ${process.platform}`) {
     case 'x64 win32':

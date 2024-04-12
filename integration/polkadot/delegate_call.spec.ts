@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import expect from 'expect';
 import { weight, createConnection, deploy, transaction, aliceKeypair, daveKeypair, debug_buffer, query, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';

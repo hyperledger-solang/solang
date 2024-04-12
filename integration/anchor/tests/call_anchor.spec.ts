@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import expect from 'expect';
 import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import {

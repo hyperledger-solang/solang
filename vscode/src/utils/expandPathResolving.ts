@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { homedir } from 'os';
 
 export default function expandPathResolving(path: string): string {
