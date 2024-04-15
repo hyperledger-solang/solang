@@ -25,7 +25,7 @@ async fn case() -> anyhow::Result<()> {
         })
         .await?;
 
-    assert_eq!(rs.len(), 4);
+    assert_eq!(rs.len(), 5);
 
     // TODO: currently event decoding is different than ink, as we can see in contract-transcode.
     let e1 = &rs[0];
