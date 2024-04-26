@@ -14,7 +14,7 @@ will be documented here.
 - **Polkadot**: Compatibility with ink! v5.0 metadata and substrate-contracts-node v0.39.0
 - Implement event selectors [seanyoung](https://github.com/seanyoung)
 - Add a feature flag for compiling language server [xermicus](https://github.com/xermicus)
-- Parsing the pragma solidity version numbers making this information available in the downstream 
+- Parsing the pragma solidity version numbers, making this information available in the downstream 
   compilation pipeline [seanyoung](https://github.com/seanyoung)
 
 ### Changed
