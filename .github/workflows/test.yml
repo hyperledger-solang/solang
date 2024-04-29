@@ -109,7 +109,7 @@ jobs:
 
   linux-arm:
     name: Linux Arm
-    runs-on: linux-arm64
+    runs-on: solang-arm
     if: ${{ github.repository_owner == 'hyperledger' }}
     container: ghcr.io/hyperledger/solang-llvm:ci-7
     steps:
