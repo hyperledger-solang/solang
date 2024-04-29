@@ -111,13 +111,22 @@ jobs:
     name: Linux Arm
     runs-on: solang-arm
     if: ${{ github.repository_owner == 'hyperledger' }}
-    container: ghcr.io/hyperledger/solang-llvm:ci-7
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
       with:
         submodules: recursive
+    - name: Basic build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc g++ make
     - uses: dtolnay/rust-toolchain@1.74.0
+    - name: Get LLVM
+      run: curl -sSL --output llvm16.0-linux-arm64.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm16-0/llvm16.0-linux-arm64.tar.xz
+    - name: Extract LLVM
+      run: tar Jxf llvm16.0-linux-arm64.tar.xz
+    - name: Add LLVM to Path
+      run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
     - name: Build
       run: cargo build --verbose
     - name: Run tests
