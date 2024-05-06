@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 pub enum BuiltinAccounts {
     /// These are the accounts that we can collect from a contract and that Anchor will populate
@@ -31,10 +31,9 @@ impl BuiltinAccounts {
     }
 }
 
-impl ToString for BuiltinAccounts {
-    fn to_string(&self) -> String {
-        let str = self.as_str();
-        str.to_string()
+impl fmt::Display for BuiltinAccounts {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 

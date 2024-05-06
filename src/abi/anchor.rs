@@ -290,7 +290,7 @@ impl TypeManager<'_> {
                 format!("_{real_name}")
             };
             let unique_name = self.unique_string(new_other_name);
-            self.types[idx].name = unique_name.clone();
+            self.types[idx].name.clone_from(&unique_name);
             self.added_names
                 .insert(unique_name, (idx, other_contract, real_name));
             type_name.clone()

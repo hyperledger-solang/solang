@@ -2,6 +2,7 @@
 
 use crate::Target;
 use phf::{phf_map, phf_set};
+use std::fmt;
 
 pub struct YulBuiltinPrototype {
     pub name: &'static str,
@@ -258,10 +259,10 @@ impl YulBuiltInFunction {
     }
 }
 
-impl ToString for YulBuiltInFunction {
-    fn to_string(&self) -> String {
+impl fmt::Display for YulBuiltInFunction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let prototype = self.get_prototype_info();
-        prototype.name.to_owned()
+        f.write_str(prototype.name)
     }
 }
 

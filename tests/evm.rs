@@ -272,18 +272,20 @@ fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {
             if !contents.is_empty() {
                 cache.set_file_contents(&name, contents);
                 names.push(name);
+                name = String::new();
             }
-            name = cap.get(1).unwrap().as_str().to_owned();
+            cap.get(1).unwrap().as_str().clone_into(&mut name);
             if name == "////" {
-                name = "test.sol".to_owned();
+                "test.sol".clone_into(&mut name);
             }
             contents = String::new();
         } else if let Some(cap) = external_source_delimiter.captures(line) {
-            let mut name = cap.get(1).unwrap().as_str().to_owned();
-            if let Some(cap) = equals.captures(&name) {
+            let filename = cap.get(1).unwrap().as_str();
+            let mut name = filename.to_owned();
+            if let Some(cap) = equals.captures(filename) {
                 let mut ext = path.parent().unwrap().to_path_buf();
                 ext.push(cap.get(2).unwrap().as_str());
-                name = cap.get(1).unwrap().as_str().to_owned();
+                cap.get(1).unwrap().as_str().clone_into(&mut name);
                 let source = fs::read_to_string(ext).unwrap();
                 cache.set_file_contents(&name, source);
             }
