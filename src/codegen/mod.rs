@@ -107,6 +107,7 @@ pub struct Options {
     pub log_prints: bool,
     #[cfg(feature = "wasm_opt")]
     pub wasm_opt: Option<OptimizationPasses>,
+    pub soroban_version: Option<u64>,
 }
 
 impl Default for Options {
@@ -123,6 +124,7 @@ impl Default for Options {
             log_prints: true,
             #[cfg(feature = "wasm_opt")]
             wasm_opt: None,
+            soroban_version: None,
         }
     }
 }
@@ -232,6 +234,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
 
         // Generate cfg for storage initializers
         let cfg = storage_initializer(contract_no, ns, opt);
+        println!("THE INITALIZER CFG: {:?}", cfg);
         let pos = all_cfg.len();
         all_cfg.push(cfg);
         ns.contracts[contract_no].initializer = Some(pos);

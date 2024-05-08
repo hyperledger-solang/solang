@@ -67,6 +67,8 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
 fn generate_module(input: &[u8]) -> Vec<u8> {
     let mut module = Module::new();
     for payload in Parser::new(0).parse_all(input).map(|s| s.unwrap()) {
+        println!("PAYLOAD {:?}", payload);
+
         match payload {
             ImportSection(s) => generate_import_section(s, &mut module),
             GlobalSection(s) => generate_global_section(s, &mut module),
@@ -88,6 +90,8 @@ fn generate_module(input: &[u8]) -> Vec<u8> {
 fn generate_import_section(section: SectionLimited<Import>, module: &mut Module) {
     let mut imports = ImportSection::new();
     for import in section.into_iter().map(|import| import.unwrap()) {
+        println!("import {:?}", import);
+
         let import_type = match import.ty {
             TypeRef::Func(n) => EntityType::Function(n),
             TypeRef::Memory(m) => EntityType::Memory(MemoryType {

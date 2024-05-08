@@ -321,6 +321,15 @@ pub struct CompilePackage {
     #[arg(name = "VERSION", help = "specify contracts version", long = "version", num_args = 1, value_parser = ValueParser::new(parse_version))]
     #[serde(default, deserialize_with = "deserialize_version")]
     pub version: Option<String>,
+
+    #[arg(
+        name = "SOROBAN-VERSION",
+        help = "specify soroban contracts pre-release number",
+        short = 's',
+        long = "soroban-version",
+        num_args = 1
+    )]
+    pub soroban_version: Option<u64>,
 }
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
@@ -545,7 +554,11 @@ pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
     resolver
 }
 
-pub fn options_arg(debug: &DebugFeatures, optimizations: &Optimizations) -> Options {
+pub fn options_arg(
+    debug: &DebugFeatures,
+    optimizations: &Optimizations,
+    compiler_inputs: &CompilePackage,
+) -> Options {
     let opt_level = if let Some(level) = &optimizations.opt_level {
         match level.as_str() {
             "none" => OptimizationLevel::None,
@@ -574,6 +587,7 @@ pub fn options_arg(debug: &DebugFeatures, optimizations: &Optimizations) -> Opti
         } else {
             None
         }),
+        soroban_version: compiler_inputs.soroban_version,
     }
 }
 

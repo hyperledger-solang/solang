@@ -26,6 +26,7 @@ use std::{
 };
 use tiny_keccak::{Hasher, Keccak};
 
+
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub enum Type {
     Address(bool),
@@ -833,8 +834,10 @@ pub struct Contract {
     /// Can the contract be instantiated, i.e. not abstract, no errors, etc.
     pub instantiable: bool,
     /// Account of deployed program code on Solana
-    pub program_id: Option<Vec<u8>>,
+    pub program_id: Option<Vec<u8>>
 }
+
+
 
 impl Contract {
     // Is this a concrete contract, which can be instantiated

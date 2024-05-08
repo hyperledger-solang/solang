@@ -4,29 +4,48 @@ use crate::codegen::cfg::HashTy;
 use crate::codegen::Expression;
 use crate::emit::binary::Binary;
 use crate::emit::soroban::SorobanTarget;
-use crate::emit::ContractArgs;
+use crate::emit::{storage, ContractArgs};
 use crate::emit::{TargetRuntime, Variable};
+use crate::emit_context;
 use crate::sema::ast;
 use crate::sema::ast::CallTy;
 use crate::sema::ast::{Function, Namespace, Type};
+use inkwell::module::{self, Linkage};
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+    
 };
+use inkwell::IntPredicate;
+use num_bigint::BigInt;
+use num_traits::{One, ToPrimitive};
 use solang_parser::pt::Loc;
+use std::any::Any;
 use std::collections::HashMap;
+use soroban_sdk::xdr::{self, WriteXdr};
+
+
+
 
 // TODO: Implement TargetRuntime for SorobanTarget.
 #[allow(unused_variables)]
 impl<'a> TargetRuntime<'a> for SorobanTarget {
     fn get_storage_int(
         &self,
-        bin: &Binary<'a>,
+        binary: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
-        unimplemented!()
+        emit_context!(binary);
+
+        let function_value = binary.module.get_function("l.1").unwrap();
+        //let res = binary.builder.build_call(function_value, &[i64_const!(1).into(), i64_const!(1).into(), i32_const!(1).into()], "1").unwrap();
+        call!("l.1", &[i64_const!(1).into(), i64_const!(1).into()])
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value()
     }
 
     fn storage_load(
@@ -37,7 +56,22 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
-        unimplemented!()
+        println!("storage_load");
+        let slot_ptr = binary
+            .builder
+            .build_alloca(slot.get_type(), "slot")
+            .unwrap();
+
+        binary.builder.build_store(slot_ptr, *slot).unwrap();
+
+        let ret = self.get_storage_int(
+            binary,
+            function,
+            slot_ptr,
+            binary.llvm_type(ty.deref_any(), ns).into_int_type(),
+        );
+
+        ret.into()
     }
 
     /// Recursively store a type to storage
@@ -51,7 +85,27 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         ns: &ast::Namespace,
     ) {
-        unimplemented!()
+        println!("storage_store");
+
+        
+        emit_context!(binary);
+        let function_value = binary.module.get_function("l._").unwrap();
+                
+        let value = binary
+            .builder
+            .build_call(
+                function_value,
+                &[
+                    i64_const!(1).into(),
+                    i64_const!(1).into(),
+                    i64_const!(1).into(),
+                ],
+                "1._",
+            )
+            .unwrap().try_as_basic_value().left().unwrap().into_int_value();
+
+
+        //binary.builder.build_return(None).unwrap();
     }
 
     /// Recursively clear storage. The default implementation is for slot-based storage
@@ -194,7 +248,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     /// Prints a string
     fn print(&self, bin: &Binary, string: PointerValue, length: IntValue) {
-        unimplemented!()
+        println!("print");
     }
 
     /// Return success without any result
@@ -209,7 +263,10 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     /// Return failure without any result
     fn assert_failure(&self, bin: &Binary, data: PointerValue, length: IntValue) {
-        unimplemented!()
+        //unimplemented!()
+        println!("assert_failure");
+
+        bin.builder.build_unreachable().unwrap();
     }
 
     fn builtin_function(
