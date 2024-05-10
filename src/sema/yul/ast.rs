@@ -7,7 +7,7 @@ use crate::sema::Recurse;
 use num_bigint::BigInt;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, StorageLocation};
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
 #[derive(Debug, Clone)]
 pub struct InlineAssembly {
@@ -97,17 +97,15 @@ pub enum YulSuffix {
     Address,
 }
 
-impl ToString for YulSuffix {
-    fn to_string(&self) -> String {
-        let name = match self {
-            YulSuffix::Offset => "offset",
-            YulSuffix::Slot => "slot",
-            YulSuffix::Length => "length",
-            YulSuffix::Selector => "selector",
-            YulSuffix::Address => "address",
-        };
-
-        name.to_string()
+impl fmt::Display for YulSuffix {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            YulSuffix::Offset => f.write_str("offset"),
+            YulSuffix::Slot => f.write_str("slot"),
+            YulSuffix::Length => f.write_str("length"),
+            YulSuffix::Selector => f.write_str("selector"),
+            YulSuffix::Address => f.write_str("address"),
+        }
     }
 }
 

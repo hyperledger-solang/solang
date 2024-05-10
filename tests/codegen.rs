@@ -33,6 +33,7 @@ fn run_test_for_path(path: &str) {
 }
 
 #[derive(Debug)]
+#[allow(unused)]
 enum Test {
     Check(usize, String),
     CheckAbsent(usize, String),
