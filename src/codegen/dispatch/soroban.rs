@@ -27,9 +27,7 @@ pub fn function_dispatch(
 
     let mut wrapper_cfgs = Vec::new();
 
-   
-
-    for  cfg in all_cfg.iter() {
+    for cfg in all_cfg.iter() {
         if cfg.function_no == ASTFunction::None {
             continue;
         }
@@ -38,11 +36,9 @@ pub fn function_dispatch(
             "generating wrapper for function {} with number {:?}",
             cfg.name, cfg.function_no
         );
-      
+
         let function = match &cfg.function_no {
-            ASTFunction::SolidityFunction(no) | ASTFunction::YulFunction(no) => {
-                &ns.functions[*no]
-            }
+            ASTFunction::SolidityFunction(no) | ASTFunction::YulFunction(no) => &ns.functions[*no],
             _ => continue,
         };
 
@@ -88,7 +84,6 @@ pub fn function_dispatch(
         let mut return_tys = Vec::new();
 
         for (i, arg) in function.returns.iter().enumerate() {
-
             value.push(Expression::Variable {
                 loc: arg.loc,
                 ty: arg.ty.clone(),
@@ -122,8 +117,6 @@ pub fn function_dispatch(
         wrapper_cfg.add(&mut vartab, placeholder);
 
         wrapper_cfg.add(&mut vartab, return_instr);
-
-
 
         vartab.finalize(ns, &mut wrapper_cfg);
 
