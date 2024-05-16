@@ -248,7 +248,7 @@ fn mangle_function_names_in_abi() {
     let _ = runtime.contracts()[0].code.messages["foo_"];
     let _ = runtime.contracts()[0].code.messages["foo_uint256_addressArray2Array"];
     let _ = runtime.contracts()[0].code.messages["foo_uint8Array2__int256_bool_address"];
-    assert!(runtime.contracts()[0].code.messages.get("foo").is_none());
+    assert!(!runtime.contracts()[0].code.messages.contains_key("foo"));
 }
 
 #[test]
@@ -265,12 +265,11 @@ fn mangle_overloaded_function_names_in_abi() {
     );
 
     let _ = runtime.contracts()[0].code.messages["foo"];
-    assert!(runtime.contracts()[0]
+    assert!(!runtime.contracts()[0]
         .code
         .messages
-        .get("foo_bool")
-        .is_none());
+        .contains_key("foo_bool"));
 
     let _ = runtime.contracts()[1].code.messages["foo_bool"];
-    assert!(runtime.contracts()[1].code.messages.get("foo").is_none());
+    assert!(!runtime.contracts()[1].code.messages.contains_key("foo"));
 }

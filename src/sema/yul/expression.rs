@@ -576,7 +576,7 @@ fn resolve_suffix_access(
                     resolved_expr.loc(),
                     format!(
                         "the given expression does not support '.{}' suffixes",
-                        suffix_type.to_string()
+                        suffix_type
                     ),
                 ));
             }
@@ -635,7 +635,7 @@ fn resolve_suffix_access(
                 resolved_expr.loc(),
                 format!(
                     "the given expression does not support '.{}' suffixes",
-                    suffix_type.to_string()
+                    suffix_type
                 ),
             ));
             return Err(());

@@ -1876,7 +1876,7 @@ impl<'a> Builder<'a> {
                     .hover_overrides
                     .get(&pt::Loc::File(lookup.0, lookup.1.start, lookup.1.stop))
             {
-                lookup.1.val = msg.clone();
+                lookup.1.val.clone_from(msg);
             }
         }
 
@@ -1900,7 +1900,7 @@ impl<'a> Builder<'a> {
 
         for val in self.types.values_mut() {
             if let Some(path) = defs_to_files.get(&val.def_type) {
-                val.def_path = path.clone();
+                val.def_path.clone_from(path);
             }
         }
 
@@ -1948,7 +1948,7 @@ impl<'a> Builder<'a> {
                         .map(|(_, i)| {
                             let mut i = i.clone();
                             if let Some(def_path) = defs_to_files.get(&i.val.def_type) {
-                                i.val.def_path = def_path.clone();
+                                i.val.def_path.clone_from(def_path);
                             }
                             i
                         })
@@ -1963,7 +1963,7 @@ impl<'a> Builder<'a> {
                             for val in &mut scope.val {
                                 if let Some(val) = &mut val.1 {
                                     if let Some(def_path) = defs_to_files.get(&val.def_type) {
-                                        val.def_path = def_path.clone();
+                                        val.def_path.clone_from(def_path);
                                     }
                                 }
                             }
@@ -1980,7 +1980,7 @@ impl<'a> Builder<'a> {
                         {
                             if def_path.to_str().unwrap() == "" {
                                 if let Some(dp) = defs_to_files.get(def_type) {
-                                    *def_path = dp.clone();
+                                    def_path.clone_from(dp);
                                 }
                             }
                         }
@@ -1994,7 +1994,7 @@ impl<'a> Builder<'a> {
             for def_index in properties.values_mut().flatten() {
                 if def_index.def_path.to_str().unwrap() == "" {
                     if let Some(def_path) = defs_to_files.get(&def_index.def_type) {
-                        def_index.def_path = def_path.clone();
+                        def_index.def_path.clone_from(def_path);
                     }
                 }
             }

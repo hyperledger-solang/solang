@@ -12,6 +12,7 @@ use crate::{
 };
 use num_bigint::{BigInt, Sign};
 use solang_parser::pt::{FunctionTy, Loc::Codegen};
+use std::fmt::{Display, Formatter, Result};
 
 /// On Polkadot, contracts export  a `call` and a `deploy` function.
 /// The `contracts` pallet will invoke `deploy` on contract instatiation,
@@ -27,13 +28,12 @@ pub enum DispatchType {
     Call,
 }
 
-impl ToString for DispatchType {
-    fn to_string(&self) -> String {
+impl Display for DispatchType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::Deploy => "polkadot_deploy_dispatch",
-            Self::Call => "polkadot_call_dispatch",
+            Self::Deploy => f.write_str("polkadot_deploy_dispatch"),
+            Self::Call => f.write_str("polkadot_call_dispatch"),
         }
-        .into()
     }
 }
 
