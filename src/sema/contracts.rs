@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    annotions_not_allowed, ast::{self},
+    annotions_not_allowed,
+    ast::{self},
     diagnostics::Diagnostics,
     expression::{compatible_mutability, ExprContext},
     functions, statements,
@@ -53,7 +54,8 @@ impl ast::Contract {
             cfg: Vec::new(),
             code: OnceCell::new(),
             instantiable,
-            program_id: None,        }
+            program_id: None,
+        }
     }
 
     /// Selector for this contract. This is used by Solana contract bundle

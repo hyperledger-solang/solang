@@ -234,7 +234,6 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
 
         // Generate cfg for storage initializers
         let cfg = storage_initializer(contract_no, ns, opt);
-        println!("THE INITALIZER CFG: {:?}", cfg);
         let pos = all_cfg.len();
         all_cfg.push(cfg);
         ns.contracts[contract_no].initializer = Some(pos);
@@ -250,7 +249,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
-        for mut dispatch_cfg in function_dispatch(contract_no, &all_cfg, ns, opt) {
+        for mut dispatch_cfg in function_dispatch(contract_no, &mut all_cfg, ns, opt) {
             optimize_and_check_cfg(&mut dispatch_cfg, ns, ASTFunction::None, opt);
             all_cfg.push(dispatch_cfg);
         }

@@ -36,6 +36,7 @@ fn decode_compact(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> (usize, Expression) {
+    println!("decode_compact called on {:?}", offset);
     let decoded_var = vartab.temp_anonymous(&Uint(32));
     let size_width_var = vartab.temp_anonymous(&Uint(32));
     vartab.new_dirty_tracker();

@@ -5,10 +5,11 @@ use crate::{sema::ast::Namespace, Target};
 
 pub(crate) mod polkadot;
 pub(super) mod solana;
+pub(super) mod soroban;
 
 pub(super) fn function_dispatch(
     contract_no: usize,
-    all_cfg: &[ControlFlowGraph],
+    all_cfg: &mut [ControlFlowGraph],
     ns: &mut Namespace,
     opt: &Options,
 ) -> Vec<ControlFlowGraph> {
@@ -16,7 +17,8 @@ pub(super) fn function_dispatch(
         Target::Solana => vec![solana::function_dispatch(contract_no, all_cfg, ns, opt)],
         Target::Polkadot { .. } | Target::EVM => {
             polkadot::function_dispatch(contract_no, all_cfg, ns, opt)
-        }
+        },
         Target::Soroban => vec![],
+        //Target::Soroban => soroban::function_dispatch(contract_no, all_cfg, ns, opt),
     }
 }

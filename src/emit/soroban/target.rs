@@ -14,18 +14,14 @@ use inkwell::module::{self, Linkage};
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
-    
 };
 use inkwell::IntPredicate;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 use solang_parser::pt::Loc;
+use soroban_sdk::xdr::{self, WriteXdr};
 use std::any::Any;
 use std::collections::HashMap;
-use soroban_sdk::xdr::{self, WriteXdr};
-
-
-
 
 // TODO: Implement TargetRuntime for SorobanTarget.
 #[allow(unused_variables)]
@@ -87,10 +83,9 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     ) {
         println!("storage_store");
 
-        
         emit_context!(binary);
         let function_value = binary.module.get_function("l._").unwrap();
-                
+
         let value = binary
             .builder
             .build_call(
@@ -102,8 +97,11 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 ],
                 "1._",
             )
-            .unwrap().try_as_basic_value().left().unwrap().into_int_value();
-
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
         //binary.builder.build_return(None).unwrap();
     }

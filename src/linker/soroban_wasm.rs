@@ -33,7 +33,6 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     ];
     command_line.push(CString::new("--export-dynamic").unwrap());
 
-
     command_line.push(
         CString::new(
             object_filename

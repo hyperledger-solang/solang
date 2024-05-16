@@ -11,6 +11,7 @@
 mod borsh_encoding;
 mod buffer_validator;
 pub(super) mod scale_encoding;
+pub(super) mod xdr_encoding;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
@@ -38,6 +39,7 @@ pub(super) fn abi_encode(
     cfg: &mut ControlFlowGraph,
     packed: bool,
 ) -> (Expression, Expression) {
+    println!("abi_encode called with expr {:?}", args);
     let mut encoder = create_encoder(ns, packed);
     let size = calculate_size_args(&mut encoder, &args, ns, vartab, cfg);
     let encoded_bytes = vartab.temp_name("abi_encoded", &Type::DynamicBytes);
@@ -90,6 +92,7 @@ pub(super) fn abi_decode(
     cfg: &mut ControlFlowGraph,
     buffer_size_expr: Option<Expression>,
 ) -> Vec<Expression> {
+    println!("abi_decode called with expr {:?}", buffer);
     let buffer_size = vartab.temp_anonymous(&Uint(32));
     if let Some(length_expression) = buffer_size_expr {
         cfg.add(

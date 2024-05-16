@@ -1,26 +1,33 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub(super) mod target;
-use crate::codegen::cfg::ControlFlowGraph;
-use crate::emit::cfg::emit_cfg;
 use crate::{
-    codegen::{cfg::ASTFunction, Options, STORAGE_INITIALIZER},
-    emit::Binary,
-    sema::ast,
+    codegen::{
+        cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
+        revert::log_runtime_error,
+        vartable::Vartable,
+        Builtin, Expression, Options, STORAGE_INITIALIZER,
+    },
+    sema::ast::{Namespace, Parameter, Type, Type::Uint},
 };
+
+use crate::emit::cfg::emit_cfg;
+use crate::{emit::Binary, sema::ast};
+use inkwell::values::FunctionValue;
 use inkwell::{
     context::Context,
     module::{Linkage, Module},
 };
 use soroban_sdk::xdr::{
-    DepthLimitedWrite, ScEnvMetaEntry, ScSpecEntry, ScSpecFunctionInputV0, ScSpecFunctionV0, ScSpecTypeDef, StringM, ToXdr, WriteXdr
+    DepthLimitedWrite, ScEnvMetaEntry, ScSpecEntry, ScSpecFunctionInputV0, ScSpecFunctionV0,
+    ScSpecTypeDef, StringM, ToXdr, WriteXdr,
 };
-use std::sync;
 use std::ffi::CString;
+use std::sync;
 
 const SOROBAN_ENV_INTERFACE_VERSION: u64 = 85899345920;
 
-pub struct SorobanTarget ;
+pub struct SorobanTarget;
 
 impl SorobanTarget {
     pub fn build<'a>(
@@ -74,65 +81,34 @@ impl SorobanTarget {
             // Soroban has no dispatcher, so all externally addressable functions are exported and should be named the same as the original function name in the source code.
             // If there are duplicate function names, then the function name in the source is mangled to include the signature.
             let default_constructor = ns.default_constructor(contract_no);
-            let mut name = {
-                if cfg.public {
-                    let f = match &cfg.function_no {
-                        ASTFunction::SolidityFunction(no) | ASTFunction::YulFunction(no) => {
-                            &ns.functions[*no]
-                        }
-                        _ => &default_constructor,
-                    };
+            
 
-                    if f.mangled_name_contracts.contains(&contract_no) {
-                        f.mangled_name.clone()
-                    } else {
-                        f.id.name.clone()
-                    }
-                } else {
-                    cfg.name.clone()
-                }
-            };
+            Self::emit_function_spec_entry(context, cfg.clone(), "short".to_string(), binary);
 
-            /*if cfg.name == "storage_initializer" {
-                name = "storage_initializer".to_owned();
-
-                let returns = cfg.returns.clone();
-                println!(
-                    "emit_functions_with_spec: storage_initializer: returns: {:?}",
-                    returns
-                );
-            }*/
-
-            Self::emit_function_spec_entry(context, cfg.clone(), name.clone(), binary);
-
-            let linkage = if cfg.public {
-                Linkage::External
-            } else {
-                Linkage::Internal
-            };
-
-            let func_decl = if let Some(func) = binary.module.get_function(&name) {
+            let func_decl = if let Some(func) = binary.module.get_function(&cfg.name) {
                 // must not have a body yet
                 assert_eq!(func.get_first_basic_block(), None);
 
                 func
             } else {
-                binary.module.add_function(&name, ftype, Some(linkage))
+                binary
+                    .module
+                    .add_function(&cfg.name, ftype, Some(Linkage::Internal))
             };
 
             binary.functions.insert(cfg_no, func_decl);
 
-            defines.push((func_decl, cfg));
+            defines.push((func_decl, cfg, cfg.name.clone()));
         }
 
-        
-         let init_type = context.i64_type().fn_type(&[], false);
+        let init_type = context.i64_type().fn_type(&[], false);
         binary
             .module
             .add_function("storage_initializer", init_type, None);
 
-        for (func_decl, cfg) in defines {
+        for (func_decl, cfg, dispatcher_name) in defines {
             emit_cfg(&mut SorobanTarget, binary, contract, cfg, func_decl, ns);
+            //Self::emit_function_dispatcher(binary, cfg, func_decl, &dispatcher_name, ns, &contract);
         }
     }
 
@@ -259,13 +235,13 @@ impl SorobanTarget {
     }
 
     fn emit_initializer(binary: &mut Binary, _ns: &ast::Namespace) {
+
         let mut cfg = ControlFlowGraph::new("init".to_string(), ASTFunction::None);
 
         cfg.public = true;
         let void_param = ast::Parameter::new_default(ast::Type::Void);
         cfg.returns = sync::Arc::new(vec![void_param]);
 
-        // /println!("emit_initializer: cfg: {:?}", cfg);
         Self::emit_function_spec_entry(binary.context, cfg, "init".to_string(), binary);
 
         let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
@@ -278,11 +254,6 @@ impl SorobanTarget {
             .expect("storage initializer is always present");
         assert!(storage_initializers.next().is_none());
 
-        println!(
-            "emit_initializer: storage_initializer: {:?}",
-            storage_initializer
-        );
-
         let void_type = binary.context.i64_type().fn_type(&[], false);
         let init = binary
             .module
@@ -292,16 +263,110 @@ impl SorobanTarget {
         binary.builder.position_at_end(entry);
         binary
             .builder
-            .build_call(storage_initializer, &[], "storage_initializer").unwrap();
-
-        let soroban_void = soroban_sdk::Val::VOID;
-            
+            .build_call(storage_initializer, &[], "storage_initializer")
+            .unwrap();
 
         // return zero
         let zero_val = binary.context.i64_type().const_int(2, false);
         binary.builder.build_return(Some(&zero_val)).unwrap();
     }
 
+    fn emit_function_dispatcher<'a>(
+        binary: &mut Binary<'a>,
+        cfg_logic: &ControlFlowGraph,
+        function: FunctionValue<'a>,
+        dispatcher_cfg_name: &str,
+        ns: &'a ast::Namespace,
+        contract: &'a ast::Contract,
+    ) {
+        let mut disptacher_cfg =
+            ControlFlowGraph::new(dispatcher_cfg_name.to_string(), ASTFunction::None);
+        disptacher_cfg.public = true;
+
+        let params = cfg_logic.params.clone();
+        let returns = cfg_logic.returns.clone();
+        disptacher_cfg.params = params;
+        disptacher_cfg.returns = returns;
+
+        /*let mut returns: Vec<usize> = Vec::with_capacity(cfg.returns.len());
+        let mut return_tys: Vec<Type> = Vec::with_capacity(cfg.returns.len());
+        let mut returns_expr: Vec<Expression> = Vec::with_capacity(cfg.returns.len());
+        for item in cfg.returns.iter() {
+            let new_var = self.vartab.temp_anonymous(&item.ty);
+            returns.push(new_var);
+            return_tys.push(item.ty.clone());
+            returns_expr.push(Expression::Variable {
+                loc: Codegen,
+                ty: item.ty.clone(),
+                var_no: new_var,
+            });
+        }
+
+        self.add(Instr::Call {
+            res: returns,
+            call: InternalCallTy::Static { cfg_no: func_no },
+            args,
+            return_tys,
+        });
+
+        let res = Vec::with_capacity(cfg_logic.returns.len());
+        let mut vartab = vartable::Vartable::new(ns.next_id);
+
+        let function_no = match cfg_logic.function_no {
+            ASTFunction::SolidityFunction(no) | ASTFunction::YulFunction(no) => no,
+            _ => panic!("unexpected function_no"),
+        };
+
+        let mut args = vec![];
+        if params.is_empty() {
+            let buf_len = Expression::Variable {
+                loc: Codegen,
+                ty: Uint(32),
+                var_no: self.input_len,
+            };
+            let arg_len = Expression::Subtract {
+                loc: Codegen,
+                ty: Uint(32),
+                overflowing: false,
+                left: buf_len.into(),
+                right: self.selector_len.clone(),
+            };
+            args = abi_decode(
+                &Codegen,
+                &self.input_ptr,
+                &cfg.params.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
+                self.ns,
+                &mut self.vartab,
+                &mut self.cfg,
+                Some(Expression::Trunc {
+                    loc: Codegen,
+                    ty: Uint(32),
+                    expr: arg_len.into(),
+                }),
+            );
+        }
+
+        disptacher_cfg.add(
+            &mut vartab,
+            Instr::Call {
+                res,
+                call: InternalCallTy::Static {
+                    cfg_no: function_no,
+                },
+                args: params,
+                return_tys: vec![ty.clone()],
+            },
+        );
+        emit_cfg(
+            &mut SorobanTarget,
+            binary,
+            contract,
+            &disptacher_cfg,
+            function,
+            ns,
+        )
+        */
+    }
     /*
     fn public_function_prelude<'a>(
         &self,
@@ -398,12 +463,4 @@ impl SorobanTarget {
         bin.builder.build_unreachable().unwrap();
     }
     */
-
-
-
-
-
-
 }
-
-
