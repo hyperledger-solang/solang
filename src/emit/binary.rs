@@ -788,7 +788,7 @@ impl<'a> Binary<'a> {
 
         if ns.target == Target::Soroban {
             match returns.iter().next() {
-                Some(ret) => return self.llvm_type(ret, ns).fn_type(&args, false),
+                Some(ret) => return self.context.i64_type().fn_type(&args, false),
                 None => return self.context.void_type().fn_type(&args, false),
             }
         }

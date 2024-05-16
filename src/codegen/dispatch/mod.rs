@@ -18,7 +18,7 @@ pub(super) fn function_dispatch(
         Target::Polkadot { .. } | Target::EVM => {
             polkadot::function_dispatch(contract_no, all_cfg, ns, opt)
         }
-        Target::Soroban => vec![],
-        //Target::Soroban => soroban::function_dispatch(contract_no, all_cfg, ns, opt),
+        //Target::Soroban => vec![],
+        Target::Soroban => soroban::function_dispatch(contract_no, all_cfg, ns, opt),
     }
 }
