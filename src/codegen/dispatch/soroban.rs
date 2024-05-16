@@ -27,10 +27,12 @@ pub fn function_dispatch(
 
     let mut wrapper_cfgs = Vec::new();
 
-    for cfg in all_cfg.iter() {
+    for cfg in all_cfg.iter_mut() {
         if cfg.function_no == ASTFunction::None {
             continue;
         }
+
+        cfg.public = true;
 
         println!(
             "generating wrapper for function {} with number {:?}",
@@ -54,7 +56,7 @@ pub fn function_dispatch(
             }
         };
 
-        let mut wrapper_cfg = ControlFlowGraph::new(wrapper_name.clone(), ASTFunction::None);
+        let mut wrapper_cfg = ControlFlowGraph::new(wrapper_name.to_string(), ASTFunction::None);
 
         wrapper_cfg.params = function.params.clone();
         wrapper_cfg.returns = function.returns.clone();

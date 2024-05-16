@@ -82,7 +82,15 @@ impl SorobanTarget {
             // If there are duplicate function names, then the function name in the source is mangled to include the signature.
             let default_constructor = ns.default_constructor(contract_no);
 
-            Self::emit_function_spec_entry(context, cfg.clone(), "short".to_string(), binary);
+            let linkage = if cfg.public {
+               
+                        Linkage::External
+                 
+            } else {
+                Linkage::Internal
+            };
+            
+            //Self::emit_function_spec_entry(context, cfg.clone(), "short".to_string(), binary);
 
             let func_decl = if let Some(func) = binary.module.get_function(&cfg.name) {
                 // must not have a body yet
@@ -92,7 +100,7 @@ impl SorobanTarget {
             } else {
                 binary
                     .module
-                    .add_function(&cfg.name, ftype, Some(Linkage::Internal))
+                    .add_function(&cfg.name, ftype, Some(linkage))
             };
 
             binary.functions.insert(cfg_no, func_decl);

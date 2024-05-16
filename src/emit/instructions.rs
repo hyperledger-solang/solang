@@ -36,12 +36,12 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 ) {
     match ins {
         Instr::Nop => (),
-        Instr::Return { value } if value.is_empty() && ns.target != Target::Soroban => {
+        Instr::Return { value } if value.is_empty()  => {
             bin.builder
                 .build_return(Some(&bin.return_values[&ReturnCode::Success]))
                 .unwrap();
         }
-        Instr::Return { value } if ns.target != Target::Soroban => {
+        Instr::Return { value }  => {
             let returns_offset = cfg.params.len();
             for (i, val) in value.iter().enumerate() {
                 let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
@@ -57,6 +57,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap();
         }
         Instr::Return { value } => match value.iter().next() {
+
+            
             Some(val) => {
                 println!("EMIT RETURN");
                 let retval = expression(target, bin, val, &w.vars, function, ns);
@@ -455,8 +457,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             args,
             ..
         } => {
-            println!("EMIT STATIC CALL");
 
+            println!("EMIT STATIC CALL");
+            
             let f = &contract.cfg[*cfg_no];
 
             let mut parms = args
@@ -464,6 +467,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
+
+            
             if !res.is_empty() {
                 for v in f.returns.iter() {
                     parms.push(if ns.target == Target::Solana {
@@ -485,9 +490,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             //println!("CALLING FUNCTION {:?}", bin.functions[cfg_no]);
 
             println!("PRINTING PARAMS");
-            for p in bin.functions[cfg_no].get_params() {
+            for p in  bin.functions[cfg_no].get_params() {
                 println!("{:?}", p);
             }
+
 
             println!("PRINTING ARGS {:?}", parms);
 
