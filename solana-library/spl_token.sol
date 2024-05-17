@@ -128,7 +128,7 @@ library SplToken {
 	}
 
 	/// Revoke a previously approved delegate. This transaction should be signed by the owner. After
-	/// this transaction, no delgate is approved for any amount.
+	/// this transaction, no delegate is approved for any amount.
 	///
 	/// @param account the account for which a delegate should be approved
 	/// @param owner the publickey of the account owner keypair
