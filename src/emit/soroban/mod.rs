@@ -83,13 +83,11 @@ impl SorobanTarget {
             let default_constructor = ns.default_constructor(contract_no);
 
             let linkage = if cfg.public {
-               
-                        Linkage::External
-                 
+                Linkage::External
             } else {
                 Linkage::Internal
             };
-            
+
             //Self::emit_function_spec_entry(context, cfg.clone(), "short".to_string(), binary);
 
             let func_decl = if let Some(func) = binary.module.get_function(&cfg.name) {
@@ -98,9 +96,7 @@ impl SorobanTarget {
 
                 func
             } else {
-                binary
-                    .module
-                    .add_function(&cfg.name, ftype, Some(linkage))
+                binary.module.add_function(&cfg.name, ftype, Some(linkage))
             };
 
             binary.functions.insert(cfg_no, func_decl);

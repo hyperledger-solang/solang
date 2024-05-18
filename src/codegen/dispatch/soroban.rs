@@ -32,9 +32,6 @@ pub fn function_dispatch(
             continue;
         }
 
-
-        
-
         println!(
             "generating wrapper for function {} with number {:?}",
             cfg.name, cfg.function_no

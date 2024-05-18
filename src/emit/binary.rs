@@ -786,7 +786,6 @@ impl<'a> Binary<'a> {
             .map(|ty| self.llvm_var_ty(ty, ns).into())
             .collect::<Vec<BasicMetadataTypeEnum>>();
 
-        
         // add return values
         for ty in returns {
             args.push(if ty.is_reference_type(ns) && !ty.is_contract_storage() {

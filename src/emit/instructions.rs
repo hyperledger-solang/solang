@@ -57,9 +57,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap();
         }
         Instr::Return { value } => match value.iter().next() {
-
-
-            
             Some(val) => {
                 println!("EMIT RETURN");
                 println!("VALUE {:?}", value);
@@ -459,8 +456,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             args,
             ..
         } => {
-
-            
             let f = &contract.cfg[*cfg_no];
             println!("EMIT STATIC CALL for {}", f.name);
 
@@ -469,8 +464,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
-
-            
             if !res.is_empty() {
                 for v in f.returns.iter() {
                     parms.push(if ns.target == Target::Solana {
@@ -485,7 +478,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 }
             }
 
-
             println!("PARMETERSSS {:?}", bin.parameters);
             if let Some(parameters) = bin.parameters {
                 parms.push(parameters.into());
@@ -494,15 +486,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             //println!("CALLING FUNCTION {:?}", bin.functions[cfg_no]);
 
             println!("PRINTING PARAMS");
-            for p in  bin.functions[cfg_no].get_params() {
+            for p in bin.functions[cfg_no].get_params() {
                 println!("{:?}", p);
             }
-
 
             println!("PRINTING ARGS {:?}", parms);
 
             let custom_value = bin.context.i64_type().const_int(0, false);
-
 
             let ret = bin
                 .builder
@@ -512,29 +502,28 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .left()
                 .unwrap();
 
-            
             // Soroban doesnt have return codes.
             if ns.target != Target::Soroban {
-            let success = bin
-                .builder
-                .build_int_compare(
-                    IntPredicate::EQ,
-                    ret.into_int_value(),
-                    bin.return_values[&ReturnCode::Success],
-                    "success",
-                )
-                .unwrap();
+                let success = bin
+                    .builder
+                    .build_int_compare(
+                        IntPredicate::EQ,
+                        ret.into_int_value(),
+                        bin.return_values[&ReturnCode::Success],
+                        "success",
+                    )
+                    .unwrap();
 
-            let success_block = bin.context.append_basic_block(function, "success");
-            let bail_block = bin.context.append_basic_block(function, "bail");
-            bin.builder
-                .build_conditional_branch(success, success_block, bail_block)
-                .unwrap();
+                let success_block = bin.context.append_basic_block(function, "success");
+                let bail_block = bin.context.append_basic_block(function, "bail");
+                bin.builder
+                    .build_conditional_branch(success, success_block, bail_block)
+                    .unwrap();
 
-            bin.builder.position_at_end(bail_block);
+                bin.builder.position_at_end(bail_block);
 
-            bin.builder.build_return(Some(&ret)).unwrap();
-            bin.builder.position_at_end(success_block);
+                bin.builder.build_return(Some(&ret)).unwrap();
+                bin.builder.position_at_end(success_block);
             }
 
             if !res.is_empty() {
