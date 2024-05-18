@@ -61,6 +61,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 println!("EMIT RETURN");
                 println!("VALUE {:?}", value);
                 let retval = expression(target, bin, val, &w.vars, function, ns);
+
+                println!("RETVAL {:?}", retval);
                 bin.builder.build_return(Some(&retval)).unwrap();
             }
             None => {
@@ -464,6 +466,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
+                /* 
             if !res.is_empty() {
                 for v in f.returns.iter() {
                     parms.push(if ns.target == Target::Solana {
@@ -476,7 +479,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                             .into()
                     });
                 }
-            }
+            }*/
 
             println!("PARMETERSSS {:?}", bin.parameters);
             if let Some(parameters) = bin.parameters {
@@ -494,7 +497,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let custom_value = bin.context.i64_type().const_int(0, false);
 
-            let ret = bin
+            let ress = bin
                 .builder
                 .build_call(bin.functions[cfg_no], &parms, "")
                 .unwrap()
@@ -502,6 +505,14 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .left()
                 .unwrap();
 
+                w.vars.get_mut(&res[0]).unwrap().value = ress;
+
+
+
+            
+           
+            
+                /* 
             // Soroban doesnt have return codes.
             if ns.target != Target::Soroban {
                 let success = bin
@@ -550,7 +561,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                         w.vars.get_mut(&res[i]).unwrap().value = val;
                     }
                 }
-            }
+            }*/
         }
         Instr::Call {
             res,
