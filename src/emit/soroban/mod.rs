@@ -26,6 +26,8 @@ use std::ffi::CString;
 use std::sync;
 
 const SOROBAN_ENV_INTERFACE_VERSION: u64 = 85899345920;
+pub const PUT_CONTRACT_DATA: &str = "l._";
+pub const GET_CONTRACT_DATA: &str = "l.1";
 
 pub struct SorobanTarget;
 
@@ -231,10 +233,10 @@ impl SorobanTarget {
 
         binary
             .module
-            .add_function("l._", function_ty_1, Some(Linkage::External));
+            .add_function(PUT_CONTRACT_DATA, function_ty_1, Some(Linkage::External));
         binary
             .module
-            .add_function("l.1", function_ty, Some(Linkage::External));
+            .add_function(GET_CONTRACT_DATA, function_ty, Some(Linkage::External));
     }
 
     fn emit_initializer(binary: &mut Binary, _ns: &ast::Namespace) {

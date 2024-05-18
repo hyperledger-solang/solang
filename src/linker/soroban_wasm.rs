@@ -11,6 +11,9 @@ use wasm_encoder::{
 };
 use wasmparser::{Global, Import, Parser, Payload::*, SectionLimited, TypeRef};
 
+use crate::emit::soroban::GET_CONTRACT_DATA;
+use crate::emit::soroban::PUT_CONTRACT_DATA;
+
 pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     let dir = tempdir().expect("failed to create temp directory for linking");
 
@@ -94,7 +97,7 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
             _ => panic!("unexpected WASM import section {:?}", import),
         };
         let module_name = match import.name {
-            "l.1" | "l.0" | "l._" => "l",
+            GET_CONTRACT_DATA | PUT_CONTRACT_DATA => "l",
             _ => panic!("got func {:?}", import),
         };
         // parse the import name to all string after the the first dot

@@ -3,7 +3,7 @@
 use crate::codegen::cfg::HashTy;
 use crate::codegen::Expression;
 use crate::emit::binary::Binary;
-use crate::emit::soroban::SorobanTarget;
+use crate::emit::soroban::{SorobanTarget, GET_CONTRACT_DATA, PUT_CONTRACT_DATA};
 use crate::emit::{storage, ContractArgs};
 use crate::emit::{TargetRuntime, Variable};
 use crate::emit_context;
@@ -35,13 +35,16 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     ) -> IntValue<'a> {
         emit_context!(binary);
 
-        let function_value = binary.module.get_function("l.1").unwrap();
+        let function_value = binary.module.get_function(GET_CONTRACT_DATA).unwrap();
         //let res = binary.builder.build_call(function_value, &[i64_const!(1).into(), i64_const!(1).into(), i32_const!(1).into()], "1").unwrap();
-        call!("l.1", &[i64_const!(1).into(), i64_const!(1).into()])
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value()
+        call!(
+            GET_CONTRACT_DATA,
+            &[i64_const!(1).into(), i64_const!(1).into()]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value()
     }
 
     fn storage_load(
@@ -84,7 +87,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         println!("storage_store");
 
         emit_context!(binary);
-        let function_value = binary.module.get_function("l._").unwrap();
+        let function_value = binary.module.get_function(PUT_CONTRACT_DATA).unwrap();
 
         let value = binary
             .builder
@@ -95,7 +98,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                     i64_const!(1).into(),
                     i64_const!(1).into(),
                 ],
-                "1._",
+                PUT_CONTRACT_DATA,
             )
             .unwrap()
             .try_as_basic_value()
