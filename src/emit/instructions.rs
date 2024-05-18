@@ -36,12 +36,12 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 ) {
     match ins {
         Instr::Nop => (),
-        Instr::Return { value } if value.is_empty()  => {
+        Instr::Return { value } if value.is_empty() && ns.target != Target::Soroban => {
             bin.builder
                 .build_return(Some(&bin.return_values[&ReturnCode::Success]))
                 .unwrap();
         }
-        Instr::Return { value }  => {
+        Instr::Return { value } if ns.target != Target::Soroban => {
             let returns_offset = cfg.params.len();
             for (i, val) in value.iter().enumerate() {
                 let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
@@ -58,9 +58,11 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         }
         Instr::Return { value } => match value.iter().next() {
 
+
             
             Some(val) => {
                 println!("EMIT RETURN");
+                println!("VALUE {:?}", value);
                 let retval = expression(target, bin, val, &w.vars, function, ns);
                 bin.builder.build_return(Some(&retval)).unwrap();
             }
@@ -458,9 +460,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             ..
         } => {
 
-            println!("EMIT STATIC CALL");
             
             let f = &contract.cfg[*cfg_no];
+            println!("EMIT STATIC CALL for {}", f.name);
 
             let mut parms = args
                 .iter()
@@ -483,6 +485,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 }
             }
 
+
+            println!("PARMETERSSS {:?}", bin.parameters);
             if let Some(parameters) = bin.parameters {
                 parms.push(parameters.into());
             }
@@ -497,6 +501,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             println!("PRINTING ARGS {:?}", parms);
 
+            let custom_value = bin.context.i64_type().const_int(0, false);
+
+
             let ret = bin
                 .builder
                 .build_call(bin.functions[cfg_no], &parms, "")
@@ -505,6 +512,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .left()
                 .unwrap();
 
+            
+            // Soroban doesnt have return codes.
+            if ns.target != Target::Soroban {
             let success = bin
                 .builder
                 .build_int_compare(
@@ -525,6 +535,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.build_return(Some(&ret)).unwrap();
             bin.builder.position_at_end(success_block);
+            }
 
             if !res.is_empty() {
                 for (i, v) in f.returns.iter().enumerate() {

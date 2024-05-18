@@ -32,7 +32,8 @@ pub fn function_dispatch(
             continue;
         }
 
-        cfg.public = true;
+
+        
 
         println!(
             "generating wrapper for function {} with number {:?}",
@@ -121,6 +122,9 @@ pub fn function_dispatch(
         wrapper_cfg.add(&mut vartab, return_instr);
 
         vartab.finalize(ns, &mut wrapper_cfg);
+
+        // If we emit a wrapper for a function, there is no need to make the function itself as public
+        cfg.public = false;
 
         wrapper_cfgs.push(wrapper_cfg);
     }
