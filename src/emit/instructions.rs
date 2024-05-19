@@ -466,8 +466,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
-                /* 
-            if !res.is_empty() {
+            // Soroban doesnt write return values to imported memory
+            if !res.is_empty() && ns.target != Target::Soroban {
                 for v in f.returns.iter() {
                     parms.push(if ns.target == Target::Solana {
                         bin.build_alloca(function, bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
@@ -479,25 +479,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                             .into()
                     });
                 }
-            }*/
+            }
 
-            println!("PARMETERSSS {:?}", bin.parameters);
             if let Some(parameters) = bin.parameters {
                 parms.push(parameters.into());
             }
 
-            //println!("CALLING FUNCTION {:?}", bin.functions[cfg_no]);
-
-            println!("PRINTING PARAMS");
-            for p in bin.functions[cfg_no].get_params() {
-                println!("{:?}", p);
-            }
-
-            println!("PRINTING ARGS {:?}", parms);
-
-            let custom_value = bin.context.i64_type().const_int(0, false);
-
-            let ress = bin
+            let ret = bin
                 .builder
                 .build_call(bin.functions[cfg_no], &parms, "")
                 .unwrap()
@@ -505,15 +493,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .left()
                 .unwrap();
 
-                w.vars.get_mut(&res[0]).unwrap().value = ress;
-
-
-
-            
-           
-            
-                /* 
-            // Soroban doesnt have return codes.
+            // Soroban doesnt have return codes, and only returns a single i64 value
             if ns.target != Target::Soroban {
                 let success = bin
                     .builder
@@ -535,33 +515,35 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 bin.builder.build_return(Some(&ret)).unwrap();
                 bin.builder.position_at_end(success_block);
-            }
 
-            if !res.is_empty() {
-                for (i, v) in f.returns.iter().enumerate() {
-                    let load_ty = bin.llvm_var_ty(&v.ty, ns);
-                    let val = bin
-                        .builder
-                        .build_load(
-                            load_ty,
-                            parms[args.len() + i].into_pointer_value(),
-                            v.name_as_str(),
-                        )
-                        .unwrap();
-                    let dest = w.vars[&res[i]].value;
-
-                    if dest.is_pointer_value()
-                        && !(v.ty.is_reference_type(ns)
-                            || matches!(v.ty, Type::ExternalFunction { .. }))
-                    {
-                        bin.builder
-                            .build_store(dest.into_pointer_value(), val)
+                if !res.is_empty() {
+                    for (i, v) in f.returns.iter().enumerate() {
+                        let load_ty = bin.llvm_var_ty(&v.ty, ns);
+                        let val = bin
+                            .builder
+                            .build_load(
+                                load_ty,
+                                parms[args.len() + i].into_pointer_value(),
+                                v.name_as_str(),
+                            )
                             .unwrap();
-                    } else {
-                        w.vars.get_mut(&res[i]).unwrap().value = val;
+                        let dest = w.vars[&res[i]].value;
+
+                        if dest.is_pointer_value()
+                            && !(v.ty.is_reference_type(ns)
+                                || matches!(v.ty, Type::ExternalFunction { .. }))
+                        {
+                            bin.builder
+                                .build_store(dest.into_pointer_value(), val)
+                                .unwrap();
+                        } else {
+                            w.vars.get_mut(&res[i]).unwrap().value = val;
+                        }
                     }
                 }
-            }*/
+            } else {
+                w.vars.get_mut(&res[0]).unwrap().value = ret;
+            }
         }
         Instr::Call {
             res,

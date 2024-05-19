@@ -786,13 +786,12 @@ impl<'a> Binary<'a> {
             .map(|ty| self.llvm_var_ty(ty, ns).into())
             .collect::<Vec<BasicMetadataTypeEnum>>();
 
-            if ns.target == Target::Soroban {
-                match returns.iter().next() {
-                    Some(ret) => return self.llvm_type(ret, ns).fn_type(&args, false),
-                    None => return self.context.void_type().fn_type(&args, false),
-                }
+        if ns.target == Target::Soroban {
+            match returns.iter().next() {
+                Some(ret) => return self.llvm_type(ret, ns).fn_type(&args, false),
+                None => return self.context.void_type().fn_type(&args, false),
             }
-            
+        }
 
         // add return values
         for ty in returns {
@@ -807,8 +806,6 @@ impl<'a> Binary<'a> {
                     .into()
             });
         }
-
-        
 
         // On Solana, we need to pass around the accounts
         if ns.target == Target::Solana {
