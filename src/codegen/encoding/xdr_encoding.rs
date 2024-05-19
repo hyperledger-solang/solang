@@ -18,6 +18,15 @@ pub(super) struct XDREncoding {
     packed_encoder: bool,
 }
 
+impl XDREncoding {
+    pub fn new(packed_encoder: bool) -> Self {
+        Self {
+            storage_cache: HashMap::new(),
+            packed_encoder,
+        }
+    }
+}
+
 impl AbiEncoding for XDREncoding {
     fn size_width(
         &self,

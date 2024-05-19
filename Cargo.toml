@@ -72,7 +72,6 @@ forge-fmt = { version = "0.2.0", optional = true }
 # build to work.
 ethers-core = { version = "2.0.10", optional = true }
 soroban-sdk = { version = "20.0.0-rc2", features = ["testutils"], optional = true }
-#soroban-env-host = { version = "20.2.2", features = ["testutils"], optional = true}
 
 [dev-dependencies]
 num-derive = "0.4"

@@ -83,13 +83,16 @@ pub fn function_dispatch(
         let mut value = Vec::new();
         let mut return_tys = Vec::new();
 
+        let mut call_returns = Vec::new();
         for (i, arg) in function.returns.iter().enumerate() {
+            let new = vartab.temp_anonymous(&arg.ty);
             value.push(Expression::Variable {
                 loc: arg.loc,
                 ty: arg.ty.clone(),
-                var_no: function.symtable.returns[i],
+                var_no: new,
             });
             return_tys.push(arg.ty.clone());
+            call_returns.push(new);
         }
 
         let return_instr = Instr::Return { value };
@@ -99,7 +102,7 @@ pub fn function_dispatch(
             _ => 0,
         };
         let placeholder = Instr::Call {
-            res: function.symtable.returns.clone(),
+            res: call_returns,
             call: InternalCallTy::Static { cfg_no },
             return_tys,
             args: function
