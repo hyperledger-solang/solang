@@ -21,7 +21,7 @@ $(WASM): TARGET_FLAGS=--target=wasm32
 bpf/solana.bc: solana.c solana_sdk.h | outputs_dirs
 
 outputs_dirs:
-	@mkdir -p ..\target\bpf ..\target\wasm
+	@mkdir -p ../target/bpf ../target/wasm
 
 clean:
 	rm -rf ../target/bpf ../target/wasm
