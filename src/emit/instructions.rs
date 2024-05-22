@@ -490,8 +490,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_call(bin.functions[cfg_no], &parms, "")
                 .unwrap()
                 .try_as_basic_value()
-                .left()
-                .unwrap();
+                .left();
+            //.unwrap();
 
             // Soroban doesnt have return codes, and only returns a single i64 value
             if ns.target != Target::Soroban {
@@ -499,7 +499,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     .builder
                     .build_int_compare(
                         IntPredicate::EQ,
-                        ret.into_int_value(),
+                        ret.unwrap().into_int_value(),
                         bin.return_values[&ReturnCode::Success],
                         "success",
                     )
@@ -513,7 +513,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 bin.builder.position_at_end(bail_block);
 
-                bin.builder.build_return(Some(&ret)).unwrap();
+                bin.builder.build_return(Some(&ret.unwrap())).unwrap();
                 bin.builder.position_at_end(success_block);
 
                 if !res.is_empty() {
@@ -542,7 +542,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     }
                 }
             } else {
-                w.vars.get_mut(&res[0]).unwrap().value = ret;
+                if let Some(value) = ret {
+                    println!("THE VALUE {:?}", value);
+                    w.vars.get_mut(&res[0]).unwrap().value = value;
+                }
             }
         }
         Instr::Call {
@@ -551,6 +554,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             args,
             ..
         } => {
+            println!("EMIT BUILTIN CALL");
             let mut parms = args
                 .iter()
                 .map(|p| expression(target, bin, p, &w.vars, function, ns).into())

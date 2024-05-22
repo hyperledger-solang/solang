@@ -25,7 +25,7 @@ use soroban_sdk::xdr::{
 use std::ffi::CString;
 use std::sync;
 
-const SOROBAN_ENV_INTERFACE_VERSION: u64 = 85899345920;
+const SOROBAN_ENV_INTERFACE_VERSION: u64 = 90194313216;
 pub const PUT_CONTRACT_DATA: &str = "l._";
 pub const GET_CONTRACT_DATA: &str = "l.1";
 
@@ -50,8 +50,20 @@ impl SorobanTarget {
             std_lib,
             None,
         );
+
+        let mut export_list = Vec::new();
         Self::declare_externals(&mut binary);
-        Self::emit_functions_with_spec(contract, &mut binary, ns, context, contract_no);
+        Self::emit_functions_with_spec(
+            contract,
+            &mut binary,
+            ns,
+            context,
+            contract_no,
+            &mut export_list,
+        );
+
+        //println!("export_list: {:?}", export_list);
+        binary.internalize(export_list.as_slice());
 
         Self::emit_initializer(&mut binary, ns);
 
@@ -68,6 +80,7 @@ impl SorobanTarget {
         ns: &'a ast::Namespace,
         context: &'a Context,
         contract_no: usize,
+        export_list: &mut Vec<&'a str>,
     ) {
         let mut defines = Vec::new();
 
@@ -82,15 +95,24 @@ impl SorobanTarget {
             // For each function, determine the name and the linkage
             // Soroban has no dispatcher, so all externally addressable functions are exported and should be named the same as the original function name in the source code.
             // If there are duplicate function names, then the function name in the source is mangled to include the signature.
+
+            // if func is a default constructor, then the function name is the contract name
+
             let default_constructor = ns.default_constructor(contract_no);
 
             let linkage = if cfg.public {
+                let name = if cfg.name.contains("::") {
+                    // get the third part of the name which is the function name
+                    cfg.name.split("::").collect::<Vec<&str>>()[2]
+                } else {
+                    &cfg.name
+                };
+                Self::emit_function_spec_entry(context, cfg.clone(), name.to_string(), binary);
+                export_list.push(name);
                 Linkage::External
             } else {
                 Linkage::Internal
             };
-
-            //Self::emit_function_spec_entry(context, cfg.clone(), "short".to_string(), binary);
 
             let func_decl = if let Some(func) = binary.module.get_function(&cfg.name) {
                 // must not have a body yet
@@ -210,14 +232,6 @@ impl SorobanTarget {
                 ]),
             )
             .expect("adding spec as metadata");
-    }
-
-    fn add_import_section<'a>(
-        context: &'a Context,
-        module: &Module<'a>,
-        name: &'a str,
-        value: Vec<u8>,
-    ) {
     }
 
     fn declare_externals(binary: &mut Binary) {

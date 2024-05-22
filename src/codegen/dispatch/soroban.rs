@@ -1,8 +1,11 @@
-use solang_parser::pt::Identifier;
+use bitvec::view::AsBits;
+use num_bigint::BigInt;
+use num_traits::{FromPrimitive, ToBytes};
+use solang_parser::pt::{self, Identifier};
 
 use crate::codegen::statements::LoopScopes;
-use crate::sema;
 use crate::sema::ast::{Function, FunctionAttributes};
+use crate::sema::{self, ast};
 use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
@@ -57,7 +60,11 @@ pub fn function_dispatch(
         let mut wrapper_cfg = ControlFlowGraph::new(wrapper_name.to_string(), ASTFunction::None);
 
         wrapper_cfg.params = function.params.clone();
-        wrapper_cfg.returns = function.returns.clone();
+        //wrapper_cfg.returns = function.returns.clone();
+
+        //let returns = Vec::new();
+        let param = ast::Parameter::new_default(Type::Uint(64));
+        wrapper_cfg.returns = vec![param].into();
         wrapper_cfg.public = true;
 
         let mut vartab = Vartable::from_symbol_table(&function.symtable, ns.next_id);
@@ -95,7 +102,7 @@ pub fn function_dispatch(
             call_returns.push(new);
         }
 
-        let return_instr = Instr::Return { value };
+        //let return_instr = Instr::Return { value };
 
         let cfg_no = match cfg.function_no {
             ASTFunction::SolidityFunction(no) => no,
@@ -119,13 +126,47 @@ pub fn function_dispatch(
 
         wrapper_cfg.add(&mut vartab, placeholder);
 
-        wrapper_cfg.add(&mut vartab, return_instr);
+        let number_literal = Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(3_u64),
+        };
+
+        
+        // set the msb 8 bits of the return value to 6, the return value is 64 bits.
+
+        let shifted = Expression::ShiftLeft {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            left: number_literal.clone().into(),
+            right: Expression::NumberLiteral {
+                loc: pt::Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::from(8_u64),
+            }
+            .into(),
+        };
+
+        let tag = Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(6_u64),
+        };
+
+        let added = Expression::Add { loc: pt::Loc::Codegen, ty: Type::Uint(64), overflowing: false, left: shifted.into(), right: tag.into() };
+
+        wrapper_cfg.add(
+            &mut vartab,
+            Instr::Return {
+                value: vec![added],
+            },
+        );
 
         vartab.finalize(ns, &mut wrapper_cfg);
 
-        // If we emit a wrapper for a function, there is no need to make the function itself as public
+        println!(" PRINTING WRAPPER CFG{:?} ", wrapper_cfg.returns);
+        //wrapper_cfg.vars = vartab.vars.clone();
         cfg.public = false;
-
         wrapper_cfgs.push(wrapper_cfg);
     }
 
