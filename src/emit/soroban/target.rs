@@ -13,14 +13,13 @@ use crate::sema::ast::{Function, Namespace, Type};
 
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{
-    ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue, PointerValue
+    ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue,
+    PointerValue,
 };
 
 use solang_parser::pt::Loc;
 
 use std::collections::HashMap;
-
-
 
 // TODO: Implement TargetRuntime for SorobanTarget.
 #[allow(unused_variables)]
@@ -46,7 +45,13 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         emit_context!(binary);
         let ret = call!(
             GET_CONTRACT_DATA,
-            &[slot.as_basic_value_enum().into_int_value().const_cast(binary.context.i64_type(), false).into(), i64_const!(2).into()]
+            &[
+                slot.as_basic_value_enum()
+                    .into_int_value()
+                    .const_cast(binary.context.i64_type(), false)
+                    .into(),
+                i64_const!(2).into()
+            ]
         )
         .try_as_basic_value()
         .left()
@@ -75,7 +80,10 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .build_call(
                 function_value,
                 &[
-                    slot.as_basic_value_enum().into_int_value().const_cast(binary.context.i64_type(), false).into(),
+                    slot.as_basic_value_enum()
+                        .into_int_value()
+                        .const_cast(binary.context.i64_type(), false)
+                        .into(),
                     dest.into(),
                     i64_const!(2).into(),
                 ],
@@ -227,9 +235,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     }
 
     /// Prints a string
-    fn print(&self, bin: &Binary, string: PointerValue, length: IntValue) {
-        
-    }
+    fn print(&self, bin: &Binary, string: PointerValue, length: IntValue) {}
 
     /// Return success without any result
     fn return_empty_abi(&self, bin: &Binary) {

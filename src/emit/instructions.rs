@@ -58,11 +58,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         }
         Instr::Return { value } => match value.iter().next() {
             Some(val) => {
-                println!("EMIT RETURN");
-                println!("VALUE {:?}", value);
                 let retval = expression(target, bin, val, &w.vars, function, ns);
 
-                println!("RETVAL {:?}", retval);
                 bin.builder.build_return(Some(&retval)).unwrap();
             }
             None => {
@@ -459,7 +456,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             ..
         } => {
             let f = &contract.cfg[*cfg_no];
-            println!("EMIT STATIC CALL for {}", f.name);
 
             let mut parms = args
                 .iter()
@@ -543,7 +539,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 }
             } else {
                 if let Some(value) = ret {
-                    println!("THE VALUE {:?}", value);
                     w.vars.get_mut(&res[0]).unwrap().value = value;
                 }
             }
@@ -554,7 +549,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             args,
             ..
         } => {
-            println!("EMIT BUILTIN CALL");
             let mut parms = args
                 .iter()
                 .map(|p| expression(target, bin, p, &w.vars, function, ns).into())

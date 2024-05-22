@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub(super) mod target;
-use crate::
-    codegen::{
-        cfg::{ASTFunction, ControlFlowGraph},
-       Options, STORAGE_INITIALIZER,
-    };
+use crate::codegen::{
+    cfg::{ASTFunction, ControlFlowGraph},
+    Options, STORAGE_INITIALIZER,
+};
 
 use crate::emit::cfg::emit_cfg;
 use crate::{emit::Binary, sema::ast};
@@ -56,8 +55,6 @@ impl SorobanTarget {
             contract_no,
             &mut export_list,
         );
-
-        //println!("export_list: {:?}", export_list);
         binary.internalize(export_list.as_slice());
 
         Self::emit_initializer(&mut binary, ns);
@@ -80,7 +77,6 @@ impl SorobanTarget {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
-            println!("emit_functions_with_spec: cfg_name: {:?}", cfg.name);
             let ftype = binary.function_type(
                 &cfg.params.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
                 &cfg.returns.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),

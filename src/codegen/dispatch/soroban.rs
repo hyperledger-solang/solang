@@ -6,11 +6,10 @@ use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy},
         vartable::Vartable,
-     Expression, Options,
+        Expression, Options,
     },
     sema::ast::{Namespace, Type},
 };
-
 
 pub fn function_dispatch(
     contract_no: usize,
@@ -27,11 +26,6 @@ pub fn function_dispatch(
         if cfg.function_no == ASTFunction::None {
             continue;
         }
-
-        println!(
-            "generating wrapper for function {} with number {:?}",
-            cfg.name, cfg.function_no
-        );
 
         let function = match &cfg.function_no {
             ASTFunction::SolidityFunction(no) | ASTFunction::YulFunction(no) => &ns.functions[*no],
@@ -95,7 +89,6 @@ pub fn function_dispatch(
             call_returns.push(new);
         }
 
-
         let cfg_no = match cfg.function_no {
             ASTFunction::SolidityFunction(no) => no,
             _ => 0,
@@ -118,8 +111,6 @@ pub fn function_dispatch(
 
         wrapper_cfg.add(&mut vartab, placeholder);
 
-
-        
         // set the msb 8 bits of the return value to 6, the return value is 64 bits.
 
         let shifted = Expression::ShiftLeft {
@@ -140,14 +131,15 @@ pub fn function_dispatch(
             value: BigInt::from(6_u64),
         };
 
-        let added = Expression::Add { loc: pt::Loc::Codegen, ty: Type::Uint(64), overflowing: false, left: shifted.into(), right: tag.into() };
+        let added = Expression::Add {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            overflowing: false,
+            left: shifted.into(),
+            right: tag.into(),
+        };
 
-        wrapper_cfg.add(
-            &mut vartab,
-            Instr::Return {
-                value: vec![added],
-            },
-        );
+        wrapper_cfg.add(&mut vartab, Instr::Return { value: vec![added] });
 
         vartab.finalize(ns, &mut wrapper_cfg);
         cfg.public = false;
