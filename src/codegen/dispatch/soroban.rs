@@ -61,16 +61,31 @@ pub fn function_dispatch(
         for (i, arg) in function.symtable.arguments.iter().enumerate() {
             if let Some(pos) = arg {
                 let var = &function.symtable.vars[pos];
+
+                let shift_right = Expression::ShiftRight {
+                    loc: pt::Loc::Codegen,
+                    ty: Type::Uint(64),
+                    left: Expression::FunctionArg {
+                        loc: var.id.loc,
+                        ty: var.ty.clone(),
+                        arg_no: i,
+                    }
+                    .into(),
+                    right: Expression::NumberLiteral {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Uint(64),
+                        value: BigInt::from(8_u64),
+                    }
+                    .into(),
+
+                    signed: false,
+                };
                 wrapper_cfg.add(
                     &mut vartab,
                     Instr::Set {
                         loc: var.id.loc,
                         res: *pos,
-                        expr: Expression::FunctionArg {
-                            loc: var.id.loc,
-                            ty: var.ty.clone(),
-                            arg_no: i,
-                        },
+                        expr: shift_right,
                     },
                 );
             }

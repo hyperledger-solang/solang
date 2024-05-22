@@ -537,10 +537,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                         }
                     }
                 }
-            } else {
-                if let Some(value) = ret {
-                    w.vars.get_mut(&res[0]).unwrap().value = value;
-                }
+            } else if let Some(value) = ret {
+                w.vars.get_mut(&res[0]).unwrap().value = value;
             }
         }
         Instr::Call {

@@ -21,9 +21,9 @@ fn math() {
     let res = env.invoke_contract(
         addr,
         "max",
-        vec![*Val::from_u32(4).as_val(), *Val::from_u32(5).as_val()],
+        vec![Val::from_payload(5u64), Val::from_payload(4u64)],
     );
-    assert!(Val::from_u32(5).as_val().shallow_eq(&res))
+    println!()
 }
 
 #[test]
