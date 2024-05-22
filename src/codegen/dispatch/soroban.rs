@@ -1,29 +1,22 @@
-use bitvec::view::AsBits;
 use num_bigint::BigInt;
-use num_traits::{FromPrimitive, ToBytes};
-use solang_parser::pt::{self, Identifier};
+use solang_parser::pt::{self};
 
-use crate::codegen::statements::LoopScopes;
-use crate::sema::ast::{Function, FunctionAttributes};
-use crate::sema::{self, ast};
+use crate::sema::ast;
 use crate::{
     codegen::{
-        cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
-        encoding::{abi_decode, abi_encode},
-        revert::log_runtime_error,
+        cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy},
         vartable::Vartable,
-        Builtin, Expression, Options,
+     Expression, Options,
     },
-    sema::ast::{Namespace, Parameter, Type, Type::Uint},
+    sema::ast::{Namespace, Type},
 };
 
-use crate::codegen::expression;
 
 pub fn function_dispatch(
     contract_no: usize,
     all_cfg: &mut [ControlFlowGraph],
     ns: &mut Namespace,
-    opt: &Options,
+    _opt: &Options,
 ) -> Vec<ControlFlowGraph> {
     // For each function in all_cfg, we will generate a wrapper function that will call the function
     // The wrapper function will call abi_encode to encode the arguments, and then call the function
@@ -91,7 +84,7 @@ pub fn function_dispatch(
         let mut return_tys = Vec::new();
 
         let mut call_returns = Vec::new();
-        for (i, arg) in function.returns.iter().enumerate() {
+        for arg in function.returns.iter() {
             let new = vartab.temp_anonymous(&arg.ty);
             value.push(Expression::Variable {
                 loc: arg.loc,
@@ -102,7 +95,6 @@ pub fn function_dispatch(
             call_returns.push(new);
         }
 
-        //let return_instr = Instr::Return { value };
 
         let cfg_no = match cfg.function_no {
             ASTFunction::SolidityFunction(no) => no,
@@ -126,11 +118,6 @@ pub fn function_dispatch(
 
         wrapper_cfg.add(&mut vartab, placeholder);
 
-        let number_literal = Expression::NumberLiteral {
-            loc: pt::Loc::Codegen,
-            ty: Type::Uint(64),
-            value: BigInt::from(3_u64),
-        };
 
         
         // set the msb 8 bits of the return value to 6, the return value is 64 bits.
@@ -163,9 +150,6 @@ pub fn function_dispatch(
         );
 
         vartab.finalize(ns, &mut wrapper_cfg);
-
-        println!(" PRINTING WRAPPER CFG{:?} ", wrapper_cfg.returns);
-        //wrapper_cfg.vars = vartab.vars.clone();
         cfg.public = false;
         wrapper_cfgs.push(wrapper_cfg);
     }

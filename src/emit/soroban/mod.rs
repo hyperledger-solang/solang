@@ -1,26 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub(super) mod target;
-use crate::{
+use crate::
     codegen::{
-        cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
-        revert::log_runtime_error,
-        vartable::Vartable,
-        Builtin, Expression, Options, STORAGE_INITIALIZER,
-    },
-    sema::ast::{Namespace, Parameter, Type, Type::Uint},
-};
+        cfg::{ASTFunction, ControlFlowGraph},
+       Options, STORAGE_INITIALIZER,
+    };
 
 use crate::emit::cfg::emit_cfg;
 use crate::{emit::Binary, sema::ast};
-use inkwell::values::FunctionValue;
 use inkwell::{
     context::Context,
     module::{Linkage, Module},
 };
 use soroban_sdk::xdr::{
     DepthLimitedWrite, ScEnvMetaEntry, ScSpecEntry, ScSpecFunctionInputV0, ScSpecFunctionV0,
-    ScSpecTypeDef, StringM, ToXdr, WriteXdr,
+    ScSpecTypeDef, StringM, WriteXdr,
 };
 use std::ffi::CString;
 use std::sync;
@@ -79,7 +74,7 @@ impl SorobanTarget {
         binary: &mut Binary<'a>,
         ns: &'a ast::Namespace,
         context: &'a Context,
-        contract_no: usize,
+        _contract_no: usize,
         export_list: &mut Vec<&'a str>,
     ) {
         let mut defines = Vec::new();
@@ -97,8 +92,6 @@ impl SorobanTarget {
             // If there are duplicate function names, then the function name in the source is mangled to include the signature.
 
             // if func is a default constructor, then the function name is the contract name
-
-            let default_constructor = ns.default_constructor(contract_no);
 
             let linkage = if cfg.public {
                 let name = if cfg.name.contains("::") {
@@ -125,7 +118,7 @@ impl SorobanTarget {
 
             binary.functions.insert(cfg_no, func_decl);
 
-            defines.push((func_decl, cfg, cfg.name.clone()));
+            defines.push((func_decl, cfg));
         }
 
         let init_type = context.i64_type().fn_type(&[], false);
@@ -133,7 +126,7 @@ impl SorobanTarget {
             .module
             .add_function("storage_initializer", init_type, None);
 
-        for (func_decl, cfg, dispatcher_name) in defines {
+        for (func_decl, cfg) in defines {
             emit_cfg(&mut SorobanTarget, binary, contract, cfg, func_decl, ns);
             //Self::emit_function_dispatcher(binary, cfg, func_decl, &dispatcher_name, ns, &contract);
         }

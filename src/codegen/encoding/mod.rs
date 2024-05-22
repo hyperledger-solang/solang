@@ -11,7 +11,6 @@
 mod borsh_encoding;
 mod buffer_validator;
 pub(super) mod scale_encoding;
-pub(super) mod xdr_encoding;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
@@ -1749,7 +1748,6 @@ pub(crate) trait AbiEncoding {
 pub(crate) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncoding> {
     match &ns.target {
         Target::Solana => Box::new(BorshEncoding::new(packed)),
-        Target::Soroban => Box::new(xdr_encoding::XDREncoding::new(packed)),
         // Solana utilizes Borsh encoding and Polkadot, SCALE encoding.
         // All other targets are using the SCALE encoding, because we have tests for a
         // fake Ethereum target that checks the presence of Instr::AbiDecode and
