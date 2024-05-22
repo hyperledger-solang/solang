@@ -13,7 +13,7 @@ use crate::sema::ast::{Function, Namespace, Type};
 use inkwell::module::{self, Linkage};
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{
-    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+    ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue, PointerValue
 };
 use inkwell::IntPredicate;
 use num_bigint::BigInt;
@@ -22,6 +22,8 @@ use solang_parser::pt::Loc;
 use soroban_sdk::xdr::{self, WriteXdr};
 use std::any::Any;
 use std::collections::HashMap;
+
+
 
 // TODO: Implement TargetRuntime for SorobanTarget.
 #[allow(unused_variables)]
@@ -35,16 +37,17 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     ) -> IntValue<'a> {
         emit_context!(binary);
 
-        let function_value = binary.module.get_function(GET_CONTRACT_DATA).unwrap();
+        /*let function_value = binary.module.get_function(GET_CONTRACT_DATA).unwrap();
         //let res = binary.builder.build_call(function_value, &[i64_const!(1).into(), i64_const!(1).into(), i32_const!(1).into()], "1").unwrap();
         call!(
             GET_CONTRACT_DATA,
-            &[i64_const!(1).into(), i64_const!(1).into()]
+            &[slot., i64_const!(2).into()]
         )
         .try_as_basic_value()
         .left()
         .unwrap()
-        .into_int_value()
+        .into_int_value()*/
+        i64_const!(0)
     }
 
     fn storage_load(
@@ -55,20 +58,25 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
+        emit_context!(binary);
         println!("storage_load");
-        let slot_ptr = binary
+        /*let slot_ptr = binary
             .builder
             .build_alloca(slot.get_type(), "slot")
             .unwrap();
 
-        binary.builder.build_store(slot_ptr, *slot).unwrap();
+        binary.builder.build_store(slot_ptr, *slot).unwrap();*/
 
-        let ret = self.get_storage_int(
-            binary,
-            function,
-            slot_ptr,
-            binary.llvm_type(ty.deref_any(), ns).into_int_type(),
-        );
+        //let function_value = binary.module.get_function(GET_CONTRACT_DATA).unwrap();
+        //let res = binary.builder.build_call(function_value, &[i64_const!(1).into(), i64_const!(1).into(), i32_const!(1).into()], "1").unwrap();
+        let ret = call!(
+            GET_CONTRACT_DATA,
+            &[slot.as_basic_value_enum().into_int_value().const_cast(binary.context.i64_type(), false).into(), i64_const!(2).into()]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
 
         ret.into()
     }
@@ -89,14 +97,18 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         emit_context!(binary);
         let function_value = binary.module.get_function(PUT_CONTRACT_DATA).unwrap();
 
+
+
+        println!("SLOT {:?}", slot);
+        println!("DEST {:?}", dest);
         let value = binary
             .builder
             .build_call(
                 function_value,
                 &[
-                    i64_const!(1).into(),
-                    i64_const!(1).into(),
-                    i64_const!(1).into(),
+                    slot.as_basic_value_enum().into_int_value().const_cast(binary.context.i64_type(), false).into(),
+                    dest.into(),
+                    i64_const!(2).into(),
                 ],
                 PUT_CONTRACT_DATA,
             )

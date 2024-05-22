@@ -138,7 +138,7 @@ pub fn function_dispatch(
         let shifted = Expression::ShiftLeft {
             loc: pt::Loc::Codegen,
             ty: Type::Uint(64),
-            left: number_literal.clone().into(),
+            left: value[0].clone().into(),
             right: Expression::NumberLiteral {
                 loc: pt::Loc::Codegen,
                 ty: Type::Uint(64),
