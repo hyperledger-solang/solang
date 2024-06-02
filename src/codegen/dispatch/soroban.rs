@@ -58,39 +58,6 @@ pub fn function_dispatch(
 
         let mut vartab = Vartable::from_symbol_table(&function.symtable, ns.next_id);
 
-        for (i, arg) in function.symtable.arguments.iter().enumerate() {
-            if let Some(pos) = arg {
-                let var = &function.symtable.vars[pos];
-
-                let shift_right = Expression::ShiftRight {
-                    loc: pt::Loc::Codegen,
-                    ty: Type::Uint(64),
-                    left: Expression::FunctionArg {
-                        loc: var.id.loc,
-                        ty: var.ty.clone(),
-                        arg_no: i,
-                    }
-                    .into(),
-                    right: Expression::NumberLiteral {
-                        loc: pt::Loc::Codegen,
-                        ty: Type::Uint(64),
-                        value: BigInt::from(8_u64),
-                    }
-                    .into(),
-
-                    signed: false,
-                };
-                wrapper_cfg.add(
-                    &mut vartab,
-                    Instr::Set {
-                        loc: var.id.loc,
-                        res: *pos,
-                        expr: shift_right,
-                    },
-                );
-            }
-        }
-
         let mut value = Vec::new();
         let mut return_tys = Vec::new();
 
@@ -118,10 +85,23 @@ pub fn function_dispatch(
                 .params
                 .iter()
                 .enumerate()
-                .map(|(i, p)| Expression::FunctionArg {
-                    loc: p.loc,
-                    ty: p.ty.clone(),
-                    arg_no: i,
+                .map(|(i, p)| Expression::ShiftRight {
+                    loc: pt::Loc::Codegen,
+                    ty: Type::Uint(64),
+                    left: Expression::FunctionArg {
+                        loc: p.loc,
+                        ty: p.ty.clone(),
+                        arg_no: i,
+                    }
+                    .into(),
+                    right: Expression::NumberLiteral {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Uint(64),
+                        value: BigInt::from(8_u64),
+                    }
+                    .into(),
+
+                    signed: false,
                 })
                 .collect(),
         };
