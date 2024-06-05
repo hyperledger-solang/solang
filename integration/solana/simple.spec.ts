@@ -351,7 +351,7 @@ describe('Simple solang tests', function () {
     it('account storage too small constructor', async function () {
         await expect(loadContractAndCallConstructor('store', [], 100))
             .rejects
-            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
+            .toThrowError('Transaction simulation failed: Error processing Instruction 0: account data too small for instruction');
     });
 
     it('account storage too small dynamic alloc', async function () {
@@ -362,7 +362,7 @@ describe('Simple solang tests', function () {
         // set a load of string which will overflow
         await expect(program.methods.setFoo1().accounts({ dataAccount: storage.publicKey }).rpc())
             .rejects
-            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
+            .toThrowError('Transaction simulation failed: Error processing Instruction 0: account data too small for instruction');
     });
 
     it('account storage too small dynamic realloc', async function () {
@@ -377,7 +377,7 @@ describe('Simple solang tests', function () {
         // do realloc until failure
         await expect(push_until_bang())
             .rejects
-            .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
+            .toThrowError('Transaction simulation failed: Error processing Instruction 0: account data too small for instruction');
     });
 
     it('arrays in account storage', async function () {
