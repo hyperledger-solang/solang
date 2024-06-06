@@ -1,0 +1,22 @@
+[package]
+name = "forge-fmt"
+version = "0.2.0"
+edition = "2021"
+authors = ["Foundry Contributors"]
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/foundry-rs/foundry"
+repository = "https://github.com/foundry-rs/foundry"
+
+[dependencies]
+ariadne = "0.4"
+itertools = "0.12"
+solang-parser = { path = "../solang-parser" }
+thiserror = "1"
+serde = "1.0"
+tracing = "0.1"
+alloy-primitives = "0.7"
+
+[dev-dependencies]
+similar-asserts = "1.5"
+toml = "0.8"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
