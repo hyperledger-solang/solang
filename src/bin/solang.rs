@@ -176,7 +176,7 @@ fn compile(compile_args: &Compile) {
     let opt = options_arg(
         &compile_args.debug_features,
         &compile_args.optimizations,
-        &compile_package,
+        compile_package,
     );
 
     let mut namespaces = Vec::new();
