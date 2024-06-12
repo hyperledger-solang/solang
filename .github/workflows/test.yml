@@ -306,6 +306,43 @@ jobs:
       with:
        name: anchor-tests
        path: ./target/*.profraw
+  
+  soroban:
+    name: Soroban Integration test
+    runs-on: solang-ubuntu-latest
+    container: ghcr.io/hyperledger/solang-llvm:ci-7
+    needs: linux-x86-64
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+    - uses: dtolnay/rust-toolchain@1.74.0
+    - uses: actions/download-artifact@v3
+      with:
+        name: solang-linux-x86-64
+        path: bin
+    - name: Solang Compiler
+      run: |
+        chmod 755 ./bin/solang
+        echo "$(pwd)/bin" >> $GITHUB_PATH
+    
+    - name: Install Soroban
+      run: cargo install --locked soroban-cli --version 21.0.0-rc.1
+    - run: npm install
+      working-directory: ./integration/soroban
+    - name: Build Solang contracts
+      run: npm run build
+      working-directory: ./integration/soroban
+    - name: Setup Soroban enivronment
+      run: npm run setup
+      working-directory: ./integration/soroban
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: soroban-tests
+        path: ./target/*.profraw
 
   solana:
     name: Solana Integration test
@@ -425,6 +462,8 @@ jobs:
       with:
         name: polkadot-subxt-tests
         path: ./target/*.profraw
+  
+ 
 
   vscode:
     name: Visual Code Extension

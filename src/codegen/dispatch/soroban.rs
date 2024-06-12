@@ -109,7 +109,7 @@ pub fn function_dispatch(
         wrapper_cfg.add(&mut vartab, placeholder);
 
         // set the msb 8 bits of the return value to 6, the return value is 64 bits.
-
+        // FIXME: this assumes that the solidity function always returns one value.
         let shifted = Expression::ShiftLeft {
             loc: pt::Loc::Codegen,
             ty: Type::Uint(64),
