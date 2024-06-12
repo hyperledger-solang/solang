@@ -338,6 +338,9 @@ jobs:
     - name: Setup Soroban enivronment
       run: npm run setup
       working-directory: ./integration/soroban
+    - name: Deploy and test contracts
+      run: npm run test
+      working-directory: ./integration/soroban
     - name: Upload test coverage files
       uses: actions/upload-artifact@v3.1.0
       with:
