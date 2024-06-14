@@ -328,7 +328,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.build_store(l, left).unwrap();
             bin.builder.build_store(r, right).unwrap();
         }
-        // LLVM-IR can handle multiplication of sizes up to 64 bits. If the size is larger, we need to implement our own mutliplication function.
+        // LLVM-IR can handle multiplication of sizes up to 64 bits. If the size is larger, we need to implement our own multiplication function.
         // We divide the operands into sizes of 32 bits (check __mul32 in stdlib/bigint.c documentation).
         // If the size is not divisble by 32, we extend it to the next 32 bits. For example, int72 will be extended to int96.
         // Here, we zext the operands to the nearest 32 bits. zext is called instead of sext because we need to do unsigned multiplication by default.

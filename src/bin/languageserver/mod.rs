@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use forge_fmt::{format, parse, FormatterConfig};
+use forge_fmt::{format_to, parse, FormatterConfig};
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use rust_lapper::{Interval, Lapper};
@@ -2760,7 +2760,7 @@ impl LanguageServer for SolangServer {
             ..Default::default()
         };
         let mut source_formatted = String::new();
-        format(&mut source_formatted, source_parsed, config).map_err(|err| Error {
+        format_to(&mut source_formatted, source_parsed, config).map_err(|err| Error {
             code: ErrorCode::InternalError,
             message: format!("Failed to format file: {uri}").into(),
             data: Some(Value::String(format!("{:?}", err))),

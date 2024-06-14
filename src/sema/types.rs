@@ -152,7 +152,7 @@ pub fn resolve_typenames<'a>(
                         //
                         // int[2] var(bool);
                         // S var2();
-                        // funtion var3(int x);
+                        // function var3(int x);
                         // Event var4(bool f1);
                         // Error var4(bool f1);
                         // Feh.b1 var5();
