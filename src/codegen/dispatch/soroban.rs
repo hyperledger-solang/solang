@@ -30,7 +30,7 @@ pub fn function_dispatch(
         }
 
         let function = match &cfg.function_no {
-            ASTFunction::SolidityFunction(no) | ASTFunction::YulFunction(no) => &ns.functions[*no],
+            ASTFunction::SolidityFunction(no) => &ns.functions[*no],
             _ => continue,
         };
 
@@ -42,16 +42,14 @@ pub fn function_dispatch(
                     function.id.name.clone()
                 }
             } else {
-                cfg.name.clone()
+                continue;
             }
         };
 
         let mut wrapper_cfg = ControlFlowGraph::new(wrapper_name.to_string(), ASTFunction::None);
 
         wrapper_cfg.params = function.params.clone();
-        //wrapper_cfg.returns = function.returns.clone();
 
-        //let returns = Vec::new();
         let param = ast::Parameter::new_default(Type::Uint(64));
         wrapper_cfg.returns = vec![param].into();
         wrapper_cfg.public = true;

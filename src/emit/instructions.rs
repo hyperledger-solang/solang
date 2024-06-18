@@ -487,7 +487,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap()
                 .try_as_basic_value()
                 .left();
-            //.unwrap();
 
             // Soroban doesnt have return codes, and only returns a single i64 value
             if ns.target != Target::Soroban {
