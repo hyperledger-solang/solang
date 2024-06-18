@@ -793,7 +793,7 @@ fn sol_try_find_program_address(
 
     println!("program_id:{}", program_id.to_base58());
 
-    let bump_seed = [std::u8::MAX];
+    let bump_seed = [u8::MAX];
     let mut seeds_with_bump = seeds.to_vec();
     seeds_with_bump.push(&bump_seed);
 

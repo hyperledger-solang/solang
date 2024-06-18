@@ -2774,8 +2774,8 @@ impl LanguageServer for SolangServer {
                     character: 0,
                 },
                 end: Position {
-                    line: u32::max_value(),
-                    character: u32::max_value(),
+                    line: u32::MAX,
+                    character: u32::MAX,
                 },
             },
             new_text: source_formatted,
