@@ -467,8 +467,6 @@ jobs:
       with:
         name: polkadot-subxt-tests
         path: ./target/*.profraw
-  
- 
 
   vscode:
     name: Visual Code Extension
