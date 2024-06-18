@@ -761,10 +761,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
                     params,
                     attributes,
                     return_not_returns: None,
-                    returns: match returns {
-                        Some((returns, _)) => returns,
-                        None => Vec::new(),
-                    },
+                    returns: returns.map(|(v, _)| v).unwrap_or_default(),
                     body,
                 })
             },

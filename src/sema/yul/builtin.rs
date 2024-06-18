@@ -4,6 +4,7 @@ use crate::Target;
 use phf::{phf_map, phf_set};
 use std::fmt;
 
+#[allow(unused)]
 pub struct YulBuiltinPrototype {
     pub name: &'static str,
     pub no_args: u8,
