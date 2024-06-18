@@ -101,10 +101,10 @@ pub(super) fn get_digits(input: &mut std::str::CharIndices, len: usize) -> Resul
             }
             offset = match input.next() {
                 Some((i, _)) => i,
-                None => std::usize::MAX,
+                None => usize::MAX,
             };
         } else {
-            offset = std::usize::MAX;
+            offset = usize::MAX;
         }
 
         return Err(offset);
