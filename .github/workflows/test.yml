@@ -330,6 +330,8 @@ jobs:
     
     - name: Install Soroban
       run: cargo install --locked soroban-cli --version 21.0.0-rc.1
+    - name: Add cargo install location to PATH
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
     - run: npm install
       working-directory: ./integration/soroban
     - name: Build Solang contracts
