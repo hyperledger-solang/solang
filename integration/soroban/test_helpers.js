@@ -2,7 +2,7 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 
 
 
-async function call_contract_function(method, server, keypair, contract) {
+export async function call_contract_function(method, server, keypair, contract) {
 
     let res;
     let builtTransaction = new StellarSdk.TransactionBuilder(await server.getAccount(keypair.publicKey()), {
@@ -51,5 +51,3 @@ async function call_contract_function(method, server, keypair, contract) {
     }
     return res;
 }
-
-export { call_contract_function };

@@ -59,7 +59,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         Instr::Return { value } => match value.iter().next() {
             Some(val) => {
                 let retval = expression(target, bin, val, &w.vars, function, ns);
-
                 bin.builder.build_return(Some(&retval)).unwrap();
             }
             None => {
@@ -462,7 +461,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
-            // Soroban doesnt write return values to imported memory
+            // Soroban doesn't write return values to imported memory
             if !res.is_empty() && ns.target != Target::Soroban {
                 for v in f.returns.iter() {
                     parms.push(if ns.target == Target::Solana {
@@ -488,7 +487,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .try_as_basic_value()
                 .left();
 
-            // Soroban doesnt have return codes, and only returns a single i64 value
+            // Soroban doesn't have return codes, and only returns a single i64 value
             if ns.target != Target::Soroban {
                 let success = bin
                     .builder

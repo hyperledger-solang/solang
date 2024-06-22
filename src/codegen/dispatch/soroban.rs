@@ -25,10 +25,6 @@ pub fn function_dispatch(
     let mut wrapper_cfgs = Vec::new();
 
     for cfg in all_cfg.iter_mut() {
-        if cfg.function_no == ASTFunction::None {
-            continue;
-        }
-
         let function = match &cfg.function_no {
             ASTFunction::SolidityFunction(no) => &ns.functions[*no],
             _ => continue,

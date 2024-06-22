@@ -96,7 +96,7 @@ impl SorobanTarget {
                 } else {
                     &cfg.name
                 };
-                Self::emit_function_spec_entry(context, cfg.clone(), name.to_string(), binary);
+                Self::emit_function_spec_entry(context, cfg, name.to_string(), binary);
                 export_list.push(name);
                 Linkage::External
             } else {
@@ -124,7 +124,6 @@ impl SorobanTarget {
 
         for (func_decl, cfg) in defines {
             emit_cfg(&mut SorobanTarget, binary, contract, cfg, func_decl, ns);
-            //Self::emit_function_dispatcher(binary, cfg, func_decl, &dispatcher_name, ns, &contract);
         }
     }
 
@@ -140,14 +139,12 @@ impl SorobanTarget {
 
     fn emit_function_spec_entry<'a>(
         context: &'a Context,
-        cfg: ControlFlowGraph,
+        cfg: &ControlFlowGraph,
         name: String,
         binary: &mut Binary<'a>,
     ) {
         if cfg.public && !cfg.is_placeholder() {
             // TODO: Emit custom type spec entries
-            //let outputs = ScSpecTypeDef::Vec(());
-
             let mut spec = DepthLimitedWrite::new(Vec::new(), 10);
             ScSpecEntry::FunctionV0(ScSpecFunctionV0 {
                 name: name
@@ -249,7 +246,7 @@ impl SorobanTarget {
         let void_param = ast::Parameter::new_default(ast::Type::Void);
         cfg.returns = sync::Arc::new(vec![void_param]);
 
-        Self::emit_function_spec_entry(binary.context, cfg, "init".to_string(), binary);
+        Self::emit_function_spec_entry(binary.context, &cfg, "init".to_string(), binary);
 
         let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
         let mut storage_initializers = binary

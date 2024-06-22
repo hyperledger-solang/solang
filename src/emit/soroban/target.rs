@@ -85,7 +85,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                         .const_cast(binary.context.i64_type(), false)
                         .into(),
                     dest.into(),
-                    i64_const!(2).into(),
+                    binary.context.i64_type().const_int(2, false).into(),
                 ],
                 PUT_CONTRACT_DATA,
             )
@@ -235,6 +235,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     }
 
     /// Prints a string
+    /// TODO: Implement this function, with a call to the `log` function in the Soroban runtime.
     fn print(&self, bin: &Binary, string: PointerValue, length: IntValue) {}
 
     /// Return success without any result

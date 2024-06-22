@@ -792,7 +792,6 @@ impl<'a> Binary<'a> {
                 None => return self.context.void_type().fn_type(&args, false),
             }
         }
-
         // add return values
         for ty in returns {
             args.push(if ty.is_reference_type(ns) && !ty.is_contract_storage() {
