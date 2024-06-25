@@ -171,7 +171,13 @@ fn compile(compile_args: &Compile) {
 
     let mut resolver = imports_arg(&compile_args.package);
 
-    let opt = options_arg(&compile_args.debug_features, &compile_args.optimizations);
+    let compile_package = &compile_args.package;
+
+    let opt = options_arg(
+        &compile_args.debug_features,
+        &compile_args.optimizations,
+        compile_package,
+    );
 
     let mut namespaces = Vec::new();
 

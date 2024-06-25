@@ -1227,7 +1227,7 @@ impl<'a> Binary<'a> {
         ns: &Namespace,
         code: PanicCode,
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        if ns.target == Target::Solana {
+        if ns.target == Target::Solana || ns.target == Target::Soroban {
             return (
                 self.context
                     .i8_type()

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    annotions_not_allowed, ast,
+    annotions_not_allowed,
+    ast::{self},
     diagnostics::Diagnostics,
     expression::{compatible_mutability, ExprContext},
     functions, statements,

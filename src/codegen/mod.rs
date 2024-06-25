@@ -107,6 +107,7 @@ pub struct Options {
     pub log_prints: bool,
     #[cfg(feature = "wasm_opt")]
     pub wasm_opt: Option<OptimizationPasses>,
+    pub soroban_version: Option<u64>,
 }
 
 impl Default for Options {
@@ -123,6 +124,7 @@ impl Default for Options {
             log_prints: true,
             #[cfg(feature = "wasm_opt")]
             wasm_opt: None,
+            soroban_version: None,
         }
     }
 }
@@ -247,7 +249,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
-        for mut dispatch_cfg in function_dispatch(contract_no, &all_cfg, ns, opt) {
+        for mut dispatch_cfg in function_dispatch(contract_no, &mut all_cfg, ns, opt) {
             optimize_and_check_cfg(&mut dispatch_cfg, ns, ASTFunction::None, opt);
             all_cfg.push(dispatch_cfg);
         }
