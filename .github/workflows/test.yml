@@ -199,7 +199,7 @@ jobs:
 
   mac-intel:
     name: Mac Intel
-    runs-on: macos-11
+    runs-on: macos-12
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -223,7 +223,7 @@ jobs:
 
   mac-universal:
     name: Mac Universal Binary
-    runs-on: macos-11
+    runs-on: macos-12
     needs: [mac-arm, mac-intel]
     steps:
     - uses: actions/download-artifact@v3
