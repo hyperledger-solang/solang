@@ -98,7 +98,7 @@ impl RetCodeCheckBuilder<usize> {
 
 impl RetCodeCheck {
     /// Handles all cases from the [RetBlock] accordingly.
-    /// * On success, nothing is done and the execution continues at the success block.
+    /// On success, nothing is done and the execution continues at the success block.
     /// If the callee reverted and output was supplied, it will be bubble up.
     /// Otherwise, a revert without data will be inserted.
     pub(crate) fn handle_cases(

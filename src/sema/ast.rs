@@ -1281,7 +1281,7 @@ pub struct CallArgs {
 /// This enum manages the accounts in an external call on Solana. There can be three options:
 /// 1. The developer explicitly specifies there are not accounts for the call (`NoAccount`).
 /// 2. The accounts call argument is absent, in which case we attempt to generate the AccountMetas
-/// vector automatically (`AbsentArgumet`).
+///    vector automatically (`AbsentArgumet`).
 /// 3. There are accounts specified in the accounts call argument (Present).
 #[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub enum ExternalCallAccounts<T> {
