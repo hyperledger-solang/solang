@@ -1208,9 +1208,7 @@ pub fn process_side_effects_expressions(
         }
 
         ast::Expression::Builtin {
-            kind: builtin_type, ..
-        } => match &builtin_type {
-            ast::Builtin::PayableSend
+            kind: ast::Builtin::PayableSend
             | ast::Builtin::ArrayPush
             | ast::Builtin::ArrayPop
             // PayableTransfer, Revert, Require and SelfDestruct do not occur inside an expression
@@ -1229,12 +1227,10 @@ pub fn process_side_effects_expressions(
             | ast::Builtin::WriteUint64LE
             | ast::Builtin::WriteUint128LE
             | ast::Builtin::WriteUint256LE
-            | ast::Builtin::WriteAddress => {
+            | ast::Builtin::WriteAddress, ..
+        } =>  {
                 let _ = expression(exp, ctx.cfg, ctx.contract_no, ctx.func, ctx.ns, ctx.vartab, ctx.opt);
                 false
-            }
-
-            _ => true,
         },
 
         _ => true,
