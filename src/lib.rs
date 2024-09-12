@@ -95,12 +95,11 @@ impl Target {
 
     /// Size of a pointer in bits
     pub fn ptr_size(&self) -> u16 {
-        if *self == Target::Solana {
+        match *self {
             // Solana is BPF, which is 64 bit
-            64
-        } else {
+            Target::Solana => 64,
             // All others are WebAssembly in 32 bit mode
-            32
+            _ => 32,
         }
     }
 
