@@ -939,7 +939,23 @@ pub fn expression(
                     expr
                 };
 
-                cfg.add(vartab, Instr::Print { expr: to_print });
+                let res = if let Expression::AllocDynamicBytes {
+                    loc,
+                    ty,
+                    size: _,
+                    initializer: Some(initializer),
+                } = &to_print
+                {
+                    Expression::BytesLiteral {
+                        loc: *loc,
+                        ty: ty.clone(),
+                        value: initializer.to_vec(),
+                    }
+                } else {
+                    to_print
+                };
+
+                cfg.add(vartab, Instr::Print { expr: res });
             }
 
             Expression::Poison

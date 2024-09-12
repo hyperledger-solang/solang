@@ -3,7 +3,9 @@
 use crate::codegen::cfg::HashTy;
 use crate::codegen::Expression;
 use crate::emit::binary::Binary;
-use crate::emit::soroban::{SorobanTarget, GET_CONTRACT_DATA, PUT_CONTRACT_DATA};
+use crate::emit::soroban::{
+    SorobanTarget, GET_CONTRACT_DATA, LOG_FROM_LINEAR_MEMORY, PUT_CONTRACT_DATA,
+};
 use crate::emit::ContractArgs;
 use crate::emit::{TargetRuntime, Variable};
 use crate::emit_context;
@@ -236,7 +238,65 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     /// Prints a string
     /// TODO: Implement this function, with a call to the `log` function in the Soroban runtime.
-    fn print(&self, bin: &Binary, string: PointerValue, length: IntValue) {}
+    fn print(&self, bin: &Binary, string: PointerValue, length: IntValue) {
+        if string.is_const() && length.is_const() {
+            let msg_pos = bin
+                .builder
+                .build_ptr_to_int(string, bin.context.i64_type(), "msg_pos")
+                .unwrap();
+            let msg_pos = msg_pos.const_cast(bin.context.i64_type(), false);
+
+            let length = length.const_cast(bin.context.i64_type(), false);
+
+            let eight = bin.context.i64_type().const_int(8, false);
+            let four = bin.context.i64_type().const_int(4, false);
+            let zero = bin.context.i64_type().const_int(0, false);
+            let thirty_two = bin.context.i64_type().const_int(32, false);
+
+            // XDR encode msg_pos and length
+            let msg_pos_encoded = bin
+                .builder
+                .build_left_shift(msg_pos, thirty_two, "temp")
+                .unwrap();
+            let msg_pos_encoded = bin
+                .builder
+                .build_int_add(msg_pos_encoded, four, "msg_pos_encoded")
+                .unwrap();
+
+            let length_encoded = bin
+                .builder
+                .build_left_shift(length, thirty_two, "temp")
+                .unwrap();
+            let length_encoded = bin
+                .builder
+                .build_int_add(length_encoded, four, "length_encoded")
+                .unwrap();
+
+            let zero_encoded = bin.builder.build_left_shift(zero, eight, "temp").unwrap();
+
+            let eight_encoded = bin.builder.build_left_shift(eight, eight, "temp").unwrap();
+            let eight_encoded = bin
+                .builder
+                .build_int_add(eight_encoded, four, "eight_encoded")
+                .unwrap();
+
+            let call_res = bin
+                .builder
+                .build_call(
+                    bin.module.get_function(LOG_FROM_LINEAR_MEMORY).unwrap(),
+                    &[
+                        msg_pos_encoded.into(),
+                        length_encoded.into(),
+                        msg_pos_encoded.into(),
+                        four.into(),
+                    ],
+                    "log",
+                )
+                .unwrap();
+        } else {
+            todo!("Dynamic String printing is not yet supported")
+        }
+    }
 
     /// Return success without any result
     fn return_empty_abi(&self, bin: &Binary) {

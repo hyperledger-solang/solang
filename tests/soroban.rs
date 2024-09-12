@@ -6,6 +6,7 @@ pub mod soroban_testcases;
 use solang::codegen::Options;
 use solang::file_resolver::FileResolver;
 use solang::{compile, Target};
+use soroban_sdk::testutils::Logs;
 use soroban_sdk::{vec, Address, Env, Symbol, Val};
 use std::ffi::OsStr;
 
@@ -27,7 +28,7 @@ pub fn build_solidity(src: &str) -> SorobanEnv {
         target,
         &Options {
             opt_level: opt.into(),
-            log_runtime_errors: false,
+            log_runtime_errors: true,
             log_prints: true,
             #[cfg(feature = "wasm_opt")]
             wasm_opt: Some(contract_build::OptimizationPasses::Z),
@@ -73,6 +74,26 @@ impl SorobanEnv {
         }
         println!("args_soroban: {:?}", args_soroban);
         self.env.invoke_contract(addr, &func, args_soroban)
+    }
+
+    /// Invoke a contract and expect an error. Returns the logs.
+    pub fn invoke_contract_expect_error(
+        &self,
+        addr: &Address,
+        function_name: &str,
+        args: Vec<Val>,
+    ) -> Vec<String> {
+        let func = Symbol::new(&self.env, function_name);
+        let mut args_soroban = vec![&self.env];
+        for arg in args {
+            args_soroban.push_back(arg)
+        }
+
+        let _ = self
+            .env
+            .try_invoke_contract::<Val, Val>(addr, &func, args_soroban);
+
+        self.env.logs().all()
     }
 }
 
