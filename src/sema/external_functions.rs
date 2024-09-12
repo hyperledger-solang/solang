@@ -169,8 +169,8 @@ fn check_statement(stmt: &Statement, call_list: &mut CallList) -> bool {
                 }
             }
         }
-        Statement::Return(_, exprs) => {
-            for e in exprs {
+        Statement::Return(_, expr) => {
+            if let Some(e) = expr {
                 e.recurse(call_list, check_expression);
             }
         }

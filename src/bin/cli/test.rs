@@ -101,7 +101,17 @@ mod tests {
 
         let default_optimize: cli::Optimizations = toml::from_str("").unwrap();
 
-        let opt = options_arg(&default_debug, &default_optimize);
+        let compiler_package = cli::CompilePackage {
+            input: Some(vec![PathBuf::from("flipper.sol")]),
+            contracts: Some(vec!["flipper".to_owned()]),
+            import_path: Some(vec![]),
+            import_map: Some(vec![]),
+            authors: None,
+            version: Some("0.1.0".to_string()),
+            soroban_version: None,
+        };
+
+        let opt = options_arg(&default_debug, &default_optimize, &compiler_package);
 
         assert_eq!(opt, Options::default());
 
@@ -185,7 +195,8 @@ mod tests {
                     import_path: Some(vec![]),
                     import_map: Some(vec![]),
                     authors: None,
-                    version: Some("0.1.0".to_string())
+                    version: Some("0.1.0".to_string()),
+                    soroban_version: None
                 },
                 compiler_output: cli::CompilerOutput {
                     emit: None,
@@ -239,7 +250,8 @@ mod tests {
                     import_path: Some(vec![]),
                     import_map: Some(vec![]),
                     authors: Some(vec!["not_sesa".to_owned()]),
-                    version: Some("0.1.0".to_string())
+                    version: Some("0.1.0".to_string()),
+                    soroban_version: None
                 },
                 compiler_output: cli::CompilerOutput {
                     emit: None,

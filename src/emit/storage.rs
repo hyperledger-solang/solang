@@ -5,7 +5,7 @@ use crate::sema::ast::{Namespace, Type};
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, PointerValue};
 
-/// This trait species the methods for managing storage on slot based environments
+/// This trait specifies the methods for managing storage on slot based environments
 pub(super) trait StorageSlot {
     fn set_storage(
         &self,

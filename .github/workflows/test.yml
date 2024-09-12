@@ -15,7 +15,7 @@ jobs:
     runs-on: solang-ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Run repolinter
         run: npx repolinter --rulesetUrl https://raw.githubusercontent.com/hyperledger-labs/hyperledger-community-management-tools/master/repo_structure/repolint.json
       - uses: enarx/spdx@master
@@ -32,7 +32,7 @@ jobs:
           apt-get update
           apt-get install -y python3-pip git pkg-config libcairo-dev latexmk
       - name: Checkout sources
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v4
         with:
           # docs/conf.py uses `git describe --tags` which requires full history
           fetch-depth: 0
@@ -41,7 +41,7 @@ jobs:
         run: |
           # Without the --add safe.directory we get the following error:
           # fatal: detected dubious ownership in repository at '/__w/solang/solang'
-          # actions/checkout@v3.1.0 is supposed to fix this, but it does not work
+          # actions/checkout@v4 is supposed to fix this, but it does not work
           git config --global --add safe.directory "${GITHUB_WORKSPACE}"
           pip install -r requirements.txt
           make html epub
@@ -57,7 +57,7 @@ jobs:
       CARGO_LLVM_COV_TARGET_DIR: ${{ github.workspace }}/target
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: Install Rust
@@ -91,7 +91,7 @@ jobs:
       if: always()
       run: cargo llvm-cov --all-features --workspace --no-report --jobs 2
     - name: Upload binary
-      uses: actions/upload-artifact@v3.1.0
+      uses: actions/upload-artifact@v4.4.0
       with:
         name: solang-linux-x86-64
         path: ./target/debug/solang
@@ -102,7 +102,7 @@ jobs:
         tar -czvf rust-tests.tar.gz *
       working-directory: ./target
     - name: Upload test coverage files
-      uses: actions/upload-artifact@v3.1.0
+      uses: actions/upload-artifact@v4.4.0
       with:
         name: rust-tests.tar.gz
         path: ./target/rust-tests.tar.gz
@@ -113,7 +113,7 @@ jobs:
     if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: Basic build tools
@@ -131,7 +131,7 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v3.1.0
+    - uses: actions/upload-artifact@v4.4.0
       with:
         name: solang-linux-arm64
         path: ./target/debug/solang
@@ -141,7 +141,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: Download LLVM
@@ -163,7 +163,7 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v3.1.0
+    - uses: actions/upload-artifact@v4.4.0
       with:
         name: solang.exe
         path: C:/target/debug/solang.exe
@@ -176,7 +176,7 @@ jobs:
     runs-on: macos-13-xlarge
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
     - uses: dtolnay/rust-toolchain@1.74.0
@@ -192,17 +192,17 @@ jobs:
       run: cargo test --verbose --workspace
     - name: Run tests without wasm_opt
       run: cargo test --verbose --workspace --no-default-features --features language_server,llvm,soroban
-    - uses: actions/upload-artifact@v3.1.0
+    - uses: actions/upload-artifact@v4.4.0
       with:
         name: solang-mac-arm
         path: ./target/debug/solang
 
   mac-intel:
     name: Mac Intel
-    runs-on: macos-11
+    runs-on: macos-12
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
     - uses: dtolnay/rust-toolchain@1.74.0
@@ -216,26 +216,26 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v3.1.0
+    - uses: actions/upload-artifact@v4.4.0
       with:
         name: solang-mac-intel
         path: ./target/debug/solang
 
   mac-universal:
     name: Mac Universal Binary
-    runs-on: macos-11
+    runs-on: macos-12
     needs: [mac-arm, mac-intel]
     steps:
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4.1.8
       with:
         name: solang-mac-intel
     - run: mv solang solang-mac-intel
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4.1.8
       with:
         name: solang-mac-arm
     - run: mv solang solang-mac-arm
     - run: lipo -create -output solang-mac solang-mac-intel solang-mac-arm
-    - uses: actions/upload-artifact@v3.1.0
+    - uses: actions/upload-artifact@v4.4.0
       with:
         name: solang-mac
         path: solang-mac
@@ -245,7 +245,7 @@ jobs:
     runs-on: solang-ubuntu-latest
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - run: echo "push=--push" >> $GITHUB_OUTPUT
       id: push
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
@@ -263,14 +263,14 @@ jobs:
     needs: linux-x86-64
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
+      uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '16'
     - uses: dtolnay/rust-toolchain@1.74.0
     - name: Setup yarn
       run: npm install -g yarn
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4.1.8
       with:
         name: solang-linux-x86-64
         path: bin
@@ -302,10 +302,52 @@ jobs:
       run: anchor test --skip-local-validator
       working-directory: ./integration/anchor
     - name: Upload test coverage files
-      uses: actions/upload-artifact@v3.1.0
+      uses: actions/upload-artifact@v4.4.0
       with:
        name: anchor-tests
        path: ./target/*.profraw
+  
+  soroban:
+    name: Soroban Integration test
+    runs-on: solang-ubuntu-latest
+    container: ghcr.io/hyperledger/solang-llvm:ci-7
+    needs: linux-x86-64
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '16'
+    - uses: dtolnay/rust-toolchain@1.74.0
+    - uses: actions/download-artifact@v4.1.8
+      with:
+        name: solang-linux-x86-64
+        path: bin
+    - name: Solang Compiler
+      run: |
+        chmod 755 ./bin/solang
+        echo "$(pwd)/bin" >> $GITHUB_PATH
+    
+    - name: Install Soroban
+      run: cargo install --locked soroban-cli --version 21.0.0-rc.1
+    - name: Add cargo install location to PATH
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    - run: npm install
+      working-directory: ./integration/soroban
+    - name: Build Solang contracts
+      run: npm run build
+      working-directory: ./integration/soroban
+    - name: Setup Soroban enivronment
+      run: npm run setup
+      working-directory: ./integration/soroban
+    - name: Deploy and test contracts
+      run: npm run test
+      working-directory: ./integration/soroban
+    - name: Upload test coverage files
+      uses: actions/upload-artifact@v4.4.0
+      with:
+        name: soroban-tests
+        path: ./target/*.profraw
 
   solana:
     name: Solana Integration test
@@ -314,12 +356,12 @@ jobs:
     needs: linux-x86-64
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
+      uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '16'
     - uses: dtolnay/rust-toolchain@1.74.0
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4.1.8
       with:
         name: solang-linux-x86-64
         path: bin
@@ -340,7 +382,7 @@ jobs:
       run: npm run test
       working-directory: ./integration/solana
     - name: Upload test coverage files
-      uses: actions/upload-artifact@v3.1.0
+      uses: actions/upload-artifact@v4.4.0
       with:
         name: solana-tests
         path: ./target/*.profraw
@@ -351,7 +393,7 @@ jobs:
     needs: linux-x86-64
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
       # We can't run substrate node as a github actions service, since it requires
@@ -359,14 +401,14 @@ jobs:
     - name: Start substrate contracts node
       run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:62a8a6c substrate-contracts-node --dev --rpc-external -lwarn,runtime::contracts=trace) >> $GITHUB_OUTPUT
       id: substrate
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4.1.8
       with:
         name: solang-linux-x86-64
         path: bin
     - run: |
         chmod 755 ./bin/solang
         echo "$(pwd)/bin" >> $GITHUB_PATH
-    - uses: actions/setup-node@v3
+    - uses: actions/setup-node@v4
       with:
         node-version: '16'
     - run: npm install
@@ -381,7 +423,7 @@ jobs:
       run: npm run test
       working-directory: ./integration/polkadot
     - name: Upload test coverage files
-      uses: actions/upload-artifact@v3.1.0
+      uses: actions/upload-artifact@v4.4.0
       with:
         name: polkadot-tests
         path: ./target/*.profraw
@@ -401,7 +443,7 @@ jobs:
     - name: Start substrate
       run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:62a8a6c substrate-contracts-node --dev --rpc-external -lwarn,runtime::contracts=trace) >> $GITHUB_OUTPUT
       id: substrate
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4.1.8
       with:
         name: solang-linux-x86-64
         path: bin
@@ -421,7 +463,7 @@ jobs:
       if: always()
       run: docker kill ${{steps.substrate.outputs.id}}
     - name: Upload test coverage files
-      uses: actions/upload-artifact@v3.1.0
+      uses: actions/upload-artifact@v4.4.0
       with:
         name: polkadot-subxt-tests
         path: ./target/*.profraw
@@ -432,8 +474,8 @@ jobs:
     needs: linux-x86-64
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
-    - uses: actions/download-artifact@v3
+      uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4.1.8
       with:
         name: solang-linux-x86-64
         path: bin
@@ -441,7 +483,7 @@ jobs:
         chmod 755 ./bin/solang
         echo "$(pwd)/bin" >> $GITHUB_PATH
     - name: Install Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '16'
     - run: npm install
@@ -456,7 +498,7 @@ jobs:
     - run: vsce package
       working-directory: ./vscode
     - name: Upload test coverage files
-      uses: actions/upload-artifact@v3.1.0
+      uses: actions/upload-artifact@v4.4.0
       with:
         name: vscode-tests
         path: ./target/*.profraw
@@ -466,7 +508,7 @@ jobs:
     runs-on: solang-ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Lints for stdlib
         run: |
           make lint
@@ -489,7 +531,7 @@ jobs:
       CARGO_LLVM_COV_TARGET_DIR: ${{ github.workspace }}/target
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install Rust
@@ -500,32 +542,32 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Download Rust coverage files
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.8
         with:
          name: rust-tests.tar.gz
          path: ./target
       - name: Download Solana coverage files
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.8
         with:
           name: solana-tests
           path: ./target
       - name: Download Polkadot coverage files
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.8
         with:
           name: polkadot-tests
           path: ./target
       - name: Download Polkadot subxt coverage files
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.8
         with:
           name: polkadot-subxt-tests
           path: ./target
       - name: Download Anchor coverage files
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.8
         with:
           name: anchor-tests
           path: ./target
       - name: Download VSCode coverage files
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.8
         with:
           name: vscode-tests
           path: ./target

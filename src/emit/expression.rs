@@ -126,7 +126,33 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             s.into()
         }
-        Expression::BytesLiteral { value: bs, .. } => {
+        Expression::BytesLiteral { value: bs, ty, .. } => {
+            // If the type of a BytesLiteral is a String, embedd the bytes in the binary.
+            if ty == &Type::String {
+                let data = bin.emit_global_string("const_string", bs, true);
+
+                // A constant string, or array, is represented by a struct with two fields: a pointer to the data, and its length.
+                let ty = bin.context.struct_type(
+                    &[
+                        bin.llvm_type(&Type::Bytes(bs.len() as u8), ns)
+                            .ptr_type(AddressSpace::default())
+                            .into(),
+                        bin.context.i64_type().into(),
+                    ],
+                    false,
+                );
+
+                return ty
+                    .const_named_struct(&[
+                        data.into(),
+                        bin.context
+                            .i64_type()
+                            .const_int(bs.len() as u64, false)
+                            .into(),
+                    ])
+                    .into();
+            }
+
             let ty = bin.context.custom_width_int_type((bs.len() * 8) as u32);
 
             // hex"11223344" should become i32 0x11223344

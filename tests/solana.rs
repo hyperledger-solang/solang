@@ -917,9 +917,9 @@ fn sol_log_data(
                 result
             );
 
-            print!(" {}", hex::encode(&event));
-
             events.push(event.to_vec());
+
+            print!(" {}", hex::encode(event));
         }
 
         println!();

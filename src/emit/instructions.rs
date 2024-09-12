@@ -461,7 +461,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
-            if !res.is_empty() {
+            // Soroban doesn't write return values to imported memory
+            if !res.is_empty() && ns.target != Target::Soroban {
                 for v in f.returns.iter() {
                     parms.push(if ns.target == Target::Solana {
                         bin.build_alloca(function, bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
@@ -484,54 +485,58 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_call(bin.functions[cfg_no], &parms, "")
                 .unwrap()
                 .try_as_basic_value()
-                .left()
-                .unwrap();
+                .left();
 
-            let success = bin
-                .builder
-                .build_int_compare(
-                    IntPredicate::EQ,
-                    ret.into_int_value(),
-                    bin.return_values[&ReturnCode::Success],
-                    "success",
-                )
-                .unwrap();
+            // Soroban doesn't have return codes, and only returns a single i64 value
+            if ns.target != Target::Soroban {
+                let success = bin
+                    .builder
+                    .build_int_compare(
+                        IntPredicate::EQ,
+                        ret.unwrap().into_int_value(),
+                        bin.return_values[&ReturnCode::Success],
+                        "success",
+                    )
+                    .unwrap();
 
-            let success_block = bin.context.append_basic_block(function, "success");
-            let bail_block = bin.context.append_basic_block(function, "bail");
-            bin.builder
-                .build_conditional_branch(success, success_block, bail_block)
-                .unwrap();
+                let success_block = bin.context.append_basic_block(function, "success");
+                let bail_block = bin.context.append_basic_block(function, "bail");
+                bin.builder
+                    .build_conditional_branch(success, success_block, bail_block)
+                    .unwrap();
 
-            bin.builder.position_at_end(bail_block);
+                bin.builder.position_at_end(bail_block);
 
-            bin.builder.build_return(Some(&ret)).unwrap();
-            bin.builder.position_at_end(success_block);
+                bin.builder.build_return(Some(&ret.unwrap())).unwrap();
+                bin.builder.position_at_end(success_block);
 
-            if !res.is_empty() {
-                for (i, v) in f.returns.iter().enumerate() {
-                    let load_ty = bin.llvm_var_ty(&v.ty, ns);
-                    let val = bin
-                        .builder
-                        .build_load(
-                            load_ty,
-                            parms[args.len() + i].into_pointer_value(),
-                            v.name_as_str(),
-                        )
-                        .unwrap();
-                    let dest = w.vars[&res[i]].value;
-
-                    if dest.is_pointer_value()
-                        && !(v.ty.is_reference_type(ns)
-                            || matches!(v.ty, Type::ExternalFunction { .. }))
-                    {
-                        bin.builder
-                            .build_store(dest.into_pointer_value(), val)
+                if !res.is_empty() {
+                    for (i, v) in f.returns.iter().enumerate() {
+                        let load_ty = bin.llvm_var_ty(&v.ty, ns);
+                        let val = bin
+                            .builder
+                            .build_load(
+                                load_ty,
+                                parms[args.len() + i].into_pointer_value(),
+                                v.name_as_str(),
+                            )
                             .unwrap();
-                    } else {
-                        w.vars.get_mut(&res[i]).unwrap().value = val;
+                        let dest = w.vars[&res[i]].value;
+
+                        if dest.is_pointer_value()
+                            && !(v.ty.is_reference_type(ns)
+                                || matches!(v.ty, Type::ExternalFunction { .. }))
+                        {
+                            bin.builder
+                                .build_store(dest.into_pointer_value(), val)
+                                .unwrap();
+                        } else {
+                            w.vars.get_mut(&res[i]).unwrap().value = val;
+                        }
                     }
                 }
+            } else if let Some(value) = ret {
+                w.vars.get_mut(&res[0]).unwrap().value = value;
             }
         }
         Instr::Call {

@@ -27,6 +27,7 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
         log_prints: true,
         #[cfg(feature = "wasm_opt")]
         wasm_opt: None,
+        soroban_version: None,
     };
 
     codegen(&mut ns, &opt);
