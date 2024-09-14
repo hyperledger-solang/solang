@@ -471,6 +471,7 @@ jobs:
   vscode:
     name: Visual Code Extension
     runs-on: solang-ubuntu-latest
+    needs: linux-x86-64
     steps:
     - name: Checkout
       uses: actions/checkout@v4
