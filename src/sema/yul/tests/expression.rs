@@ -1126,7 +1126,7 @@ contract testTypes {
     let ns = parse(file);
     assert!(ns
         .diagnostics
-        .contains_message("assignment to length is not implemented. If there is need for this feature, please file a Github issue at https://github.com/hyperledger/solang/issues"));
+        .contains_message("assignment to length is not implemented. If there is need for this feature, please file a Github issue at https://github.com/hyperledger-solang/solang/issues"));
 
     let file = r#"
 contract testTypes {
@@ -1672,7 +1672,7 @@ contract foo {
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
-    assert!(ns.diagnostics.contains_message("builtin 'gaslimit' is not available for target Solana. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
+    assert!(ns.diagnostics.contains_message("builtin 'gaslimit' is not available for target Solana. Please, open a GitHub issue at https://github.com/hyperledger-solang/solang/issues if there is need to support this function"));
 
     let file = r#"
 contract foo {
@@ -1696,7 +1696,7 @@ contract foo {
         },
     );
 
-    assert!(ns.diagnostics.contains_message("builtin 'coinbase' is not available for target Polkadot. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
+    assert!(ns.diagnostics.contains_message("builtin 'coinbase' is not available for target Polkadot. Please, open a GitHub issue at https://github.com/hyperledger-solang/solang/issues if there is need to support this function"));
 
     let file = r#"
     contract foo {
@@ -1713,5 +1713,5 @@ contract foo {
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
-    assert!(ns.diagnostics.contains_message("builtin 'log0' is not available for target Solana. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
+    assert!(ns.diagnostics.contains_message("builtin 'log0' is not available for target Solana. Please, open a GitHub issue at https://github.com/hyperledger-solang/solang/issues if there is need to support this function"));
 }

@@ -30,4 +30,4 @@
 - Ensure ReadTheDocs defaults to the latest version
 - Update the version number and the MacOS binaries' sha256 hash in `Casks/solang.rb` under
   the repository `hyperledger/homebrew-solang`,
-  e.g. https://github.com/hyperledger/homebrew-solang/pull/11
+  e.g. https://github.com/hyperledger-solang/homebrew-solang/pull/11

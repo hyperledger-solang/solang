@@ -393,7 +393,7 @@ pub(crate) fn resolve_function_call(
                 func_call.loc,
                 format!(
                     "builtin '{}' is not available for target {}. Please, open a GitHub issue \
-                at https://github.com/hyperledger/solang/issues \
+                at https://github.com/hyperledger-solang/solang/issues \
                 if there is need to support this function",
                     prototype.name, ns.target
                 ),
@@ -697,7 +697,7 @@ pub(crate) fn check_type(
                     Some(Diagnostic::error(
                         expr.loc(),
                         "assignment to length is not implemented. If there is need for this feature, please file a Github issue \
-                        at https://github.com/hyperledger/solang/issues\
+                        at https://github.com/hyperledger-solang/solang/issues\
                         ".to_string(),
                     ))
                 } else {

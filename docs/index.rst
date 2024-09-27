@@ -2,7 +2,7 @@
     :width: 75%
     :alt: Hyperledger Solang Logo
     :align: center
-    :target: https://github.com/hyperledger/solang
+    :target: https://github.com/hyperledger-solang/solang
 
 |
 
@@ -19,7 +19,7 @@ or compute units.
 
 Solang aims for source file compatibility with the Ethereum EVM Solidity compiler,
 version 0.8. Where differences exist, this is noted in the language documentation.
-The source code repository can be found on `github <https://github.com/hyperledger/solang>`_
+The source code repository can be found on `github <https://github.com/hyperledger-solang/solang>`_
 and we have solang channels on `Hyperledger Discord <https://discord.gg/hyperledger>`_.
 
 Contents

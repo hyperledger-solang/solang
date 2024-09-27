@@ -3,10 +3,10 @@
 # solang - Solidity Compiler for Solana and Polkadot
 
 [![Discord](https://img.shields.io/discord/905194001349627914?logo=Hyperledger&style=plastic)](https://discord.gg/hyperledger)
-[![CI](https://github.com/hyperledger/solang/workflows/test/badge.svg)](https://github.com/hyperledger/solang/actions)
+[![CI](https://github.com/hyperledger-solang/solang/workflows/test/badge.svg)](https://github.com/hyperledger-solang/solang/actions)
 [![Documentation Status](https://readthedocs.org/projects/solang/badge/?version=latest)](https://solang.readthedocs.io/en/latest/?badge=latest)
 [![license](https://img.shields.io/github/license/hyperledger/solang.svg)](LICENSE)
-[![LoC](https://tokei.rs/b1/github/hyperledger/solang?category=lines)](https://github.com/hyperledger/solang)
+[![LoC](https://tokei.rs/b1/github/hyperledger/solang?category=lines)](https://github.com/hyperledger-solang/solang)
 
 Welcome to Solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. Solang can compile Solidity for Solana and
@@ -68,7 +68,7 @@ Here is a brief description of what we envision for the next versions.
 | Provide Solidity -> Polkadot porting guide         | Not started                                          |
 | Declare accounts for a Solidity function on Solana | In progress                                          |
 | Tooling for calls between ink! <> solidity         | In progress                                          |
-| Provide CLI for node interactions                  | [Done](https://github.com/hyperledger/solang-aqd)    |
+| Provide CLI for node interactions                  | [Done](https://github.com/hyperledger-solang/solang-aqd)    |
 
 ## License
 
