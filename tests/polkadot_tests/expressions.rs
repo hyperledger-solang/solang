@@ -1534,7 +1534,7 @@ fn div() {
             }
 
             function test2() public {
-                // see https://github.com/hyperledger/burrow/pull/1367#issue-399914366
+                // see https://github.com/hyperledger-solang/burrow/pull/1367#issue-399914366
                 assert(int256(7) / int256(3) == int256(2));
                 assert(int256(7) / int256(-3) == int256(-2));
                 assert(int256(-7) / int256(3) == int256(-2));

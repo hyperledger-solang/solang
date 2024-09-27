@@ -404,7 +404,7 @@ fn signed_literal_unsigned_cast() {
 
 #[test]
 fn mul() {
-    // https://github.com/hyperledger/solang/issues/1507
+    // https://github.com/hyperledger-solang/solang/issues/1507
     let mut runtime = build_solidity(
         r#"
         contract Test {

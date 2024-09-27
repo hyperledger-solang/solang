@@ -1,5 +1,5 @@
 
-// This is a test for issue #1367: https://github.com/hyperledger/solang/issues/1367
+// This is a test for issue #1367: https://github.com/hyperledger-solang/solang/issues/1367
 // This contract used to generate so many calls to 'vector_new' for allocating error strings that it caused a LLVM ERROR: Branch target out of insn range
 import "solana";
 

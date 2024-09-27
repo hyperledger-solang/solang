@@ -180,7 +180,7 @@ ______________________________
 A solang project is a directory in which there are one or more solidity files and a ``solang.toml`` file where 
 the compilation options are defined. Given these two components, a user can run ``solang compile`` in a similar fashion as ``cargo build``.
 
-The ``solang new`` command creates a new solang project with an example `flipper <https://github.com/hyperledger/solang/blob/main/examples/solana/flipper.sol>`_ contract,
+The ``solang new`` command creates a new solang project with an example `flipper <https://github.com/hyperledger-solang/solang/blob/main/examples/solana/flipper.sol>`_ contract,
 and a default ``solang.toml`` configuration file.
 
 
@@ -245,7 +245,7 @@ Running Solang using a container
 ________________________________
 
 First pull the last Solang container from
-`solang containers <https://github.com/hyperledger/solang/pkgs/container/solang>`_:
+`solang containers <https://github.com/hyperledger-solang/solang/pkgs/container/solang>`_:
 
 .. code-block:: bash
 
