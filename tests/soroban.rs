@@ -30,7 +30,7 @@ pub fn build_solidity(src: &str) -> SorobanEnv {
         target,
         &Options {
             opt_level: opt.into(),
-            log_runtime_errors: false,
+            log_runtime_errors: true,
             log_prints: false,
             #[cfg(feature = "wasm_opt")]
             wasm_opt: Some(contract_build::OptimizationPasses::Z),
