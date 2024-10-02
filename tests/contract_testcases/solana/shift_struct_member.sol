@@ -1,4 +1,4 @@
-// Test case for https://github.com/hyperledger/solang/issues/732
+// Test case for https://github.com/hyperledger-solang/solang/issues/732
 library FixedPoint {
 
     struct uq144x112 {

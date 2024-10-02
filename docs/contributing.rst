@@ -14,13 +14,13 @@ How to report issues
 --------------------
 
 Please report issues to
-`github issues <https://github.com/hyperledger/solang/issues>`_.
+`github issues <https://github.com/hyperledger-solang/solang/issues>`_.
 
 How to contribute code
 ----------------------
 
 Code contributions are submitted via 
-`pull requests <https://github.com/hyperledger/solang/compare>`_.
+`pull requests <https://github.com/hyperledger-solang/solang/compare>`_.
 
 Please fork this repository and make desired changes inside a dedicated branch on your fork.
 Prior to opening a pull request for your branch, make sure that the code in your branch
@@ -36,7 +36,7 @@ Target Specific
 
 Solang supports Polkadot and Solana. These targets need testing
 via integration tests. New targets like
-`Fabric <https://github.com/hyperledger/fabric-chaincode-wasm>`_ need to be
+`Fabric <https://github.com/hyperledger-solang/fabric-chaincode-wasm>`_ need to be
 added, and tests added.
 
 Debugging issues with LLVM

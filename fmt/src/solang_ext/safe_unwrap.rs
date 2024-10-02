@@ -9,7 +9,7 @@ use solang_parser::pt;
 /// [pt::VariableDefinition] or [pt::EventDefinition], where the `name` field is `None` only when an
 /// error occurred during parsing.
 ///
-/// [hyperledger/solang#1068]: https://github.com/hyperledger/solang/pull/1068
+/// [hyperledger/solang#1068]: https://github.com/hyperledger-solang/solang/pull/1068
 pub trait SafeUnwrap<T> {
     /// See [SafeUnwrap].
     fn safe_unwrap(&self) -> &T;

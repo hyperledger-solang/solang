@@ -5,7 +5,7 @@ contract foo {
     }
 
     // Ensure - after scientific notation is not lexed
-    // https://github.com/hyperledger/solang/issues/1065
+    // https://github.com/hyperledger-solang/solang/issues/1065
     function test2() external {
         uint256 b = 500;
         uint256 a1 = 1e18-b;

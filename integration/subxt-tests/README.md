@@ -10,7 +10,7 @@ The test cases requires compiled versions of the contracts from the `polkadot` i
 parallel solang compile -v --target polkadot --wasm-opt z -o ./contracts/ ::: ../polkadot/*.sol ../polkadot/test/*.sol
 ```
 
-Make sure to start a [solang-substrate-ci node](https://github.com/hyperledger/solang-substrate-ci) or a [substrate-contracts-node](https://github.com/paritytech/substrate-contracts-node) on the test host.
+Make sure to start a [solang-substrate-ci node](https://github.com/hyperledger-solang/solang-substrate-ci) or a [substrate-contracts-node](https://github.com/paritytech/substrate-contracts-node) on the test host.
 
 Run only one test at the time against the node by setting the `RUST_TEST_THREADS=1` env var or by passing `-- --test-threads=1 ` to `cargo test`.
 

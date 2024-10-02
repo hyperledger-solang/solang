@@ -160,7 +160,7 @@ impl SolidityError {
 /// * StorageBytesEncodingIncorrect
 /// * OutOfMemory
 ///
-/// Tracking issue: <https://github.com/hyperledger/solang/issues/1477>
+/// Tracking issue: <https://github.com/hyperledger-solang/solang/issues/1477>
 #[derive(Display, Debug, PartialEq, Clone, Copy)]
 #[non_exhaustive]
 #[repr(u8)]
