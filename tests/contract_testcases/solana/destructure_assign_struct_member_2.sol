@@ -1,4 +1,4 @@
-// https://github.com/hyperledger/solang/issues/731
+// https://github.com/hyperledger-solang/solang/issues/731
 pragma solidity 0.6.12;
 
 interface IUniswapV2Pair {

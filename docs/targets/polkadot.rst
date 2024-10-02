@@ -12,7 +12,7 @@ Solidity flavored for the Polkadot target has the following differences to Ether
 - Only functions called via rpc may return values; when calling a function in a transaction, the return values cannot be accessed
 
 There is a solidity example which can be found in the
-`examples <https://github.com/hyperledger/solang/tree/main/examples>`_
+`examples <https://github.com/hyperledger-solang/solang/tree/main/examples>`_
 directory. Write this to flipper.sol and run:
 
 .. code-block:: bash

@@ -188,7 +188,7 @@ impl GlobalCache {
 // This requires a data structure that shows import dependencies between different files in the namespace.
 // 2. Need a way to safely remove stored Definitions that are no longer used by any of the References
 //
-// More information can be found here: https://github.com/hyperledger/solang/pull/1411
+// More information can be found here: https://github.com/hyperledger-solang/solang/pull/1411
 pub struct SolangServer {
     client: Client,
     target: Target,
