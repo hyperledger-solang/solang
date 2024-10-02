@@ -58,9 +58,23 @@ pub fn expression(
             ns.contracts[contract_no].get_storage_slot(*loc, *var_contract_no, *var_no, ns, None)
         }
         ast::Expression::StorageLoad { loc, ty, expr } => {
+            let mut storage_type = None;
+            if let ast::Expression::StorageVariable {
+                loc: _,
+                ty: _,
+                var_no,
+                contract_no,
+            } = *expr.clone()
+            {
+                let var = ns.contracts[contract_no].variables.get(var_no).unwrap();
+
+                storage_type = var.storage_type.clone();
+
+                println!("storage_type {:?}", var);
+            }
             let storage = expression(expr, cfg, contract_no, func, ns, vartab, opt);
 
-            load_storage(loc, ty, storage, cfg, vartab)
+            load_storage(loc, ty, storage, cfg, vartab, storage_type)
         }
         ast::Expression::Add {
             loc,
@@ -543,7 +557,7 @@ pub fn expression(
                                 elem_ty: elem_ty.clone(),
                             }
                         } else {
-                            load_storage(loc, &ns.storage_type(), array, cfg, vartab)
+                            load_storage(loc, &ns.storage_type(), array, cfg, vartab, None)
                         }
                     }
                     ArrayLength::Fixed(length) => {
@@ -1232,13 +1246,35 @@ fn post_incdec(
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
     let v = expression(var, cfg, contract_no, func, ns, vartab, opt);
+
+    let mut storage_type = None;
+
+    if let ast::Expression::StorageVariable {
+        loc: _,
+        ty: _,
+        var_no,
+        contract_no,
+    } = var
+    {
+        let var = ns.contracts[*contract_no].variables.get(*var_no).unwrap();
+
+        storage_type = var.storage_type.clone();
+    }
+
     let v = match var.ty() {
         Type::Ref(ty) => Expression::Load {
             loc: var.loc(),
             ty: ty.as_ref().clone(),
             expr: Box::new(v),
         },
-        Type::StorageRef(_, ty) => load_storage(&var.loc(), ty.as_ref(), v, cfg, vartab),
+        Type::StorageRef(_, ty) => load_storage(
+            &var.loc(),
+            ty.as_ref(),
+            v,
+            cfg,
+            vartab,
+            storage_type.clone(),
+        ),
         _ => v,
     };
     cfg.add(
@@ -1314,6 +1350,7 @@ fn post_incdec(
                             },
                             ty: ty.clone(),
                             storage: dest,
+                            storage_type,
                         },
                     );
                 }
@@ -1356,13 +1393,34 @@ fn pre_incdec(
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
     let v = expression(var, cfg, contract_no, func, ns, vartab, opt);
+    let mut storage_type = None;
+
+    if let ast::Expression::StorageVariable {
+        loc: _,
+        ty: _,
+        var_no,
+        contract_no,
+    } = var
+    {
+        let var = ns.contracts[*contract_no].variables.get(*var_no).unwrap();
+
+        storage_type = var.storage_type.clone();
+    }
+
     let v = match var.ty() {
         Type::Ref(ty) => Expression::Load {
             loc: var.loc(),
             ty: ty.as_ref().clone(),
             expr: Box::new(v),
         },
-        Type::StorageRef(_, ty) => load_storage(&var.loc(), ty.as_ref(), v, cfg, vartab),
+        Type::StorageRef(_, ty) => load_storage(
+            &var.loc(),
+            ty.as_ref(),
+            v,
+            cfg,
+            vartab,
+            storage_type.clone(),
+        ),
         _ => v,
     };
     let one = Box::new(Expression::NumberLiteral {
@@ -1395,6 +1453,7 @@ fn pre_incdec(
             expr,
         },
     );
+
     match var {
         ast::Expression::Variable { loc, var_no, .. } => {
             cfg.add(
@@ -1425,6 +1484,7 @@ fn pre_incdec(
                             },
                             ty: ty.clone(),
                             storage: dest,
+                            storage_type: storage_type.clone(),
                         },
                     );
                 }
@@ -2676,6 +2736,19 @@ pub fn assign_single(
                 },
             );
 
+            let mut storage_type = None;
+            if let ast::Expression::StorageVariable {
+                loc: _,
+                ty: _,
+                var_no,
+                contract_no,
+            } = left
+            {
+                let var = ns.contracts[*contract_no].variables.get(*var_no).unwrap();
+
+                storage_type = var.storage_type.clone();
+            }
+
             match left_ty {
                 Type::StorageRef(..) if set_storage_bytes => {
                     if let Expression::Subscript {
@@ -2710,6 +2783,7 @@ pub fn assign_single(
                             },
                             ty: ty.deref_any().clone(),
                             storage: dest,
+                            storage_type,
                         },
                     );
                 }
@@ -3268,8 +3342,9 @@ fn array_subscript(
                             elem_ty: array_ty.storage_array_elem().deref_into(),
                         }
                     } else {
+                        // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
                         let array_length =
-                            load_storage(loc, &Type::Uint(256), array.clone(), cfg, vartab);
+                            load_storage(loc, &Type::Uint(256), array.clone(), cfg, vartab, None);
 
                         array = Expression::Keccak256 {
                             loc: *loc,
@@ -3616,14 +3691,17 @@ pub fn load_storage(
     storage: Expression,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
+    storage_type: Option<pt::StorageType>,
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
+
     cfg.add(
         vartab,
         Instr::LoadStorage {
             res,
             ty: ty.clone(),
             storage,
+            storage_type,
         },
     );
 
