@@ -31,7 +31,7 @@ pub fn build_solidity(src: &str) -> SorobanEnv {
         &Options {
             opt_level: opt.into(),
             log_runtime_errors: true,
-            log_prints: false,
+            log_prints: true,
             #[cfg(feature = "wasm_opt")]
             wasm_opt: Some(contract_build::OptimizationPasses::Z),
             soroban_version: Some(85899345977),
