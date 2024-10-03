@@ -69,8 +69,6 @@ pub fn expression(
                 let var = ns.contracts[contract_no].variables.get(var_no).unwrap();
 
                 storage_type = var.storage_type.clone();
-
-                println!("storage_type {:?}", var);
             }
             let storage = expression(expr, cfg, contract_no, func, ns, vartab, opt);
 
