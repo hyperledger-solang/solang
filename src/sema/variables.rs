@@ -261,16 +261,14 @@ pub fn variable_decl<'a>(
                 ),
             ));
         }
-    } else {
-        if storage_type.is_some() {
-            ns.diagnostics.push(Diagnostic::warning(
-                def.loc,
-                format!(
-                    "variable `{}`: storage types are only valid for Soroban targets",
-                    def.name.as_ref().unwrap().name
-                ),
-            ));
-        }
+    } else if storage_type.is_some() {
+        ns.diagnostics.push(Diagnostic::warning(
+            def.loc,
+            format!(
+                "variable `{}`: storage types are only valid for Soroban targets",
+                def.name.as_ref().unwrap().name
+            ),
+        ));
     }
 
     if let Some(loc) = &has_immutable {
