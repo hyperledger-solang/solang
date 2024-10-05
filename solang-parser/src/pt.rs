@@ -965,14 +965,14 @@ pub enum VariableAttribute {
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 #[repr(u8)] // for cmp; order of variants is important
 pub enum StorageType {
+    /// `Temporary`
+    Temporary(Option<Loc>),
+
     /// `persistent`
     Persistent(Option<Loc>),
 
     /// `Instance`
     Instance(Option<Loc>),
-
-    /// `Temporary`
-    Temporary(Option<Loc>),
 }
 
 /// A variable definition.

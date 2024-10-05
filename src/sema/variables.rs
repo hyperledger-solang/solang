@@ -236,19 +236,41 @@ pub fn variable_decl<'a>(
                 visibility = Some(v.clone());
             }
             pt::VariableAttribute::StorageType(s) => {
-                storage_type = Some(s.clone());
+                if storage_type.is_some() {
+                    ns.diagnostics.push(Diagnostic::error(
+                        attr.loc(),
+                        format!(
+                            "mutliple storage type specifiers for '{}'",
+                            def.name.as_ref().unwrap().name
+                        ),
+                    ));
+                } else {
+                    storage_type = Some(s.clone());
+                }
             }
         }
     }
 
-    if ns.target == Target::Soroban && storage_type.is_none() {
-        ns.diagnostics.push(Diagnostic::warning(
-            def.loc,
-            format!(
-                "storage type not specified for `{}`, defaulting to `persistent`",
-                def.name.as_ref().unwrap().name
-            ),
-        ));
+    if ns.target == Target::Soroban {
+        if storage_type.is_none() {
+            ns.diagnostics.push(Diagnostic::warning(
+                def.loc,
+                format!(
+                    "storage type not specified for `{}`, defaulting to `persistent`",
+                    def.name.as_ref().unwrap().name
+                ),
+            ));
+        }
+    } else {
+        if storage_type.is_some() {
+            ns.diagnostics.push(Diagnostic::warning(
+                def.loc,
+                format!(
+                    "variable `{}`: storage types are only valid for Soroban targets",
+                    def.name.as_ref().unwrap().name
+                ),
+            ));
+        }
     }
 
     if let Some(loc) = &has_immutable {

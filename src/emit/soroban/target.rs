@@ -45,16 +45,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         ns: &ast::Namespace,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
-        let storage_type = if let Some(storage_type) = storage_type {
-            match storage_type {
-                StorageType::Temporary(_) => 0,
-                StorageType::Persistent(_) => 1,
-                StorageType::Instance(_) => 2,
-            }
-        } else {
-            1
-        };
-
+        let storage_type = storage_type_to_int(storage_type);
         emit_context!(binary);
         let ret = call!(
             GET_CONTRACT_DATA,
@@ -92,15 +83,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     ) {
         emit_context!(binary);
 
-        let storage_type = if let Some(storage_type) = storage_type {
-            match storage_type {
-                StorageType::Temporary(_) => 0,
-                StorageType::Persistent(_) => 1,
-                StorageType::Instance(_) => 2,
-            }
-        } else {
-            1
-        };
+        let storage_type = storage_type_to_int(storage_type);
 
         let function_value = binary.module.get_function(PUT_CONTRACT_DATA).unwrap();
 
@@ -463,5 +446,17 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         data_len: BasicValueEnum<'b>,
     ) {
         unimplemented!()
+    }
+}
+
+fn storage_type_to_int(storage_type: &Option<StorageType>) -> u64 {
+    if let Some(storage_type) = storage_type {
+        match storage_type {
+            StorageType::Temporary(_) => 0,
+            StorageType::Persistent(_) => 1,
+            StorageType::Instance(_) => 2,
+        }
+    } else {
+        1
     }
 }

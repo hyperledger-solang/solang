@@ -58,18 +58,7 @@ pub fn expression(
             ns.contracts[contract_no].get_storage_slot(*loc, *var_contract_no, *var_no, ns, None)
         }
         ast::Expression::StorageLoad { loc, ty, expr } => {
-            let mut storage_type = None;
-            if let ast::Expression::StorageVariable {
-                loc: _,
-                ty: _,
-                var_no,
-                contract_no,
-            } = *expr.clone()
-            {
-                let var = ns.contracts[contract_no].variables.get(var_no).unwrap();
-
-                storage_type = var.storage_type.clone();
-            }
+            let storage_type = storage_type(expr, ns);
             let storage = expression(expr, cfg, contract_no, func, ns, vartab, opt);
 
             load_storage(loc, ty, storage, cfg, vartab, storage_type)
@@ -1245,19 +1234,7 @@ fn post_incdec(
     let res = vartab.temp_anonymous(ty);
     let v = expression(var, cfg, contract_no, func, ns, vartab, opt);
 
-    let mut storage_type = None;
-
-    if let ast::Expression::StorageVariable {
-        loc: _,
-        ty: _,
-        var_no,
-        contract_no,
-    } = var
-    {
-        let var = ns.contracts[*contract_no].variables.get(*var_no).unwrap();
-
-        storage_type = var.storage_type.clone();
-    }
+    let storage_type = storage_type(var, ns);
 
     let v = match var.ty() {
         Type::Ref(ty) => Expression::Load {
@@ -1391,20 +1368,7 @@ fn pre_incdec(
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
     let v = expression(var, cfg, contract_no, func, ns, vartab, opt);
-    let mut storage_type = None;
-
-    if let ast::Expression::StorageVariable {
-        loc: _,
-        ty: _,
-        var_no,
-        contract_no,
-    } = var
-    {
-        let var = ns.contracts[*contract_no].variables.get(*var_no).unwrap();
-
-        storage_type = var.storage_type.clone();
-    }
-
+    let storage_type = storage_type(var, ns);
     let v = match var.ty() {
         Type::Ref(ty) => Expression::Load {
             loc: var.loc(),
@@ -2734,18 +2698,7 @@ pub fn assign_single(
                 },
             );
 
-            let mut storage_type = None;
-            if let ast::Expression::StorageVariable {
-                loc: _,
-                ty: _,
-                var_no,
-                contract_no,
-            } = left
-            {
-                let var = ns.contracts[*contract_no].variables.get(*var_no).unwrap();
-
-                storage_type = var.storage_type.clone();
-            }
+            let storage_type = storage_type(left, ns);
 
             match left_ty {
                 Type::StorageRef(..) if set_storage_bytes => {
@@ -3879,5 +3832,21 @@ fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
                 ),
             ],
         }
+    }
+}
+
+fn storage_type(expr: &ast::Expression, ns: &Namespace) -> Option<pt::StorageType> {
+    match expr {
+        ast::Expression::StorageVariable {
+            loc: _,
+            ty: _,
+            var_no,
+            contract_no,
+        } => {
+            let var = ns.contracts[*contract_no].variables.get(*var_no).unwrap();
+
+            var.storage_type.clone()
+        }
+        _ => None,
     }
 }
