@@ -60,7 +60,7 @@ impl<T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for &mut T {
     }
 }
 
-impl<T: ?Sized + ToOwned + OptionalCodeLocation> OptionalCodeLocation for Cow<'_,T> {
+impl<T: ?Sized + ToOwned + OptionalCodeLocation> OptionalCodeLocation for Cow<'_, T> {
     fn loc_opt(&self) -> Option<Loc> {
         (**self).loc_opt()
     }
