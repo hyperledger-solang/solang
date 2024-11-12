@@ -182,7 +182,7 @@ pub enum Token<'input> {
     Annotation(&'input str),
 }
 
-impl<'input> fmt::Display for Token<'input> {
+impl fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Token::Identifier(id) => write!(f, "{id}"),
