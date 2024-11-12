@@ -48,19 +48,19 @@ impl<T: CodeLocation> OptionalCodeLocation for Vec<T> {
     }
 }
 
-impl<'a, T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for &'a T {
+impl<T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for &T {
     fn loc_opt(&self) -> Option<Loc> {
         (**self).loc_opt()
     }
 }
 
-impl<'a, T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for &'a mut T {
+impl<T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for &mut T {
     fn loc_opt(&self) -> Option<Loc> {
         (**self).loc_opt()
     }
 }
 
-impl<'a, T: ?Sized + ToOwned + OptionalCodeLocation> OptionalCodeLocation for Cow<'a, T> {
+impl<T: ?Sized + ToOwned + OptionalCodeLocation> OptionalCodeLocation for Cow<'_, T> {
     fn loc_opt(&self) -> Option<Loc> {
         (**self).loc_opt()
     }
@@ -163,19 +163,19 @@ impl CodeLocation for Loc {
     }
 }
 
-impl<'a, T: ?Sized + CodeLocation> CodeLocation for &'a T {
+impl<T: ?Sized + CodeLocation> CodeLocation for &T {
     fn loc(&self) -> Loc {
         (**self).loc()
     }
 }
 
-impl<'a, T: ?Sized + CodeLocation> CodeLocation for &'a mut T {
+impl<T: ?Sized + CodeLocation> CodeLocation for &mut T {
     fn loc(&self) -> Loc {
         (**self).loc()
     }
 }
 
-impl<'a, T: ?Sized + ToOwned + CodeLocation> CodeLocation for Cow<'a, T> {
+impl<T: ?Sized + ToOwned + CodeLocation> CodeLocation for Cow<'_, T> {
     fn loc(&self) -> Loc {
         (**self).loc()
     }
