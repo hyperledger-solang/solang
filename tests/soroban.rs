@@ -59,6 +59,9 @@ impl SorobanEnv {
     }
 
     pub fn register_contract(&mut self, contract_wasm: Vec<u8>) -> Address {
+        // For now, we keep using `register_contract_wasm`. To use `register`, we have to figure
+        // out first what to pass for `constructor_args`
+        #[allow(deprecated)]
         let addr = self
             .env
             .register_contract_wasm(None, contract_wasm.as_slice());
