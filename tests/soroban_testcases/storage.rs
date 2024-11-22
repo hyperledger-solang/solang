@@ -23,8 +23,6 @@ fn counter() {
 
     let addr = src.contracts.last().unwrap();
 
-    let _res = src.invoke_contract(addr, "init", vec![]);
-
     let res = src.invoke_contract(addr, "count", vec![]);
     let expected: Val = 10_u64.into_val(&src.env);
     assert!(expected.shallow_eq(&res));

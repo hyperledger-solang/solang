@@ -71,7 +71,7 @@ forge-fmt = { path = "fmt", optional = true }
 # We don't use ethers-core directly, but need the correct version for the
 # build to work.
 ethers-core = { version = "2.0.10", optional = true }
-soroban-sdk = { version = "20.0.0-rc2", features = ["testutils"], optional = true }
+soroban-sdk = { version = "22.0.0-rc.3.2", features = ["testutils"], optional = true }
 
 [dev-dependencies]
 num-derive = "0.4"

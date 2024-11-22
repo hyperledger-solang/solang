@@ -32,7 +32,7 @@ pub fn build_solidity(src: &str) -> SorobanEnv {
             log_prints: true,
             #[cfg(feature = "wasm_opt")]
             wasm_opt: Some(contract_build::OptimizationPasses::Z),
-            soroban_version: Some(85899345977),
+            soroban_version: None,
             ..Default::default()
         },
         std::vec!["unknown".to_string()],

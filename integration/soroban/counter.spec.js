@@ -30,10 +30,6 @@ describe('Counter', () => {
 
     // load contract
     contract = new StellarSdk.Contract(contractAddr);
-
-    // initialize the contract
-    await call_contract_function("init", server, keypair, contract);
-
   });
 
   it('get correct initial counter', async () => {
