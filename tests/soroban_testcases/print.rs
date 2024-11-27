@@ -18,8 +18,6 @@ fn log_runtime_error() {
 
     let addr = src.contracts.last().unwrap();
 
-    let _res = src.invoke_contract(addr, "init", vec![]);
-
     src.invoke_contract(addr, "decrement", vec![]);
 
     let logs = src.invoke_contract_expect_error(addr, "decrement", vec![]);
@@ -39,8 +37,6 @@ fn print() {
     );
 
     let addr = src.contracts.last().unwrap();
-
-    let _res = src.invoke_contract(addr, "init", vec![]);
 
     src.invoke_contract(addr, "print", vec![]);
 
@@ -64,8 +60,6 @@ fn print_then_runtime_error() {
     );
 
     let addr = src.contracts.last().unwrap();
-
-    let _res = src.invoke_contract(addr, "init", vec![]);
 
     src.invoke_contract(addr, "decrement", vec![]);
 
