@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{build_solidity, SorobanEnv};
 use soroban_sdk::testutils::Logs;
 use soroban_sdk::{IntoVal, Val};
