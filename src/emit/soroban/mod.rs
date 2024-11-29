@@ -63,7 +63,7 @@ impl SorobanTarget {
         );
         binary.internalize(export_list.as_slice());
 
-        Self::emit_initializer(&mut binary, ns);
+        Self::emit_initializer(&mut binary, ns, contract.constructors(&ns).first());
 
         Self::emit_env_meta_entries(context, &mut binary, opt);
 
@@ -262,14 +262,16 @@ impl SorobanTarget {
         );
     }
 
-    fn emit_initializer(binary: &mut Binary, _ns: &ast::Namespace) {
+    fn emit_initializer(
+        binary: &mut Binary,
+        _ns: &ast::Namespace,
+        constructor_cfg_no: Option<&usize>,
+    ) {
         let mut cfg = ControlFlowGraph::new("__constructor".to_string(), ASTFunction::None);
 
         cfg.public = true;
         let void_param = ast::Parameter::new_default(ast::Type::Void);
         cfg.returns = sync::Arc::new(vec![void_param]);
-
-        Self::emit_function_spec_entry(binary.context, &cfg, "__constructor".to_string(), binary);
 
         let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
         let mut storage_initializers = binary
@@ -294,8 +296,20 @@ impl SorobanTarget {
             .build_call(storage_initializer, &[], "storage_initializer")
             .unwrap();
 
+        // call the user defined constructor (if any)
+        if let Some(cfg_no) = constructor_cfg_no {
+            let constructor = binary.functions[cfg_no];
+            let constructor_name = constructor.get_name().to_str().unwrap();
+            binary
+                .builder
+                .build_call(constructor, &[], constructor_name)
+                .unwrap();
+        }
+
         // return zero
         let zero_val = binary.context.i64_type().const_int(2, false);
         binary.builder.build_return(Some(&zero_val)).unwrap();
+
+        Self::emit_function_spec_entry(binary.context, &cfg, "__constructor".to_string(), binary);
     }
 }
