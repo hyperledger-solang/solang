@@ -16,7 +16,8 @@ pub struct SorobanEnv {
     contracts: Vec<Address>,
 }
 
-pub fn build_solidity(src: &str) -> SorobanEnv {
+/// Compile a Solidity contract and return the compiled WASM blob.
+pub fn build_solidity(src: &str) -> Vec<u8> {
     let tmp_file = OsStr::new("test.sol");
     let mut cache = FileResolver::default();
     cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
@@ -40,11 +41,11 @@ pub fn build_solidity(src: &str) -> SorobanEnv {
     );
     ns.print_diagnostics_in_plain(&cache, false);
     assert!(!wasm.is_empty());
-    let wasm_blob = wasm[0].0.clone();
-    SorobanEnv::new_with_contract(wasm_blob)
+    wasm[0].0.clone()
 }
 
 impl SorobanEnv {
+    /// Create a new Soroban environment.
     pub fn new() -> Self {
         Self {
             env: Env::default(),
@@ -52,23 +53,30 @@ impl SorobanEnv {
         }
     }
 
-    pub fn new_with_contract(contract_wasm: Vec<u8>) -> Self {
+    /// Create a new Soroban environment with a contract.
+    pub fn new_with_contract(
+        contract_wasm: Vec<u8>,
+        constructor_args: soroban_sdk::Vec<Val>,
+    ) -> Self {
         let mut env = Self::new();
-        env.register_contract(contract_wasm);
+        env.register_contract(contract_wasm, constructor_args);
         env
     }
 
-    pub fn register_contract(&mut self, contract_wasm: Vec<u8>) -> Address {
-        // For now, we keep using `register_contract_wasm`. To use `register`, we have to figure
-        // out first what to pass for `constructor_args`
-        #[allow(deprecated)]
+    /// Register a contract given its WASM blob and constructor arguments.
+    pub fn register_contract(
+        &mut self,
+        contract_wasm: Vec<u8>,
+        constructor_args: soroban_sdk::Vec<Val>,
+    ) -> Address {
         let addr = self
             .env
-            .register_contract_wasm(None, contract_wasm.as_slice());
+            .register(contract_wasm.as_slice(), constructor_args);
         self.contracts.push(addr.clone());
         addr
     }
 
+    /// Invoke a contract and return the result.
     pub fn invoke_contract(&self, addr: &Address, function_name: &str, args: Vec<Val>) -> Val {
         let func = Symbol::new(&self.env, function_name);
         let mut args_soroban = vec![&self.env];

@@ -60,4 +60,5 @@ function add_testnet() {
 
 add_testnet();
 generate_alice();
+// FIXME: This will need to be refactored to allow providing constructor arguments for a specific contract
 deploy_all();
