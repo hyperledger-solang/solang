@@ -63,7 +63,7 @@ impl SorobanTarget {
         );
         binary.internalize(export_list.as_slice());
 
-        Self::emit_initializer(&mut binary, ns, contract.constructors(&ns).first());
+        Self::emit_initializer(&mut binary, ns, contract.constructors(ns).first());
 
         Self::emit_env_meta_entries(context, &mut binary, opt);
 

@@ -41,8 +41,7 @@ pub fn build_solidity(src: &str) -> Vec<u8> {
     );
     ns.print_diagnostics_in_plain(&cache, false);
     assert!(!wasm.is_empty());
-    let wasm_blob = wasm[0].0.clone();
-    wasm_blob
+    wasm[0].0.clone()
 }
 
 impl SorobanEnv {
