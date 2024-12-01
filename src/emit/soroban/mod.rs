@@ -8,18 +8,23 @@ use crate::codegen::{
 
 use crate::emit::cfg::emit_cfg;
 use crate::{emit::Binary, sema::ast};
+use funty::Fundamental;
 use inkwell::{
     context::Context,
     module::{Linkage, Module},
 };
 use soroban_sdk::xdr::{
-    DepthLimitedWrite, ScEnvMetaEntry, ScSpecEntry, ScSpecFunctionInputV0, ScSpecFunctionV0,
-    ScSpecTypeDef, StringM, WriteXdr,
+    Limited, Limits, ScEnvMetaEntry, ScEnvMetaEntryInterfaceVersion, ScSpecEntry,
+    ScSpecFunctionInputV0, ScSpecFunctionV0, ScSpecTypeDef, StringM, WriteXdr,
 };
 use std::ffi::CString;
 use std::sync;
 
-const SOROBAN_ENV_INTERFACE_VERSION: u64 = 90194313216;
+const SOROBAN_ENV_INTERFACE_VERSION: ScEnvMetaEntryInterfaceVersion =
+    ScEnvMetaEntryInterfaceVersion {
+        protocol: 22,
+        pre_release: 0,
+    };
 pub const PUT_CONTRACT_DATA: &str = "l._";
 pub const GET_CONTRACT_DATA: &str = "l.1";
 pub const LOG_FROM_LINEAR_MEMORY: &str = "x._";
@@ -129,9 +134,15 @@ impl SorobanTarget {
     }
 
     fn emit_env_meta_entries<'a>(context: &'a Context, binary: &mut Binary<'a>, opt: &'a Options) {
-        let mut meta = DepthLimitedWrite::new(Vec::new(), 10);
-        let soroban_env_interface_version =
-            opt.soroban_version.unwrap_or(SOROBAN_ENV_INTERFACE_VERSION);
+        let mut meta = Limited::new(Vec::new(), Limits::none());
+        let soroban_env_interface_version = opt.soroban_version;
+        let soroban_env_interface_version = match soroban_env_interface_version {
+            Some(version) => ScEnvMetaEntryInterfaceVersion {
+                protocol: version.as_u32(),
+                pre_release: 0,
+            },
+            None => SOROBAN_ENV_INTERFACE_VERSION,
+        };
         ScEnvMetaEntry::ScEnvMetaKindInterfaceVersion(soroban_env_interface_version)
             .write_xdr(&mut meta)
             .expect("writing env meta interface version to xdr");
@@ -146,7 +157,7 @@ impl SorobanTarget {
     ) {
         if cfg.public && !cfg.is_placeholder() {
             // TODO: Emit custom type spec entries
-            let mut spec = DepthLimitedWrite::new(Vec::new(), 10);
+            let mut spec = Limited::new(Vec::new(), Limits::none());
             ScSpecEntry::FunctionV0(ScSpecFunctionV0 {
                 name: name
                     .try_into()
@@ -252,13 +263,13 @@ impl SorobanTarget {
     }
 
     fn emit_initializer(binary: &mut Binary, _ns: &ast::Namespace) {
-        let mut cfg = ControlFlowGraph::new("init".to_string(), ASTFunction::None);
+        let mut cfg = ControlFlowGraph::new("__constructor".to_string(), ASTFunction::None);
 
         cfg.public = true;
         let void_param = ast::Parameter::new_default(ast::Type::Void);
         cfg.returns = sync::Arc::new(vec![void_param]);
 
-        Self::emit_function_spec_entry(binary.context, &cfg, "init".to_string(), binary);
+        Self::emit_function_spec_entry(binary.context, &cfg, "__constructor".to_string(), binary);
 
         let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
         let mut storage_initializers = binary
@@ -271,10 +282,11 @@ impl SorobanTarget {
         assert!(storage_initializers.next().is_none());
 
         let void_type = binary.context.i64_type().fn_type(&[], false);
-        let init = binary
-            .module
-            .add_function("init", void_type, Some(Linkage::External));
-        let entry = binary.context.append_basic_block(init, "entry");
+        let constructor =
+            binary
+                .module
+                .add_function("__constructor", void_type, Some(Linkage::External));
+        let entry = binary.context.append_basic_block(constructor, "entry");
 
         binary.builder.position_at_end(entry);
         binary
