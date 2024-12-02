@@ -66,8 +66,6 @@ fn different_storage_types() {
 
     let addr = src.contracts.last().unwrap();
 
-    let _res = src.invoke_contract(addr, "init", vec![]);
-
     let res = src.invoke_contract(addr, "sesa", vec![]);
     let expected: Val = 1_u64.into_val(&src.env);
     assert!(expected.shallow_eq(&res));
