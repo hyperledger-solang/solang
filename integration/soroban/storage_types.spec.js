@@ -29,9 +29,6 @@ describe('StorageTypes', () => {
 
     // Load contract
     contract = new StellarSdk.Contract(contractAddr);
-
-    // Initialize the contract if necessary (adapt according to your contract logic)
-    await call_contract_function("init", server, keypair, contract);
   });
 
   it('check initial values', async () => {

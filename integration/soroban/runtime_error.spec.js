@@ -31,9 +31,6 @@ describe('Runtime Error', () => {
     // load contract
     contract = new StellarSdk.Contract(contractAddr);
 
-    // initialize the contract
-    await call_contract_function("init", server, keypair, contract);
-
     // call decrement once. The second call however will result in a runtime error
     await call_contract_function("decrement", server, keypair, contract);
   });
