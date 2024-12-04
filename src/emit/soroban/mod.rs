@@ -316,14 +316,14 @@ impl SorobanTarget {
             .add_function(OBJ_FROM_U64, one_arg, Some(Linkage::External));
     }
 
-    fn emit_initializer(binary: &mut Binary, _ns: &ast::Namespace) {
+    fn emit_initializer<'a>(binary: &mut Binary<'a>, ns: &'a ast::Namespace) {
         let mut cfg = ControlFlowGraph::new("__constructor".to_string(), ASTFunction::None);
 
         cfg.public = true;
         let void_param = ast::Parameter::new_default(ast::Type::Void);
         cfg.returns = sync::Arc::new(vec![void_param]);
 
-        Self::emit_function_spec_entry(binary.context, &cfg, "__constructor".to_string(), binary);
+        Self::emit_function_spec_entry(binary.context, &cfg, "__constructor".to_string(), binary, ns);
 
         let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
         let mut storage_initializers = binary
