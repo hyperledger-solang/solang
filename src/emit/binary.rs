@@ -937,7 +937,13 @@ impl<'a> Binary<'a> {
                         .custom_width_int_type(ns.value_length as u32 * 8),
                 ),
                 Type::Contract(_) | Type::Address(_) => {
+
+                    // Soroban addresses are 64 bit wide integer that represents a refrenece for the real Address on the Host side.
+                    if ns.target == Target::Soroban {
+                    BasicTypeEnum::IntType(self.context.i64_type())}
+                    else {
                     BasicTypeEnum::ArrayType(self.address_type(ns))
+                    }
                 }
                 Type::Bytes(n) => {
                     BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
@@ -1070,13 +1076,19 @@ impl<'a> Binary<'a> {
             // slice
             let slice = vector.into_struct_value();
 
+            let len_type = if self.target == Target::Soroban {
+                self.context.i64_type()
+            } else {
+                self.context.i32_type()
+            };
+
             self.builder
                 .build_int_truncate(
                     self.builder
                         .build_extract_value(slice, 1, "slice_len")
                         .unwrap()
                         .into_int_value(),
-                    self.context.i32_type(),
+                    len_type,
                     "len",
                 )
                 .unwrap()
@@ -1125,6 +1137,9 @@ impl<'a> Binary<'a> {
                 .build_extract_value(slice, 0, "slice_data")
                 .unwrap()
                 .into_pointer_value()
+        } else if vector.is_pointer_value() && self.target == Target::Soroban {
+            let vector = vector.into_pointer_value();
+            vector
         } else {
             let vector_type = self.module.get_struct_type("struct.vector").unwrap();
             unsafe {
