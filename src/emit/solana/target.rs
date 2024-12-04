@@ -1487,13 +1487,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: Option<PointerValue<'b>>,
+        address: Option<BasicValueEnum<'b>>,
         mut contract_args: ContractArgs<'b>,
         _ty: ast::CallTy,
         ns: &ast::Namespace,
         _loc: Loc,
     ) {
-        let address = address.unwrap();
+        let address = address.unwrap().into_pointer_value();
 
         if contract_args.accounts.is_none() {
             contract_args.accounts = Some((

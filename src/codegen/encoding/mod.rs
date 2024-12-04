@@ -28,6 +28,167 @@ use std::ops::{AddAssign, MulAssign, Sub};
 
 use self::buffer_validator::BufferValidator;
 
+/// Soroban encoder works a little differently than the other encoders.
+/// For an external call, Soroban first needs to convert values into Soroban ScVals.
+/// Each ScVal is 64 bits long, and encoded either via a host function or shifting bits.
+/// For this reason, the soroban encoder is implemented as separate from the other encoders.
+pub(super) fn soroban_encode(
+    loc: &Loc,
+    args: Vec<Expression>,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+    packed: bool,
+) -> (Expression, Expression) {
+    let mut encoder = create_encoder(ns, packed);
+
+    let size = 8 * args.len(); // 8 bytes per argument
+
+    let size_expr = Expression::NumberLiteral {
+        loc: *loc,
+        ty: Uint(64),
+        value: size.into(),
+    };
+    let encoded_bytes = vartab.temp_name("abi_encoded", &Type::Bytes(size as u8));
+
+    let expr = Expression::AllocDynamicBytes {
+        loc: *loc,
+        ty: Type::Bytes(size as u8),
+        size: size_expr.clone().into(),
+        initializer: Some(vec![]),
+    };
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: *loc,
+            res: encoded_bytes,
+            expr,
+        },
+    );
+
+    let mut offset = Expression::NumberLiteral {
+        loc: *loc,
+        ty: Uint(64),
+        value: BigInt::zero(),
+    };
+
+    let buffer = Expression::Variable {
+        loc: *loc,
+        ty: Type::Bytes(size as u8),
+        var_no: encoded_bytes,
+    };
+
+    for (arg_no, item) in args.iter().enumerate() {
+        println!("item {:?}", item);
+
+        let obj = vartab.temp_name(format!("obj_{arg_no}").as_str(), &Type::Uint(64));
+
+        let transformer = match item.ty() {
+            Type::String => {
+                let inp = Expression::PointerPosition {
+                    pointer: Box::new(item.clone()),
+                };
+
+                let encoded = Expression::ShiftLeft {
+                    loc: Loc::Codegen,
+                    ty: Uint(64),
+                    left: Box::new(inp),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(64),
+                        value: BigInt::from(32),
+                    }),
+                };
+
+                let encoded = Expression::Add {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    overflowing: true,
+                    left: Box::new(encoded),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(64),
+                        value: BigInt::from(4),
+                    }),
+                };
+
+                let len = if let Expression::AllocDynamicBytes {
+                    loc,
+                    ty,
+                    size,
+                    initializer,
+                } = item
+                {
+                    let sesa = Expression::ShiftLeft {
+                        loc: Loc::Codegen,
+                        ty: Uint(64),
+                        left: Box::new(size.clone().cast(&Type::Uint(64), ns)),
+                        right: Box::new(Expression::NumberLiteral {
+                            loc: Loc::Codegen,
+                            ty: Type::Uint(64),
+                            value: BigInt::from(32),
+                        }),
+                    };
+
+                    let sesa = Expression::Add {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(64),
+                        overflowing: true,
+                        left: Box::new(sesa),
+                        right: Box::new(Expression::NumberLiteral {
+                            loc: Loc::Codegen,
+                            ty: Type::Uint(64),
+                            value: BigInt::from(4),
+                        }),
+                    };
+
+                    sesa
+                } else {
+                    unreachable!()
+                };
+
+                Instr::Call {
+                    res: vec![obj],
+                    return_tys: vec![Type::Uint(64)],
+                    call: crate::codegen::cfg::InternalCallTy::HostFunction {
+                        name: "b.j".to_string(),
+                    },
+                    args: vec![encoded, len],
+                }
+            }
+            Type::Uint(64) => Instr::Call {
+                res: vec![obj],
+                return_tys: vec![Type::Uint(64)],
+                call: super::cfg::InternalCallTy::HostFunction {
+                    name: "i._".to_string(),
+                },
+                args: vec![item.clone()],
+            },
+            _ => todo!("type not yet supported"),
+        };
+
+        let var = Expression::Variable {
+            loc: *loc,
+            ty: Type::Uint(64),
+            var_no: obj,
+        };
+
+        cfg.add(vartab, transformer);
+
+        let advance = encoder.encode(&var, &buffer, &offset, arg_no, ns, vartab, cfg);
+        offset = Expression::Add {
+            loc: *loc,
+            ty: Uint(64),
+            overflowing: false,
+            left: offset.into(),
+            right: advance.into(),
+        };
+    }
+
+    (buffer, size_expr)
+}
+
 /// Insert encoding instructions into the `cfg` for any `Expression` in `args`.
 /// Returns a pointer to the encoded data and the size as a 32bit integer.
 pub(super) fn abi_encode(
@@ -38,6 +199,9 @@ pub(super) fn abi_encode(
     cfg: &mut ControlFlowGraph,
     packed: bool,
 ) -> (Expression, Expression) {
+    if ns.target == Target::Soroban {
+        return soroban_encode(loc, args, ns, vartab, cfg, packed);
+    }
     let mut encoder = create_encoder(ns, packed);
     let size = calculate_size_args(&mut encoder, &args, ns, vartab, cfg);
     let encoded_bytes = vartab.temp_name("abi_encoded", &Type::DynamicBytes);

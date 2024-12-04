@@ -927,13 +927,15 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: Option<PointerValue<'b>>,
+        address: Option<BasicValueEnum<'b>>,
         contract_args: ContractArgs<'b>,
         call_type: ast::CallTy,
         ns: &ast::Namespace,
         loc: Loc,
     ) {
         emit_context!(binary);
+
+        let address = address.unwrap().into_pointer_value();
 
         let (scratch_buf, scratch_len) = scratch_buf!();
         binary
@@ -956,7 +958,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                     "seal_call",
                     &[
                         contract_args.flags.unwrap_or(i32_zero!()).into(),
-                        address.unwrap().into(),
+                        address.into(),
                         contract_args.gas.unwrap().into(),
                         value_ptr.into(),
                         payload.into(),
@@ -989,7 +991,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 let code_hash_ret = call!(
                     "code_hash",
                     &[
-                        address.unwrap().into(),
+                        address.into(),
                         code_hash_out_ptr.into(),
                         code_hash_out_len_ptr.into(),
                     ]

@@ -38,6 +38,7 @@ pub struct Variable<'a> {
     value: BasicValueEnum<'a>,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct ContractArgs<'b> {
     program_id: Option<PointerValue<'b>>,
     value: Option<IntValue<'b>>,
@@ -258,7 +259,7 @@ pub trait TargetRuntime<'a> {
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: Option<PointerValue<'b>>,
+        address: Option<BasicValueEnum<'b>>,
         contract_args: ContractArgs<'b>,
         ty: CallTy,
         ns: &Namespace,

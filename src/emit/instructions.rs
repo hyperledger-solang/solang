@@ -18,7 +18,10 @@ use inkwell::values::{
 use inkwell::{AddressSpace, IntPredicate};
 use num_traits::ToPrimitive;
 use solang_parser::pt::CodeLocation;
-use std::collections::{HashMap, VecDeque};
+use std::{
+    collections::{HashMap, VecDeque},
+    ops::Add,
+};
 
 use super::expression::expression_to_slice;
 
@@ -743,6 +746,30 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 }
             }
         }
+        Instr::Call {
+            res,
+            return_tys,
+            call: InternalCallTy::HostFunction { name },
+            args,
+        } => {
+            let mut parms = args
+                .iter()
+                .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
+                .collect::<Vec<BasicMetadataValueEnum>>();
+
+            let call = bin.module.get_function(name).unwrap();
+
+            let ret = bin
+                .builder
+                .build_call(call, &parms, "")
+                .unwrap()
+                .try_as_basic_value()
+                .left();
+
+            if let Some(value) = ret {
+                w.vars.get_mut(&res[0]).unwrap().value = value;
+            }
+        }
         Instr::Constructor {
             success,
             res,
@@ -885,6 +912,11 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             flags,
             ..
         } => {
+            println!("===========================================================================");
+            println!("Payload {:?}", payload);
+            println!("Value {:?}", value);
+            println!("Address {:?}", address);
+
             let loc = payload.loc();
             let gas = expression(target, bin, gas, &w.vars, function, ns).into_int_value();
             let value = expression(target, bin, value, &w.vars, function, ns).into_int_value();
@@ -894,7 +926,26 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let address = if let Some(address) = address {
                 let address = expression(target, bin, address, &w.vars, function, ns);
 
-                let addr = bin.build_array_alloca(
+                println!("Address Before{:?}", address);
+
+                if ns.target == Target::Soroban {
+                    Some(address)
+                }
+                else {
+                    let addr = bin.build_array_alloca(
+                        function,
+                        bin.context.i8_type(),
+                        bin.context
+                            .i32_type()
+                            .const_int(ns.address_length as u64, false),
+                        "address",
+                    );
+    
+                    bin.builder.build_store(addr, address).unwrap();
+
+                    Some(addr.as_basic_value_enum())
+                }
+                /*let addr = bin.build_array_alloca(
                     function,
                     bin.context.i8_type(),
                     bin.context
@@ -903,9 +954,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     "address",
                 );
 
-                bin.builder.build_store(addr, address).unwrap();
+                bin.builder.build_store(addr, address).unwrap();*/
 
-                Some(addr)
+                //Some(address)
             } else {
                 None
             };
@@ -913,6 +964,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let accounts = process_account_metas(target, accounts, bin, &w.vars, function, ns);
 
             let (payload_ptr, payload_len) = if payload_ty == Type::DynamicBytes {
+                println!("INSIDE FIRST IF GOOD {:?}", payload);
                 (bin.vector_bytes(payload), bin.vector_len(payload))
             } else {
                 let ptr = payload.into_pointer_value();
@@ -920,6 +972,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 (ptr, len)
             };
+
+            println!("GOT PAYLOAD LEN {:?}", payload_len);
 
             // sol_invoke_signed_c() takes of a slice of a slice of slice of bytes
             // 1. A single seed value is a slice of bytes.
@@ -940,6 +994,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 None => None,
             };
 
+            //let payload_len = bin.vector_len(payload[1]);
             target.external_call(
                 bin,
                 function,
@@ -996,6 +1051,83 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             target.emit_event(bin, function, data, &topics);
         }
         Instr::WriteBuffer { buf, offset, value } => {
+
+
+            
+            if ns.target == Target::Soroban{
+            let num = if let Expression::NumberLiteral { loc, ty, value } = offset {
+                value
+            } else {
+                panic!("Offset must be a number literal");
+            };
+
+            let num = num.to_u64().unwrap();;
+
+            let data = expression(target, bin, buf, &w.vars, function, ns);
+
+            let data = bin.vector_bytes(data);
+
+            let offset = expression(target, bin, offset, &w.vars, function, ns).into_int_value();
+
+            println!("OFFSET {:?}", offset);
+            let emit_value = expression(target, bin, value, &w.vars, function, ns);
+
+            println!("EMIT VALUE {:?}", emit_value);
+
+            let index_zero = bin.context.i64_type().const_zero();
+            let offset = bin.context.i64_type().const_int(num / 8, false);
+
+            //let ress = unsafe{  data.into_pointer_value().const_gep(ty, ordered_indexes) };
+
+            let start = unsafe {
+                bin.builder
+                    .build_gep(
+                        bin.context.i64_type().array_type(3),
+                        data,
+                        &[bin.context.i64_type().const_zero(), offset],
+                        "start",
+                    )
+                    .unwrap()
+            };
+
+            let is_bytes = if let Type::Bytes(n) = value.ty().unwrap_user_type(ns) {
+                n
+            } else if value.ty() == Type::FunctionSelector {
+                ns.target.selector_length()
+            } else {
+                0
+            };
+
+            if is_bytes > 1 {
+                println!("CALLING __leNtobeN");
+                let value_ptr = bin.build_alloca(
+                    function,
+                    emit_value.into_int_value().get_type(),
+                    &format!("bytes{is_bytes}"),
+                );
+                bin.builder
+                    .build_store(value_ptr, emit_value.into_int_value())
+                    .unwrap();
+                bin.builder
+                    .build_call(
+                        bin.module.get_function("__leNtobeN").unwrap(),
+                        &[
+                            value_ptr.into(),
+                            start.into(),
+                            bin.context
+                                .i32_type()
+                                .const_int(is_bytes as u64, false)
+                                .into(),
+                        ],
+                        "",
+                    )
+                    .unwrap();
+            } else {
+                bin.builder.build_store(start, emit_value).unwrap();
+            }
+        }
+        else {
+
             let v = expression(target, bin, buf, &w.vars, function, ns);
             let data = bin.vector_bytes(v);
 
@@ -1042,6 +1174,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             } else {
                 bin.builder.build_store(start, emit_value).unwrap();
             }
+
+
+        }
         }
         Instr::MemCopy {
             source: from,

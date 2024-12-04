@@ -420,6 +420,8 @@ impl Converter<'_> {
                 bytes_offset,
                 ..
             } => self.advance_pointer(dest, pointer, bytes_offset, vartable, results),
+
+            codegen::Expression::PointerPosition { pointer } => (),
         }
     }
 
