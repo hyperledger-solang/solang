@@ -8,7 +8,7 @@ import { call_contract_function } from './test_helpers.js';
 const __filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(__filename);
 
-describe('Counter', () => {
+describe('Runtime Error', () => {
   let keypair;
   const server = new StellarSdk.SorobanRpc.Server(
     "https://soroban-testnet.stellar.org:443",
@@ -18,34 +18,31 @@ describe('Counter', () => {
   let contract;
   before(async () => {
 
-    console.log('Setting up counter contract tests...');
+    console.log('Setting up runtime_error.sol contract tests...');
 
     // read secret from file
     const secret = readFileSync('alice.txt', 'utf8').trim();
     keypair = StellarSdk.Keypair.fromSecret(secret);
 
-    let contractIdFile = path.join(dirname, '.soroban', 'contract-ids', 'counter.txt');
+    let contractIdFile = path.join(dirname, '.soroban', 'contract-ids', 'Error.txt');
     // read contract address from file
     contractAddr = readFileSync(contractIdFile, 'utf8').trim().toString();
 
     // load contract
     contract = new StellarSdk.Contract(contractAddr);
+
+    // call decrement once. The second call however will result in a runtime error
+    await call_contract_function("decrement", server, keypair, contract);
   });
 
   it('get correct initial counter', async () => {
-    // get the count
-    let count = await call_contract_function("count", server, keypair, contract);
-    expect(count.toString()).eq("10");
+
+    // decrement the counter again, resulting in a runtime error
+    let res = await call_contract_function("decrement", server, keypair, contract);
+
+    expect(res).to.contain('runtime_error: math overflow in runtime_error.sol:6:9-19');
   });
 
-  it('increment counter', async () => {
-    // increment the counter
-    await call_contract_function("increment", server, keypair, contract);
-
-    // get the count
-    let count = await call_contract_function("count", server, keypair, contract);
-    expect(count.toString()).eq("11");
-  });
 });
 
 

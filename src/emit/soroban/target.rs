@@ -20,7 +20,7 @@ use inkwell::values::{
     PointerValue,
 };
 
-use solang_parser::pt::Loc;
+use solang_parser::pt::{Loc, StorageType};
 
 use std::collections::HashMap;
 
@@ -44,7 +44,9 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
         ns: &ast::Namespace,
+        storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
+        let storage_type = storage_type_to_int(storage_type);
         emit_context!(binary);
         let ret = call!(
             GET_CONTRACT_DATA,
@@ -53,7 +55,11 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                     .into_int_value()
                     .const_cast(binary.context.i64_type(), false)
                     .into(),
-                i64_const!(2).into()
+                binary
+                    .context
+                    .i64_type()
+                    .const_int(storage_type, false)
+                    .into(),
             ]
         )
         .try_as_basic_value()
@@ -74,8 +80,12 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
         ns: &ast::Namespace,
+        storage_type: &Option<StorageType>,
     ) {
         emit_context!(binary);
+
+        let storage_type = storage_type_to_int(storage_type);
+
         let function_value = binary.module.get_function(PUT_CONTRACT_DATA).unwrap();
 
         let value = binary
@@ -88,7 +98,11 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                         .const_cast(binary.context.i64_type(), false)
                         .into(),
                     dest.into(),
-                    binary.context.i64_type().const_int(2, false).into(),
+                    binary
+                        .context
+                        .i64_type()
+                        .const_int(storage_type, false)
+                        .into(),
                 ],
                 PUT_CONTRACT_DATA,
             )
@@ -627,5 +641,17 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         data_len: BasicValueEnum<'b>,
     ) {
         unimplemented!()
+    }
+}
+
+fn storage_type_to_int(storage_type: &Option<StorageType>) -> u64 {
+    if let Some(storage_type) = storage_type {
+        match storage_type {
+            StorageType::Temporary(_) => 0,
+            StorageType::Persistent(_) => 1,
+            StorageType::Instance(_) => 2,
+        }
+    } else {
+        1
     }
 }

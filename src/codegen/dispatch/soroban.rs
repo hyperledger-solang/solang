@@ -44,9 +44,15 @@ pub fn function_dispatch(
 
         let mut wrapper_cfg = ControlFlowGraph::new(wrapper_name.to_string(), ASTFunction::None);
 
-        let param = ast::Parameter::new_default(Type::Uint(64));
         wrapper_cfg.params = function.params.clone();
-        wrapper_cfg.returns = vec![param.clone()].into();
+
+        let return_type = if cfg.returns.len() == 1 {
+            cfg.returns[0].clone()
+        } else {
+            ast::Parameter::new_default(Type::Void)
+        };
+
+        wrapper_cfg.returns = vec![return_type].into();
         wrapper_cfg.public = true;
         wrapper_cfg.function_no = cfg.function_no.clone();
 
@@ -105,7 +111,7 @@ pub fn function_dispatch(
             let added = Expression::Add {
                 loc: pt::Loc::Codegen,
                 ty: Type::Uint(64),
-                overflowing: false,
+                overflowing: true,
                 left: shifted.into(),
                 right: tag.into(),
             };
