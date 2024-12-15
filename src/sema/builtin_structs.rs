@@ -240,7 +240,7 @@ pub static BUILTIN_STRUCTS: Lazy<[BuiltinStructDeclaration; 3]> = Lazy::new(|| {
 });
 
 impl StructType {
-    pub fn definition<'a>(&'a self, ns: &'a Namespace) -> &StructDecl {
+    pub fn definition<'a>(&'a self, ns: &'a Namespace) -> &'a StructDecl {
         match self {
             StructType::UserDefined(struct_no) => &ns.structs[*struct_no],
             StructType::AccountInfo => &BUILTIN_STRUCTS[0].struct_decl,
