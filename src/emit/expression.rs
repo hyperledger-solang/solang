@@ -153,6 +153,33 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .into();
             }
 
+            if ns.target == Target::Soroban {
+            if let Type::Bytes(x) = ty {
+                let data = bin.emit_global_string("const_string", bs, true);
+
+                // A constant string, or array, is represented by a struct with two fields: a pointer to the data, and its length.
+                let ty = bin.context.struct_type(
+                    &[
+                        bin.llvm_type(&Type::Bytes(bs.len() as u8), ns)
+                            .ptr_type(AddressSpace::default())
+                            .into(),
+                        bin.context.i64_type().into(),
+                    ],
+                    false,
+                );
+
+                return ty
+                    .const_named_struct(&[
+                        data.into(),
+                        bin.context
+                            .i64_type()
+                            .const_int(bs.len() as u64, false)
+                            .into(),
+                    ])
+                    .into();
+            }
+        }
+
             let ty = bin.context.custom_width_int_type((bs.len() * 8) as u32);
 
             // hex"11223344" should become i32 0x11223344
@@ -1579,6 +1606,80 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                             .into(),
                     ])
                     .into()
+            } else if matches!(ty, Type::Bytes(_)) && ns.target == Target::Soroban {
+
+
+                let n = if let Type::Bytes(n) = ty {
+                    n
+                }
+                else {
+                    unreachable!()
+                };
+
+                let data = bin.build_alloca(
+                    function,
+                    bin.context.i64_type().array_type((*n / 8) as u32),
+                    "data",
+                );
+
+                let size = expression(target, bin, size, vartab, function, ns).into_int_value();
+
+                println!("SIZE ISSS {:?}", size);
+
+                let ty = bin.context.struct_type(
+                    &[data.get_type().into(), bin.context.i64_type().into()],
+                    false,
+                );
+
+                // Start with an undefined struct value
+                let mut struct_value = ty.get_undef();
+
+                // Insert `data` into the first field of the struct
+                struct_value = bin
+                    .builder
+                    .build_insert_value(struct_value, data, 0, "insert_data")
+                    .unwrap()
+                    .into_struct_value();
+
+                // Insert `size` into the second field of the struct
+                struct_value = bin
+                    .builder
+                    .build_insert_value(struct_value, size, 1, "insert_size")
+                    .unwrap()
+                    .into_struct_value();
+
+                // Return the constructed struct value
+                struct_value.into()
+            } else if matches!(ty, Type::String) && ns.target == Target::Soroban {
+                /*let data = bin.emit_global_string("const_string", initializer.as_ref().unwrap(), false);
+
+                data.into()*/
+
+                println!("ALLOC DYNAMIC BYTES FOR STRING");
+                let bs = initializer.as_ref().unwrap();
+
+                let data = bin.emit_global_string("const_string", bs, true);
+
+                // A constant string, or array, is represented by a struct with two fields: a pointer to the data, and its length.
+                let ty = bin.context.struct_type(
+                    &[
+                        bin.llvm_type(&Type::Bytes(bs.len() as u8), ns)
+                            .ptr_type(AddressSpace::default())
+                            .into(),
+                        bin.context.i64_type().into(),
+                    ],
+                    false,
+                );
+
+                return ty
+                    .const_named_struct(&[
+                        data.into(),
+                        bin.context
+                            .i64_type()
+                            .const_int(bs.len() as u64, false)
+                            .into(),
+                    ])
+                    .into();
             } else {
                 let elem = match ty {
                     Type::Slice(_) | Type::String | Type::DynamicBytes => Type::Bytes(1),
@@ -2145,6 +2246,16 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             };
 
             advanced.into()
+        }
+
+        Expression::PointerPosition { pointer } => {
+            let ptr = expression(target, bin, pointer, vartab, function, ns);
+            let data = bin.vector_bytes(ptr);
+            let res = bin
+                .builder
+                .build_ptr_to_int(data, bin.context.i64_type(), "sesa");
+
+            res.unwrap().into()
         }
 
         Expression::RationalNumberLiteral { .. }

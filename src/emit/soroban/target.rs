@@ -4,7 +4,8 @@ use crate::codegen::cfg::HashTy;
 use crate::codegen::Expression;
 use crate::emit::binary::Binary;
 use crate::emit::soroban::{
-    SorobanTarget, GET_CONTRACT_DATA, LOG_FROM_LINEAR_MEMORY, PUT_CONTRACT_DATA,
+    SorobanTarget, CALL, GET_CONTRACT_DATA, LOG_FROM_LINEAR_MEMORY, PUT_CONTRACT_DATA,
+    SYMBOL_NEW_FROM_LINEAR_MEMORY, VECTOR_NEW, VECTOR_NEW_FROM_LINEAR_MEMORY,
 };
 use crate::emit::ContractArgs;
 use crate::emit::{TargetRuntime, Variable};
@@ -364,13 +365,202 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: Option<PointerValue<'b>>,
+        address: Option<BasicValueEnum<'b>>,
         contract_args: ContractArgs<'b>,
         ty: CallTy,
         ns: &Namespace,
         loc: Loc,
     ) {
-        unimplemented!()
+        println!("PAYLOAD LEN{:?}", payload_len);
+
+        let eight = bin.context.i64_type().const_int(8, false);
+        let four = bin.context.i64_type().const_int(4, false);
+        let zero = bin.context.i64_type().const_int(0, false);
+        let thirty_two = bin.context.i64_type().const_int(32, false);
+
+        //let callee =unsafe{ bin.builder.build_gep(bin.context.i64_type(), payload[0].into_pointer_value(), ordered_indexes, "symbol")};
+
+        let offset = bin.context.i64_type().const_int(0, false);
+
+        let start = unsafe {
+            bin.builder
+                .build_gep(
+                    bin.context.i64_type().array_type(3),
+                    payload,
+                    &[bin.context.i64_type().const_zero(), offset],
+                    "start",
+                )
+                .unwrap()
+        };
+
+        let symbol = bin
+            .builder
+            .build_load(bin.context.i64_type(), start, "symbol")
+            .unwrap()
+            .into_int_value();
+
+        /*println!("External call!!!!");
+            let callee_name = bin.vector_bytes(payload[0]);
+
+            let callee_pos = bin
+                    .builder
+                    .build_ptr_to_int(callee_name, bin.context.i64_type(), "msg_pos")
+                    .unwrap().const_cast(bin.context.i64_type(), false);
+
+                    let callee_pos_encoded = bin
+                    .builder
+                    .build_left_shift(callee_pos, thirty_two, "temp")
+                    .unwrap();
+                let callee_pos_encoded = bin
+                    .builder
+                    .build_int_add(callee_pos_encoded, four, "callee_pos_encoded")
+                    .unwrap();
+
+            println!("Callee name: {:?}", callee_name);
+
+            let callee_len = bin.vector_len(payload[0]).const_cast(bin.context.i64_type(), false);
+
+            let callee_len_encoded = bin
+            .builder
+            .build_left_shift(callee_len, thirty_two, "temp")
+            .unwrap();
+
+            let callee_len_encoded = bin
+                    .builder
+                    .build_int_add(callee_len_encoded, four, "callee_pos_encoded")
+                    .unwrap();
+
+            println!("Callee len: {:?}", callee_len);
+
+
+            println!("PAYLOAD [1] {:?}", payload[1]);
+
+            let args_ptr = payload[1].into_pointer_value();
+
+            println!("Args ptr: {:?}", args_ptr);
+
+            let args_len = payload_len;
+            println!("Args len: {:?}", args_len);
+
+            let args_len = payload_len.const_cast(bin.context.i64_type(), false);
+
+            let args_len_encoded = bin.builder.build_left_shift(args_len, thirty_two, "temp").unwrap();
+
+            let args_len_encoded = bin
+                    .builder
+                    .build_int_add(args_len_encoded, four, "args_len_encoded")
+                    .unwrap();
+
+            let args_ptr_to_int = bin
+                    .builder
+                    .build_ptr_to_int(args_ptr, bin.context.i64_type(), "args_ptr")
+                    .unwrap();
+
+            let args_ptr_encoded = bin. builder.build_left_shift(args_ptr_to_int, thirty_two, "temp").unwrap();
+            let args_ptr_encoded = bin
+                    .builder
+                    .build_int_add(args_ptr_encoded, four, "args_ptr_encoded")
+                    .unwrap();
+
+
+        /*let symbol = bin
+            .builder
+            .build_call(
+                bin.module.get_function(SYMBOL_NEW_FROM_LINEAR_MEMORY).unwrap(),
+                &[
+                    callee_pos_encoded.into(),
+                    callee_len_encoded.into()
+                ],
+                "symbol",
+            )
+            .unwrap().try_as_basic_value().left().unwrap().into_int_value();*/
+
+
+
+            let vec_object = bin.builder.build_call(
+                bin.module.get_function(VECTOR_NEW_FROM_LINEAR_MEMORY).unwrap(),
+                &[
+                    args_ptr_encoded.into(),
+                    args_len_encoded.into()
+                ],
+                "vec_object",
+            ).unwrap().try_as_basic_value().left().unwrap().into_int_value();*/
+
+        let args_len = bin
+            .builder
+            .build_int_sub(
+                payload_len,
+                bin.context.i64_type().const_int(1, false),
+                "a7a",
+            )
+            .unwrap();
+
+        let args_len = bin
+            .builder
+            .build_int_unsigned_div(args_len, eight, "args_len")
+            .unwrap();
+
+        let args_len_encoded = bin
+            .builder
+            .build_left_shift(args_len, thirty_two, "temp")
+            .unwrap();
+
+        let args_len_encoded = bin
+            .builder
+            .build_int_add(args_len_encoded, four, "args_len_encoded")
+            .unwrap();
+
+        let offset = bin.context.i64_type().const_int(1, false);
+        let args_ptr = unsafe {
+            bin.builder
+                .build_gep(
+                    bin.context.i64_type().array_type(3),
+                    payload,
+                    &[bin.context.i64_type().const_zero(), offset],
+                    "start",
+                )
+                .unwrap()
+        };
+
+        let args_ptr_to_int = bin
+            .builder
+            .build_ptr_to_int(args_ptr, bin.context.i64_type(), "args_ptr")
+            .unwrap();
+
+        let args_ptr_encoded = bin
+            .builder
+            .build_left_shift(args_ptr_to_int, thirty_two, "temp")
+            .unwrap();
+        let args_ptr_encoded = bin
+            .builder
+            .build_int_add(args_ptr_encoded, four, "args_ptr_encoded")
+            .unwrap();
+
+        let vec_object = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(VECTOR_NEW_FROM_LINEAR_MEMORY)
+                    .unwrap(),
+                &[args_ptr_encoded.into(), args_len_encoded.into()],
+                "vec_object",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let call_res = bin
+            .builder
+            .build_call(
+                bin.module.get_function(CALL).unwrap(),
+                &[address.unwrap().into(), symbol.into(), vec_object.into()],
+                "call",
+            )
+            .unwrap();
+
+        //
     }
 
     /// send value to address
@@ -401,7 +591,12 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     /// Return the return data from an external call (either revert error or return values)
     fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b> {
-        unimplemented!()
+        println!("Return data!!!!");
+        bin.context
+            .i8_type()
+            .ptr_type(inkwell::AddressSpace::default())
+            .const_null()
+        //unimplemented!()
     }
 
     /// Return the value we received

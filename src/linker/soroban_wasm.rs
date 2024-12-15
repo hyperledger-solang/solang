@@ -11,7 +11,13 @@ use wasm_encoder::{
 };
 use wasmparser::{Global, Import, Parser, Payload::*, SectionLimited, TypeRef};
 
-use crate::emit::soroban::{GET_CONTRACT_DATA, LOG_FROM_LINEAR_MEMORY, PUT_CONTRACT_DATA};
+use crate::emit::soroban::OBJ_FROM_U64;
+use crate::emit::soroban::OBJ_TO_U64;
+use crate::emit::soroban::VECTOR_NEW_FROM_LINEAR_MEMORY;
+use crate::emit::soroban::{
+    CALL, GET_CONTRACT_DATA, LOG_FROM_LINEAR_MEMORY, PUT_CONTRACT_DATA,
+    SYMBOL_NEW_FROM_LINEAR_MEMORY, VECTOR_NEW,
+};
 
 pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     let dir = tempdir().expect("failed to create temp directory for linking");
@@ -27,11 +33,13 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
         .expect("failed to write object file to temp file");
 
     let mut command_line = vec![
-        CString::new("-O3").unwrap(),
+        //CString::new("-O3").unwrap(),
         CString::new("--no-entry").unwrap(),
         CString::new("--allow-undefined").unwrap(),
         CString::new("--gc-sections").unwrap(),
         CString::new("--global-base=0").unwrap(),
+        CString::new("--initial-memory=1048576").unwrap(), // 1 MiB initial memory
+        CString::new("--max-memory=1048576").unwrap(),
     ];
     command_line.push(CString::new("--export-dynamic").unwrap());
 
@@ -98,6 +106,12 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
         let module_name = match import.name {
             GET_CONTRACT_DATA | PUT_CONTRACT_DATA => "l",
             LOG_FROM_LINEAR_MEMORY => "x",
+            SYMBOL_NEW_FROM_LINEAR_MEMORY => "b",
+            VECTOR_NEW => "v",
+            CALL => "d",
+            VECTOR_NEW_FROM_LINEAR_MEMORY => "v",
+            OBJ_TO_U64 => "i",
+            OBJ_FROM_U64 => "i",
             _ => panic!("got func {:?}", import),
         };
         // parse the import name to all string after the the first dot
