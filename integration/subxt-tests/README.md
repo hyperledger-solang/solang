@@ -1,6 +1,6 @@
 # Solang `subxt` integration test suite
 
-This directroy contains integration tests against a real node using `subxt`.
+This directory contains integration tests against a real node using `subxt`.
 
 ## How to execute the tests
 
