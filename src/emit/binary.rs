@@ -8,6 +8,7 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::str;
 
+use libc::uint32_t;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
@@ -930,8 +931,14 @@ impl<'a> Binary<'a> {
             match ty {
                 Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
                 Type::Int(n) | Type::Uint(n) => {
-                    BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
+                    if ns.target == Target::Soroban {
+                        //ahmads edit testing if this work....
+                        BasicTypeEnum::IntType(self.context.i64_type())
+                    } else {
+                        BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
+                    }
                 }
+
                 Type::Value => BasicTypeEnum::IntType(
                     self.context
                         .custom_width_int_type(ns.value_length as u32 * 8),
