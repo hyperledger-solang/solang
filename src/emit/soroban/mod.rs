@@ -3,7 +3,7 @@
 pub(super) mod target;
 use crate::codegen::{
     cfg::{ASTFunction, ControlFlowGraph},
-    Options, STORAGE_INITIALIZER,
+    HostFunctions, Options, STORAGE_INITIALIZER,
 };
 
 use crate::emit::cfg::emit_cfg;
@@ -27,33 +27,7 @@ const SOROBAN_ENV_INTERFACE_VERSION: ScEnvMetaEntryInterfaceVersion =
         pre_release: 0,
     };
 
-pub enum HostFunctions {
-    PutContractData,
-    GetContractData,
-    LogFromLinearMemory,
-    SymbolNewFromLinearMemory,
-    VectorNew,
-    VectorNewFromLinearMemory,
-    Call,
-    ObjToU64,
-    ObjFromU64,
-}
-
 impl HostFunctions {
-    pub fn name(&self) -> &str {
-        match self {
-            HostFunctions::PutContractData => "l._",
-            HostFunctions::GetContractData => "l.1",
-            HostFunctions::LogFromLinearMemory => "x._",
-            HostFunctions::SymbolNewFromLinearMemory => "b.j",
-            HostFunctions::VectorNew => "v._",
-            HostFunctions::VectorNewFromLinearMemory => "v.g",
-            HostFunctions::Call => "d._",
-            HostFunctions::ObjToU64 => "i.0",
-            HostFunctions::ObjFromU64 => "i._",
-        }
-    }
-
     pub fn function_signature<'b>(&self, bin: &Binary<'b>) -> FunctionType<'b> {
         let ty = bin.context.i64_type();
         match self {

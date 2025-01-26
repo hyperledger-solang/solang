@@ -94,6 +94,34 @@ impl From<inkwell::OptimizationLevel> for OptimizationLevel {
     }
 }
 
+pub enum HostFunctions {
+    PutContractData,
+    GetContractData,
+    LogFromLinearMemory,
+    SymbolNewFromLinearMemory,
+    VectorNew,
+    VectorNewFromLinearMemory,
+    Call,
+    ObjToU64,
+    ObjFromU64,
+}
+
+impl HostFunctions {
+    pub fn name(&self) -> &str {
+        match self {
+            HostFunctions::PutContractData => "l._",
+            HostFunctions::GetContractData => "l.1",
+            HostFunctions::LogFromLinearMemory => "x._",
+            HostFunctions::SymbolNewFromLinearMemory => "b.j",
+            HostFunctions::VectorNew => "v._",
+            HostFunctions::VectorNewFromLinearMemory => "v.g",
+            HostFunctions::Call => "d._",
+            HostFunctions::ObjToU64 => "i.0",
+            HostFunctions::ObjFromU64 => "i._",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Options {
     pub dead_storage: bool,

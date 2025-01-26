@@ -2,7 +2,7 @@ use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::create_encoder;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Expression;
-use crate::emit::soroban::HostFunctions;
+use crate::codegen::HostFunctions;
 use crate::sema::ast::{Namespace, RetrieveType, Type, Type::Uint};
 use num_bigint::BigInt;
 use num_traits::Zero;
