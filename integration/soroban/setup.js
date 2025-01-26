@@ -32,10 +32,6 @@ function filenameNoExtension(filename) {
   return path.basename(filename, path.extname(filename));
 }
 
-function build_rust() {
-  exe(`soroban contract build --profile release-with-logs`);
-}
-
 function deploy(wasm) {
 
   let contractId = path.join(dirname, '.soroban', 'contract-ids', filenameNoExtension(wasm) + '.txt');
@@ -68,7 +64,6 @@ function add_testnet() {
     --network-passphrase "Test SDF Network ; September 2015"`);
 }
 
-build_rust();
 add_testnet();
 generate_alice();
 deploy_all();

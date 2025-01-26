@@ -339,6 +339,9 @@ jobs:
     - name: Build Solang contracts
       run: npm run build
       working-directory: ./integration/soroban
+    - name: Build rust contracts
+      run: soroban contract build --profile release-with-logs
+      working-directory: ./integration/soroban/rust/contracts
     - name: Setup Soroban enivronment
       run: npm run setup
       working-directory: ./integration/soroban
