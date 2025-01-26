@@ -136,7 +136,7 @@ pub fn function_dispatch(
     wrapper_cfgs
 }
 
-fn decode_args(function: &Function, ns: &Namespace) -> Vec<Expression> {
+fn decode_args(function: &Function, _ns: &Namespace) -> Vec<Expression> {
     let mut args = Vec::new();
 
     for (i, arg) in function.params.iter().enumerate() {
