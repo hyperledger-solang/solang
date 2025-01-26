@@ -12,6 +12,7 @@ use funty::Fundamental;
 use inkwell::{
     context::Context,
     module::{Linkage, Module},
+    types::FunctionType,
 };
 use soroban_sdk::xdr::{
     Limited, Limits, ScEnvMetaEntry, ScEnvMetaEntryInterfaceVersion, ScSpecEntry,
@@ -25,9 +26,67 @@ const SOROBAN_ENV_INTERFACE_VERSION: ScEnvMetaEntryInterfaceVersion =
         protocol: 22,
         pre_release: 0,
     };
-pub const PUT_CONTRACT_DATA: &str = "l._";
-pub const GET_CONTRACT_DATA: &str = "l.1";
-pub const LOG_FROM_LINEAR_MEMORY: &str = "x._";
+
+pub enum HostFunctions {
+    PutContractData,
+    GetContractData,
+    LogFromLinearMemory,
+    SymbolNewFromLinearMemory,
+    VectorNew,
+    VectorNewFromLinearMemory,
+    Call,
+    ObjToU64,
+    ObjFromU64,
+}
+
+impl HostFunctions {
+    pub fn name(&self) -> &str {
+        match self {
+            HostFunctions::PutContractData => "l._",
+            HostFunctions::GetContractData => "l.1",
+            HostFunctions::LogFromLinearMemory => "x._",
+            HostFunctions::SymbolNewFromLinearMemory => "b.j",
+            HostFunctions::VectorNew => "v._",
+            HostFunctions::VectorNewFromLinearMemory => "v.g",
+            HostFunctions::Call => "d._",
+            HostFunctions::ObjToU64 => "i.0",
+            HostFunctions::ObjFromU64 => "i._",
+        }
+    }
+
+    pub fn function_signature<'b>(&self, bin: &Binary<'b>) -> FunctionType<'b> {
+        let ty = bin.context.i64_type();
+        match self {
+            HostFunctions::PutContractData => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::GetContractData => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::LogFromLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::SymbolNewFromLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::VectorNew => bin.context.i64_type().fn_type(&[], false),
+            HostFunctions::Call => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::VectorNewFromLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::ObjToU64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjFromU64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+        }
+    }
+}
 
 pub struct SorobanTarget;
 
@@ -174,8 +233,18 @@ impl SorobanTarget {
                             .unwrap_or_else(|| i.to_string())
                             .try_into()
                             .expect("function input name exceeds limit"),
-                        type_: ScSpecTypeDef::U64, // TODO: Map type.
-                        doc: StringM::default(),   // TODO: Add doc.
+                        type_: match p.ty {
+                            ast::Type::Uint(32) => ScSpecTypeDef::U32,
+                            ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                            ast::Type::Int(128) => ScSpecTypeDef::I128,
+                            ast::Type::Bool => ScSpecTypeDef::Bool,
+                            ast::Type::Address(_) => ScSpecTypeDef::Address,
+                            ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
+                            ast::Type::String => ScSpecTypeDef::String,
+                            //ast::Type::Val => ScSpecTypeDef::Address,
+                            _ => panic!("unsupported input type {:?}", p.ty),
+                        }, // TODO: Map type.
+                        doc: StringM::default(), // TODO: Add doc.
                     })
                     .collect::<Vec<_>>()
                     .try_into()
@@ -233,33 +302,26 @@ impl SorobanTarget {
     }
 
     fn declare_externals(binary: &mut Binary) {
-        let ty = binary.context.i64_type();
-        let function_ty_1 = binary
-            .context
-            .i64_type()
-            .fn_type(&[ty.into(), ty.into(), ty.into()], false);
-        let function_ty = binary
-            .context
-            .i64_type()
-            .fn_type(&[ty.into(), ty.into()], false);
+        let host_functions = [
+            HostFunctions::PutContractData,
+            HostFunctions::GetContractData,
+            HostFunctions::LogFromLinearMemory,
+            HostFunctions::SymbolNewFromLinearMemory,
+            HostFunctions::VectorNew,
+            HostFunctions::Call,
+            HostFunctions::VectorNewFromLinearMemory,
+            HostFunctions::ObjToU64,
+            HostFunctions::ObjFromU64,
+            HostFunctions::PutContractData,
+        ];
 
-        let log_function_ty = binary
-            .context
-            .i64_type()
-            .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false);
-
-        binary
-            .module
-            .add_function(PUT_CONTRACT_DATA, function_ty_1, Some(Linkage::External));
-        binary
-            .module
-            .add_function(GET_CONTRACT_DATA, function_ty, Some(Linkage::External));
-
-        binary.module.add_function(
-            LOG_FROM_LINEAR_MEMORY,
-            log_function_ty,
-            Some(Linkage::External),
-        );
+        for func in &host_functions {
+            binary.module.add_function(
+                func.name(),
+                func.function_signature(binary),
+                Some(Linkage::External),
+            );
+        }
     }
 
     fn emit_initializer(binary: &mut Binary, _ns: &ast::Namespace) {

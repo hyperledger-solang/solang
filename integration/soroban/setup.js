@@ -21,7 +21,7 @@ function exe(command) {
 }
 
 function generate_alice() {
-  exe(`${soroban} keys generate alice --network testnet`);
+  exe(`${soroban} keys generate alice --network testnet --overwrite`);
 
   // get the secret key of alice and put it in alice.txt
   exe(`${soroban} keys show alice > alice.txt`);
@@ -30,6 +30,10 @@ function generate_alice() {
 
 function filenameNoExtension(filename) {
   return path.basename(filename, path.extname(filename));
+}
+
+function build_rust() {
+  exe(`soroban contract build --profile release-with-logs`);
 }
 
 function deploy(wasm) {
@@ -43,7 +47,13 @@ function deploy_all() {
   const contractsDir = path.join(dirname, '.soroban', 'contract-ids');
   mkdirSync(contractsDir, { recursive: true });
 
-  const wasmFiles = readdirSync(`${dirname}`).filter(file => file.endsWith('.wasm'));
+  let wasmFiles = readdirSync(`${dirname}`).filter(file => file.endsWith('.wasm'));
+  console.log(dirname);
+  
+  let rust_wasm = path.join('rust','target','wasm32-unknown-unknown', 'release-with-logs', 'hello_world.wasm');
+
+  // add rust wasm file to the list of wasm files
+  wasmFiles.push(rust_wasm);
 
   wasmFiles.forEach(wasmFile => {
     deploy(path.join(dirname, wasmFile));
@@ -58,6 +68,7 @@ function add_testnet() {
     --network-passphrase "Test SDF Network ; September 2015"`);
 }
 
+build_rust();
 add_testnet();
 generate_alice();
 deploy_all();

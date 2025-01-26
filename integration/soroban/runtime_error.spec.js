@@ -35,7 +35,7 @@ describe('Runtime Error', () => {
     await call_contract_function("decrement", server, keypair, contract);
   });
 
-  it('get correct initial counter', async () => {
+  it('prints error', async () => {
 
     // decrement the counter again, resulting in a runtime error
     let res = await call_contract_function("decrement", server, keypair, contract);

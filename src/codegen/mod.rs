@@ -660,6 +660,9 @@ pub enum Expression {
         pointer: Box<Expression>,
         bytes_offset: Box<Expression>,
     },
+    PointerPosition {
+        pointer: Box<Expression>,
+    },
 }
 
 impl CodeLocation for Expression {
@@ -716,7 +719,8 @@ impl CodeLocation for Expression {
             Expression::InternalFunctionCfg { .. }
             | Expression::Poison
             | Expression::Undefined { .. }
-            | Expression::AdvancePointer { .. } => pt::Loc::Codegen,
+            | Expression::AdvancePointer { .. }
+            | Expression::PointerPosition { .. } => pt::Loc::Codegen,
         }
     }
 }
@@ -868,6 +872,7 @@ impl RetrieveType for Expression {
 
             Expression::AdvancePointer { .. } => Type::BufferPointer,
             Expression::FormatString { .. } => Type::String,
+            Expression::PointerPosition { .. } => Type::Uint(64),
             Expression::Poison => unreachable!("Expression does not have a type"),
         }
     }

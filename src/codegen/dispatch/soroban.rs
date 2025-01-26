@@ -3,7 +3,7 @@
 use num_bigint::BigInt;
 use solang_parser::pt::{self};
 
-use crate::sema::ast;
+use crate::sema::ast::{self, Function};
 use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy},
@@ -54,6 +54,7 @@ pub fn function_dispatch(
 
         wrapper_cfg.returns = vec![return_type].into();
         wrapper_cfg.public = true;
+        wrapper_cfg.function_no = cfg.function_no;
 
         let mut vartab = Vartable::from_symbol_table(&function.symtable, ns.next_id);
 
@@ -80,29 +81,7 @@ pub fn function_dispatch(
             res: call_returns,
             call: InternalCallTy::Static { cfg_no },
             return_tys,
-            args: function
-                .params
-                .iter()
-                .enumerate()
-                .map(|(i, p)| Expression::ShiftRight {
-                    loc: pt::Loc::Codegen,
-                    ty: Type::Uint(64),
-                    left: Expression::FunctionArg {
-                        loc: p.loc,
-                        ty: p.ty.clone(),
-                        arg_no: i,
-                    }
-                    .into(),
-                    right: Expression::NumberLiteral {
-                        loc: pt::Loc::Codegen,
-                        ty: Type::Uint(64),
-                        value: BigInt::from(8_u64),
-                    }
-                    .into(),
-
-                    signed: false,
-                })
-                .collect(),
+            args: decode_args(function, ns),
         };
 
         wrapper_cfg.add(&mut vartab, placeholder);
@@ -155,4 +134,46 @@ pub fn function_dispatch(
     }
 
     wrapper_cfgs
+}
+
+fn decode_args(function: &Function, ns: &Namespace) -> Vec<Expression> {
+    let mut args = Vec::new();
+
+    for (i, arg) in function.params.iter().enumerate() {
+        let arg = match arg.ty {
+            Type::Uint(64) => Expression::ShiftRight {
+                loc: arg.loc,
+                ty: Type::Uint(64),
+                left: Box::new(Expression::FunctionArg {
+                    loc: arg.loc,
+                    ty: arg.ty.clone(),
+                    arg_no: i,
+                }),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: arg.loc,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(8_u64),
+                }),
+                signed: false,
+            },
+
+            Type::Address(_) => Expression::FunctionArg {
+                loc: arg.loc,
+                ty: arg.ty.clone(),
+                arg_no: i,
+            },
+
+            // TODO: implement encoding/decoding for Int 128
+            Type::Int(128) => Expression::FunctionArg {
+                loc: arg.loc,
+                ty: arg.ty.clone(),
+                arg_no: i,
+            },
+            _ => unimplemented!(),
+        };
+
+        args.push(arg);
+    }
+
+    args
 }
