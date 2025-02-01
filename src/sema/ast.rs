@@ -1779,6 +1779,7 @@ pub enum Builtin {
     TypeInterfaceId,
     TypeRuntimeCode,
     TypeCreatorCode,
+    ExtendPersistentTtl,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]

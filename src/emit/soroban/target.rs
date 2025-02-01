@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::HashTy;
+use crate::codegen::Builtin;
 use crate::codegen::Expression;
 use crate::emit::binary::Binary;
 use crate::emit::soroban::{HostFunctions, SorobanTarget};
@@ -16,6 +17,7 @@ use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue,
     PointerValue,
 };
+use num_traits::ToPrimitive;
 
 use solang_parser::pt::{Loc, StorageType};
 
@@ -460,7 +462,74 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'b>,
         ns: &Namespace,
     ) -> BasicValueEnum<'b> {
-        unimplemented!()
+        emit_context!(bin);
+
+        match expr {
+            Expression::Builtin {
+                kind: Builtin::ExtendPersistentTtl,
+                args,
+                ..
+            } => {
+                // Get arguments
+                // (func $extend_contract_data_ttl (param $k_val i64) (param $t_storage_type i64) (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
+                let storage_type = storage_type_to_int(&Some(StorageType::Persistent(None)));
+                assert_eq!(args.len(), 3, "extendPersistentTtl expects 3 arguments");
+                // SAFETY: We already checked that the length of args is 3 so it is safe to unwrap here
+                let slot_no = match args.first().unwrap() {
+                    Expression::FunctionArg { arg_no, .. } => *arg_no,
+                    _ => panic!("Expected slot_no to be of type Expression::FunctionArg"),
+                }
+                .to_u64()
+                .unwrap();
+                let threshold = match args.get(1).unwrap() {
+                    Expression::NumberLiteral { value, .. } => value,
+                    _ => panic!("Expected threshold to be of type Expression::NumberLiteral"),
+                }
+                .to_u64()
+                .unwrap();
+                let extend_to = match args.get(2).unwrap() {
+                    Expression::NumberLiteral { value, .. } => value,
+                    _ => panic!("Expected extend_to to be of type Expression::NumberLiteral"),
+                }
+                .to_u64()
+                .unwrap();
+
+                // Encode the values (threshold and extend_to)
+                // See: https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#tag-values
+                let threshold_u32_val = (threshold << 32) + 4;
+                let extend_to_u32_val = (extend_to << 32) + 4;
+
+                // Call the function
+                let function_value = bin.module.get_function(EXTEND_CONTRACT_DATA_TTL).unwrap();
+
+                let value = bin
+                    .builder
+                    .build_call(
+                        function_value,
+                        &[
+                            bin.context.i64_type().const_int(slot_no, false).into(),
+                            bin.context.i64_type().const_int(storage_type, false).into(),
+                            bin.context
+                                .i64_type()
+                                .const_int(threshold_u32_val, false)
+                                .into(),
+                            bin.context
+                                .i64_type()
+                                .const_int(extend_to_u32_val, false)
+                                .into(),
+                        ],
+                        EXTEND_CONTRACT_DATA_TTL,
+                    )
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                value.into()
+            }
+            _ => unimplemented!("unsupported builtin"),
+        }
     }
 
     /// Return the return data from an external call (either revert error or return values)
