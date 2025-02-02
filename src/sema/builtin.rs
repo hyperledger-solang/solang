@@ -553,7 +553,7 @@ pub static BUILTIN_METHODS: Lazy<[Prototype; 28]> = Lazy::new(|| {
             builtin: Builtin::ExtendPersistentTtl,
             namespace: None, 
             // FIXME: For now as a PoC, we are only supporting this method for type `uint64`
-            method: vec![Type::Uint(64)], 
+            method: vec![Type::StorageRef(false, Box::new(Type::Uint(64)))],
             name: "extendPersistentTtl",
             params: vec![Type::Uint(32), Type::Uint(32)], // Parameters `threshold` and `extend_to` of type `uint32`
             ret: vec![Type::Int(64)], 
