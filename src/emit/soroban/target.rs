@@ -476,20 +476,29 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 assert_eq!(args.len(), 3, "extendPersistentTtl expects 3 arguments");
                 // SAFETY: We already checked that the length of args is 3 so it is safe to unwrap here
                 let slot_no = match args.first().unwrap() {
-                    Expression::FunctionArg { arg_no, .. } => *arg_no,
-                    _ => panic!("Expected slot_no to be of type Expression::FunctionArg"),
+                    Expression::NumberLiteral { value, .. } => value,
+                    _ => panic!(
+                        "Expected slot_no to be of type Expression::NumberLiteral. Actual: {:?}",
+                        args.get(1).unwrap()
+                    ),
                 }
                 .to_u64()
                 .unwrap();
                 let threshold = match args.get(1).unwrap() {
                     Expression::NumberLiteral { value, .. } => value,
-                    _ => panic!("Expected threshold to be of type Expression::NumberLiteral"),
+                    _ => panic!(
+                        "Expected threshold to be of type Expression::NumberLiteral. Actual: {:?}",
+                        args.get(1).unwrap()
+                    ),
                 }
                 .to_u64()
                 .unwrap();
                 let extend_to = match args.get(2).unwrap() {
                     Expression::NumberLiteral { value, .. } => value,
-                    _ => panic!("Expected extend_to to be of type Expression::NumberLiteral"),
+                    _ => panic!(
+                        "Expected extend_to to be of type Expression::NumberLiteral. Actual: {:?}",
+                        args.get(2).unwrap()
+                    ),
                 }
                 .to_u64()
                 .unwrap();
