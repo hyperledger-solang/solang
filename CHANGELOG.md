@@ -83,7 +83,7 @@ The language server is much improved, and many fixes all over.
 
 ### Changed
 - The Substrate target has been renamed to Polkadot. [xermicus](https://github.com/xermicus)
-- **Polkadot** `assert()` and `require()` is now implemented as a transction revert, rather
+- **Polkadot** `assert()` and `require()` is now implemented as a transaction revert, rather
   than a trap. The error data is returned, and encoded the same as on Ethereum. Error data is now
   passed to the calling contract, all the way up the call stack. [xermicus](https://github.com/xermicus)
 - **Polkadot** constructor can be non-payable. [xermicus](https://github.com/xermicus)
@@ -173,7 +173,7 @@ The parser and semantic analysis stage of Solang have gone through
   [LucasSte](https://github.com/LucasSte)
 
 ### Changed
-- **Solana**: Addresses are now base58 encoded when formated with `"address:{}".format(address)`.
+- **Solana**: Addresses are now base58 encoded when formatted with `"address:{}".format(address)`.
   [LucasSte](https://github.com/LucasSte)
 - **Substrate**: No longer use the prefixed names for seal runtime API calls, which grants small improvements in contract sizes. [xermicus](https://github.com/xermicus)
 
@@ -412,7 +412,7 @@ substrate contracts node `v0.22.1`.
 ## v0.1.9
 
 ### Added
-- Added support for solc import mapppings using `--importmap`
+- Added support for solc import mappings using `--importmap`
 - Added support for Events on Solana
 - `msg.data`, `msg.sig`, `msg.value`, `block.number`, and `block.slot` are
   implemented for Solana
