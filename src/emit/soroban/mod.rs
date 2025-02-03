@@ -174,8 +174,12 @@ impl SorobanTarget {
                             .unwrap_or_else(|| i.to_string())
                             .try_into()
                             .expect("function input name exceeds limit"),
-                        type_: ScSpecTypeDef::U64, // TODO: Map type.
-                        doc: StringM::default(),   // TODO: Add doc.
+                        type_: match p.ty {
+                            ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                            ast::Type::Uint(32) => ScSpecTypeDef::U32,
+                            _ => panic!("unsupported input type"),
+                        }, // TODO: Map type.
+                        doc: StringM::default(), // TODO: Add doc.
                     })
                     .collect::<Vec<_>>()
                     .try_into()
