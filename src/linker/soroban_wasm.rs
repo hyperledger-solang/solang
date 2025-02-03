@@ -11,7 +11,9 @@ use wasm_encoder::{
 };
 use wasmparser::{Global, Import, Parser, Payload::*, SectionLimited, TypeRef};
 
-use crate::emit::soroban::{GET_CONTRACT_DATA, LOG_FROM_LINEAR_MEMORY, PUT_CONTRACT_DATA};
+use crate::emit::soroban::{
+    EXTEND_CONTRACT_DATA_TTL, GET_CONTRACT_DATA, LOG_FROM_LINEAR_MEMORY, PUT_CONTRACT_DATA,
+};
 
 pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     let dir = tempdir().expect("failed to create temp directory for linking");
@@ -96,7 +98,7 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
             _ => panic!("unexpected WASM import section {:?}", import),
         };
         let module_name = match import.name {
-            GET_CONTRACT_DATA | PUT_CONTRACT_DATA => "l",
+            GET_CONTRACT_DATA | PUT_CONTRACT_DATA | EXTEND_CONTRACT_DATA_TTL => "l",
             LOG_FROM_LINEAR_MEMORY => "x",
             _ => panic!("got func {:?}", import),
         };
