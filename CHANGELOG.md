@@ -83,7 +83,7 @@ The language server is much improved, and many fixes all over.
 
 ### Changed
 - The Substrate target has been renamed to Polkadot. [xermicus](https://github.com/xermicus)
-- **Polkadot** `assert()` and `require()` is now implemented as a transction revert, rather
+- **Polkadot** `assert()` and `require()` is now implemented as a transaction revert, rather
   than a trap. The error data is returned, and encoded the same as on Ethereum. Error data is now
   passed to the calling contract, all the way up the call stack. [xermicus](https://github.com/xermicus)
 - **Polkadot** constructor can be non-payable. [xermicus](https://github.com/xermicus)
