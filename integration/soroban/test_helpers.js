@@ -1,13 +1,13 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
 
-export async function call_contract_function(method, server, keypair, contract) {
+export async function call_contract_function(method, server, keypair, contract, ... params) {
     let res = null;
 
     try {
         let builtTransaction = new StellarSdk.TransactionBuilder(await server.getAccount(keypair.publicKey()), {
             fee: StellarSdk.BASE_FEE,
             networkPassphrase: StellarSdk.Networks.TESTNET,
-        }).addOperation(contract.call(method)).setTimeout(30).build();
+        }).addOperation(contract.call(method, ...params)).setTimeout(30).build();
 
         let preparedTransaction = await server.prepareTransaction(builtTransaction);
 
@@ -34,9 +34,8 @@ export async function call_contract_function(method, server, keypair, contract) 
                 }
                 // Extract and return the return value from the contract
                 let transactionMeta = getResponse.resultMetaXdr;
-                let returnValue = transactionMeta.v3().sorobanMeta().returnValue();
-                console.log(`Transaction result: ${returnValue.value()}`);
-                res = returnValue.value();
+                let returnValue = transactionMeta.v3().sorobanMeta();
+                res = returnValue;
             } else {
                 throw `Transaction failed: ${getResponse.resultXdr}`;
             }
@@ -61,4 +60,23 @@ export async function call_contract_function(method, server, keypair, contract) 
     }
 
     return res;
+}
+
+export function extractLogEvent(diagnosticEvents) {
+    // Convert events into human-readable format
+    const humanReadableEvents = StellarSdk.humanizeEvents(diagnosticEvents);
+
+    // Find the log event
+    const logEvent = humanReadableEvents.find(event =>
+        event.type === "diagnostic" && event.topics.includes("log")
+    );
+
+    if (logEvent) {
+        return {
+            contractId: logEvent.contractId || "Unknown Contract",
+            logMessages: Array.isArray(logEvent.data) ? logEvent.data : [logEvent.data]
+        };
+    }
+
+    return null; // No log event found
 }

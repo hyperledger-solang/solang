@@ -3,9 +3,7 @@
 use crate::codegen::cfg::HashTy;
 use crate::codegen::Expression;
 use crate::emit::binary::Binary;
-use crate::emit::soroban::{
-    SorobanTarget, GET_CONTRACT_DATA, LOG_FROM_LINEAR_MEMORY, PUT_CONTRACT_DATA,
-};
+use crate::emit::soroban::{HostFunctions, SorobanTarget};
 use crate::emit::ContractArgs;
 use crate::emit::{TargetRuntime, Variable};
 use crate::emit_context;
@@ -48,7 +46,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(binary);
         let ret = call!(
-            GET_CONTRACT_DATA,
+            HostFunctions::GetContractData.name(),
             &[
                 slot.as_basic_value_enum()
                     .into_int_value()
@@ -85,7 +83,10 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
         let storage_type = storage_type_to_int(storage_type);
 
-        let function_value = binary.module.get_function(PUT_CONTRACT_DATA).unwrap();
+        let function_value = binary
+            .module
+            .get_function(HostFunctions::PutContractData.name())
+            .unwrap();
 
         let value = binary
             .builder
@@ -103,7 +104,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                         .const_int(storage_type, false)
                         .into(),
                 ],
-                PUT_CONTRACT_DATA,
+                HostFunctions::PutContractData.name(),
             )
             .unwrap()
             .try_as_basic_value()
@@ -258,51 +259,21 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 .builder
                 .build_ptr_to_int(string, bin.context.i64_type(), "msg_pos")
                 .unwrap();
-            let msg_pos = msg_pos.const_cast(bin.context.i64_type(), false);
-
             let length = length.const_cast(bin.context.i64_type(), false);
 
-            let eight = bin.context.i64_type().const_int(8, false);
-            let four = bin.context.i64_type().const_int(4, false);
-            let zero = bin.context.i64_type().const_int(0, false);
-            let thirty_two = bin.context.i64_type().const_int(32, false);
+            let msg_pos_encoded = encode_value(msg_pos, 32, 4, bin);
+            let length_encoded = encode_value(length, 32, 4, bin);
 
-            // XDR encode msg_pos and length
-            let msg_pos_encoded = bin
-                .builder
-                .build_left_shift(msg_pos, thirty_two, "temp")
-                .unwrap();
-            let msg_pos_encoded = bin
-                .builder
-                .build_int_add(msg_pos_encoded, four, "msg_pos_encoded")
-                .unwrap();
-
-            let length_encoded = bin
-                .builder
-                .build_left_shift(length, thirty_two, "temp")
-                .unwrap();
-            let length_encoded = bin
-                .builder
-                .build_int_add(length_encoded, four, "length_encoded")
-                .unwrap();
-
-            let zero_encoded = bin.builder.build_left_shift(zero, eight, "temp").unwrap();
-
-            let eight_encoded = bin.builder.build_left_shift(eight, eight, "temp").unwrap();
-            let eight_encoded = bin
-                .builder
-                .build_int_add(eight_encoded, four, "eight_encoded")
-                .unwrap();
-
-            let call_res = bin
-                .builder
+            bin.builder
                 .build_call(
-                    bin.module.get_function(LOG_FROM_LINEAR_MEMORY).unwrap(),
+                    bin.module
+                        .get_function(HostFunctions::LogFromLinearMemory.name())
+                        .unwrap(),
                     &[
                         msg_pos_encoded.into(),
                         length_encoded.into(),
                         msg_pos_encoded.into(),
-                        four.into(),
+                        encode_value(bin.context.i64_type().const_zero(), 32, 4, bin).into(),
                     ],
                     "log",
                 )
@@ -364,13 +335,106 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: Option<PointerValue<'b>>,
+        address: Option<BasicValueEnum<'b>>,
         contract_args: ContractArgs<'b>,
         ty: CallTy,
         ns: &Namespace,
         loc: Loc,
     ) {
-        unimplemented!()
+        let offset = bin.context.i64_type().const_int(0, false);
+
+        let start = unsafe {
+            bin.builder
+                .build_gep(
+                    bin.context.i64_type().array_type(1),
+                    payload,
+                    &[bin.context.i64_type().const_zero(), offset],
+                    "start",
+                )
+                .unwrap()
+        };
+
+        let symbol = bin
+            .builder
+            .build_load(bin.context.i64_type(), start, "symbol")
+            .unwrap()
+            .into_int_value();
+
+        let args_len = bin
+            .builder
+            .build_int_unsigned_div(
+                payload_len,
+                bin.context.i64_type().const_int(8, false),
+                "args_len",
+            )
+            .unwrap();
+
+        let args_len = bin
+            .builder
+            .build_int_sub(
+                args_len,
+                bin.context.i64_type().const_int(1, false),
+                "args_len",
+            )
+            .unwrap();
+
+        let args_len_encoded = encode_value(args_len, 32, 4, bin);
+
+        let offset = bin.context.i64_type().const_int(1, false);
+        let args_ptr = unsafe {
+            bin.builder
+                .build_gep(
+                    bin.context.i64_type().array_type(1),
+                    payload,
+                    &[bin.context.i64_type().const_zero(), offset],
+                    "start",
+                )
+                .unwrap()
+        };
+
+        let args_ptr_to_int = bin
+            .builder
+            .build_ptr_to_int(args_ptr, bin.context.i64_type(), "args_ptr")
+            .unwrap();
+
+        let args_ptr_encoded = encode_value(args_ptr_to_int, 32, 4, bin);
+
+        let vec_object = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VectorNewFromLinearMemory.name())
+                    .unwrap(),
+                &[args_ptr_encoded.into(), args_len_encoded.into()],
+                "vec_object",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let call_res = bin
+            .builder
+            .build_call(
+                bin.module.get_function(HostFunctions::Call.name()).unwrap(),
+                &[address.unwrap().into(), symbol.into(), vec_object.into()],
+                "call",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let allocate_i64 = bin
+            .builder
+            .build_alloca(bin.context.i64_type(), "allocate_i64")
+            .unwrap();
+
+        bin.builder.build_store(allocate_i64, call_res).unwrap();
+
+        *bin.return_data.borrow_mut() = Some(allocate_i64);
     }
 
     /// send value to address
@@ -401,7 +465,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     /// Return the return data from an external call (either revert error or return values)
     fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b> {
-        unimplemented!()
+        bin.return_data.borrow().unwrap()
     }
 
     /// Return the value we received
@@ -459,4 +523,22 @@ fn storage_type_to_int(storage_type: &Option<StorageType>) -> u64 {
     } else {
         1
     }
+}
+
+fn encode_value<'a>(value: IntValue<'a>, shift: u64, add: u64, bin: &'a Binary) -> IntValue<'a> {
+    let shifted = bin
+        .builder
+        .build_left_shift(
+            value,
+            bin.context.i64_type().const_int(shift, false),
+            "temp",
+        )
+        .unwrap();
+    bin.builder
+        .build_int_add(
+            shifted,
+            bin.context.i64_type().const_int(add, false),
+            "encoded",
+        )
+        .unwrap()
 }

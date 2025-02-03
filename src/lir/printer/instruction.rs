@@ -249,6 +249,9 @@ impl Printer<'_> {
                         write!(f, "function#{}", cfg_no).unwrap()
                     }
                     InternalCallTy::Dynamic(op) => self.print_rhs_operand(f, op),
+                    InternalCallTy::HostFunction { name } => {
+                        write!(f, "host_function#{}", name).unwrap()
+                    }
                 };
 
                 write!(f, "(").unwrap();

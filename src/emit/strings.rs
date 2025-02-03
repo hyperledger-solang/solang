@@ -95,7 +95,15 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
     }
 
     // allocate the string and
-    let vector = bin.vector_new(length, bin.context.i32_type().const_int(1, false), None);
+    let vector = bin
+        .vector_new(
+            length,
+            bin.context.i32_type().const_int(1, false),
+            None,
+            &Type::String,
+            ns,
+        )
+        .into_pointer_value();
 
     let output_start = bin.vector_bytes(vector.into());
 
