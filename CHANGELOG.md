@@ -34,7 +34,7 @@ There are many fixes all over the code base.
   }
   ```
 - The language server can now format Solidity source code using the `forge-fmt` crate. [chioni16](https://github.com/chioni16)
-- The langauge server can now do go references, go to implementation, and go to type
+- The language server can now do go references, go to implementation, and go to type
   definition. [chioni16](https://github.com/chioni16)
 - **Polkadot** `Panic` errors can now be caught in try-catch statements [xermicus](https://github.com/xermicus)
 - **Polkadot** custom errors are now supported [xermicus](https://github.com/xermicus)
@@ -117,7 +117,7 @@ The language server is much improved, and many fixes all over.
 - Do not allow push and pop in fixed length arrays. [LucasSte](https://github.com/LucasSte)
 - Improve unused variable elimination to remove unused arrays. [LucasSte](https://github.com/LucasSte)
 - Salt argument should be of type `bytes32`. [seanyoung](https://github.com/seanyoung)
-- Allow return vallues to be ignored in try-catch statements. [seanyoung](https://github.com/seanyoung)
+- Allow return values to be ignored in try-catch statements. [seanyoung](https://github.com/seanyoung)
 - Optimize modifiers' CFGs. [xermicus](https://github.com/xermicus)
 - Fix an error whereby building large contracts would cause an LLVM error. [LucasSte](https://github.com/LucasSte)
 - A constructor for a Solana contract cannot run twice on the same data account. [seanyoung](https://github.com/seanyoung)
@@ -339,7 +339,7 @@ substrate contracts node `v0.22.1`.
   [LucasSte](https://github.com/LucasSte)
 - Add a wrapper for the Solana System Program
   [LucasSte](https://github.com/LucasSte)
-- The selector for functions can be overriden with the `selector=hex"abcd0123"`
+- The selector for functions can be overridden with the `selector=hex"abcd0123"`
   syntax.
   [seanyoung](https://github.com/seanyoung)
 - Shell completion is available using the `solang shell-completion` subcommand.
