@@ -13,14 +13,20 @@ jobs:
   repolinter:
     name: Repolinter
     runs-on: solang-ubuntu-latest
+    # spdx runs on python 3.10 but not any later versions
+    container: ubuntu:22.04
     steps:
+      - name: Install Python and npm
+        run: |
+          apt-get update
+          apt-get install -y python3 git npm
       - name: Checkout sources
         uses: actions/checkout@v4
       - name: Run repolinter
         run: npx repolinter --rulesetUrl https://raw.githubusercontent.com/hyperledger-labs/hyperledger-community-management-tools/master/repo_structure/repolint.json
       - uses: enarx/spdx@master
         with:
-          licenses: Apache-2.0 MIT
+          licenses: Apache-2.0
 
   docs:
     name: Docs
@@ -199,7 +205,7 @@ jobs:
 
   mac-intel:
     name: Mac Intel
-    runs-on: macos-12
+    runs-on: macos-13
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
@@ -223,7 +229,7 @@ jobs:
 
   mac-universal:
     name: Mac Universal Binary
-    runs-on: macos-12
+    runs-on: macos-13
     needs: [mac-arm, mac-intel]
     steps:
     - uses: actions/download-artifact@v4.1.8
