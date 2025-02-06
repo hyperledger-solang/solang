@@ -909,8 +909,7 @@ impl<'a> Binary<'a> {
     pub(crate) fn llvm_type(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
         emit_context!(self);
         if ty.is_builtin_struct() == Some(StructType::AccountInfo) {
-            return self
-                .context
+            self.context
                 .struct_type(
                     &[
                         byte_ptr!().as_basic_type_enum(),             // SolPubkey *
@@ -925,7 +924,7 @@ impl<'a> Binary<'a> {
                     ],
                     false,
                 )
-                .as_basic_type_enum();
+                .as_basic_type_enum()
         } else {
             match ty {
                 Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
