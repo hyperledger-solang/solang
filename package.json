@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@stellar/stellar-sdk": "^13.1.0",
+    "chai": "^5.1.2",
+    "setup": "^0.0.3"
+  }
+}

@@ -1,0 +1,25 @@
+language: node_js
+node_js:
+  - 10
+  - 11
+  - 12
+cache:
+  directories:
+    - node_modules
+services:
+  - xvfb
+script: yarn test
+notifications:
+  slack:
+    secure: Bu3OZ0Cdy8eq0IMoLJmadDba8Yyb9ajobKocfp8V7/vfOjpIVXdFrGMqfckkZ22uiWxHCsYEX1ahQ77zTjbO3tNq1CTmSgEAWaqqMVz1iIVNhSoeHRfYDa9r1sKFpJv1KEz+j/8i2phcR5MDE6cGK+byJmjfjcnkP1XoNiupuck=
+before_deploy:
+  - yarn build
+deploy:
+  provider: npm
+  email: npm@stellar.org
+  api_key: $NPM_TOKEN
+  skip_cleanup: true
+  on:
+    tags: true
+    repo: stellar/js-xdr
+    branch: master

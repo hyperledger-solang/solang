@@ -1,0 +1,46 @@
+GIT
+  remote: git@github.com:stellar/xdrgen.git
+  revision: 80e38ef2a96489f6b501d4db3a350406e5aa3bab
+  specs:
+    xdrgen (0.1.1)
+      activesupport (~> 6)
+      memoist (~> 0.11.0)
+      slop (~> 3.4)
+      treetop (~> 1.5.3)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    activesupport (6.1.7.6)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (>= 1.6, < 2)
+      minitest (>= 5.1)
+      tzinfo (~> 2.0)
+      zeitwerk (~> 2.3)
+    coderay (1.1.3)
+    concurrent-ruby (1.2.2)
+    i18n (1.14.1)
+      concurrent-ruby (~> 1.0)
+    memoist (0.11.0)
+    method_source (1.0.0)
+    minitest (5.19.0)
+    polyglot (0.3.5)
+    pry (0.14.2)
+      coderay (~> 1.1)
+      method_source (~> 1.0)
+    slop (3.6.0)
+    treetop (1.5.3)
+      polyglot (~> 0.3)
+    tzinfo (2.0.6)
+      concurrent-ruby (~> 1.0)
+    zeitwerk (2.6.11)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  pry
+  xdrgen!
+
+BUNDLED WITH
+   2.4.6

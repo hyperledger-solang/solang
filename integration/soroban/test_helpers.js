@@ -1,13 +1,13 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
 
-export async function call_contract_function(method, server, keypair, contract) {
+export async function call_contract_function(method, server, keypair, contract, ...params) {
     let res = null;
 
     try {
         let builtTransaction = new StellarSdk.TransactionBuilder(await server.getAccount(keypair.publicKey()), {
             fee: StellarSdk.BASE_FEE,
             networkPassphrase: StellarSdk.Networks.TESTNET,
-        }).addOperation(contract.call(method)).setTimeout(30).build();
+        }).addOperation(contract.call(method, ...params)).setTimeout(30).build();
 
         let preparedTransaction = await server.prepareTransaction(builtTransaction);
 

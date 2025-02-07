@@ -1,23 +1,23 @@
 {
-    "type": "module",
-    "dependencies": {
-      "@stellar/stellar-sdk": "^12.0.1",
-      "chai": "^5.1.1",
-      "dotenv": "^16.4.5",
-      "mocha": "^10.4.0"
-    },
-    "scripts": {
-      "build": "solang compile *.sol --target soroban && solang compile storage_types.sol --target soroban --release",
-      "setup": "node setup.js",
-      "test": "mocha *.spec.js --timeout 100000"
-    },
-    "devDependencies": {
-      "@eslint/js": "^9.4.0",
-      "@types/mocha": "^10.0.6",
-      "eslint": "^9.4.0",
-      "expect": "^29.7.0",
-      "globals": "^15.4.0",
-      "typescript": "^5.4.5"
-    }
+  "type": "module",
+  "dependencies": {
+    "@stellar/stellar-sdk": "^12.0.1",
+    "chai": "^5.1.1",
+    "dotenv": "^16.4.7",
+    "mocha": "^10.4.0"
+  },
+  "scripts": {
+    "build": "solang compile *.sol --target soroban && solang compile counter.sol --target soroban --release",
+    "setup": "node setup.js",
+    "test": "mocha *.spec.js --timeout 100000",
+    "testcounter": "mocha counter.spec.js --timeout 100000"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.4.0",
+    "@types/mocha": "^10.0.6",
+    "eslint": "^9.4.0",
+    "expect": "^29.7.0",
+    "globals": "^15.4.0",
+    "typescript": "^5.4.5"
   }
-  
+}

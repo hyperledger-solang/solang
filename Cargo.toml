@@ -1,34 +1,52 @@
 [package]
 name = "solang"
 version = "0.3.3"
-authors = ["Sean Young <sean@mess.org>", "Lucas Steuernagel <lucas.tnagel@gmail.com>", "Cyrill Leutwiler <bigcyrill@hotmail.com>"]
+authors = [
+    "Sean Young <sean@mess.org>",
+    "Lucas Steuernagel <lucas.tnagel@gmail.com>",
+    "Cyrill Leutwiler <bigcyrill@hotmail.com>",
+]
 repository = "https://github.com/hyperledger-solang/solang"
 documentation = "https://solang.readthedocs.io/"
 license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
-keywords = [ "solidity", "compiler", "solana", "polkadot", "substrate" ]
+keywords = ["solidity", "compiler", "solana", "polkadot", "substrate"]
 rust-version = "1.81.0"
 edition = "2021"
-exclude = [ "/.*", "/docs",  "/examples", "/solana-library", "/tests", "/integration", "/vscode", "/testdata" ]
+exclude = [
+    "/.*",
+    "/docs",
+    "/examples",
+    "/solana-library",
+    "/tests",
+    "/integration",
+    "/vscode",
+    "/testdata",
+]
 
 [build-dependencies]
 cc = "1.0"
 
 [dependencies]
+llvm-sys = "160.0"
 regex = "1"
 rand = "0.8"
-num-bigint = { version = "0.4", features = ["rand"]}
+num-bigint = { version = "0.4", features = ["rand"] }
 num-traits = "0.2"
 num-integer = "0.1"
-clap = {version = "4.5", features = ["derive"]}
+clap = { version = "4.5", features = ["derive"] }
 clap_complete = "4.5"
 hex = "0.4"
 tiny-keccak = { version = "2.0", features = ["keccak"] }
 serde_json = "1.0"
 serde = "1.0"
 serde_derive = { version = "1.0" }
-inkwell = { version = "0.4.0", features = ["target-webassembly", "no-libffi-linking", "llvm16-0"], optional = true }
+inkwell = { version = "0.4.0", features = [
+    "target-webassembly",
+    "no-libffi-linking",
+    "llvm16-0",
+], optional = true }
 blake2-rfc = "0.2.18"
 handlebars = "5.1"
 contract-metadata = "4.0.2"
@@ -36,7 +54,11 @@ semver = { version = "1.0", features = ["serde"] }
 tempfile = "3.10"
 libc = { version = "0.2", optional = true }
 tower-lsp = { version = "0.20", optional = true }
-tokio = { version = "1.27", features = ["rt", "io-std", "macros"], optional = true }
+tokio = { version = "1.27", features = [
+    "rt",
+    "io-std",
+    "macros",
+], optional = true }
 base58 = "0.2.0"
 sha2 = "0.10"
 ripemd = "0.1"
@@ -71,7 +93,10 @@ forge-fmt = { path = "fmt", optional = true }
 # We don't use ethers-core directly, but need the correct version for the
 # build to work.
 ethers-core = { version = "2.0.10", optional = true }
-soroban-sdk = { version = "22.0.0-rc.3.2", features = ["testutils"], optional = true }
+soroban-sdk = { version = "22.0.0-rc.3.2", features = [
+    "testutils",
+], optional = true }
+
 
 [dev-dependencies]
 num-derive = "0.4"
@@ -91,7 +116,7 @@ rayon = "1"
 walkdir = "2.4"
 ink_primitives = "5.0.0"
 wasm_host_attr = { path = "tests/wasm_host_attr" }
-num-bigint = { version = "0.4", features = ["rand", "serde"]}
+num-bigint = { version = "0.4", features = ["rand", "serde"] }
 
 [package.metadata.docs.rs]
 no-default-features = true
@@ -104,7 +129,13 @@ soroban = ["soroban-sdk"]
 default = ["llvm", "wasm_opt", "language_server", "soroban"]
 llvm = ["inkwell", "libc"]
 wasm_opt = ["llvm", "wasm-opt", "contract-build"]
-language_server = ["tower-lsp", "forge-fmt", "ethers-core", "tokio", "rust-lapper"]
+language_server = [
+    "tower-lsp",
+    "forge-fmt",
+    "ethers-core",
+    "tokio",
+    "rust-lapper",
+]
 
 [workspace]
 members = ["solang-parser", "fmt", "tests/wasm_host_attr"]
