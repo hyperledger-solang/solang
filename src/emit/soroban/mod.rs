@@ -58,6 +58,12 @@ impl HostFunctions {
                 .fn_type(&[ty.into(), ty.into()], false),
             HostFunctions::ObjToU64 => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::ObjFromU64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToI128Lo64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToI128Hi64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjFromI128Pieces => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
         }
     }
 }
@@ -116,6 +122,7 @@ impl SorobanTarget {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
+            println!("Looping over {}", cfg.name);
             let ftype = binary.function_type(
                 &cfg.params.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
                 &cfg.returns.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
@@ -162,6 +169,7 @@ impl SorobanTarget {
             .add_function("storage_initializer", init_type, None);
 
         for (func_decl, cfg) in defines {
+            println!("Emitting function {}", cfg.name);
             emit_cfg(&mut SorobanTarget, binary, contract, cfg, func_decl, ns);
         }
     }
@@ -207,7 +215,7 @@ impl SorobanTarget {
                             .unwrap_or_else(|| i.to_string())
                             .try_into()
                             .expect("function input name exceeds limit"),
-                        type_: match p.ty {
+                        type_: match &p.ty {
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
                             ast::Type::Uint(64) => ScSpecTypeDef::U64,
                             ast::Type::Int(128) => ScSpecTypeDef::I128,
@@ -215,6 +223,7 @@ impl SorobanTarget {
                             ast::Type::Address(_) => ScSpecTypeDef::Address,
                             ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                             ast::Type::String => ScSpecTypeDef::String,
+                            ast::Type::Ref(ty) => ScSpecTypeDef::I128,
                             //ast::Type::Val => ScSpecTypeDef::Address,
                             _ => panic!("unsupported input type {:?}", p.ty),
                         }, // TODO: Map type.
@@ -237,6 +246,7 @@ impl SorobanTarget {
                             ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                             ast::Type::String => ScSpecTypeDef::String,
                             ast::Type::Void => ScSpecTypeDef::Void,
+                            ast::Type::Ref(ty) => ScSpecTypeDef::I128,
                             _ => panic!("unsupported return type {:?}", ty),
                         }
                     }) // TODO: Map type.
@@ -287,6 +297,9 @@ impl SorobanTarget {
             HostFunctions::ObjToU64,
             HostFunctions::ObjFromU64,
             HostFunctions::PutContractData,
+            HostFunctions::ObjToI128Lo64,
+            HostFunctions::ObjToI128Hi64,
+            HostFunctions::ObjFromI128Pieces,
         ];
 
         for func in &host_functions {

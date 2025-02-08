@@ -440,6 +440,7 @@ impl BasicBlock {
         // out cfg has edge as the last instruction in a block
         for (i, instr) in self.instr.iter().rev().enumerate() {
             match instr {
+
                 Instr::Branch { block } => {
                     assert_eq!(i, 0, "Branch is not last instruction in block");
                     out.push(*block);

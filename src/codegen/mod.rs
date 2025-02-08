@@ -104,6 +104,9 @@ pub enum HostFunctions {
     Call,
     ObjToU64,
     ObjFromU64,
+    ObjToI128Lo64,
+    ObjToI128Hi64,
+    ObjFromI128Pieces,
 }
 
 impl HostFunctions {
@@ -118,6 +121,9 @@ impl HostFunctions {
             HostFunctions::Call => "d._",
             HostFunctions::ObjToU64 => "i.0",
             HostFunctions::ObjFromU64 => "i._",
+            HostFunctions::ObjToI128Lo64 => "i.7",
+            HostFunctions::ObjToI128Hi64 => "i.8",
+            HostFunctions::ObjFromI128Pieces => "i.6",
         }
     }
 }

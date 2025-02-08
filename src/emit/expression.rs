@@ -173,7 +173,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let left = expression(target, bin, left, vartab, function, ns).into_int_value();
             let right = expression(target, bin, right, vartab, function, ns).into_int_value();
 
-            if !overflowing {
+            /*if !overflowing {
                 let signed = ty.is_signed_int(ns);
                 build_binary_op_with_overflow_check(
                     target,
@@ -189,7 +189,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .into()
             } else {
                 bin.builder.build_int_add(left, right, "").unwrap().into()
-            }
+            }*/
+            bin.builder.build_int_add(left, right, "").unwrap().into()
         }
         Expression::Subtract {
             loc,
@@ -1087,11 +1088,14 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             stack.into()
         }
         Expression::Load { ty, expr, .. } => {
-            let ptr = expression(target, bin, expr, vartab, function, ns).into_pointer_value();
+            let ptr = expression(target, bin, expr, vartab, function, ns);
 
             if ty.is_reference_type(ns) && !ty.is_fixed_reference_type(ns) {
                 let loaded_type = bin.llvm_type(ty, ns).ptr_type(AddressSpace::default());
-                let value = bin.builder.build_load(loaded_type, ptr, "").unwrap();
+                let value = bin
+                    .builder
+                    .build_load(loaded_type, ptr.into_pointer_value(), "")
+                    .unwrap();
                 // if the pointer is null, it needs to be allocated
                 let allocation_needed = bin
                     .builder
@@ -1133,7 +1137,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .unwrap()
                     .into_pointer_value();
 
-                bin.builder.build_store(ptr, new_struct).unwrap();
+                bin.builder
+                    .build_store(ptr.into_pointer_value(), new_struct)
+                    .unwrap();
 
                 bin.builder
                     .build_unconditional_branch(already_allocated)
@@ -1155,7 +1161,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 combined_struct_ptr.as_basic_value()
             } else {
                 let loaded_type = bin.llvm_type(ty, ns);
-                bin.builder.build_load(loaded_type, ptr, "").unwrap()
+
+                let load_ptr = bin.vector_bytes(ptr);
+
+                bin.builder.build_load(loaded_type, load_ptr, "").unwrap()
             }
         }
 
