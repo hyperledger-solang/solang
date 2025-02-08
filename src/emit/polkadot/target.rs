@@ -927,7 +927,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: Option<PointerValue<'b>>,
+        address: Option<BasicValueEnum<'b>>,
         contract_args: ContractArgs<'b>,
         call_type: ast::CallTy,
         ns: &ast::Namespace,

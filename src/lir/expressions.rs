@@ -231,6 +231,10 @@ pub enum Expression {
     ReturnData {
         loc: Loc,
     },
+
+    VectorData {
+        pointer: Box<Operand>,
+    },
 }
 
 impl fmt::Display for BinaryOperator {

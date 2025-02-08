@@ -35,7 +35,8 @@ describe('Counter', () => {
   it('get correct initial counter', async () => {
     // get the count
     let count = await call_contract_function("count", server, keypair, contract);
-    expect(count.toString()).eq("10");
+    console.log(count.returnValue().value());
+    expect(count.returnValue().value().toString()).eq("10");
   });
 
   it('increment counter', async () => {
@@ -44,7 +45,7 @@ describe('Counter', () => {
 
     // get the count
     let count = await call_contract_function("count", server, keypair, contract);
-    expect(count.toString()).eq("11");
+    expect(count.returnValue().value().toString()).eq("11");
   });
 });
 

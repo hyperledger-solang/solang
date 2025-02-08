@@ -55,6 +55,7 @@ pub enum InternalCallTy {
     Static { cfg_no: usize },
     Dynamic(Operand),
     Builtin { ast_func_no: usize },
+    HostFunction { name: String },
 }
 
 #[derive(Clone, Debug)]
