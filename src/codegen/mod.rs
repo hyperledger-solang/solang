@@ -688,7 +688,7 @@ pub enum Expression {
         pointer: Box<Expression>,
         bytes_offset: Box<Expression>,
     },
-    PointerPosition {
+    VectorData {
         pointer: Box<Expression>,
     },
 }
