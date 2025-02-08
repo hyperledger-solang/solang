@@ -8,3 +8,4 @@ tests/create_me/
 
 .helix/
 .vscode/
+.DS_Store

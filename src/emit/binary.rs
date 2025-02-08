@@ -8,7 +8,6 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::str;
 
-use libc::uint32_t;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
