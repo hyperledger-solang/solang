@@ -68,7 +68,7 @@ pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             params: vec![Type::Bool],
             ret: vec![Type::Void],
             target: vec![],
-            doc: "Abort execution if argument evaulates to false",
+            doc: "Abort execution if argument evaluates to false",
             constant: false,
         },
         Prototype {
@@ -79,7 +79,7 @@ pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             params: vec![Type::Bool, Type::String],
             ret: vec![Type::Void],
             target: vec![],
-            doc: "Abort execution if argument evaulates to false. Report string when aborting",
+            doc: "Abort execution if argument evaluates to false. Report string when aborting",
             constant: false,
         },
         Prototype {
