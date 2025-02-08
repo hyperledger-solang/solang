@@ -421,7 +421,7 @@ impl Converter<'_> {
                 ..
             } => self.advance_pointer(dest, pointer, bytes_offset, vartable, results),
 
-            codegen::Expression::PointerPosition { pointer } => {
+            codegen::Expression::VectorData { pointer } => {
                 self.pointer_position(dest, pointer, vartable, results)
             }
         }
@@ -438,7 +438,7 @@ impl Converter<'_> {
         results.push(Instruction::Set {
             loc: Loc::Codegen,
             res: dest.get_id_or_error(),
-            expr: Expression::PointerPosition {
+            expr: Expression::VectorData {
                 pointer: Box::new(pointer_op),
             },
         });

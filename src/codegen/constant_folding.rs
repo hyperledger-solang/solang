@@ -666,7 +666,7 @@ fn expression(
         | Expression::FormatString { .. }
         | Expression::GetRef { .. }
         | Expression::InternalFunctionCfg { .. }
-        | Expression::PointerPosition { .. } => (expr.clone(), false),
+        | Expression::VectorData { .. } => (expr.clone(), false),
         // nothing else is permitted in cfg
         _ => panic!("expr should not be in cfg: {expr:?}"),
     }

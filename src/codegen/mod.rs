@@ -748,7 +748,7 @@ impl CodeLocation for Expression {
             | Expression::Poison
             | Expression::Undefined { .. }
             | Expression::AdvancePointer { .. }
-            | Expression::PointerPosition { .. } => pt::Loc::Codegen,
+            | Expression::VectorData { .. } => pt::Loc::Codegen,
         }
     }
 }
@@ -900,7 +900,7 @@ impl RetrieveType for Expression {
 
             Expression::AdvancePointer { .. } => Type::BufferPointer,
             Expression::FormatString { .. } => Type::String,
-            Expression::PointerPosition { .. } => Type::Uint(64),
+            Expression::VectorData { .. } => Type::Uint(64),
             Expression::Poison => unreachable!("Expression does not have a type"),
         }
     }

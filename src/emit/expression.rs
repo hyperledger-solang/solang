@@ -2149,7 +2149,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             advanced.into()
         }
 
-        Expression::PointerPosition { pointer } => {
+        Expression::VectorData { pointer } => {
             let ptr = expression(target, bin, pointer, vartab, function, ns);
             let data = bin.vector_bytes(ptr);
             let res = bin

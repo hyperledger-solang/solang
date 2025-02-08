@@ -985,7 +985,7 @@ impl ControlFlowGraph {
             Expression::GetRef { expr, .. } => {
                 format!("(deref {}", self.expr_to_string(contract, ns, expr))
             }
-            Expression::PointerPosition { pointer } => {
+            Expression::VectorData { pointer } => {
                 format!("pointer pos {}", self.expr_to_string(contract, ns, pointer))
             }
         }

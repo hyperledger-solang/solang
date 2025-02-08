@@ -68,7 +68,7 @@ pub fn soroban_encode(
 
         let transformer = match item.ty() {
             Type::String => {
-                let inp = Expression::PointerPosition {
+                let inp = Expression::VectorData {
                     pointer: Box::new(item.clone()),
                 };
 

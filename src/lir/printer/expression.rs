@@ -267,7 +267,7 @@ impl Printer<'_> {
                 });
                 write!(f, ")").unwrap();
             }
-            Expression::PointerPosition { pointer } => {
+            Expression::VectorData { pointer } => {
                 write!(f, "ptr_pos(").unwrap();
                 self.print_rhs_operand(f, pointer);
                 write!(f, ")").unwrap();
