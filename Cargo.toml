@@ -29,7 +29,6 @@ exclude = [
 cc = "1.0"
 
 [dependencies]
-llvm-sys = "160.0"
 regex = "1"
 rand = "0.8"
 num-bigint = { version = "0.4", features = ["rand"] }
@@ -96,7 +95,6 @@ ethers-core = { version = "2.0.10", optional = true }
 soroban-sdk = { version = "22.0.0-rc.3.2", features = [
     "testutils",
 ], optional = true }
-
 
 [dev-dependencies]
 num-derive = "0.4"

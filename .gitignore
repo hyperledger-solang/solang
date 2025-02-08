@@ -8,4 +8,7 @@ tests/create_me/
 
 .helix/
 .vscode/
+# Ignore macOS .DS_Store files everywhere
 .DS_Store
+**/.DS_Store
+
