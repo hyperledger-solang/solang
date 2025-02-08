@@ -1135,24 +1135,30 @@ pub(super) fn resolve_namespace_call(
         let mut tys = Vec::new();
         let mut broken = false;
 
-        for arg in parameter_list_to_expr_list(&args[1], diagnostics)? {
-            let ty = ns.resolve_type(
-                context.file_no,
-                context.contract_no,
-                ResolveTypeContext::None,
-                arg.strip_parentheses(),
-                diagnostics,
-            )?;
+        let ty_exprs = parameter_list_to_expr_list(&args[1], diagnostics)?;
 
-            if ty.is_mapping() || ty.is_recursive(ns) {
-                diagnostics.push(Diagnostic::error(
+        if ty_exprs.is_empty() {
+            tys.push(Type::Void);
+        } else {
+            for arg in ty_exprs {
+                let ty = ns.resolve_type(
+                    context.file_no,
+                    context.contract_no,
+                    ResolveTypeContext::None,
+                    arg.strip_parentheses(),
+                    diagnostics,
+                )?;
+
+                if ty.is_mapping() || ty.is_recursive(ns) {
+                    diagnostics.push(Diagnostic::error(
                     *loc,
                     format!("Invalid type '{}': mappings and recursive types cannot be abi decoded or encoded", ty.to_string(ns))
                 ));
-                broken = true;
-            }
+                    broken = true;
+                }
 
-            tys.push(ty);
+                tys.push(ty);
+            }
         }
 
         return if broken {
