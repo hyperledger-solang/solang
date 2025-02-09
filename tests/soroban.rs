@@ -19,9 +19,16 @@ pub struct SorobanEnv {
     compiler_diagnostics: Diagnostics,
 }
 
-pub fn build_solidity(src: &str) -> SorobanEnv {
+pub fn build_solidity<F>(src: &str, configure_env: F) -> SorobanEnv
+where
+    F: FnOnce(&mut SorobanEnv),
+{
     let (wasm_blob, ns) = build_wasm(src);
-    SorobanEnv::new_with_contract(wasm_blob).insert_diagnostics(ns.diagnostics)
+
+    let env =
+        SorobanEnv::new_with_contract(wasm_blob, configure_env).insert_diagnostics(ns.diagnostics);
+
+    env
 }
 
 fn build_wasm(src: &str) -> (Vec<u8>, Namespace) {
@@ -51,7 +58,6 @@ fn build_wasm(src: &str) -> (Vec<u8>, Namespace) {
 }
 
 impl SorobanEnv {
-    /// Create a new Soroban environment
     pub fn new() -> Self {
         Self {
             env: Env::default(),
@@ -65,31 +71,29 @@ impl SorobanEnv {
         self
     }
 
-    /// Create a new Soroban environment with a contract
-    pub fn new_with_contract(
-        contract_wasm: Vec<u8>,
-        constructor_args: soroban_sdk::Vec<Val>,
-    ) -> Self {
+    pub fn new_with_contract<F>(contract_wasm: Vec<u8>, configure_env: F) -> Self
+    where
+        F: FnOnce(&mut SorobanEnv),
+    {
         let mut env = Self::new();
-        env.register_contract(contract_wasm, constructor_args);
+        configure_env(&mut env);
+
+        env.register_contract(contract_wasm);
+
         env
     }
 
-    /// Register a contract given its WASM blob and constructor arguments
-    pub fn register_contract(
-        &mut self,
-        contract_wasm: Vec<u8>,
-        constructor_args: soroban_sdk::Vec<Val>,
-    ) -> Address {
+    pub fn register_contract(&mut self, contract_wasm: Vec<u8>) -> Address {
+        // For now, we keep using `register_contract_wasm`. To use `register`, we have to figure
+        // out first what to pass for `constructor_args`
+        #[allow(deprecated)]
         let addr = self
             .env
-            .register(contract_wasm.as_slice(), constructor_args);
-
+            .register_contract_wasm(None, contract_wasm.as_slice());
         self.contracts.push(addr.clone());
         addr
     }
 
-    /// Invoke a contract and return the result
     pub fn invoke_contract(&self, addr: &Address, function_name: &str, args: Vec<Val>) -> Val {
         let func = Symbol::new(&self.env, function_name);
         let mut args_soroban = vec![&self.env];

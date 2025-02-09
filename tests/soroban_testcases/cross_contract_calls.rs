@@ -15,6 +15,7 @@ fn simple_cross_contract() {
             }
         }
     }"#,
+        |_| {},
     );
 
     let caller = runtime.deploy_contract(

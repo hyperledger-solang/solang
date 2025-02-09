@@ -17,9 +17,10 @@ use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue,
     PointerValue,
 };
-use num_traits::ToPrimitive;
 
 use solang_parser::pt::{Loc, StorageType};
+
+use num_traits::ToPrimitive;
 
 use std::collections::HashMap;
 
@@ -509,7 +510,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 let extend_to_u32_val = (extend_to << 32) + 4;
 
                 // Call the function
-                let function_value = bin.module.get_function(EXTEND_CONTRACT_DATA_TTL).unwrap();
+                let function_name = HostFunctions::ExtendContractDataTtl.name();
+                let function_value = bin.module.get_function(function_name).unwrap();
 
                 let value = bin
                     .builder
@@ -527,7 +529,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                                 .const_int(extend_to_u32_val, false)
                                 .into(),
                         ],
-                        EXTEND_CONTRACT_DATA_TTL,
+                        function_name,
                     )
                     .unwrap()
                     .try_as_basic_value()

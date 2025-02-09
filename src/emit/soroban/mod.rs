@@ -39,6 +39,13 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
+            // https://github.com/stellar/stellar-protocol/blob/2fdc77302715bc4a31a784aef1a797d466965024/core/cap-0046-03.md#ledger-host-functions-mod-l
+            // ;; If the entry's TTL is below `threshold` ledgers, extend `live_until_ledger_seq` such that TTL == `extend_to`, where TTL is defined as live_until_ledger_seq - current ledger.
+            // (func $extend_contract_data_ttl (param $k_val i64) (param $t_storage_type i64) (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
+            HostFunctions::ExtendContractDataTtl => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
             HostFunctions::LogFromLinearMemory => bin
                 .context
                 .i64_type()
@@ -279,6 +286,7 @@ impl SorobanTarget {
         let host_functions = [
             HostFunctions::PutContractData,
             HostFunctions::GetContractData,
+            HostFunctions::ExtendContractDataTtl,
             HostFunctions::LogFromLinearMemory,
             HostFunctions::SymbolNewFromLinearMemory,
             HostFunctions::VectorNew,
