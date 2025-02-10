@@ -97,6 +97,7 @@ impl From<inkwell::OptimizationLevel> for OptimizationLevel {
 pub enum HostFunctions {
     PutContractData,
     GetContractData,
+    ExtendContractDataTtl,
     LogFromLinearMemory,
     SymbolNewFromLinearMemory,
     VectorNew,
@@ -111,6 +112,7 @@ impl HostFunctions {
         match self {
             HostFunctions::PutContractData => "l._",
             HostFunctions::GetContractData => "l.1",
+            HostFunctions::ExtendContractDataTtl => "l.7",
             HostFunctions::LogFromLinearMemory => "x._",
             HostFunctions::SymbolNewFromLinearMemory => "b.j",
             HostFunctions::VectorNew => "v._",
@@ -1794,6 +1796,7 @@ pub enum Builtin {
     WriteUint256LE,
     WriteBytes,
     Concat,
+    ExtendPersistentTtl,
 }
 
 impl From<&ast::Builtin> for Builtin {
@@ -1856,6 +1859,7 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::PrevRandao => Builtin::PrevRandao,
             ast::Builtin::ContractCode => Builtin::ContractCode,
             ast::Builtin::StringConcat | ast::Builtin::BytesConcat => Builtin::Concat,
+            ast::Builtin::ExtendPersistentTtl => Builtin::ExtendPersistentTtl,
             _ => panic!("Builtin should not be in the cfg"),
         }
     }

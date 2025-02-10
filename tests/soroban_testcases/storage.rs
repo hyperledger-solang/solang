@@ -19,6 +19,7 @@ fn counter() {
                 return count;
             }
         }"#,
+        |_| {},
     );
 
     let addr = src.contracts.last().unwrap();
@@ -62,6 +63,7 @@ fn different_storage_types() {
         sesa3--;
     }
 }"#,
+        |_| {},
     );
 
     let addr = src.contracts.last().unwrap();
