@@ -38,7 +38,7 @@ fn ttl_basic() {
     let addr = runtime.contracts.last().unwrap();
 
     // initial TTL
-    runtime.env.as_contract(&addr, || {
+    runtime.env.as_contract(addr, || {
         // There is only one key in the persistent storage
         let key = runtime
             .env
@@ -52,9 +52,9 @@ fn ttl_basic() {
     });
 
     // Extend persistent entry TTL to 5000 ledgers - now it is 5000.
-    runtime.invoke_contract(&addr, "extend_ttl", vec![]);
+    runtime.invoke_contract(addr, "extend_ttl", vec![]);
 
-    runtime.env.as_contract(&addr, || {
+    runtime.env.as_contract(addr, || {
         // There is only one key in the persistent storage
         let key = runtime
             .env

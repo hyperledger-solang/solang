@@ -25,10 +25,7 @@ where
 {
     let (wasm_blob, ns) = build_wasm(src);
 
-    let env =
-        SorobanEnv::new_with_contract(wasm_blob, configure_env).insert_diagnostics(ns.diagnostics);
-
-    env
+    SorobanEnv::new_with_contract(wasm_blob, configure_env).insert_diagnostics(ns.diagnostics)
 }
 
 fn build_wasm(src: &str) -> (Vec<u8>, Namespace) {
