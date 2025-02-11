@@ -70,7 +70,7 @@ struct StateCheck<'a> {
     data_account: DataAccountUsage,
 }
 
-impl<'a> StateCheck<'a> {
+impl StateCheck<'_> {
     fn value(&mut self, loc: &pt::Loc) {
         self.check_level(loc, Access::Value);
         self.required_access.increase_to(Access::Value);

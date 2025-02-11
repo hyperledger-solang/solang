@@ -665,7 +665,8 @@ fn expression(
         | Expression::Undefined { .. }
         | Expression::FormatString { .. }
         | Expression::GetRef { .. }
-        | Expression::InternalFunctionCfg { .. } => (expr.clone(), false),
+        | Expression::InternalFunctionCfg { .. }
+        | Expression::VectorData { .. } => (expr.clone(), false),
         // nothing else is permitted in cfg
         _ => panic!("expr should not be in cfg: {expr:?}"),
     }

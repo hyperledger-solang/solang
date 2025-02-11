@@ -3,12 +3,9 @@ Cargo.lock
 /target
 **/*.rs.bk
 *.ll
-tests/.tmp*
-tests/create_me/
+/tests/.tmp*
+/tests/create_me/
+/test_snapshots/
 
 .helix/
 .vscode/
-# Ignore macOS .DS_Store files everywhere
-.DS_Store
-**/.DS_Store
-
