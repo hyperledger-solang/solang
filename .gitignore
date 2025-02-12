@@ -11,3 +11,5 @@ Cargo.lock
 .vscode/
 
 /test_snapshots
+# Exclude macOS system files
+.DS_Store
