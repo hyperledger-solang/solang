@@ -753,30 +753,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 }
             }
         }
-        Instr::Call {
-            res,
-            call: InternalCallTy::HostFunction { name },
-            args,
-            ..
-        } => {
-            let parms = args
-                .iter()
-                .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
-                .collect::<Vec<BasicMetadataValueEnum>>();
-
-            let call = bin.module.get_function(name).unwrap();
-
-            let ret = bin
-                .builder
-                .build_call(call, &parms, "")
-                .unwrap()
-                .try_as_basic_value()
-                .left();
-
-            if let Some(value) = ret {
-                w.vars.get_mut(&res[0]).unwrap().value = value;
-            }
-        }
         Instr::Constructor {
             success,
             res,
@@ -927,22 +903,19 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let address = if let Some(address) = address {
                 let address = expression(target, bin, address, &w.vars, function, ns);
-                if ns.target == Target::Soroban {
-                    Some(address)
-                } else {
-                    let addr = bin.build_array_alloca(
-                        function,
-                        bin.context.i8_type(),
-                        bin.context
-                            .i32_type()
-                            .const_int(ns.address_length as u64, false),
-                        "address",
-                    );
 
-                    bin.builder.build_store(addr, address).unwrap();
+                let addr = bin.build_array_alloca(
+                    function,
+                    bin.context.i8_type(),
+                    bin.context
+                        .i32_type()
+                        .const_int(ns.address_length as u64, false),
+                    "address",
+                );
 
-                    Some(addr.as_basic_value_enum())
-                }
+                bin.builder.build_store(addr, address).unwrap();
+
+                Some(addr)
             } else {
                 None
             };
@@ -1039,68 +1012,45 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let offset = expression(target, bin, offset, &w.vars, function, ns).into_int_value();
             let emit_value = expression(target, bin, value, &w.vars, function, ns);
 
-            if ns.target == Target::Soroban {
-                let new_offset = bin
-                    .builder
-                    .build_int_unsigned_div(
-                        offset,
-                        bin.context.i64_type().const_int(8, false),
-                        "new_offset",
+            let start = unsafe {
+                bin.builder
+                    .build_gep(bin.context.i8_type(), data, &[offset], "start")
+                    .unwrap()
+            };
+
+            let is_bytes = if let Type::Bytes(n) = value.ty().unwrap_user_type(ns) {
+                n
+            } else if value.ty() == Type::FunctionSelector {
+                ns.target.selector_length()
+            } else {
+                0
+            };
+
+            if is_bytes > 1 {
+                let value_ptr = bin.build_alloca(
+                    function,
+                    emit_value.into_int_value().get_type(),
+                    &format!("bytes{is_bytes}"),
+                );
+                bin.builder
+                    .build_store(value_ptr, emit_value.into_int_value())
+                    .unwrap();
+                bin.builder
+                    .build_call(
+                        bin.module.get_function("__leNtobeN").unwrap(),
+                        &[
+                            value_ptr.into(),
+                            start.into(),
+                            bin.context
+                                .i32_type()
+                                .const_int(is_bytes as u64, false)
+                                .into(),
+                        ],
+                        "",
                     )
                     .unwrap();
-                let start = unsafe {
-                    bin.builder
-                        .build_gep(
-                            bin.context.i64_type().array_type(1),
-                            data,
-                            &[bin.context.i64_type().const_zero(), new_offset],
-                            "start",
-                        )
-                        .unwrap()
-                };
-
-                bin.builder.build_store(start, emit_value).unwrap();
             } else {
-                let start = unsafe {
-                    bin.builder
-                        .build_gep(bin.context.i8_type(), data, &[offset], "start")
-                        .unwrap()
-                };
-
-                let is_bytes = if let Type::Bytes(n) = value.ty().unwrap_user_type(ns) {
-                    n
-                } else if value.ty() == Type::FunctionSelector {
-                    ns.target.selector_length()
-                } else {
-                    0
-                };
-
-                if is_bytes > 1 {
-                    let value_ptr = bin.build_alloca(
-                        function,
-                        emit_value.into_int_value().get_type(),
-                        &format!("bytes{is_bytes}"),
-                    );
-                    bin.builder
-                        .build_store(value_ptr, emit_value.into_int_value())
-                        .unwrap();
-                    bin.builder
-                        .build_call(
-                            bin.module.get_function("__leNtobeN").unwrap(),
-                            &[
-                                value_ptr.into(),
-                                start.into(),
-                                bin.context
-                                    .i32_type()
-                                    .const_int(is_bytes as u64, false)
-                                    .into(),
-                            ],
-                            "",
-                        )
-                        .unwrap();
-                } else {
-                    bin.builder.build_store(start, emit_value).unwrap();
-                }
+                bin.builder.build_store(start, emit_value).unwrap();
             }
         }
         Instr::MemCopy {

@@ -183,9 +183,6 @@ impl<'input> Converter<'input> {
                 let tmp = self.to_operand_and_insns(expr, vartable, result);
                 InternalCallTy::Dynamic(tmp)
             }
-            cfg::InternalCallTy::HostFunction { name: sesa } => {
-                InternalCallTy::HostFunction { name: sesa.clone() }
-            }
         }
     }
 

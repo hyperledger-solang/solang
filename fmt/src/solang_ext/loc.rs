@@ -12,19 +12,19 @@ pub trait CodeLocationExt {
     fn loc(&self) -> pt::Loc;
 }
 
-impl<T: ?Sized + CodeLocationExt> CodeLocationExt for &'_ T {
+impl<'a, T: ?Sized + CodeLocationExt> CodeLocationExt for &'a T {
     fn loc(&self) -> pt::Loc {
         (**self).loc()
     }
 }
 
-impl<T: ?Sized + CodeLocationExt> CodeLocationExt for &'_ mut T {
+impl<'a, T: ?Sized + CodeLocationExt> CodeLocationExt for &'a mut T {
     fn loc(&self) -> pt::Loc {
         (**self).loc()
     }
 }
 
-impl<T: ?Sized + ToOwned + CodeLocationExt> CodeLocationExt for Cow<'_, T> {
+impl<'a, T: ?Sized + ToOwned + CodeLocationExt> CodeLocationExt for Cow<'a, T> {
     fn loc(&self) -> pt::Loc {
         (**self).loc()
     }

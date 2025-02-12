@@ -3198,12 +3198,7 @@ pub fn emit_function_call(
             args,
         } => {
             let data = expression(&args[0], cfg, caller_contract_no, func, ns, vartab, opt);
-
-            if tys.len() == 1 && tys[0] == Type::Void {
-                vec![Expression::Poison]
-            } else {
-                abi_decode(loc, &data, tys, ns, vartab, cfg, None)
-            }
+            abi_decode(loc, &data, tys, ns, vartab, cfg, None)
         }
         _ => unreachable!(),
     }

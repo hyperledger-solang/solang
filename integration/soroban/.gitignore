@@ -6,8 +6,4 @@
 node_modules
 package-lock.json
 *.txt
-*.wasm
-*.abi
-target/
-.stellar
-
+*.toml

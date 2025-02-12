@@ -89,8 +89,8 @@ pub(super) fn reaching_values(
 /// changes in the set.
 /// There is a discussion to improve this function: https://github.com/hyperledger-solang/solang/issues/934
 fn update_map(var_no: usize, set: &HashSet<Value>, map: &mut Variables) -> bool {
-    if let Some(existing) = map.get_mut(&var_no) {
-        if existing.iter().next().is_some_and(|v| v.all_unknown()) {
+    return if let Some(existing) = map.get_mut(&var_no) {
+        if existing.iter().next().map_or(false, |v| v.all_unknown()) {
             // If we already think it is unknown, nothing can improve on that
             false
         } else if let Some(v) = set.iter().find(|v| v.all_unknown()) {
@@ -138,7 +138,7 @@ fn update_map(var_no: usize, set: &HashSet<Value>, map: &mut Variables) -> bool 
         }
 
         true
-    }
+    };
 }
 
 /// For a given instruction, calculate the new reaching values

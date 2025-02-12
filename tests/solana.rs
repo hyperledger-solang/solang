@@ -440,7 +440,7 @@ struct SyscallContext<'a> {
     pub remaining: u64,
 }
 
-impl ContextObject for SyscallContext<'_> {
+impl<'a> ContextObject for SyscallContext<'a> {
     fn trace(&mut self, _state: [u64; 12]) {}
 
     fn consume(&mut self, amount: u64) {
@@ -453,7 +453,7 @@ impl ContextObject for SyscallContext<'_> {
     }
 }
 
-impl SyscallContext<'_> {
+impl<'a> SyscallContext<'a> {
     pub fn heap_verify(&self) {
         const VERBOSE: bool = false;
 
@@ -1647,7 +1647,7 @@ struct VmFunction<'a, 'b> {
     data_account: Option<usize>,
 }
 
-impl<'b> VmFunction<'_, 'b> {
+impl<'a, 'b> VmFunction<'a, 'b> {
     fn accounts(&mut self, accounts: Vec<(&str, Account)>) -> &mut Self {
         let accounts = accounts.into_iter().collect::<HashMap<&str, Account>>();
         let mut metas: Vec<AccountMeta> = Vec::new();

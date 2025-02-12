@@ -1581,9 +1581,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .into()
             } else {
                 let elem = match ty {
-                    Type::Slice(_) | Type::String | Type::DynamicBytes | Type::Bytes(_) => {
-                        Type::Bytes(1)
-                    }
+                    Type::Slice(_) | Type::String | Type::DynamicBytes => Type::Bytes(1),
                     _ => ty.array_elem(),
                 };
 
@@ -1595,7 +1593,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .unwrap()
                     .const_cast(bin.context.i32_type(), false);
 
-                bin.vector_new(size, elem_size, initializer.as_ref(), ty, ns)
+                bin.vector_new(size, elem_size, initializer.as_ref()).into()
             }
         }
         Expression::Builtin {
@@ -2147,16 +2145,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             };
 
             advanced.into()
-        }
-
-        Expression::VectorData { pointer } => {
-            let ptr = expression(target, bin, pointer, vartab, function, ns);
-            let data = bin.vector_bytes(ptr);
-            let res = bin
-                .builder
-                .build_ptr_to_int(data, bin.context.i64_type(), "sesa");
-
-            res.unwrap().into()
         }
 
         Expression::RationalNumberLiteral { .. }

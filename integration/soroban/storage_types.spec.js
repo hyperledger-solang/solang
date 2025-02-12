@@ -33,20 +33,16 @@ describe('StorageTypes', () => {
 
   it('check initial values', async () => {
     // Check initial values of all storage variables
-    let res = await call_contract_function("sesa", server, keypair, contract);
-    let sesa = res.returnValue().value();
+    let sesa = await call_contract_function("sesa", server, keypair, contract);
     expect(sesa.toString()).eq("1");
 
-    res = await call_contract_function("sesa1", server, keypair, contract);
-    let sesa1 = res.returnValue().value();
+    let sesa1 = await call_contract_function("sesa1", server, keypair, contract);
     expect(sesa1.toString()).eq("1");
 
-    res = await call_contract_function("sesa2", server, keypair, contract);
-    let sesa2 = res.returnValue().value();
+    let sesa2 = await call_contract_function("sesa2", server, keypair, contract);
     expect(sesa2.toString()).eq("2");
 
-    res = await call_contract_function("sesa3", server, keypair, contract);
-    let sesa3 = res.returnValue().value();
+    let sesa3 = await call_contract_function("sesa3", server, keypair, contract);
     expect(sesa3.toString()).eq("2");
   });
 
@@ -55,20 +51,16 @@ describe('StorageTypes', () => {
     await call_contract_function("inc", server, keypair, contract);
 
     // Check the incremented values
-    let res = await call_contract_function("sesa", server, keypair, contract);
-    let sesa = res.returnValue().value();
+    let sesa = await call_contract_function("sesa", server, keypair, contract);
     expect(sesa.toString()).eq("2");
 
-    res = await call_contract_function("sesa1", server, keypair, contract);
-    let sesa1 = res.returnValue().value();
+    let sesa1 = await call_contract_function("sesa1", server, keypair, contract);
     expect(sesa1.toString()).eq("2");
 
-    res = await call_contract_function("sesa2", server, keypair, contract);
-    let sesa2 = res.returnValue().value();
+    let sesa2 = await call_contract_function("sesa2", server, keypair, contract);
     expect(sesa2.toString()).eq("3");
 
-    res = await call_contract_function("sesa3", server, keypair, contract);
-    let sesa3 = res.returnValue().value();
+    let sesa3 = await call_contract_function("sesa3", server, keypair, contract);
     expect(sesa3.toString()).eq("3");
   });
 
@@ -77,20 +69,16 @@ describe('StorageTypes', () => {
     await call_contract_function("dec", server, keypair, contract);
 
     // Check the decremented values
-    let res = await call_contract_function("sesa", server, keypair, contract);
-    let sesa = res.returnValue().value();
+    let sesa = await call_contract_function("sesa", server, keypair, contract);
     expect(sesa.toString()).eq("1");
 
-    res = await call_contract_function("sesa1", server, keypair, contract);
-    let sesa1 = res.returnValue().value();
+    let sesa1 = await call_contract_function("sesa1", server, keypair, contract);
     expect(sesa1.toString()).eq("1");
 
-    res = await call_contract_function("sesa2", server, keypair, contract);
-    let sesa2 = res.returnValue().value();
+    let sesa2 = await call_contract_function("sesa2", server, keypair, contract);
     expect(sesa2.toString()).eq("2");
 
-    res = await call_contract_function("sesa3", server, keypair, contract);
-    let sesa3 = res.returnValue().value();
+    let sesa3 = await call_contract_function("sesa3", server, keypair, contract);
     expect(sesa3.toString()).eq("2");
   });
 });

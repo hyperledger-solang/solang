@@ -89,7 +89,7 @@ impl Context {
     pub(crate) fn is_constructor_function(&self) -> bool {
         self.function
             .as_ref()
-            .is_some_and(|f| matches!(f.ty, FunctionTy::Constructor))
+            .map_or(false, |f| matches!(f.ty, FunctionTy::Constructor))
     }
 }
 
@@ -348,7 +348,7 @@ impl<'a, W: Write> Formatter<'a, W> {
                 };
 
                 self.find_next_line(start_from)
-                    .is_some_and(|loc| loc >= end_at)
+                    .map_or(false, |loc| loc >= end_at)
             }
         }
     }
@@ -549,7 +549,7 @@ impl<'a, W: Write> Formatter<'a, W> {
     fn write_doc_block_line(&mut self, comment: &CommentWithMetadata, line: &str) -> Result<()> {
         if line.trim().starts_with('*') {
             let line = line.trim().trim_start_matches('*');
-            let needs_space = line.chars().next().is_some_and(|ch| !ch.is_whitespace());
+            let needs_space = line.chars().next().map_or(false, |ch| !ch.is_whitespace());
             write!(self.buf(), " *{}", if needs_space { " " } else { "" })?;
             self.write_comment_line(comment, line)?;
             self.write_whitespace_separator(true)?;
@@ -1797,7 +1797,7 @@ impl<'a, W: Write> Formatter<'a, W> {
 }
 
 // Traverse the Solidity Parse Tree and write to the code formatter
-impl<W: Write> Visitor for Formatter<'_, W> {
+impl<'a, W: Write> Visitor for Formatter<'a, W> {
     type Error = FormatterError;
 
     #[instrument(name = "source", skip(self))]
@@ -1862,7 +1862,7 @@ impl<W: Write> Visitor for Formatter<'_, W> {
         )?;
 
         // EOF newline
-        if self.last_char() != Some('\n') {
+        if self.last_char().map_or(true, |char| char != '\n') {
             writeln!(self.buf())?;
         }
 
@@ -3268,7 +3268,7 @@ impl<W: Write> Visitor for Formatter<'_, W> {
 
                 // we can however check if the contract `is` the `base`, this however also does
                 // not cover all cases
-                let is_contract_base = self.context.contract.as_ref().is_some_and(|contract| {
+                let is_contract_base = self.context.contract.as_ref().map_or(false, |contract| {
                     contract.base.iter().any(|contract_base| {
                         contract_base
                             .name
@@ -3292,7 +3292,7 @@ impl<W: Write> Visitor for Formatter<'_, W> {
                         .content
                         .chars()
                         .next()
-                        .is_some_and(|c| c.is_lowercase());
+                        .map_or(false, |c| c.is_lowercase());
                     if is_lowercase && base_or_modifier.content.ends_with("()") {
                         base_or_modifier
                             .content
@@ -3904,14 +3904,14 @@ struct Transaction<'f, 'a, W> {
     comments: Comments,
 }
 
-impl<'a, W> std::ops::Deref for Transaction<'_, 'a, W> {
+impl<'f, 'a, W> std::ops::Deref for Transaction<'f, 'a, W> {
     type Target = Formatter<'a, W>;
     fn deref(&self) -> &Self::Target {
         self.fmt
     }
 }
 
-impl<W> std::ops::DerefMut for Transaction<'_, '_, W> {
+impl<'f, 'a, W> std::ops::DerefMut for Transaction<'f, 'a, W> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.fmt
     }

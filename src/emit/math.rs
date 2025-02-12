@@ -446,7 +446,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_int_truncate(res.into_int_value(), left.get_type(), "")
                 .unwrap()
         } else {
-            call_mul32_without_ovf(bin, l, r, o, mul_bits, mul_ty, left.get_type())
+            return call_mul32_without_ovf(bin, l, r, o, mul_bits, mul_ty, left.get_type());
         }
     } else if !unchecked {
         build_binary_op_with_overflow_check(

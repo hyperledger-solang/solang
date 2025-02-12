@@ -372,7 +372,6 @@ pub enum InternalCallTy {
     Static { cfg_no: usize },
     Dynamic(Expression),
     Builtin { ast_func_no: usize },
-    HostFunction { name: String },
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -985,9 +984,6 @@ impl ControlFlowGraph {
             Expression::GetRef { expr, .. } => {
                 format!("(deref {}", self.expr_to_string(contract, ns, expr))
             }
-            Expression::VectorData { pointer } => {
-                format!("pointer pos {}", self.expr_to_string(contract, ns, pointer))
-            }
         }
     }
 
@@ -1176,19 +1172,6 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Instr::Call { res, call: InternalCallTy::HostFunction { name }, args, .. } => {
-                format!("{} = call host function {} {}",
-                        res.iter()
-                            .map(|local| format!("%{}", self.vars[local].id.name))
-                            .collect::<Vec<String>>()
-                            .join(", "),
-                        name,
-                        args.iter()
-                            .map(|expr| self.expr_to_string(contract, ns, expr))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                )
-            }
             Instr::ExternalCall {
                 success,
                 address,

@@ -117,7 +117,7 @@ impl CommentWithMetadata {
                     // line has something
                     // check if the last comment after code was a postfix comment
                     if last_comment
-                        .is_some_and(|last| last.loc.end() > code_end && !last.is_prefix())
+                        .map_or(false, |last| last.loc.end() > code_end && !last.is_prefix())
                     {
                         // get the indent size of the next item of code
                         let next_indent_len = src[comment.loc().end()..]
@@ -434,7 +434,7 @@ impl std::iter::FusedIterator for CommentStateCharIndices<'_> {}
 /// An Iterator over characters in a string slice which are not a apart of comments
 pub struct NonCommentChars<'a>(CommentStateCharIndices<'a>);
 
-impl Iterator for NonCommentChars<'_> {
+impl<'a> Iterator for NonCommentChars<'a> {
     type Item = char;
 
     #[inline]

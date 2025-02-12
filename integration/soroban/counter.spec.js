@@ -39,8 +39,6 @@ describe('Counter', () => {
     let count = await call_contract_function("count", server, keypair, contract);
     console.log(`initial counter is: ${count}`);
     expect(count.toString()).eq("10");
-    console.log(count.returnValue().value());
-    expect(count.returnValue().value().toString()).eq("10");
   });
 
   it('increment counter', async () => {
@@ -49,19 +47,7 @@ describe('Counter', () => {
 
     // get the count
     let count = await call_contract_function("count", server, keypair, contract);
-    expect(count.returnValue().value().toString()).eq("11");
-  });
-
-  it('adding two numbers', async () => {
-    // add two numbers
-    let args = [
-      StellarSdk.xdr.ScVal.scvU32(30),
-      StellarSdk.xdr.ScVal.scvU32(40)
-    ];
-
-    let result = await call_contract_function("additionu32", server, keypair, contract, ...args);    // let returnValue = result.returnValue().value().toString();
-    console.log(`additionu32 output is: ${result}`);
-    expect(result.toString()).eq("70");
+    expect(count.toString()).eq("11");
   });
 
   it('adding two numbers', async () => {

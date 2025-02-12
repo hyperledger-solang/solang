@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#![cfg(test)]
+#[cfg(test)]
 
 mod tests {
     use crate::{cli, options_arg, Cli, Commands};

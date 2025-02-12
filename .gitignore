@@ -9,3 +9,5 @@ Cargo.lock
 
 .helix/
 .vscode/
+
+/test_snapshots

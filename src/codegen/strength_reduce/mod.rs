@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use value::{get_max_signed, get_max_unsigned, is_single_constant, Value};
 
-/*
+/**
   Strength Reduce optimization pass - replace expensive arithmetic operations with cheaper ones
 
   Currently implemented:

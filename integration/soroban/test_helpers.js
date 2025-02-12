@@ -34,8 +34,9 @@ export async function call_contract_function(method, server, keypair, contract, 
                 }
                 // Extract and return the return value from the contract
                 let transactionMeta = getResponse.resultMetaXdr;
-                let returnValue = transactionMeta.v3().sorobanMeta();
-                res = returnValue;
+                let returnValue = transactionMeta.v3().sorobanMeta().returnValue();
+                console.log(`Transaction result: ${returnValue.value()}`);
+                res = returnValue.value();
             } else {
                 throw `Transaction failed: ${getResponse.resultXdr}`;
             }
@@ -60,23 +61,4 @@ export async function call_contract_function(method, server, keypair, contract, 
     }
 
     return res;
-}
-
-export function extractLogEvent(diagnosticEvents) {
-    // Convert events into human-readable format
-    const humanReadableEvents = StellarSdk.humanizeEvents(diagnosticEvents);
-
-    // Find the log event
-    const logEvent = humanReadableEvents.find(event =>
-        event.type === "diagnostic" && event.topics.includes("log")
-    );
-
-    if (logEvent) {
-        return {
-            contractId: logEvent.contractId || "Unknown Contract",
-            logMessages: Array.isArray(logEvent.data) ? logEvent.data : [logEvent.data]
-        };
-    }
-
-    return null; // No log event found
 }

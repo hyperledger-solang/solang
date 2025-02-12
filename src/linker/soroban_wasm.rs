@@ -11,6 +11,8 @@ use wasm_encoder::{
 };
 use wasmparser::{Global, Import, Parser, Payload::*, SectionLimited, TypeRef};
 
+use crate::emit::soroban::{GET_CONTRACT_DATA, LOG_FROM_LINEAR_MEMORY, PUT_CONTRACT_DATA};
+
 pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     let dir = tempdir().expect("failed to create temp directory for linking");
 
@@ -25,12 +27,11 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
         .expect("failed to write object file to temp file");
 
     let mut command_line = vec![
+        CString::new("-O3").unwrap(),
         CString::new("--no-entry").unwrap(),
         CString::new("--allow-undefined").unwrap(),
         CString::new("--gc-sections").unwrap(),
         CString::new("--global-base=0").unwrap(),
-        CString::new("--initial-memory=1048576").unwrap(), // 1 MiB initial memory
-        CString::new("--max-memory=1048576").unwrap(),
     ];
     command_line.push(CString::new("--export-dynamic").unwrap());
 
@@ -94,7 +95,11 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
             }),
             _ => panic!("unexpected WASM import section {:?}", import),
         };
-        let module_name = import.name.split('.').next().unwrap();
+        let module_name = match import.name {
+            GET_CONTRACT_DATA | PUT_CONTRACT_DATA => "l",
+            LOG_FROM_LINEAR_MEMORY => "x",
+            _ => panic!("got func {:?}", import),
+        };
         // parse the import name to all string after the the first dot
         let import_name = import.name.split('.').nth(1).unwrap();
         imports.import(module_name, import_name, import_type);

@@ -24,7 +24,7 @@ Please see the [extension documentation](https://solang.readthedocs.io/en/latest
 
 ## References
 
-Files solidity.configuration.json, syntaxes/solidity.json referred from https://github.com/juanfranblanco/vscode-solidity
+Files solidity.configuration.json, syntaxes/solidity.json reffered from https://github.com/juanfranblanco/vscode-solidity
 
 Commit hash: e22c566909a18ae646cbc41ea3e788222c8377a6
 

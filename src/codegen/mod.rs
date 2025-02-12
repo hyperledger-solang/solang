@@ -94,34 +94,6 @@ impl From<inkwell::OptimizationLevel> for OptimizationLevel {
     }
 }
 
-pub enum HostFunctions {
-    PutContractData,
-    GetContractData,
-    LogFromLinearMemory,
-    SymbolNewFromLinearMemory,
-    VectorNew,
-    VectorNewFromLinearMemory,
-    Call,
-    ObjToU64,
-    ObjFromU64,
-}
-
-impl HostFunctions {
-    pub fn name(&self) -> &str {
-        match self {
-            HostFunctions::PutContractData => "l._",
-            HostFunctions::GetContractData => "l.1",
-            HostFunctions::LogFromLinearMemory => "x._",
-            HostFunctions::SymbolNewFromLinearMemory => "b.j",
-            HostFunctions::VectorNew => "v._",
-            HostFunctions::VectorNewFromLinearMemory => "v.g",
-            HostFunctions::Call => "d._",
-            HostFunctions::ObjToU64 => "i.0",
-            HostFunctions::ObjFromU64 => "i._",
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Options {
     pub dead_storage: bool,
@@ -688,9 +660,6 @@ pub enum Expression {
         pointer: Box<Expression>,
         bytes_offset: Box<Expression>,
     },
-    VectorData {
-        pointer: Box<Expression>,
-    },
 }
 
 impl CodeLocation for Expression {
@@ -747,8 +716,7 @@ impl CodeLocation for Expression {
             Expression::InternalFunctionCfg { .. }
             | Expression::Poison
             | Expression::Undefined { .. }
-            | Expression::AdvancePointer { .. }
-            | Expression::VectorData { .. } => pt::Loc::Codegen,
+            | Expression::AdvancePointer { .. } => pt::Loc::Codegen,
         }
     }
 }
@@ -900,7 +868,6 @@ impl RetrieveType for Expression {
 
             Expression::AdvancePointer { .. } => Type::BufferPointer,
             Expression::FormatString { .. } => Type::String,
-            Expression::VectorData { .. } => Type::Uint(64),
             Expression::Poison => unreachable!("Expression does not have a type"),
         }
     }

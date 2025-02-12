@@ -248,7 +248,7 @@ impl<'a> FormatIterator<'a> {
     }
 }
 
-impl Iterator for FormatIterator<'_> {
+impl<'a> Iterator for FormatIterator<'a> {
     type Item = (pt::Loc, char);
 
     fn next(&mut self) -> Option<Self::Item> {

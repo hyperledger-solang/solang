@@ -43,7 +43,7 @@ impl<'a> QuoteStateCharIndices<'a> {
     }
 }
 
-impl Iterator for QuoteStateCharIndices<'_> {
+impl<'a> Iterator for QuoteStateCharIndices<'a> {
     type Item = (QuoteState, usize, char);
     fn next(&mut self) -> Option<Self::Item> {
         let (idx, ch) = self.iter.next()?;
@@ -73,14 +73,14 @@ impl Iterator for QuoteStateCharIndices<'_> {
 /// An iterator over the indices of quoted string locations
 pub struct QuotedRanges<'a>(QuoteStateCharIndices<'a>);
 
-impl QuotedRanges<'_> {
+impl<'a> QuotedRanges<'a> {
     pub fn with_state(mut self, state: QuoteState) -> Self {
         self.0 = self.0.with_state(state);
         self
     }
 }
 
-impl Iterator for QuotedRanges<'_> {
+impl<'a> Iterator for QuotedRanges<'a> {
     type Item = (char, usize, usize);
     fn next(&mut self) -> Option<Self::Item> {
         let (quote, start) = loop {

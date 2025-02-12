@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-impl<'a> AvailableExpressionSet<'a> {
+impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     /// Deep clone a set
     pub fn deep_clone(&self) -> AvailableExpressionSet<'a> {
         let mut new_set = AvailableExpressionSet {

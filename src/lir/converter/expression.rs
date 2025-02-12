@@ -420,28 +420,7 @@ impl Converter<'_> {
                 bytes_offset,
                 ..
             } => self.advance_pointer(dest, pointer, bytes_offset, vartable, results),
-
-            codegen::Expression::VectorData { pointer } => {
-                self.pointer_position(dest, pointer, vartable, results)
-            }
         }
-    }
-
-    fn pointer_position(
-        &self,
-        dest: &Operand,
-        pointer: &codegen::Expression,
-        vartable: &mut Vartable,
-        results: &mut Vec<Instruction>,
-    ) {
-        let pointer_op = self.to_operand_and_insns(pointer, vartable, results);
-        results.push(Instruction::Set {
-            loc: Loc::Codegen,
-            res: dest.get_id_or_error(),
-            expr: Expression::VectorData {
-                pointer: Box::new(pointer_op),
-            },
-        });
     }
 
     fn advance_pointer(

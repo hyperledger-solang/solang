@@ -5,7 +5,6 @@ pub mod soroban_testcases;
 
 use solang::codegen::Options;
 use solang::file_resolver::FileResolver;
-use solang::sema::ast::Namespace;
 use solang::sema::diagnostics::Diagnostics;
 use solang::{compile, Target};
 use soroban_sdk::testutils::Logs;
@@ -20,11 +19,6 @@ pub struct SorobanEnv {
 }
 
 pub fn build_solidity(src: &str) -> SorobanEnv {
-    let (wasm_blob, ns) = build_wasm(src);
-    SorobanEnv::new_with_contract(wasm_blob).insert_diagnostics(ns.diagnostics)
-}
-
-fn build_wasm(src: &str) -> (Vec<u8>, Namespace) {
     let tmp_file = OsStr::new("test.sol");
     let mut cache = FileResolver::default();
     cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
@@ -46,8 +40,10 @@ fn build_wasm(src: &str) -> (Vec<u8>, Namespace) {
         std::vec!["unknown".to_string()],
         "0.0.1",
     );
+    ns.print_diagnostics_in_plain(&cache, false);
     assert!(!wasm.is_empty());
-    (wasm[0].0.clone(), ns)
+    let wasm_blob = wasm[0].0.clone();
+    SorobanEnv::new_with_contract(wasm_blob).insert_diagnostics(ns.diagnostics)
 }
 
 impl SorobanEnv {
@@ -109,16 +105,6 @@ impl SorobanEnv {
             .try_invoke_contract::<Val, Val>(addr, &func, args_soroban);
 
         self.env.logs().all()
-    }
-
-    pub fn deploy_contract(&mut self, src: &str) -> Address {
-        let wasm = build_wasm(src).0;
-
-        let addr = self.register_contract(wasm);
-
-        self.contracts.push(addr.clone());
-
-        addr
     }
 }
 

@@ -217,7 +217,7 @@ struct chunk
     uint32_t allocated;
 };
 
-#define ROUND_UP(n, d) (((n) + (d) - 1) & ~(d - 1))
+#define ROUND_UP(n, d) (((n) + (d)-1) & ~(d - 1))
 
 uint64_t account_data_alloc(SolAccountInfo *ai, uint32_t size, uint32_t *res)
 {

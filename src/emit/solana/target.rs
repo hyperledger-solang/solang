@@ -825,9 +825,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         .unwrap()
                         .into_int_value();
 
-                    dest = binary
-                        .vector_new(length, elem_size, None, elem_ty, ns)
-                        .into_pointer_value();
+                    dest = binary.vector_new(length, elem_size, None);
                 };
 
                 let elem_size = elem_ty.solana_storage_size(ns).to_u64().unwrap();
@@ -1495,7 +1493,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
-        address: Option<BasicValueEnum<'b>>,
+        address: Option<PointerValue<'b>>,
         mut contract_args: ContractArgs<'b>,
         _ty: ast::CallTy,
         ns: &ast::Namespace,
@@ -1514,7 +1512,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             ))
         };
 
-        contract_args.program_id = Some(address.into_pointer_value());
+        contract_args.program_id = Some(address);
         self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args, ns);
     }
 
