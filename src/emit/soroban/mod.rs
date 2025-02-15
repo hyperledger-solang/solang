@@ -46,6 +46,12 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
+            // ;; If the TTL for the current contract instance and code (if applicable) is below `threshold` ledgers, extend `live_until_ledger_seq` such that TTL == `extend_to`, where TTL is defined as live_until_ledger_seq - current ledger.
+            // (func $extend_current_contract_instance_and_code_ttl (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
+            HostFunctions::ExtendCurrentContractInstanceAndCodeTtl => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
             HostFunctions::LogFromLinearMemory => bin
                 .context
                 .i64_type()
@@ -287,6 +293,7 @@ impl SorobanTarget {
             HostFunctions::PutContractData,
             HostFunctions::GetContractData,
             HostFunctions::ExtendContractDataTtl,
+            HostFunctions::ExtendCurrentContractInstanceAndCodeTtl,
             HostFunctions::LogFromLinearMemory,
             HostFunctions::SymbolNewFromLinearMemory,
             HostFunctions::VectorNew,

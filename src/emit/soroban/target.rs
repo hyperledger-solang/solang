@@ -474,7 +474,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 // Get arguments
                 // (func $extend_contract_data_ttl (param $k_val i64) (param $t_storage_type i64) (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
                 assert_eq!(args.len(), 4, "extendTtl expects 4 arguments");
-                // SAFETY: We already checked that the length of args is 3 so it is safe to unwrap here
+                // SAFETY: We already checked that the length of args is 4 so it is safe to unwrap here
                 let slot_no = match args.first().unwrap() {
                     Expression::NumberLiteral { value, .. } => value,
                     _ => panic!(
@@ -528,6 +528,67 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                         &[
                             bin.context.i64_type().const_int(slot_no, false).into(),
                             bin.context.i64_type().const_int(storage_type, false).into(),
+                            bin.context
+                                .i64_type()
+                                .const_int(threshold_u32_val, false)
+                                .into(),
+                            bin.context
+                                .i64_type()
+                                .const_int(extend_to_u32_val, false)
+                                .into(),
+                        ],
+                        function_name,
+                    )
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                value.into()
+            }
+            Expression::Builtin {
+                kind: Builtin::ExtendInstanceTtl,
+                args,
+                ..
+            } => {
+                // Get arguments
+                // (func $extend_contract_data_ttl (param $k_val i64) (param $t_storage_type i64) (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
+                assert_eq!(args.len(), 2, "extendTtl expects 2 arguments");
+                // SAFETY: We already checked that the length of args is 2 so it is safe to unwrap here
+                let threshold = match args.first().unwrap() {
+                    Expression::NumberLiteral { value, .. } => value,
+                    _ => panic!(
+                        "Expected threshold to be of type Expression::NumberLiteral. Actual: {:?}",
+                        args.get(1).unwrap()
+                    ),
+                }
+                .to_u64()
+                .unwrap();
+                let extend_to = match args.get(1).unwrap() {
+                    Expression::NumberLiteral { value, .. } => value,
+                    _ => panic!(
+                        "Expected extend_to to be of type Expression::NumberLiteral. Actual: {:?}",
+                        args.get(2).unwrap()
+                    ),
+                }
+                .to_u64()
+                .unwrap();
+
+                // Encode the values (threshold and extend_to)
+                // See: https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#tag-values
+                let threshold_u32_val = (threshold << 32) + 4;
+                let extend_to_u32_val = (extend_to << 32) + 4;
+
+                // Call the function
+                let function_name = HostFunctions::ExtendCurrentContractInstanceAndCodeTtl.name();
+                let function_value = bin.module.get_function(function_name).unwrap();
+
+                let value = bin
+                    .builder
+                    .build_call(
+                        function_value,
+                        &[
                             bin.context
                                 .i64_type()
                                 .const_int(threshold_u32_val, false)
