@@ -42,7 +42,7 @@ pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 28]> = Lazy::new(|| {
             builtin: Builtin::ExtendInstanceTtl,
             namespace: None,
             method: vec![],
-            name: "extend_instance_ttl",  
+            name: "extendInstanceTtl",  
             params: vec![Type::Uint(32), Type::Uint(32)],
             ret: vec![Type::Int(64)],
             target: vec![Target::Soroban],

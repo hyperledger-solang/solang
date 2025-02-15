@@ -131,7 +131,7 @@ fn ttl_instance_wrong() {
         r#"contract instance_counter {
             uint64 instance instanceCount = 3;
             
-            function extend_instance_ttl() public view returns (int64) {
+            function extendInstanceTtl() public view returns (int64) {
                 return instanceCount.extendTtl(700, 3000);
             }
         }"#,
@@ -152,8 +152,8 @@ fn ttl_instance_correct() {
 
             /// Extends the TTL for the instance storage to 10000 ledgers
             /// if the current TTL is smaller than 2000 ledgers
-            function extend_instance_ttl() public view returns (int64) {
-                return extend_instance_ttl(2000, 10000);
+            function extendInstanceTtl() public view returns (int64) {
+                return extendInstanceTtl(2000, 10000);
             }
         }"#,
         |env| {
@@ -185,7 +185,7 @@ fn ttl_instance_correct() {
     });
 
     // Extend instance TTL to 10000 ledgers
-    runtime.invoke_contract(addr, "extend_instance_ttl", vec![]);
+    runtime.invoke_contract(addr, "extendInstanceTtl", vec![]);
     runtime.env.as_contract(addr, || {
         assert_eq!(runtime.env.storage().instance().get_ttl(), 10000);
     });
@@ -210,8 +210,8 @@ fn ttl_combined() {
                 return tCount.extendTtl(3000, 7000);
             }
 
-            function extend_instance_ttl() public view returns (int64) {
-                return extend_instance_ttl(2000, 10000);
+            function extendInstanceTtl() public view returns (int64) {
+                return extendInstanceTtl(2000, 10000);
             }
         }"#,
         |env| {
@@ -264,7 +264,7 @@ fn ttl_combined() {
     });
 
     // Extend instance storage TTL
-    runtime.invoke_contract(addr, "extend_instance_ttl", vec![]);
+    runtime.invoke_contract(addr, "extendInstanceTtl", vec![]);
     runtime.env.as_contract(addr, || {
         assert_eq!(runtime.env.storage().instance().get_ttl(), 10000);
     });
@@ -313,7 +313,7 @@ fn ttl_combined() {
 
     // Re-extend all TTLs
     runtime.invoke_contract(addr, "extend_persistent_ttl", vec![]);
-    runtime.invoke_contract(addr, "extend_instance_ttl", vec![]);
+    runtime.invoke_contract(addr, "extendInstanceTtl", vec![]);
     runtime.invoke_contract(addr, "extend_temp_ttl", vec![]);
 
     // Final TTL verification
@@ -352,8 +352,8 @@ fn test_persistent_entry_archival() {
                 return pCount.extendTtl(1000, 10000);
             }
 
-            function extend_instance_ttl() public view returns (int64) {
-                return extend_instance_ttl(2000, 10000);
+            function extendInstanceTtl() public view returns (int64) {
+                return extendInstanceTtl(2000, 10000);
             }
         }"#,
         |env| {
@@ -369,7 +369,7 @@ fn test_persistent_entry_archival() {
     let addr = runtime.contracts.last().unwrap();
 
     // Extend instance TTL
-    runtime.invoke_contract(addr, "extend_instance_ttl", vec![]);
+    runtime.invoke_contract(addr, "extendInstanceTtl", vec![]);
 
     // Bump ledger sequence by 10001 (one past persistent TTL)
     runtime.env.ledger().with_mut(|li| {
