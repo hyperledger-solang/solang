@@ -669,10 +669,10 @@ Assuming `arg1` is 512 and `arg2` is 196, the output to the log will be ``foo en
 
 .. _extendPersistentTtl:
 
-extendPersistentTtl(uint32 threshold, uint32 extend_to) 
+extendTtl(uint32 threshold, uint32 extend_to) 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-The ``extendPersistentTtl()`` method allows extending the time-to-live (TTL) of a contract storage entry.
+The ``extendTtl()`` method allows extending the time-to-live (TTL) of a contract storage entry.
 
 If the entry's TTL is below threshold ledgers, this function updates ``live_until_ledger_seq`` such that TTL equals ``extend_to``. The TTL is defined as:
 
@@ -688,7 +688,7 @@ TTL = live_until_ledger_seq - current_ledger
     /// Extends the TTL for the `count` persistent key to 5000 ledgers
     /// if the current TTL is smaller than 1000 ledgers
     function extend_ttl() public view returns (int64) {
-        return count.extendPersistentTtl(1000, 5000);
+        return count.extendTtl(1000, 5000);
     }
 
 

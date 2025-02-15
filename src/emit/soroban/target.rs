@@ -467,14 +467,13 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
         match expr {
             Expression::Builtin {
-                kind: Builtin::ExtendPersistentTtl,
+                kind: Builtin::ExtendTtl,
                 args,
                 ..
             } => {
                 // Get arguments
                 // (func $extend_contract_data_ttl (param $k_val i64) (param $t_storage_type i64) (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
-                let storage_type = storage_type_to_int(&Some(StorageType::Persistent(None)));
-                assert_eq!(args.len(), 3, "extendPersistentTtl expects 3 arguments");
+                assert_eq!(args.len(), 4, "extendTtl expects 4 arguments");
                 // SAFETY: We already checked that the length of args is 3 so it is safe to unwrap here
                 let slot_no = match args.first().unwrap() {
                     Expression::NumberLiteral { value, .. } => value,
@@ -500,6 +499,15 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                         "Expected extend_to to be of type Expression::NumberLiteral. Actual: {:?}",
                         args.get(2).unwrap()
                     ),
+                }
+                .to_u64()
+                .unwrap();
+                let storage_type = match args.get(3).unwrap() {
+                    Expression::NumberLiteral { value, .. } => value,
+                    _ => panic!(
+                    "Expected storage_type to be of type Expression::NumberLiteral. Actual: {:?}",
+                    args.get(3).unwrap()
+                ),
                 }
                 .to_u64()
                 .unwrap();

@@ -18,7 +18,7 @@ fn ttl_basic() {
             /// Extends the TTL for the `count` persistent key to 5000 ledgers
             /// if the current TTL is smaller than 1000 ledgers
             function extend_ttl() public view returns (int64) {
-                return count.extendPersistentTtl(1000, 5000);
+                return count.extendTtl(1000, 5000);
             }
         }"#,
         |env| {

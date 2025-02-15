@@ -1796,7 +1796,7 @@ pub enum Builtin {
     WriteUint256LE,
     WriteBytes,
     Concat,
-    ExtendPersistentTtl,
+    ExtendTtl,
 }
 
 impl From<&ast::Builtin> for Builtin {
@@ -1859,7 +1859,7 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::PrevRandao => Builtin::PrevRandao,
             ast::Builtin::ContractCode => Builtin::ContractCode,
             ast::Builtin::StringConcat | ast::Builtin::BytesConcat => Builtin::Concat,
-            ast::Builtin::ExtendPersistentTtl => Builtin::ExtendPersistentTtl,
+            ast::Builtin::ExtendTtl => Builtin::ExtendTtl,
             _ => panic!("Builtin should not be in the cfg"),
         }
     }
