@@ -14,6 +14,7 @@ fn log_runtime_error() {
                 return count;
             }
         }"#,
+        |_| {},
     );
 
     let addr = src.contracts.last().unwrap();
@@ -34,6 +35,7 @@ fn print() {
                 print("Hello, World!");
             }
         }"#,
+        |_| {},
     );
 
     let addr = src.contracts.last().unwrap();
@@ -57,6 +59,7 @@ fn print_then_runtime_error() {
                 return count;
             }
         }"#,
+        |_| {},
     );
 
     let addr = src.contracts.last().unwrap();

@@ -30,6 +30,7 @@ use crate::sema::{
     expression::ResolveTo,
 };
 use crate::Target;
+use core::panic;
 use num_bigint::{BigInt, Sign};
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
 use solang_parser::pt::{self, CodeLocation, Loc};
@@ -2326,6 +2327,43 @@ fn expr_builtin(
             };
 
             code(loc, *contract_no, ns, opt)
+        }
+        ast::Builtin::ExtendTtl => {
+            let mut arguments: Vec<Expression> = args
+                .iter()
+                .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
+                .collect();
+
+            // var_no is the first argument of the builtin
+            let var_no = match arguments[0].clone() {
+                Expression::NumberLiteral { value, .. } => value,
+                _ => panic!("First argument of extendTtl() must be a number literal"),
+            }
+            .to_usize()
+            .expect("Unable to convert var_no to usize");
+            let var = ns.contracts[contract_no].variables.get(var_no).unwrap();
+            let storage_type_usize = match var
+            .storage_type
+            .clone()
+            .expect("Unable to get storage type") {
+                solang_parser::pt::StorageType::Temporary(_) => 0,
+                solang_parser::pt::StorageType::Persistent(_) => 1,
+                solang_parser::pt::StorageType::Instance(_) => panic!("Calling extendTtl() on instance storage is not allowed. Use `extendInstanceTtl()` instead."),
+            };
+
+            // append the storage type to the arguments
+            arguments.push(Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Uint(32),
+                value: BigInt::from(storage_type_usize),
+            });
+
+            Expression::Builtin {
+                loc: *loc,
+                tys: tys.to_vec(),
+                kind: (&builtin).into(),
+                args: arguments,
+            }
         }
         _ => {
             let arguments: Vec<Expression> = args

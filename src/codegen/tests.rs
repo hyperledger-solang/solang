@@ -59,6 +59,8 @@ fn test_builtin_conversion() {
         ast::Builtin::WriteUint256LE,
         ast::Builtin::WriteString,
         ast::Builtin::WriteBytes,
+        ast::Builtin::ExtendTtl,
+        ast::Builtin::ExtendInstanceTtl,
     ];
 
     let output: Vec<codegen::Builtin> = vec![
@@ -115,6 +117,8 @@ fn test_builtin_conversion() {
         codegen::Builtin::WriteUint256LE,
         codegen::Builtin::WriteBytes,
         codegen::Builtin::WriteBytes,
+        codegen::Builtin::ExtendTtl,
+        codegen::Builtin::ExtendInstanceTtl,
     ];
 
     for (i, item) in input.iter().enumerate() {

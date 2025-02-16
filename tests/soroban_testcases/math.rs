@@ -15,6 +15,7 @@ fn math() {
             }
         }
     }"#,
+        |_| {},
     );
 
     let arg: Val = 5_u64.into_val(&runtime.env);
@@ -56,6 +57,7 @@ fn math_same_name() {
         }
     }
     "#,
+        |_| {},
     );
 
     let addr = src.contracts.last().unwrap();
