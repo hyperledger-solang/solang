@@ -26,7 +26,7 @@ def setup(sphinx):
 # -- Project information -----------------------------------------------------
 
 project = 'Solang Solidity Compiler'
-copyright = '2019 - 2023 Solang Maintainers'
+copyright = '2019 - 2025 Solang Maintainers'
 author = 'Sean Young <sean@mess.org>, Cyrill Leutwiler <bigcyrill@hotmail.com>, Lucas Steuernagel <lucas.tnagel@gmail.com>'
 
 # The full version, including alpha/beta/rc tags
