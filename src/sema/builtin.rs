@@ -36,8 +36,19 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
+pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 28]> = Lazy::new(|| {
     [
+        Prototype {
+            builtin: Builtin::ExtendInstanceTtl,
+            namespace: None,
+            method: vec![],
+            name: "extendInstanceTtl",  
+            params: vec![Type::Uint(32), Type::Uint(32)],
+            ret: vec![Type::Int(64)],
+            target: vec![Target::Soroban],
+            doc: "If the TTL for the current contract instance and code (if applicable) is below `threshold` ledgers, extend `live_until_ledger_seq` such that TTL == `extend_to`, where TTL is defined as live_until_ledger_seq - current ledger.",
+            constant: false,
+        },
         Prototype {
             builtin: Builtin::Assert,
             namespace: None,
@@ -547,8 +558,20 @@ pub static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins methods
-pub static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
+pub static BUILTIN_METHODS: Lazy<[Prototype; 28]> = Lazy::new(|| {
     [
+        Prototype {
+            builtin: Builtin::ExtendTtl,
+            namespace: None,
+            // FIXME: For now as a PoC, we are only supporting this method for type `uint64`
+            method: vec![Type::StorageRef(false, Box::new(Type::Uint(64)))],
+            name: "extendTtl",
+            params: vec![Type::Uint(32), Type::Uint(32)], // Parameters `threshold` and `extend_to` of type `uint32`
+            ret: vec![Type::Int(64)],
+            target: vec![Target::Soroban],
+            doc: "If the entry's TTL is below `threshold` ledgers, extend `live_until_ledger_seq` such that TTL == `extend_to`, where TTL is defined as live_until_ledger_seq - current ledger.",
+            constant: false,
+        },
         Prototype {
             builtin: Builtin::ReadInt8,
             namespace: None,

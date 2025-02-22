@@ -19,9 +19,13 @@ pub struct SorobanEnv {
     compiler_diagnostics: Diagnostics,
 }
 
-pub fn build_solidity(src: &str) -> SorobanEnv {
+pub fn build_solidity<F>(src: &str, configure_env: F) -> SorobanEnv
+where
+    F: FnOnce(&mut SorobanEnv),
+{
     let (wasm_blob, ns) = build_wasm(src);
-    SorobanEnv::new_with_contract(wasm_blob).insert_diagnostics(ns.diagnostics)
+
+    SorobanEnv::new_with_contract(wasm_blob, configure_env).insert_diagnostics(ns.diagnostics)
 }
 
 fn build_wasm(src: &str) -> (Vec<u8>, Namespace) {
@@ -64,9 +68,15 @@ impl SorobanEnv {
         self
     }
 
-    pub fn new_with_contract(contract_wasm: Vec<u8>) -> Self {
+    pub fn new_with_contract<F>(contract_wasm: Vec<u8>, configure_env: F) -> Self
+    where
+        F: FnOnce(&mut SorobanEnv),
+    {
         let mut env = Self::new();
+        configure_env(&mut env);
+
         env.register_contract(contract_wasm);
+
         env
     }
 
@@ -88,6 +98,8 @@ impl SorobanEnv {
             args_soroban.push_back(arg)
         }
         println!("args_soroban: {:?}", args_soroban);
+        // To avoid running out of fuel
+        self.env.cost_estimate().budget().reset_unlimited();
         self.env.invoke_contract(addr, &func, args_soroban)
     }
 
