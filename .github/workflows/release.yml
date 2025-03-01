@@ -118,7 +118,7 @@ jobs:
 
   mac-intel:
     name: Mac Intel
-    runs-on: macos-12
+    runs-on: macos-13
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4

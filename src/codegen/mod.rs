@@ -46,6 +46,7 @@ use crate::sema::eval::eval_const_number;
 use crate::sema::Recurse;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
+use encoding::soroban_encoding::soroban_encode;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
@@ -97,16 +98,36 @@ impl From<inkwell::OptimizationLevel> for OptimizationLevel {
 pub enum HostFunctions {
     PutContractData,
     GetContractData,
+<<<<<<< HEAD
+=======
+    ExtendContractDataTtl,
+    ExtendCurrentContractInstanceAndCodeTtl,
+>>>>>>> feat/soroban_auth_framework
     LogFromLinearMemory,
     SymbolNewFromLinearMemory,
     VectorNew,
     VectorNewFromLinearMemory,
+<<<<<<< HEAD
     Call,
     ObjToU64,
     ObjFromU64,
     ObjToI128Lo64,
     ObjToI128Hi64,
     ObjFromI128Pieces,
+=======
+    MapNewFromLinearMemory,
+    Call,
+    ObjToU64,
+    ObjFromU64,
+    RequireAuth,
+    AuthAsCurrContract,
+    MapNew,
+    MapPut,
+    VecPushBack,
+    StringNewFromLinearMemory,
+    StrKeyToAddr,
+    GetCurrentContractAddress,
+>>>>>>> feat/soroban_auth_framework
 }
 
 impl HostFunctions {
@@ -114,6 +135,11 @@ impl HostFunctions {
         match self {
             HostFunctions::PutContractData => "l._",
             HostFunctions::GetContractData => "l.1",
+<<<<<<< HEAD
+=======
+            HostFunctions::ExtendContractDataTtl => "l.7",
+            HostFunctions::ExtendCurrentContractInstanceAndCodeTtl => "l.8",
+>>>>>>> feat/soroban_auth_framework
             HostFunctions::LogFromLinearMemory => "x._",
             HostFunctions::SymbolNewFromLinearMemory => "b.j",
             HostFunctions::VectorNew => "v._",
@@ -121,9 +147,21 @@ impl HostFunctions {
             HostFunctions::Call => "d._",
             HostFunctions::ObjToU64 => "i.0",
             HostFunctions::ObjFromU64 => "i._",
+<<<<<<< HEAD
             HostFunctions::ObjToI128Lo64 => "i.7",
             HostFunctions::ObjToI128Hi64 => "i.8",
             HostFunctions::ObjFromI128Pieces => "i.6",
+=======
+            HostFunctions::RequireAuth => "a.0",
+            HostFunctions::AuthAsCurrContract => "a.3",
+            HostFunctions::MapNewFromLinearMemory => "m.9",
+            HostFunctions::MapNew => "m._",
+            HostFunctions::MapPut => "m.0",
+            HostFunctions::VecPushBack => "v.6",
+            HostFunctions::StringNewFromLinearMemory => "b.i",
+            HostFunctions::StrKeyToAddr => "a.1",
+            HostFunctions::GetCurrentContractAddress => "x.7",
+>>>>>>> feat/soroban_auth_framework
         }
     }
 }
@@ -310,7 +348,13 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
                 None,
             );
 
-            let value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
+            let mut value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
+
+            if ns.target == Target::Soroban {
+                value = soroban_encode(&value.loc(), vec![value], ns, &mut vartab, &mut cfg, false)
+                    .2[0]
+                    .clone();
+            }
 
             cfg.add(
                 &mut vartab,
@@ -694,7 +738,7 @@ pub enum Expression {
         pointer: Box<Expression>,
         bytes_offset: Box<Expression>,
     },
-    PointerPosition {
+    VectorData {
         pointer: Box<Expression>,
     },
 }
@@ -754,7 +798,11 @@ impl CodeLocation for Expression {
             | Expression::Poison
             | Expression::Undefined { .. }
             | Expression::AdvancePointer { .. }
+<<<<<<< HEAD
             | Expression::PointerPosition { .. } => pt::Loc::Codegen,
+=======
+            | Expression::VectorData { .. } => pt::Loc::Codegen,
+>>>>>>> feat/soroban_auth_framework
         }
     }
 }
@@ -906,7 +954,11 @@ impl RetrieveType for Expression {
 
             Expression::AdvancePointer { .. } => Type::BufferPointer,
             Expression::FormatString { .. } => Type::String,
+<<<<<<< HEAD
             Expression::PointerPosition { .. } => Type::Uint(64),
+=======
+            Expression::VectorData { .. } => Type::Uint(64),
+>>>>>>> feat/soroban_auth_framework
             Expression::Poison => unreachable!("Expression does not have a type"),
         }
     }
@@ -1800,6 +1852,10 @@ pub enum Builtin {
     WriteUint256LE,
     WriteBytes,
     Concat,
+    RequireAuth,
+    AuthAsCurrContract,
+    ExtendTtl,
+    ExtendInstanceTtl,
 }
 
 impl From<&ast::Builtin> for Builtin {
@@ -1862,6 +1918,10 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::PrevRandao => Builtin::PrevRandao,
             ast::Builtin::ContractCode => Builtin::ContractCode,
             ast::Builtin::StringConcat | ast::Builtin::BytesConcat => Builtin::Concat,
+            ast::Builtin::RequireAuth => Builtin::RequireAuth,
+            ast::Builtin::AuthAsCurrContract => Builtin::AuthAsCurrContract,
+            ast::Builtin::ExtendTtl => Builtin::ExtendTtl,
+            ast::Builtin::ExtendInstanceTtl => Builtin::ExtendInstanceTtl,
             _ => panic!("Builtin should not be in the cfg"),
         }
     }

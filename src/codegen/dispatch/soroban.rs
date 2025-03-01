@@ -657,3 +657,45 @@ fn encode_return(
 
     encoded_ret
 }
+
+fn decode_args(function: &Function, _ns: &Namespace) -> Vec<Expression> {
+    let mut args = Vec::new();
+
+    for (i, arg) in function.params.iter().enumerate() {
+        let arg = match arg.ty {
+            Type::Uint(64) => Expression::ShiftRight {
+                loc: arg.loc,
+                ty: Type::Uint(64),
+                left: Box::new(Expression::FunctionArg {
+                    loc: arg.loc,
+                    ty: arg.ty.clone(),
+                    arg_no: i,
+                }),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: arg.loc,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(8_u64),
+                }),
+                signed: false,
+            },
+
+            Type::Address(_) => Expression::FunctionArg {
+                loc: arg.loc,
+                ty: arg.ty.clone(),
+                arg_no: i,
+            },
+
+            // TODO: implement encoding/decoding for Int 128
+            Type::Int(128) => Expression::FunctionArg {
+                loc: arg.loc,
+                ty: arg.ty.clone(),
+                arg_no: i,
+            },
+            _ => unimplemented!(),
+        };
+
+        args.push(arg);
+    }
+
+    args
+}

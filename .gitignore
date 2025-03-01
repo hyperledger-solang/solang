@@ -3,8 +3,9 @@ Cargo.lock
 /target
 **/*.rs.bk
 *.ll
-tests/.tmp*
-tests/create_me/
+/tests/.tmp*
+/tests/create_me/
+/test_snapshots/
 
 .helix/
 .vscode/

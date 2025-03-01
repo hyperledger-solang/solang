@@ -372,7 +372,7 @@ impl ast::Contract {
         context: &'a inkwell::context::Context,
         opt: &'a Options,
         contract_no: usize,
-    ) -> binary::Binary {
+    ) -> binary::Binary<'a> {
         binary::Binary::build(context, self, ns, opt, contract_no)
     }
 

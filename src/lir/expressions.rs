@@ -232,7 +232,7 @@ pub enum Expression {
         loc: Loc,
     },
 
-    PointerPosition {
+    VectorData {
         pointer: Box<Operand>,
     },
 }

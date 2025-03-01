@@ -21,7 +21,7 @@ pub fn soroban_encode(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     packed: bool,
-) -> (Expression, Expression) {
+) -> (Expression, Expression, Vec<Expression>) {
     let mut encoder = create_encoder(ns, packed);
 
     let size = 8 * args.len(); // 8 bytes per argument
@@ -61,21 +61,27 @@ pub fn soroban_encode(
         var_no: encoded_bytes,
     };
 
-    for (arg_no, item) in args.iter().enumerate() {
-        println!("item {:?}", item);
+    let mut encoded_items = Vec::new();
 
+    for (arg_no, item) in args.iter().enumerate() {
         let obj = vartab.temp_name(format!("obj_{arg_no}").as_str(), &Type::Uint(64));
 
         let transformer = match item.ty() {
             Type::String => {
-                let inp = Expression::PointerPosition {
+                let inp = Expression::VectorData {
                     pointer: Box::new(item.clone()),
+                };
+
+                let inp_extend = Expression::ZeroExt {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    expr: Box::new(inp),
                 };
 
                 let encoded = Expression::ShiftLeft {
                     loc: Loc::Codegen,
                     ty: Uint(64),
-                    left: Box::new(inp),
+                    left: Box::new(inp_extend),
                     right: Box::new(Expression::NumberLiteral {
                         loc: Loc::Codegen,
                         ty: Type::Uint(64),
@@ -95,31 +101,62 @@ pub fn soroban_encode(
                     }),
                 };
 
-                let len = if let Expression::AllocDynamicBytes { size, .. } = item {
-                    let sesa = Expression::ShiftLeft {
-                        loc: Loc::Codegen,
-                        ty: Uint(64),
-                        left: Box::new(size.clone().cast(&Type::Uint(64), ns)),
-                        right: Box::new(Expression::NumberLiteral {
+                let len = match item {
+                    Expression::AllocDynamicBytes { size, .. } => {
+                        let sesa = Expression::ShiftLeft {
                             loc: Loc::Codegen,
-                            ty: Type::Uint(64),
-                            value: BigInt::from(32),
-                        }),
-                    };
+                            ty: Uint(64),
+                            left: Box::new(size.clone().cast(&Type::Uint(64), ns)),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc: Loc::Codegen,
+                                ty: Type::Uint(64),
+                                value: BigInt::from(32),
+                            }),
+                        };
 
-                    Expression::Add {
-                        loc: Loc::Codegen,
-                        ty: Type::Uint(64),
-                        overflowing: true,
-                        left: Box::new(sesa),
-                        right: Box::new(Expression::NumberLiteral {
+                        Expression::Add {
                             loc: Loc::Codegen,
                             ty: Type::Uint(64),
-                            value: BigInt::from(4),
-                        }),
+                            overflowing: true,
+                            left: Box::new(sesa),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc: Loc::Codegen,
+                                ty: Type::Uint(64),
+                                value: BigInt::from(4),
+                            }),
+                        }
                     }
-                } else {
-                    unreachable!()
+                    Expression::BytesLiteral { loc, ty: _, value } => {
+                        let len = Expression::NumberLiteral {
+                            loc: *loc,
+                            ty: Type::Uint(64),
+                            value: BigInt::from(value.len() as u64),
+                        };
+
+                        let len = Expression::ShiftLeft {
+                            loc: *loc,
+                            ty: Type::Uint(64),
+                            left: Box::new(len),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc: *loc,
+                                ty: Type::Uint(64),
+                                value: BigInt::from(32),
+                            }),
+                        };
+
+                        Expression::Add {
+                            loc: *loc,
+                            ty: Type::Uint(64),
+                            left: Box::new(len),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc: *loc,
+                                ty: Type::Uint(64),
+                                value: BigInt::from(4),
+                            }),
+                            overflowing: false,
+                        }
+                    }
+                    _ => unreachable!(),
                 };
 
                 Instr::Call {
@@ -162,12 +199,114 @@ pub fn soroban_encode(
                 }
             }
             Type::Address(_) => {
-                // pass the address as is
-                Instr::Set {
-                    loc: *loc,
-                    res: obj,
-                    expr: item.clone(),
-                }
+                let instr = if let Expression::Cast { loc, ty: _, expr } = item {
+                    let address_literal = expr;
+
+                    let pointer = Expression::VectorData {
+                        pointer: address_literal.clone(),
+                    };
+
+                    let pointer_extend = Expression::ZeroExt {
+                        loc: *loc,
+                        ty: Type::Uint(64),
+                        expr: Box::new(pointer),
+                    };
+
+                    let encoded = Expression::ShiftLeft {
+                        loc: *loc,
+                        ty: Uint(64),
+                        left: Box::new(pointer_extend),
+                        right: Box::new(Expression::NumberLiteral {
+                            loc: *loc,
+                            ty: Type::Uint(64),
+                            value: BigInt::from(32),
+                        }),
+                    };
+
+                    let encoded = Expression::Add {
+                        loc: *loc,
+                        ty: Type::Uint(64),
+                        overflowing: true,
+                        left: Box::new(encoded),
+                        right: Box::new(Expression::NumberLiteral {
+                            loc: *loc,
+                            ty: Type::Uint(64),
+                            value: BigInt::from(4),
+                        }),
+                    };
+
+                    let len = if let Expression::BytesLiteral { loc, ty: _, value } =
+                        *address_literal.clone()
+                    {
+                        let len = Expression::NumberLiteral {
+                            loc,
+                            ty: Type::Uint(64),
+                            value: BigInt::from(value.len() as u64),
+                        };
+
+                        let len = Expression::ShiftLeft {
+                            loc,
+                            ty: Type::Uint(64),
+                            left: Box::new(len),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc,
+                                ty: Type::Uint(64),
+                                value: BigInt::from(32),
+                            }),
+                        };
+
+                        Expression::Add {
+                            loc,
+                            ty: Type::Uint(64),
+                            left: Box::new(len),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc,
+                                ty: Type::Uint(64),
+                                value: BigInt::from(4),
+                            }),
+                            overflowing: false,
+                        }
+                    } else {
+                        todo!()
+                    };
+
+                    let str_key_temp = vartab.temp_name("str_key", &Type::Uint(64));
+                    let str_key_var = Expression::Variable {
+                        loc: *loc,
+                        ty: Type::Uint(64),
+                        var_no: str_key_temp,
+                    };
+
+                    let soroban_str_key = Instr::Call {
+                        res: vec![str_key_temp],
+                        return_tys: vec![Type::Uint(64)],
+                        call: crate::codegen::cfg::InternalCallTy::HostFunction {
+                            name: HostFunctions::StringNewFromLinearMemory.name().to_string(),
+                        },
+                        args: vec![encoded.clone(), len.clone()],
+                    };
+
+                    cfg.add(vartab, soroban_str_key);
+
+                    let address_object = Instr::Call {
+                        res: vec![obj],
+                        return_tys: vec![Type::Uint(64)],
+                        call: crate::codegen::cfg::InternalCallTy::HostFunction {
+                            name: HostFunctions::StrKeyToAddr.name().to_string(),
+                        },
+                        args: vec![str_key_var],
+                    };
+
+                    address_object
+                } else {
+                    Instr::Set {
+                        loc: *loc,
+                        res: obj,
+                        expr: item.clone(),
+                    }
+                };
+
+                instr
             }
             // FIXME: Implement encoding/decoding for i128
             Type::Int(128) => Instr::Set {
@@ -184,6 +323,8 @@ pub fn soroban_encode(
             var_no: obj,
         };
 
+        encoded_items.push(var.clone());
+
         cfg.add(vartab, transformer);
 
         let advance = encoder.encode(&var, &buffer, &offset, arg_no, ns, vartab, cfg);
@@ -196,11 +337,19 @@ pub fn soroban_encode(
         };
     }
 
+<<<<<<< HEAD
     (buffer, size_expr)
 }
 
 pub fn soroban_decode(
     loc: &Loc,
+=======
+    (buffer, size_expr, encoded_items)
+}
+
+pub fn soroban_decode(
+    _loc: &Loc,
+>>>>>>> feat/soroban_auth_framework
     buffer: &Expression,
     _types: &[Type],
     _ns: &Namespace,
@@ -216,6 +365,7 @@ pub fn soroban_decode(
         expr: Box::new(buffer.clone()),
     };
 
+<<<<<<< HEAD
     let decoded_val = Expression::ShiftRight {
         loc: *loc,
         ty: Type::Uint(64),
@@ -227,8 +377,32 @@ pub fn soroban_decode(
         }),
         signed: false,
     };
+=======
+    let decoded_val = soroban_decode_arg(loaded_val);
+>>>>>>> feat/soroban_auth_framework
 
     returns.push(decoded_val);
 
     returns
 }
+<<<<<<< HEAD
+=======
+
+pub fn soroban_decode_arg(item: Expression) -> Expression {
+    match item.ty() {
+        Type::Uint(64) => Expression::ShiftRight {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            left: Box::new(item.clone()),
+            right: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::from(8),
+            }),
+            signed: false,
+        },
+        Type::Address(_) => item,
+        _ => todo!(),
+    }
+}
+>>>>>>> feat/soroban_auth_framework
