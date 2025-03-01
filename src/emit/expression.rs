@@ -128,7 +128,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         }
         Expression::BytesLiteral { value: bs, ty, .. } => {
             // If the type of a BytesLiteral is a String, embedd the bytes in the binary.
-            if ty == &Type::String {
+            if ty == &Type::String || ty == &Type::Address(true) {
                 let data = bin.emit_global_string("const_string", bs, true);
 
                 // A constant string, or array, is represented by a struct with two fields: a pointer to the data, and its length.
@@ -2154,7 +2154,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let data = bin.vector_bytes(ptr);
             let res = bin
                 .builder
-                .build_ptr_to_int(data, bin.context.i64_type(), "sesa");
+                .build_ptr_to_int(data, bin.context.i32_type(), "ptr_as_int32");
 
             res.unwrap().into()
         }

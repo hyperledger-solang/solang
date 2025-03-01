@@ -11,7 +11,7 @@
 mod borsh_encoding;
 mod buffer_validator;
 pub(super) mod scale_encoding;
-mod soroban_encoding;
+pub mod soroban_encoding;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
@@ -41,7 +41,8 @@ pub(super) fn abi_encode(
     packed: bool,
 ) -> (Expression, Expression) {
     if ns.target == Target::Soroban {
-        return soroban_encode(loc, args, ns, vartab, cfg, packed);
+        let ret = soroban_encode(loc, args, ns, vartab, cfg, packed);
+        return (ret.0, ret.1);
     }
     let mut encoder = create_encoder(ns, packed);
     let size = calculate_size_args(&mut encoder, &args, ns, vartab, cfg);
@@ -1431,7 +1432,7 @@ pub(crate) trait AbiEncoding {
                 self.get_expr_size(arg_no, &loaded, ns, vartab, cfg)
             }
             Type::StorageRef(_, r) => {
-                let var = load_storage(&Codegen, r, expr.clone(), cfg, vartab, None);
+                let var = load_storage(&Codegen, r, expr.clone(), cfg, vartab, None, ns);
                 let size = self.get_expr_size(arg_no, &var, ns, vartab, cfg);
                 self.storage_cache_insert(arg_no, var.clone());
                 size

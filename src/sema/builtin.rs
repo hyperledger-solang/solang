@@ -36,7 +36,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 28]> = Lazy::new(|| {
+pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 29]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::ExtendInstanceTtl,
@@ -358,6 +358,17 @@ pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 28]> = Lazy::new(|| {
             doc: "Concatenate bytes",
             constant: true,
         },
+        Prototype {
+            builtin: Builtin::AuthAsCurrContract,
+            namespace: Some("auth"),
+            method: vec![],
+            name: "authAsCurrContract",
+            params: vec![],
+            ret: vec![],
+            target: vec![Target::Soroban],
+            doc: "Authorizes sub-contract calls for the next contract call on behalf of the current contract.",
+            constant: false,
+        },
     ]
 });
 
@@ -558,7 +569,7 @@ pub static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins methods
-pub static BUILTIN_METHODS: Lazy<[Prototype; 28]> = Lazy::new(|| {
+pub static BUILTIN_METHODS: Lazy<[Prototype; 29]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::ExtendTtl,
@@ -869,6 +880,17 @@ pub static BUILTIN_METHODS: Lazy<[Prototype; 28]> = Lazy::new(|| {
             doc: "Write the contents of a bytes array (without its length) to the specified offset",
             constant: false,
         },
+        Prototype {
+            builtin: Builtin::RequireAuth,
+            namespace: None,
+            method: vec![Type::Address(false), Type::StorageRef(false, Box::new(Type::Address(false)))],
+            name: "requireAuth",
+            params: vec![],
+            ret: vec![],
+            target: vec![Target::Soroban],
+            doc: "Checks if the address has authorized the invocation of the current contract function with all the arguments of the invocation. Traps if the invocation hasn't been authorized.",
+            constant: false,
+        },
     ]
 });
 
@@ -1106,6 +1128,23 @@ pub(super) fn resolve_namespace_call(
             loc: *loc,
             tys: vec![ty],
             kind,
+            args: resolved_args,
+        });
+    }
+
+    if name == "authAsCurrContract" {
+        let mut resolved_args = Vec::new();
+
+        for arg in args {
+            let expr = expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+
+            resolved_args.push(expr);
+        }
+
+        return Ok(Expression::Builtin {
+            loc: *loc,
+            tys: Vec::new(),
+            kind: Builtin::AuthAsCurrContract,
             args: resolved_args,
         });
     }

@@ -99,7 +99,7 @@ pub fn storage_slots_array_push(
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
     // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
-    let expr = load_storage(loc, &slot_ty, var_expr.clone(), cfg, vartab, None);
+    let expr = load_storage(loc, &slot_ty, var_expr.clone(), cfg, vartab, None, ns);
 
     cfg.add(
         vartab,
@@ -213,7 +213,7 @@ pub fn storage_slots_array_pop(
     let ty = args[0].ty();
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
     // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
-    let expr = load_storage(loc, &length_ty, var_expr.clone(), cfg, vartab, None);
+    let expr = load_storage(loc, &length_ty, var_expr.clone(), cfg, vartab, None, ns);
 
     cfg.add(
         vartab,
@@ -328,6 +328,7 @@ pub fn storage_slots_array_pop(
             cfg,
             vartab,
             None,
+            ns,
         );
 
         cfg.add(

@@ -1779,6 +1779,8 @@ pub enum Builtin {
     TypeInterfaceId,
     TypeRuntimeCode,
     TypeCreatorCode,
+    RequireAuth,
+    AuthAsCurrContract,
     ExtendTtl,
     ExtendInstanceTtl,
 }
