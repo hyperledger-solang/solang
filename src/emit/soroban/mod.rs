@@ -39,8 +39,6 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
-<<<<<<< HEAD
-=======
             // https://github.com/stellar/stellar-protocol/blob/2fdc77302715bc4a31a784aef1a797d466965024/core/cap-0046-03.md#ledger-host-functions-mod-l
             // ;; If the entry's TTL is below `threshold` ledgers, extend `live_until_ledger_seq` such that TTL == `extend_to`, where TTL is defined as live_until_ledger_seq - current ledger.
             // (func $extend_contract_data_ttl (param $k_val i64) (param $t_storage_type i64) (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
@@ -54,7 +52,6 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
->>>>>>> feat/soroban_auth_framework
             HostFunctions::LogFromLinearMemory => bin
                 .context
                 .i64_type()
@@ -101,6 +98,12 @@ impl HostFunctions {
                 .fn_type(&[ty.into(), ty.into()], false),
             HostFunctions::StrKeyToAddr => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::GetCurrentContractAddress => bin.context.i64_type().fn_type(&[], false),
+            HostFunctions::ObjToI128Lo64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToI128Hi64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjFromI128Pieces => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
         }
     }
 }
@@ -252,11 +255,8 @@ impl SorobanTarget {
                             .unwrap_or_else(|| i.to_string())
                             .try_into()
                             .expect("function input name exceeds limit"),
-<<<<<<< HEAD
+                        //type_: match &p.ty {
                         type_: match &p.ty {
-=======
-                        type_: match p.ty {
->>>>>>> feat/soroban_auth_framework
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
                             ast::Type::Uint(64) => ScSpecTypeDef::U64,
                             ast::Type::Int(128) => ScSpecTypeDef::I128,
@@ -264,10 +264,7 @@ impl SorobanTarget {
                             ast::Type::Address(_) => ScSpecTypeDef::Address,
                             ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                             ast::Type::String => ScSpecTypeDef::String,
-<<<<<<< HEAD
                             ast::Type::Ref(ty) => ScSpecTypeDef::I128,
-=======
->>>>>>> feat/soroban_auth_framework
                             //ast::Type::Val => ScSpecTypeDef::Address,
                             _ => panic!("unsupported input type {:?}", p.ty),
                         }, // TODO: Map type.
@@ -333,11 +330,8 @@ impl SorobanTarget {
         let host_functions = [
             HostFunctions::PutContractData,
             HostFunctions::GetContractData,
-<<<<<<< HEAD
-=======
             HostFunctions::ExtendContractDataTtl,
             HostFunctions::ExtendCurrentContractInstanceAndCodeTtl,
->>>>>>> feat/soroban_auth_framework
             HostFunctions::LogFromLinearMemory,
             HostFunctions::SymbolNewFromLinearMemory,
             HostFunctions::VectorNew,
@@ -346,11 +340,9 @@ impl SorobanTarget {
             HostFunctions::ObjToU64,
             HostFunctions::ObjFromU64,
             HostFunctions::PutContractData,
-<<<<<<< HEAD
             HostFunctions::ObjToI128Lo64,
             HostFunctions::ObjToI128Hi64,
             HostFunctions::ObjFromI128Pieces,
-=======
             HostFunctions::RequireAuth,
             HostFunctions::AuthAsCurrContract,
             HostFunctions::MapNewFromLinearMemory,
@@ -360,7 +352,6 @@ impl SorobanTarget {
             HostFunctions::StringNewFromLinearMemory,
             HostFunctions::StrKeyToAddr,
             HostFunctions::GetCurrentContractAddress,
->>>>>>> feat/soroban_auth_framework
         ];
 
         for func in &host_functions {

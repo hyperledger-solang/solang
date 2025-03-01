@@ -337,19 +337,11 @@ pub fn soroban_encode(
         };
     }
 
-<<<<<<< HEAD
-    (buffer, size_expr)
-}
-
-pub fn soroban_decode(
-    loc: &Loc,
-=======
     (buffer, size_expr, encoded_items)
 }
 
 pub fn soroban_decode(
     _loc: &Loc,
->>>>>>> feat/soroban_auth_framework
     buffer: &Expression,
     _types: &[Type],
     _ns: &Namespace,
@@ -365,28 +357,12 @@ pub fn soroban_decode(
         expr: Box::new(buffer.clone()),
     };
 
-<<<<<<< HEAD
-    let decoded_val = Expression::ShiftRight {
-        loc: *loc,
-        ty: Type::Uint(64),
-        left: Box::new(loaded_val.clone()),
-        right: Box::new(Expression::NumberLiteral {
-            loc: *loc,
-            ty: Type::Uint(64),
-            value: BigInt::from(8),
-        }),
-        signed: false,
-    };
-=======
     let decoded_val = soroban_decode_arg(loaded_val);
->>>>>>> feat/soroban_auth_framework
 
     returns.push(decoded_val);
 
     returns
 }
-<<<<<<< HEAD
-=======
 
 pub fn soroban_decode_arg(item: Expression) -> Expression {
     match item.ty() {
@@ -405,4 +381,3 @@ pub fn soroban_decode_arg(item: Expression) -> Expression {
         _ => todo!(),
     }
 }
->>>>>>> feat/soroban_auth_framework
