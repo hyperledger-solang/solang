@@ -84,7 +84,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     ) {
         emit_context!(binary);
 
-
         let storage_type = storage_type_to_int(storage_type);
 
         let function_value = binary

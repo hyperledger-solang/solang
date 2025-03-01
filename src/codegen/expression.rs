@@ -3262,7 +3262,6 @@ pub fn assign_single(
                         var_no: pos,
                     };
 
-
                     if ns.target == Target::Soroban {
                         value = soroban_encode(&left.loc(), vec![value], ns, vartab, cfg, false).2
                             [0]
