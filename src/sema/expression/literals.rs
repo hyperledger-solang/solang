@@ -302,6 +302,12 @@ pub(super) fn address_literal(
                 Err(())
             }
         }
+    } else if ns.target == Target::Soroban {
+        Ok(Expression::BytesLiteral {
+            loc: *loc,
+            ty: Type::Address(true),
+            value: address.to_string().into_bytes(),
+        })
     } else {
         diagnostics.push(Diagnostic::error(
             *loc,
