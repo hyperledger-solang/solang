@@ -3262,7 +3262,6 @@ pub fn assign_single(
                         var_no: pos,
                     };
 
-                    println!("SETTING STORAGE {:?}", value);
 
                     if ns.target == Target::Soroban {
                         value = soroban_encode(&left.loc(), vec![value], ns, vartab, cfg, false).2
@@ -4216,8 +4215,6 @@ pub fn load_storage(
         ty: ty.clone(),
         var_no: res,
     };
-
-    println!("TO BE DECODED {:?} OF TYPE {:?}", var, ty);
 
     if ns.target == Target::Soroban {
         soroban_decode_arg(var)
