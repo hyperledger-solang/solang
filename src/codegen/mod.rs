@@ -46,7 +46,7 @@ use crate::sema::eval::eval_const_number;
 use crate::sema::Recurse;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
-use encoding::soroban_encoding::soroban_encode;
+use encoding::soroban_encoding::{soroban_encode, soroban_encode_arg};
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
@@ -336,9 +336,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
             let mut value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
 
             if ns.target == Target::Soroban {
-                value = soroban_encode(&value.loc(), vec![value], ns, &mut vartab, &mut cfg, false)
-                    .2[0]
-                    .clone();
+                value = soroban_encode_arg(value, &mut cfg, &mut vartab, ns);
             }
 
             cfg.add(

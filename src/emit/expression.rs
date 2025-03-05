@@ -173,7 +173,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let left = expression(target, bin, left, vartab, function, ns).into_int_value();
             let right = expression(target, bin, right, vartab, function, ns).into_int_value();
 
-            /*if !overflowing {
+            if !overflowing {
                 let signed = ty.is_signed_int(ns);
                 build_binary_op_with_overflow_check(
                     target,
@@ -189,8 +189,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .into()
             } else {
                 bin.builder.build_int_add(left, right, "").unwrap().into()
-            }*/
-            bin.builder.build_int_add(left, right, "").unwrap().into()
+            }
+            //bin.builder.build_int_add(left, right, "").unwrap().into()
         }
         Expression::Subtract {
             loc,

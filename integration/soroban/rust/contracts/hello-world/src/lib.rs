@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
-
 #![no_std]
 use soroban_sdk::{contract, contractimpl, Env, log};
 
