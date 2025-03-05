@@ -3,7 +3,7 @@
 use num_bigint::BigInt;
 use solang_parser::pt::{self};
 
-use crate::sema::ast;
+use crate::sema::ast::{self, Function, RetrieveType};
 use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy},
@@ -42,6 +42,8 @@ pub fn function_dispatch(
             }
         };
 
+        println!("Wrapper function name is {:?}\n", wrapper_name);
+
         let mut wrapper_cfg = ControlFlowGraph::new(wrapper_name.to_string(), ASTFunction::None);
 
         wrapper_cfg.params = function.params.clone();
@@ -53,13 +55,13 @@ pub fn function_dispatch(
         };
 
         wrapper_cfg.returns = vec![return_type].into();
+        println!("Wrapper function returns are : {:?}\n", wrapper_cfg.returns);
+
         wrapper_cfg.public = true;
-
+        wrapper_cfg.function_no = cfg.function_no;
         let mut vartab = Vartable::from_symbol_table(&function.symtable, ns.next_id);
-
         let mut value = Vec::new();
         let mut return_tys = Vec::new();
-
         let mut call_returns = Vec::new();
         for arg in function.returns.iter() {
             let new = vartab.temp_anonymous(&arg.ty);
@@ -72,71 +74,96 @@ pub fn function_dispatch(
             call_returns.push(new);
         }
 
+        println!("\n\nReturn-types from original cfg: {:?}\n\n", return_tys);
+        println!("\n\nCALL RETURNS: {:?}\n\n", call_returns);
+
+        // Create arguments for the internal call by dereferencing the wrapper's arguments
         let cfg_no = match cfg.function_no {
             ASTFunction::SolidityFunction(no) => no,
             _ => 0,
         };
+
         let placeholder = Instr::Call {
             res: call_returns,
             call: InternalCallTy::Static { cfg_no },
-            return_tys,
-            args: function
-                .params
-                .iter()
-                .enumerate()
-                .map(|(i, p)| Expression::ShiftRight {
-                    loc: pt::Loc::Codegen,
-                    ty: Type::Uint(64),
-                    left: Expression::FunctionArg {
-                        loc: p.loc,
-                        ty: p.ty.clone(),
-                        arg_no: i,
-                    }
-                    .into(),
-                    right: Expression::NumberLiteral {
-                        loc: pt::Loc::Codegen,
-                        ty: Type::Uint(64),
-                        value: BigInt::from(8_u64),
-                    }
-                    .into(),
-
-                    signed: false,
-                })
-                .collect(),
+            return_tys: return_tys.clone(),
+            args: decode_args(function, ns),
         };
 
         wrapper_cfg.add(&mut vartab, placeholder);
-
+        println!(
+            "\n\nwrapper cfg  \nparams:{:?}\n returns: {:?}",
+            wrapper_cfg.params, wrapper_cfg.returns
+        );
         // TODO: support multiple returns
         if value.len() == 1 {
-            // set the msb 8 bits of the return value to 6, the return value is 64 bits.
-            // FIXME: this assumes that the solidity function always returns one value.
-            let shifted = Expression::ShiftLeft {
-                loc: pt::Loc::Codegen,
-                ty: Type::Uint(64),
-                left: value[0].clone().into(),
-                right: Expression::NumberLiteral {
-                    loc: pt::Loc::Codegen,
-                    ty: Type::Uint(64),
-                    value: BigInt::from(8_u64),
+            println!(
+                "\n\nRETURN-VALUE-TYPE : {:?} , \nReturn-Value-Actual: {:?} \n\n",
+                value[0].ty(),
+                value[0],
+            );
+
+            let added = match function.returns[0].clone().ty {
+                Type::Uint(32) => {
+                    let shifted = Expression::ShiftLeft {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Uint(64),
+                        left: value[0].clone().into(),
+                        right: Expression::NumberLiteral {
+                            loc: pt::Loc::Codegen,
+                            ty: Type::Uint(64),
+                            value: BigInt::from(8_u64),
+                        }
+                        .into(),
+                    };
+                    let tag = Expression::NumberLiteral {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Uint(64),
+                        value: BigInt::from(4_u64),
+                    };
+
+                    Expression::Add {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Uint(64),
+                        overflowing: true,
+                        left: shifted.into(),
+                        right: tag.into(),
+                    }
                 }
-                .into(),
+                Type::Uint(64) => {
+                    let shifted = Expression::ShiftLeft {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Uint(64),
+                        left: value[0].clone().into(),
+                        right: Expression::NumberLiteral {
+                            loc: pt::Loc::Codegen,
+                            ty: Type::Uint(64),
+                            value: BigInt::from(8_u64),
+                        }
+                        .into(),
+                    };
+                    let tag = Expression::NumberLiteral {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Uint(64),
+                        value: BigInt::from(6_u64),
+                    };
+
+                    Expression::Add {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Uint(64),
+                        overflowing: true,
+                        left: shifted.into(),
+                        right: tag.into(),
+                    }
+                }
+                _ => panic!("unsupported return type"),
             };
 
-            let tag = Expression::NumberLiteral {
-                loc: pt::Loc::Codegen,
-                ty: Type::Uint(64),
-                value: BigInt::from(6_u64),
-            };
-
-            let added = Expression::Add {
-                loc: pt::Loc::Codegen,
-                ty: Type::Uint(64),
-                overflowing: true,
-                left: shifted.into(),
-                right: tag.into(),
-            };
-
+            println!(
+                "\n\nExpression added: {:?}\n\n Expression added type : {:?}",
+                added,
+                added.ty()
+            );
             wrapper_cfg.add(&mut vartab, Instr::Return { value: vec![added] });
         } else {
             // Return 2 as numberliteral. 2 is the soroban Void type encoded.
@@ -155,4 +182,57 @@ pub fn function_dispatch(
     }
 
     wrapper_cfgs
+}
+
+fn decode_args(function: &Function, ns: &Namespace) -> Vec<Expression> {
+    let mut args = Vec::new();
+
+    for (i, arg) in function.params.iter().enumerate() {
+        let arg = match &arg.ty {
+            Type::Uint(64) | Type::Uint(32) => {
+                println!("Inside Decode_args Uint64/32 match");
+                Expression::ShiftRight {
+                    loc: arg.loc,
+                    ty: Type::Uint(64),
+                    left: Box::new(Expression::FunctionArg {
+                        loc: arg.loc,
+                        ty: Type::Uint(64),
+                        arg_no: i,
+                    }),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: arg.loc,
+                        ty: Type::Uint(64),
+                        value: BigInt::from(8_u64),
+                    }),
+                    signed: false,
+                }
+            }
+            Type::Address(_) => Expression::FunctionArg {
+                loc: arg.loc,
+                ty: arg.ty.clone(),
+                arg_no: i,
+            }
+            .cast(&Type::Address(false), ns),
+
+            // FIXME: Should properly decode the value instead of just passing it
+            Type::Uint(128) | Type::Int(128) => Expression::FunctionArg {
+                loc: arg.loc,
+                ty: arg.ty.clone(),
+                arg_no: i,
+            },
+            _ => {
+                panic!(
+                    "\n\nUnexpected type for arg inside decode_args type: {:?} argument:  {:?}\n",
+                    arg.ty, arg
+                );
+            }
+        };
+        println!(
+            "\n\nINSIDE DECODE_ARG_FN:: ARGUMENT TO BE PUSHED: {:?}\n\n",
+            arg,
+        );
+        args.push(arg);
+    }
+
+    args
 }

@@ -46,6 +46,24 @@ describe('Counter', () => {
     let count = await call_contract_function("count", server, keypair, contract);
     expect(count.toString()).eq("11");
   });
+
+
+  it('adding two numbers', async () => {
+    // add two numbers
+
+    let args = [
+      StellarSdk.xdr.ScVal.scvU32(50),
+      StellarSdk.xdr.ScVal.scvU32(60)
+    ];
+
+    console.log(`additionu32 input is: ${args[0].u32()} and ${args[1].u32()} `);
+
+
+    let result = await call_contract_function("additionu32", server, keypair, contract, ...args);    // let returnValue = result.returnValue().value().toString();
+
+    console.log(`additionu32 output is: ${result}`);
+    expect(result.toString()).eq("110");
+  });
 });
 
 

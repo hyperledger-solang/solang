@@ -8,3 +8,11 @@ tests/create_me/
 
 .helix/
 .vscode/
+*.DS_Store
+*.wasm
+*.abi
+node_modules/
+test_snapshots/
+integration/soroban/addition.sol
+integration/soroban/rust/target/
+integration/anchor/target/

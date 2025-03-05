@@ -166,16 +166,49 @@ impl SorobanTarget {
                     .params
                     .iter()
                     .enumerate()
-                    .map(|(i, p)| ScSpecFunctionInputV0 {
-                        name: p
-                            .id
-                            .as_ref()
-                            .map(|id| id.to_string())
-                            .unwrap_or_else(|| i.to_string())
-                            .try_into()
-                            .expect("function input name exceeds limit"),
-                        type_: ScSpecTypeDef::U64, // TODO: Map type.
-                        doc: StringM::default(),   // TODO: Add doc.
+                    .map(|(i, p)| {
+                        println!(
+                            "\n INSIDE MOD.RS ---> Parameter type: {:?}\n\nPARAMETER : {:?}\n\n",
+                            p.ty, p
+                        ); // Added print statement
+                        ScSpecFunctionInputV0 {
+                            name: p
+                                .id
+                                .as_ref()
+                                .map(|id| id.to_string())
+                                .unwrap_or_else(|| i.to_string())
+                                .try_into()
+                                .expect("function input name exceeds limit"),
+                            type_: match &p.ty {
+                                ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                                ast::Type::Uint(32) => ScSpecTypeDef::U32,
+                                // ast::Type::Ref(inner) => {
+                                //     println!("inputs inner (inside): {:?}", **inner);
+                                //     // match **inner {
+                                //     //     ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                                //     //     ast::Type::Uint(32) => ScSpecTypeDef::U32,
+                                //     //     _ => {
+                                //     //         panic!("\n\nunsupported type for function input {:?}", p.ty);
+                                //     //     }
+                                //     // }
+
+                                //     if **inner == ast::Type::Uint(64){
+                                //         println!("inside if type is uint64 {:?}", inner);
+                                //         ScSpecTypeDef::U64
+                                //     }else if **inner == ast::Type::Uint(32){
+                                //         println!("inside if type is uint32 {:?}", inner);
+                                //         ScSpecTypeDef::U32
+                                //     }else{
+                                //         panic!("\n\nunsupported type for function input {:?}", p.ty);
+                                //     }
+                                //},
+                                _ => panic!(
+                                    "unsupported type for function input spec entry error {:?}",
+                                    p.ty
+                                ),
+                            }, // TODO: Map type.
+                            doc: StringM::default(), // TODO: Add doc.
+                        }
                     })
                     .collect::<Vec<_>>()
                     .try_into()
@@ -185,6 +218,7 @@ impl SorobanTarget {
                     .iter()
                     .map(|return_type| {
                         let ty = return_type.ty.clone();
+                        print!("inside MOD.RS --> outputs type: {:?}", ty);
                         match ty {
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
                             ast::Type::Uint(64) => ScSpecTypeDef::U64,
