@@ -62,6 +62,10 @@ pub fn function_dispatch(
         }
 
         wrapper_cfg.params = Arc::new(params);
+
+        if returns.is_empty() {
+            returns.push(ast::Parameter::new_default(Type::Ref(Box::new(Type::Void))));
+        }
         wrapper_cfg.returns = Arc::new(returns);
 
         println!("PARAMS: {:?}", wrapper_cfg.params);
@@ -155,7 +159,7 @@ fn encode_return(
         soroban_encode_arg( returns[0].clone(), cfg, vartab, ns)
         
     } else {
-        Expression::NumberLiteral { loc: Loc::Codegen, ty: Type::Uint(64), value: BigInt::from(11) }
+        Expression::NumberLiteral { loc: Loc::Codegen, ty: Type::Uint(64), value: BigInt::from(2) }
     };
     
     ret

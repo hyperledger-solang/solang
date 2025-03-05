@@ -434,7 +434,6 @@ pub fn soroban_encode_arg(item: Expression, cfg: &mut ControlFlowGraph, vartab: 
                     expr: Box::new(high),
                 };
     
-                let res = vartab.temp_name("res", &Type::Uint(64));
                 /*let res_var = Expression::Variable {
                     loc: Loc::Codegen,
                     ty: Type::Uint(64),
@@ -442,7 +441,7 @@ pub fn soroban_encode_arg(item: Expression, cfg: &mut ControlFlowGraph, vartab: 
                 };*/
     
                 let instr = Instr::Call {
-                    res: vec![res],
+                    res: vec![obj],
                     return_tys: vec![Type::Uint(64)],
                     call: InternalCallTy::HostFunction {
                         name: HostFunctions::ObjFromI128Pieces.name().to_string(),

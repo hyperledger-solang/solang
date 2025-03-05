@@ -300,6 +300,7 @@ impl SorobanTarget {
                         match ty {
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
                             ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                            ast::Type::Int(128) => ScSpecTypeDef::I128,
                             ast::Type::Int(_) => ScSpecTypeDef::I32,
                             ast::Type::Bool => ScSpecTypeDef::Bool,
                             ast::Type::Address(_) => ScSpecTypeDef::Address,

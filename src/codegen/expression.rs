@@ -3136,7 +3136,7 @@ fn conditional_operator(
     cfg.set_phis(done_block, vartab.pop_dirty_tracker());
 
     Expression::Variable {
-        loc: *loc,  
+        loc: *loc,
         ty: ty.clone(),
         var_no: pos,
     }
