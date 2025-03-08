@@ -46,6 +46,7 @@ use crate::sema::eval::eval_const_number;
 use crate::sema::Recurse;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
+use encoding::soroban_encoding::soroban_encode;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
@@ -103,9 +104,18 @@ pub enum HostFunctions {
     SymbolNewFromLinearMemory,
     VectorNew,
     VectorNewFromLinearMemory,
+    MapNewFromLinearMemory,
     Call,
     ObjToU64,
     ObjFromU64,
+    RequireAuth,
+    AuthAsCurrContract,
+    MapNew,
+    MapPut,
+    VecPushBack,
+    StringNewFromLinearMemory,
+    StrKeyToAddr,
+    GetCurrentContractAddress,
 }
 
 impl HostFunctions {
@@ -122,6 +132,15 @@ impl HostFunctions {
             HostFunctions::Call => "d._",
             HostFunctions::ObjToU64 => "i.0",
             HostFunctions::ObjFromU64 => "i._",
+            HostFunctions::RequireAuth => "a.0",
+            HostFunctions::AuthAsCurrContract => "a.3",
+            HostFunctions::MapNewFromLinearMemory => "m.9",
+            HostFunctions::MapNew => "m._",
+            HostFunctions::MapPut => "m.0",
+            HostFunctions::VecPushBack => "v.6",
+            HostFunctions::StringNewFromLinearMemory => "b.i",
+            HostFunctions::StrKeyToAddr => "a.1",
+            HostFunctions::GetCurrentContractAddress => "x.7",
         }
     }
 }
@@ -308,7 +327,13 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
                 None,
             );
 
-            let value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
+            let mut value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
+
+            if ns.target == Target::Soroban {
+                value = soroban_encode(&value.loc(), vec![value], ns, &mut vartab, &mut cfg, false)
+                    .2[0]
+                    .clone();
+            }
 
             cfg.add(
                 &mut vartab,
@@ -1798,6 +1823,8 @@ pub enum Builtin {
     WriteUint256LE,
     WriteBytes,
     Concat,
+    RequireAuth,
+    AuthAsCurrContract,
     ExtendTtl,
     ExtendInstanceTtl,
 }
@@ -1862,6 +1889,8 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::PrevRandao => Builtin::PrevRandao,
             ast::Builtin::ContractCode => Builtin::ContractCode,
             ast::Builtin::StringConcat | ast::Builtin::BytesConcat => Builtin::Concat,
+            ast::Builtin::RequireAuth => Builtin::RequireAuth,
+            ast::Builtin::AuthAsCurrContract => Builtin::AuthAsCurrContract,
             ast::Builtin::ExtendTtl => Builtin::ExtendTtl,
             ast::Builtin::ExtendInstanceTtl => Builtin::ExtendInstanceTtl,
             _ => panic!("Builtin should not be in the cfg"),
