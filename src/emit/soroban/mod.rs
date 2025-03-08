@@ -275,8 +275,6 @@ impl SorobanTarget {
                                 ast::Type::Address(_) => ScSpecTypeDef::Address,
                                 ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                                 ast::Type::String => ScSpecTypeDef::String,
-                                ast::Type::Ref(ty) => ScSpecTypeDef::I128,
-                                //ast::Type::Val => ScSpecTypeDef::Address,
                                 _ => panic!("unsupported input type {:?}", p.ty),
                             }
                         }, // TODO: Map type.
