@@ -1198,11 +1198,11 @@ impl<'a, W: Write> Formatter<'a, W> {
         let whitespace = if !prefix.is_empty() { " " } else { "" };
         let next_after_start_offset = items.first().map(|item| item.loc().start());
         let first_surrounding = SurroundingChunk::new("", start_offset, next_after_start_offset);
-        let last_surronding = SurroundingChunk::new(")", None, end_offset);
+        let last_surrounding = SurroundingChunk::new(")", None, end_offset);
         if items.is_empty() {
             if paren_required {
                 write!(self.buf(), "{whitespace}(")?;
-                self.surrounded(first_surrounding, last_surronding, |fmt, _| {
+                self.surrounded(first_surrounding, last_surrounding, |fmt, _| {
                     // write comments before the list end
                     write_chunk!(fmt, end_offset.unwrap_or_default(), "")?;
                     Ok(())
@@ -1210,7 +1210,7 @@ impl<'a, W: Write> Formatter<'a, W> {
             }
         } else {
             write!(self.buf(), "{whitespace}(")?;
-            self.surrounded(first_surrounding, last_surronding, |fmt, multiline| {
+            self.surrounded(first_surrounding, last_surrounding, |fmt, multiline| {
                 let args =
                     fmt.items_to_chunks(end_offset, items.iter_mut().map(|arg| (arg.loc(), arg)))?;
                 let multiline =

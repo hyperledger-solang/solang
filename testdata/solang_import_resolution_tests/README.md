@@ -1,6 +1,6 @@
 # README
 
-This repo catalogues discrepencies between the import behaviors of solc and
+This repo catalogues discrepancies between the import behaviors of solc and
 solang. Tests were run on:
 
 + solang v0.3.0
