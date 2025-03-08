@@ -68,12 +68,9 @@ pub fn function_dispatch(
         }
         wrapper_cfg.returns = Arc::new(returns);
 
-        println!("PARAMS: {:?}", wrapper_cfg.params);
-
         wrapper_cfg.public = true;
         wrapper_cfg.function_no = cfg.function_no;
 
-        //let mut vartab = Vartable::from_symbol_table(&function.symtable, ns.next_id);
         let mut vartab = Vartable::new(ns.next_id);
 
         let mut value = Vec::new();
@@ -107,10 +104,7 @@ pub fn function_dispatch(
 
         wrapper_cfg.add(&mut vartab, placeholder);
 
-        println!("RETURNS: {:?}", value);
-
         let ret = encode_return(value, ns, &mut vartab, &mut wrapper_cfg);
-
         wrapper_cfg.add(&mut vartab, Instr::Return { value: vec![ret] });
 
         vartab.finalize(ns, &mut wrapper_cfg);
@@ -147,7 +141,7 @@ fn encode_return(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> Expression {
-    let ret = if returns.len() == 1 {
+    if returns.len() == 1 {
         soroban_encode_arg(returns[0].clone(), cfg, vartab, ns)
     } else {
         Expression::NumberLiteral {
@@ -155,7 +149,5 @@ fn encode_return(
             ty: Type::Uint(64),
             value: BigInt::from(2),
         }
-    };
-
-    ret
+    }
 }

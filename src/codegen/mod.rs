@@ -46,7 +46,7 @@ use crate::sema::eval::eval_const_number;
 use crate::sema::Recurse;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
-use encoding::soroban_encoding::{soroban_encode, soroban_encode_arg};
+use encoding::soroban_encoding::soroban_encode_arg;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
