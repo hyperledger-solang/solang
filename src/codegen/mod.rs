@@ -114,7 +114,6 @@ pub enum HostFunctions {
     ObjToU128Hi64,
     ObjFromI128Pieces,
     ObjFromU128Pieces,
-    MapNewFromLinearMemory,
     RequireAuth,
     AuthAsCurrContract,
     MapNew,
