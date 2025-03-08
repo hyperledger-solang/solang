@@ -10,3 +10,4 @@ package-lock.json
 *.wasm
 *.abi
 target/
+.stellar/
