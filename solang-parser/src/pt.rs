@@ -1532,7 +1532,7 @@ impl FunctionDefinition {
     /// Returns `true` if the function body is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.body.is_none()
+        self.body.as_ref().map_or(true, Statement::is_empty)
     }
 
     /// Sorts the function attributes.
