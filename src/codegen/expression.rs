@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
+<<<<<<< HEAD
 use super::encoding::soroban_encoding::{soroban_decode_arg, soroban_encode_arg};
+=======
+use super::encoding::soroban_encoding::soroban_decode_arg;
+>>>>>>> main
 use super::encoding::{abi_decode, abi_encode, soroban_encoding::soroban_encode};
 use super::revert::{
     assert_failure, expr_assert, log_runtime_error, require, PanicCode, SolidityError,
@@ -1325,7 +1329,13 @@ fn post_incdec(
                     };
                     // If the target is Soroban, encode the value before storing it in storage.
                     if ns.target == Target::Soroban {
+<<<<<<< HEAD
                         value = soroban_encode_arg(value, cfg, vartab, ns);
+=======
+                        value = soroban_encode(&value.loc(), vec![value], ns, vartab, cfg, false).2
+                            [0]
+                        .clone();
+>>>>>>> main
                     }
 
                     cfg.add(
@@ -3259,7 +3269,13 @@ pub fn assign_single(
                     };
 
                     if ns.target == Target::Soroban {
+<<<<<<< HEAD
                         value = soroban_encode_arg(value, cfg, vartab, ns);
+=======
+                        value = soroban_encode(&left.loc(), vec![value], ns, vartab, cfg, false).2
+                            [0]
+                        .clone();
+>>>>>>> main
                     }
 
                     cfg.add(
@@ -4210,7 +4226,11 @@ pub fn load_storage(
     };
 
     if ns.target == Target::Soroban {
+<<<<<<< HEAD
         soroban_decode_arg(var, cfg, vartab)
+=======
+        soroban_decode_arg(var)
+>>>>>>> main
     } else {
         var
     }

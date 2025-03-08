@@ -104,6 +104,7 @@ pub enum HostFunctions {
     SymbolNewFromLinearMemory,
     VectorNew,
     VectorNewFromLinearMemory,
+    MapNewFromLinearMemory,
     Call,
     ObjToU64,
     ObjFromU64,
