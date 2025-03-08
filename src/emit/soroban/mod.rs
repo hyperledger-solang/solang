@@ -287,7 +287,6 @@ impl SorobanTarget {
                     .returns
                     .iter()
                     .map(|return_type| {
-                        //let ty = return_type.ty.clone();
                         let ret_type = return_type.ty.clone();
                         let ty = if let ast::Type::Ref(ty) = ret_type {
                             *ty
@@ -305,7 +304,6 @@ impl SorobanTarget {
                             ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                             ast::Type::String => ScSpecTypeDef::String,
                             ast::Type::Void => ScSpecTypeDef::Void,
-                            ast::Type::Ref(ty) => ScSpecTypeDef::I128,
                             _ => panic!("unsupported return type {:?}", ty),
                         }
                     }) // TODO: Map type.
