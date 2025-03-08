@@ -168,7 +168,6 @@ impl SorobanTarget {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
-            println!("Looping over {}", cfg.name);
             let ftype = binary.function_type(
                 &cfg.params.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
                 &cfg.returns.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
@@ -215,7 +214,6 @@ impl SorobanTarget {
             .add_function("storage_initializer", init_type, None);
 
         for (func_decl, cfg) in defines {
-            println!("Emitting function {}", cfg.name);
             emit_cfg(&mut SorobanTarget, binary, contract, cfg, func_decl, ns);
         }
     }
@@ -261,9 +259,7 @@ impl SorobanTarget {
                             .unwrap_or_else(|| i.to_string())
                             .try_into()
                             .expect("function input name exceeds limit"),
-                        //type_: match &p.ty {
                         type_: {
-                            println!("Type: {:?}", p.ty);
                             let ty = if let ast::Type::Ref(ty) = &p.ty {
                                 ty.as_ref()
                             } else {
