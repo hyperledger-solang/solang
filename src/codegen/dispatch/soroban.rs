@@ -5,9 +5,9 @@ use crate::sema::ast;
 use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy},
+        encoding::soroban_encoding::{soroban_decode_arg, soroban_encode_arg},
         vartable::Vartable,
         Expression, Options,
-        encoding::soroban_encoding::{soroban_decode_arg, soroban_encode_arg}
     },
     sema::ast::{Namespace, Type},
 };
@@ -70,7 +70,6 @@ pub fn function_dispatch(
 
         println!("PARAMS: {:?}", wrapper_cfg.params);
 
-   
         wrapper_cfg.public = true;
         wrapper_cfg.function_no = cfg.function_no;
 
@@ -97,9 +96,7 @@ pub fn function_dispatch(
             _ => 0,
         };
 
-
         let decoded = decode_args(&mut wrapper_cfg, &mut vartab);
-
 
         let placeholder = Instr::Call {
             res: call_returns,
@@ -124,14 +121,12 @@ pub fn function_dispatch(
     wrapper_cfgs
 }
 
-
 fn decode_args(wrapper_cfg: &mut ControlFlowGraph, vartab: &mut Vartable) -> Vec<Expression> {
     let mut args = Vec::new();
 
     let params = wrapper_cfg.params.clone();
 
     for (i, arg) in params.iter().enumerate() {
-
         let arg = Expression::FunctionArg {
             loc: pt::Loc::Codegen,
             ty: arg.ty.clone(),
@@ -141,7 +136,6 @@ fn decode_args(wrapper_cfg: &mut ControlFlowGraph, vartab: &mut Vartable) -> Vec
         let decoded = soroban_decode_arg(arg.clone(), wrapper_cfg, vartab);
 
         args.push(decoded);
-
     }
 
     args
@@ -153,20 +147,15 @@ fn encode_return(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> Expression {
-
-
     let ret = if returns.len() == 1 {
-        soroban_encode_arg( returns[0].clone(), cfg, vartab, ns)
-        
+        soroban_encode_arg(returns[0].clone(), cfg, vartab, ns)
     } else {
-        Expression::NumberLiteral { loc: Loc::Codegen, ty: Type::Uint(64), value: BigInt::from(2) }
+        Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(2),
+        }
     };
-    
+
     ret
 }
-
-
-
-
-
-

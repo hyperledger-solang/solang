@@ -100,7 +100,13 @@ impl HostFunctions {
             HostFunctions::GetCurrentContractAddress => bin.context.i64_type().fn_type(&[], false),
             HostFunctions::ObjToI128Lo64 => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::ObjToI128Hi64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToU128Lo64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToU128Hi64 => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::ObjFromI128Pieces => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::ObjFromU128Pieces => bin
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
@@ -256,30 +262,27 @@ impl SorobanTarget {
                             .try_into()
                             .expect("function input name exceeds limit"),
                         //type_: match &p.ty {
-
-                        
                         type_: {
-                            
-                            let ty = if let  ast::Type::Ref(ty) = &p.ty {
+                            println!("Type: {:?}", p.ty);
+                            let ty = if let ast::Type::Ref(ty) = &p.ty {
                                 ty.as_ref()
                             } else {
                                 &p.ty
                             };
-                            
-                            
+
                             match ty {
-                            ast::Type::Uint(32) => ScSpecTypeDef::U32,
-                            ast::Type::Uint(64) => ScSpecTypeDef::U64,
-                            ast::Type::Int(128) => ScSpecTypeDef::I128,
-                            ast::Type::Bool => ScSpecTypeDef::Bool,
-                            ast::Type::Address(_) => ScSpecTypeDef::Address,
-                            ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
-                            ast::Type::String => ScSpecTypeDef::String,
-                            ast::Type::Ref(ty) => ScSpecTypeDef::I128,
-                            //ast::Type::Val => ScSpecTypeDef::Address,
-                            _ => panic!("unsupported input type {:?}", p.ty),
-                        
-                        }
+                                ast::Type::Uint(32) => ScSpecTypeDef::U32,
+                                ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                                ast::Type::Int(128) => ScSpecTypeDef::I128,
+                                ast::Type::Uint(128) => ScSpecTypeDef::U128,
+                                ast::Type::Bool => ScSpecTypeDef::Bool,
+                                ast::Type::Address(_) => ScSpecTypeDef::Address,
+                                ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
+                                ast::Type::String => ScSpecTypeDef::String,
+                                ast::Type::Ref(ty) => ScSpecTypeDef::I128,
+                                //ast::Type::Val => ScSpecTypeDef::Address,
+                                _ => panic!("unsupported input type {:?}", p.ty),
+                            }
                         }, // TODO: Map type.
                         doc: StringM::default(), // TODO: Add doc.
                     })
@@ -292,7 +295,7 @@ impl SorobanTarget {
                     .map(|return_type| {
                         //let ty = return_type.ty.clone();
                         let ret_type = return_type.ty.clone();
-                        let ty = if let ast::Type::Ref(ty) = ret_type{
+                        let ty = if let ast::Type::Ref(ty) = ret_type {
                             *ty
                         } else {
                             ret_type
@@ -301,6 +304,7 @@ impl SorobanTarget {
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
                             ast::Type::Uint(64) => ScSpecTypeDef::U64,
                             ast::Type::Int(128) => ScSpecTypeDef::I128,
+                            ast::Type::Uint(128) => ScSpecTypeDef::U128,
                             ast::Type::Int(_) => ScSpecTypeDef::I32,
                             ast::Type::Bool => ScSpecTypeDef::Bool,
                             ast::Type::Address(_) => ScSpecTypeDef::Address,
@@ -362,7 +366,10 @@ impl SorobanTarget {
             HostFunctions::PutContractData,
             HostFunctions::ObjToI128Lo64,
             HostFunctions::ObjToI128Hi64,
+            HostFunctions::ObjToU128Lo64,
+            HostFunctions::ObjToU128Hi64,
             HostFunctions::ObjFromI128Pieces,
+            HostFunctions::ObjFromU128Pieces,
             HostFunctions::RequireAuth,
             HostFunctions::AuthAsCurrContract,
             HostFunctions::MapNewFromLinearMemory,

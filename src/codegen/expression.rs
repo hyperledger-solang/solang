@@ -4209,7 +4209,7 @@ pub fn load_storage(
         var_no: res,
     };
 
-    if ns.target == Target::Soroban { 
+    if ns.target == Target::Soroban {
         soroban_decode_arg(var, cfg, vartab)
     } else {
         var
