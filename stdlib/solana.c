@@ -23,6 +23,22 @@ static const SolPubkey ed25519_address = {0x03, 0x7d, 0x46, 0xd6, 0x7c, 0x93, 0x
 
 #ifndef TEST
 
+bool address_equal(void *a, void *b)
+{
+    uint64_t *left = a;
+    uint64_t *right = b;
+
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        if (left[i] != right[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 uint64_t entrypoint(const uint8_t *input)
 {
     SolParameters params;
@@ -46,7 +62,7 @@ uint64_t entrypoint(const uint8_t *input)
             // dataAccount.owner & program_id must exist
             return 1;
         }
-        if (owner->x != program_id->x) {
+        if (!address_equal(owner, program_id)) {
             // dataAccount must be owned by us
             return 1;
         }
@@ -87,22 +103,6 @@ uint64_t address_hash(uint8_t data[32])
     }
 
     return hash;
-}
-
-bool address_equal(void *a, void *b)
-{
-    uint64_t *left = a;
-    uint64_t *right = b;
-
-    for (uint32_t i = 0; i < 4; i++)
-    {
-        if (left[i] != right[i])
-        {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 struct ed25519_instruction_sig
