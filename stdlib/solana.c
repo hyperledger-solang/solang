@@ -57,8 +57,9 @@ uint64_t entrypoint(const uint8_t *input)
             return 1;
         }
         uint64_t lamports = *params.ka[0].lamports;
+        uint64_t data_len = params.ka[0].data_len;
         // if account is uninitialized, we can skip owner checks
-        if (lamports > 0) {
+        if (lamports > 0 || data_len > 0) {
             SolPubkey* owner = params.ka[0].owner;
             SolPubkey* program_id = params.program_id;
             if (!owner || !program_id) {
