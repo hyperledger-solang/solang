@@ -33,6 +33,25 @@ uint64_t entrypoint(const uint8_t *input)
         return ret;
     }
 
+
+    { // fixes #1754 and #1756, but breaks fallback functions
+        if (params.ka_num < 1) {
+            // at least dataAccount must be provided.
+            // TODO: call fallback function here
+            return 1;
+        }
+        SolPubkey* owner = params.ka[0].owner;
+        SolPubkey* program_id = params.program_id;
+        if (!owner || !program_id) {
+            // dataAccount.owner & program_id must exist
+            return 1;
+        }
+        if (owner->x != program_id->x) {
+            // dataAccount must be owned by us
+            return 1;
+        }
+    }
+
     params.ka_clock = NULL;
     params.ka_instructions = NULL;
 
