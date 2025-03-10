@@ -56,15 +56,19 @@ uint64_t entrypoint(const uint8_t *input)
             // TODO: call fallback function here
             return 1;
         }
-        SolPubkey* owner = params.ka[0].owner;
-        SolPubkey* program_id = params.program_id;
-        if (!owner || !program_id) {
-            // dataAccount.owner & program_id must exist
-            return 1;
-        }
-        if (!address_equal(owner, program_id)) {
-            // dataAccount must be owned by us
-            return 1;
+        uint64_t lamports = *params.ka[0].lamports;
+        // if account is uninitialized, we can skip owner checks
+        if (lamports > 0) {
+            SolPubkey* owner = params.ka[0].owner;
+            SolPubkey* program_id = params.program_id;
+            if (!owner || !program_id) {
+                // dataAccount.owner & program_id must exist
+                return 1;
+            }
+            if (!address_equal(owner, program_id)) {
+                // dataAccount must be owned by us
+                return 1;
+            }
         }
     }
 
