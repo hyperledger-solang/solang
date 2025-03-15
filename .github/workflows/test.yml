@@ -424,6 +424,7 @@ jobs:
         node-version: '16'
     - run: npm install
       working-directory: ./integration/polkadot
+    - uses: dtolnay/rust-toolchain@1.82.0
     - name: Build ink! contracts
       run: npm run build-ink
       working-directory: ./integration/polkadot
