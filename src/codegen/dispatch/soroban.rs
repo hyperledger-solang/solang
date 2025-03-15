@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use num_bigint::BigInt;
-use solang_parser::pt::{self};
-
-use crate::sema::ast::{self, Function};
+use crate::pt::Loc;
+use crate::sema::ast;
 use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy},
+        encoding::soroban_encoding::{soroban_decode_arg, soroban_encode_arg},
         vartable::Vartable,
         Expression, Options,
     },
     sema::ast::{Namespace, Type},
 };
+use num_bigint::BigInt;
+use solang_parser::pt;
+use std::sync::Arc;
 
 pub fn function_dispatch(
     contract_no: usize,
@@ -44,19 +46,32 @@ pub fn function_dispatch(
 
         let mut wrapper_cfg = ControlFlowGraph::new(wrapper_name.to_string(), ASTFunction::None);
 
-        wrapper_cfg.params = function.params.clone();
+        let mut params = Vec::new();
+        for p in function.params.as_ref() {
+            let type_ref = Type::Ref(Box::new(p.ty.clone()));
+            let mut param = ast::Parameter::new_default(type_ref);
+            param.id = p.id.clone();
+            params.push(param);
+        }
 
-        let return_type = if cfg.returns.len() == 1 {
-            cfg.returns[0].clone()
-        } else {
-            ast::Parameter::new_default(Type::Void)
-        };
+        let mut returns = Vec::new();
+        for ret in function.returns.as_ref() {
+            let type_ref = Type::Ref(Box::new(ret.ty.clone()));
+            let ret = ast::Parameter::new_default(type_ref);
+            returns.push(ret);
+        }
 
-        wrapper_cfg.returns = vec![return_type].into();
+        wrapper_cfg.params = Arc::new(params);
+
+        if returns.is_empty() {
+            returns.push(ast::Parameter::new_default(Type::Ref(Box::new(Type::Void))));
+        }
+        wrapper_cfg.returns = Arc::new(returns);
+
         wrapper_cfg.public = true;
         wrapper_cfg.function_no = cfg.function_no;
 
-        let mut vartab = Vartable::from_symbol_table(&function.symtable, ns.next_id);
+        let mut vartab = Vartable::new(ns.next_id);
 
         let mut value = Vec::new();
         let mut return_tys = Vec::new();
@@ -77,56 +92,20 @@ pub fn function_dispatch(
             ASTFunction::SolidityFunction(no) => no,
             _ => 0,
         };
+
+        let decoded = decode_args(&mut wrapper_cfg, &mut vartab);
+
         let placeholder = Instr::Call {
             res: call_returns,
             call: InternalCallTy::Static { cfg_no },
             return_tys,
-            args: decode_args(function, ns),
+            args: decoded,
         };
 
         wrapper_cfg.add(&mut vartab, placeholder);
 
-        // TODO: support multiple returns
-        if value.len() == 1 {
-            // set the msb 8 bits of the return value to 6, the return value is 64 bits.
-            // FIXME: this assumes that the solidity function always returns one value.
-            let shifted = Expression::ShiftLeft {
-                loc: pt::Loc::Codegen,
-                ty: Type::Uint(64),
-                left: value[0].clone().into(),
-                right: Expression::NumberLiteral {
-                    loc: pt::Loc::Codegen,
-                    ty: Type::Uint(64),
-                    value: BigInt::from(8_u64),
-                }
-                .into(),
-            };
-
-            let tag = Expression::NumberLiteral {
-                loc: pt::Loc::Codegen,
-                ty: Type::Uint(64),
-                value: BigInt::from(6_u64),
-            };
-
-            let added = Expression::Add {
-                loc: pt::Loc::Codegen,
-                ty: Type::Uint(64),
-                overflowing: true,
-                left: shifted.into(),
-                right: tag.into(),
-            };
-
-            wrapper_cfg.add(&mut vartab, Instr::Return { value: vec![added] });
-        } else {
-            // Return 2 as numberliteral. 2 is the soroban Void type encoded.
-            let two = Expression::NumberLiteral {
-                loc: pt::Loc::Codegen,
-                ty: Type::Uint(64),
-                value: BigInt::from(2_u64),
-            };
-
-            wrapper_cfg.add(&mut vartab, Instr::Return { value: vec![two] });
-        }
+        let ret = encode_return(value, ns, &mut vartab, &mut wrapper_cfg);
+        wrapper_cfg.add(&mut vartab, Instr::Return { value: vec![ret] });
 
         vartab.finalize(ns, &mut wrapper_cfg);
         cfg.public = false;
@@ -136,44 +115,39 @@ pub fn function_dispatch(
     wrapper_cfgs
 }
 
-fn decode_args(function: &Function, _ns: &Namespace) -> Vec<Expression> {
+fn decode_args(wrapper_cfg: &mut ControlFlowGraph, vartab: &mut Vartable) -> Vec<Expression> {
     let mut args = Vec::new();
 
-    for (i, arg) in function.params.iter().enumerate() {
-        let arg = match arg.ty {
-            Type::Uint(64) => Expression::ShiftRight {
-                loc: arg.loc,
-                ty: Type::Uint(64),
-                left: Box::new(Expression::FunctionArg {
-                    loc: arg.loc,
-                    ty: arg.ty.clone(),
-                    arg_no: i,
-                }),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: arg.loc,
-                    ty: Type::Uint(64),
-                    value: BigInt::from(8_u64),
-                }),
-                signed: false,
-            },
+    let params = wrapper_cfg.params.clone();
 
-            Type::Address(_) => Expression::FunctionArg {
-                loc: arg.loc,
-                ty: arg.ty.clone(),
-                arg_no: i,
-            },
-
-            // TODO: implement encoding/decoding for Int 128
-            Type::Int(128) => Expression::FunctionArg {
-                loc: arg.loc,
-                ty: arg.ty.clone(),
-                arg_no: i,
-            },
-            _ => unimplemented!(),
+    for (i, arg) in params.iter().enumerate() {
+        let arg = Expression::FunctionArg {
+            loc: pt::Loc::Codegen,
+            ty: arg.ty.clone(),
+            arg_no: i,
         };
 
-        args.push(arg);
+        let decoded = soroban_decode_arg(arg.clone(), wrapper_cfg, vartab);
+
+        args.push(decoded);
     }
 
     args
+}
+
+fn encode_return(
+    returns: Vec<Expression>,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+) -> Expression {
+    if returns.len() == 1 {
+        soroban_encode_arg(returns[0].clone(), cfg, vartab, ns)
+    } else {
+        Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(2),
+        }
+    }
 }

@@ -46,7 +46,7 @@ use crate::sema::eval::eval_const_number;
 use crate::sema::Recurse;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
-use encoding::soroban_encoding::soroban_encode;
+use encoding::soroban_encoding::soroban_encode_arg;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
@@ -108,6 +108,12 @@ pub enum HostFunctions {
     Call,
     ObjToU64,
     ObjFromU64,
+    ObjToI128Lo64,
+    ObjToI128Hi64,
+    ObjToU128Lo64,
+    ObjToU128Hi64,
+    ObjFromI128Pieces,
+    ObjFromU128Pieces,
     RequireAuth,
     AuthAsCurrContract,
     MapNew,
@@ -132,6 +138,12 @@ impl HostFunctions {
             HostFunctions::Call => "d._",
             HostFunctions::ObjToU64 => "i.0",
             HostFunctions::ObjFromU64 => "i._",
+            HostFunctions::ObjToI128Lo64 => "i.7",
+            HostFunctions::ObjToI128Hi64 => "i.8",
+            HostFunctions::ObjToU128Lo64 => "i.4",
+            HostFunctions::ObjToU128Hi64 => "i.5",
+            HostFunctions::ObjFromI128Pieces => "i.6",
+            HostFunctions::ObjFromU128Pieces => "i.3",
             HostFunctions::RequireAuth => "a.0",
             HostFunctions::AuthAsCurrContract => "a.3",
             HostFunctions::MapNewFromLinearMemory => "m.9",
@@ -330,9 +342,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
             let mut value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
 
             if ns.target == Target::Soroban {
-                value = soroban_encode(&value.loc(), vec![value], ns, &mut vartab, &mut cfg, false)
-                    .2[0]
-                    .clone();
+                value = soroban_encode_arg(value, &mut cfg, &mut vartab, ns);
             }
 
             cfg.add(
