@@ -11,3 +11,25 @@ Cargo.lock
 .vscode/
 
 /test_snapshots
+integration/anchor/target/.rustc_info.json
+package-lock.json
+
+
+/docs/build
+Cargo.lock
+/target
+**/*.rs.bk
+*.ll
+tests/.tmp*
+tests/create_me/
+
+.helix/
+.vscode/
+*.DS_Store
+*.wasm
+*.abi
+node_modules/
+test_snapshots/
+integration/soroban/addition.sol
+integration/soroban/rust/target/
+integration/anchor/target/

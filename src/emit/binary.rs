@@ -934,7 +934,11 @@ impl<'a> Binary<'a> {
             match ty {
                 Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
                 Type::Int(n) | Type::Uint(n) => {
-                    BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
+                    if ns.target == Target::Soroban {
+                        BasicTypeEnum::IntType(self.context.i64_type())
+                    } else {
+                        BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
+                    }
                 }
                 Type::Value => BasicTypeEnum::IntType(
                     self.context
@@ -983,10 +987,15 @@ impl<'a> Binary<'a> {
                     )
                     .as_basic_type_enum(),
                 Type::Mapping(..) => self.llvm_type(&ns.storage_type(), ns),
-                Type::Ref(r) => self
-                    .llvm_type(r, ns)
-                    .ptr_type(AddressSpace::default())
-                    .as_basic_type_enum(),
+                Type::Ref(r) => {
+                    if ns.target == Target::Soroban {
+                        return BasicTypeEnum::IntType(self.context.i64_type());
+                    }
+
+                    self.llvm_type(r, ns)
+                        .ptr_type(AddressSpace::default())
+                        .as_basic_type_enum()
+                }
                 Type::StorageRef(..) => self.llvm_type(&ns.storage_type(), ns),
                 Type::InternalFunction {
                     params, returns, ..
