@@ -47,6 +47,46 @@ describe('Counter', () => {
     let count = await call_contract_function("count", server, keypair, contract);
     expect(count.returnValue().value().toString()).eq("11");
   });
+
+  it('adding two u64 values', async () => {
+    // add two numbers
+
+    let args = [
+      StellarSdk.xdr.ScVal.scvU64(100n),
+      StellarSdk.xdr.ScVal.scvU64(200n)
+    ];
+
+    console.log(`addingu64 inputs are: ${args[0].u64()} and ${args[1].u64()} `);
+
+
+    let result = await call_contract_function("addingu64", server, keypair, contract, ...args);    // let returnValue = result.returnValue().value().toString();
+
+    let output = result.returnValue().value().toString();
+    console.log(`additionu64 output is: ${output}`);
+    expect(result.returnValue().value().toString()).eq("300");
+  });
+
+
+
+
+
+  it('adding two u32 values', async () => {
+    // add two numbers
+
+    let args = [
+      StellarSdk.xdr.ScVal.scvU32(50),
+      StellarSdk.xdr.ScVal.scvU32(60)
+    ];
+
+    console.log(`additionu32 input is: ${args[0].u32()} and ${args[1].u32()} `);
+
+
+    let result = await call_contract_function("addingu32", server, keypair, contract, ...args);    // let returnValue = result.returnValue().value().toString();
+
+    let output = result.returnValue().value().toString();
+    console.log(`additionu32 output is: ${output}`);
+    expect(result.returnValue().value().toString()).eq("110");
+  });
 });
 
 
