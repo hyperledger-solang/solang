@@ -23,6 +23,22 @@ static const SolPubkey ed25519_address = {0x03, 0x7d, 0x46, 0xd6, 0x7c, 0x93, 0x
 
 #ifndef TEST
 
+bool address_equal(void *a, void *b)
+{
+    uint64_t *left = a;
+    uint64_t *right = b;
+
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        if (left[i] != right[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 uint64_t entrypoint(const uint8_t *input)
 {
     SolParameters params;
@@ -31,6 +47,40 @@ uint64_t entrypoint(const uint8_t *input)
     if (ret)
     {
         return ret;
+    }
+
+
+    { // fixes #1754 and #1756, but breaks fallback functions
+        if (params.ka_num < 1) {
+            // at least dataAccount must be provided.
+            // TODO: call fallback function here
+            return 1;
+        }
+        uint64_t lamports = *params.ka[0].lamports;
+        uint64_t data_len = params.ka[0].data_len;
+        // if account is uninitialized, we can skip owner checks
+        if (lamports > 0 || data_len > 0) {
+            SolPubkey* owner = params.ka[0].owner;
+            SolPubkey* program_id = params.program_id;
+            if (!owner || !program_id) {
+                // dataAccount.owner & program_id must exist
+                return 1;
+            }
+            if (!address_equal(owner, program_id)) {
+                // dataAccount must be owned by us
+                return 1;
+            }
+        }
+    }
+
+    // ensures that self-cpi event data never gets downstream
+    if (params.input_len >= 8) {
+        uint64_t discriminator = *(const uint64_t*)params.input;
+        if (discriminator == 0x1d9acb512ea545e4) {
+            // cap input length at 8
+            // prevents abi.decode() errors
+            params.input_len = 8;
+        }
     }
 
     params.ka_clock = NULL;
@@ -68,22 +118,6 @@ uint64_t address_hash(uint8_t data[32])
     }
 
     return hash;
-}
-
-bool address_equal(void *a, void *b)
-{
-    uint64_t *left = a;
-    uint64_t *right = b;
-
-    for (uint32_t i = 0; i < 4; i++)
-    {
-        if (left[i] != right[i])
-        {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 struct ed25519_instruction_sig
