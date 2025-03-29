@@ -209,8 +209,7 @@ typedef struct
  */
 typedef struct
 {
-    SolAccountInfo ka[10]; /** Pointer to an array of SolAccountInfo, must already
-                          point to an array of SolAccountInfos */
+    SolAccountInfo ka[64]; /** Array of SolAccountInfos */
     uint64_t ka_num;       /** Number of SolAccountInfo entries in `ka` */
     const uint8_t *input;  /** pointer to the instruction data */
     uint64_t input_len;    /** Length in bytes of the instruction data */
@@ -245,39 +244,20 @@ static uint64_t sol_deserialize(const uint8_t *input, SolParameters *params)
         return ERROR_INVALID_ARGUMENT;
     }
 
-    uint64_t max_accounts = SOL_ARRAY_SIZE(params->ka);
     params->ka_num = *(uint64_t *)input;
     input += sizeof(uint64_t);
+
+    if (params->ka_num > SOL_ARRAY_SIZE(params->ka)) {
+        // too many accounts, can't deserialize correctly
+        // this error is good enough :)
+        return ERROR_NOT_ENOUGH_ACCOUNT_KEYS;
+    }
 
     for (int i = 0; i < params->ka_num; i++)
     {
         uint8_t dup_info = input[0];
         input += sizeof(uint8_t);
 
-        if (i >= max_accounts)
-        {
-            if (dup_info == UINT8_MAX)
-            {
-                input += sizeof(uint8_t);
-                input += sizeof(uint8_t);
-                input += sizeof(uint8_t);
-                input += 4; // padding
-                input += sizeof(SolPubkey);
-                input += sizeof(SolPubkey);
-                input += sizeof(uint64_t);
-                uint64_t data_len = *(uint64_t *)input;
-                input += sizeof(uint64_t);
-                input += data_len;
-                input += MAX_PERMITTED_DATA_INCREASE;
-                input = (uint8_t *)(((uint64_t)input + 8 - 1) & ~(8 - 1)); // padding
-                input += sizeof(uint64_t);
-            }
-            else
-            {
-                input += 7; // padding for the 64-bit alignment
-            }
-            continue;
-        }
         if (dup_info == UINT8_MAX)
         {
             // is signer?
