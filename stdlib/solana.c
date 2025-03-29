@@ -73,6 +73,16 @@ uint64_t entrypoint(const uint8_t *input)
         }
     }
 
+    // ensures that self-cpi event data never gets downstream
+    if (params.input_len >= 8) {
+        uint64_t discriminator = *(const uint64_t*)params.input;
+        if (discriminator == 0x1d9acb512ea545e4) {
+            // cap input length at 8
+            // prevents abi.decode() errors
+            params.input_len = 8;
+        }
+    }
+
     params.ka_clock = NULL;
     params.ka_instructions = NULL;
 
