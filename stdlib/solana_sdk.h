@@ -323,9 +323,6 @@ static uint64_t sol_deserialize(const uint8_t *input, SolParameters *params)
     params->program_id = (SolPubkey *)input;
     input += sizeof(SolPubkey);
 
-    if (params->ka_num > max_accounts)
-        params->ka_num = max_accounts;
-
     return 0;
 }
 
