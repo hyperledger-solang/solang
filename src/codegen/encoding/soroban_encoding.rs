@@ -120,6 +120,15 @@ pub fn soroban_decode_arg(
     };
 
     match ty {
+        Type::Bool => Expression::NotEqual {
+            loc: Loc::Codegen,
+            left: arg.into(),
+            right: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: 0u64.into(),
+            }),
+        },
         Type::Uint(64) => Expression::ShiftRight {
             loc: Loc::Codegen,
             ty: Type::Uint(64),
@@ -148,6 +157,22 @@ pub fn soroban_encode_arg(
     let obj = vartab.temp_name("obj_".to_string().as_str(), &Type::Uint(64));
 
     let ret = match item.ty() {
+        Type::Bool => {
+            let encoded = match item {
+                Expression::BoolLiteral { value, .. } => Expression::NumberLiteral {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    value: if value { 1u64.into() } else { 0u64.into() },
+                },
+                _ => item.cast(&Type::Uint(64), ns),
+            };
+
+            Instr::Set {
+                loc: item.loc(),
+                res: obj,
+                expr: encoded,
+            }
+        }
         Type::String => {
             let inp = Expression::VectorData {
                 pointer: Box::new(item.clone()),

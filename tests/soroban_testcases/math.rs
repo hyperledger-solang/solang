@@ -189,3 +189,22 @@ fn u128_ops() {
     let expected: Val = 1_u128.into_val(&runtime.env);
     assert!(expected.shallow_eq(&res));
 }
+
+#[test]
+fn bool_roundtrip() {
+    let runtime = build_solidity(
+        r#"
+        contract test {
+            function flip(bool x) public returns (bool) {
+                return !x;
+            }
+        }"#,
+        |_| {},
+    );
+
+    let addr = runtime.contracts.last().unwrap();
+    let arg_true: Val = true.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "flip", vec![arg_true]);
+    let expected: Val = false.into_val(&runtime.env);
+    assert!(expected.shallow_eq(&res));
+}
