@@ -46,15 +46,26 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         ns: &ast::Namespace,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
+        println!("storage_load: {:?}", ty);
+        println!("slot: {:?}", slot);
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(binary);
+
+
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                    .into_int_value()
+                    .const_cast(binary.context.i64_type(), false)
+        }
+        else {
+            *slot
+        };
+
+
         let ret = call!(
             HostFunctions::GetContractData.name(),
             &[
-                slot.as_basic_value_enum()
-                    .into_int_value()
-                    .const_cast(binary.context.i64_type(), false)
-                    .into(),
+                slot.into(),
                 binary
                     .context
                     .i64_type()
@@ -82,6 +93,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         ns: &ast::Namespace,
         storage_type: &Option<StorageType>,
     ) {
+        println!("storage_store: {:?}", ty);
         emit_context!(binary);
 
         let storage_type = storage_type_to_int(storage_type);
@@ -90,16 +102,21 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .module
             .get_function(HostFunctions::PutContractData.name())
             .unwrap();
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                    .into_int_value()
+                    .const_cast(binary.context.i64_type(), false)
+        }
+        else {
+            *slot
+        };
 
         let value = binary
             .builder
             .build_call(
                 function_value,
                 &[
-                    slot.as_basic_value_enum()
-                        .into_int_value()
-                        .const_cast(binary.context.i64_type(), false)
-                        .into(),
+                    slot.into(),
                     dest.into(),
                     binary
                         .context
@@ -203,7 +220,74 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         index: BasicValueEnum<'a>,
         ns: &Namespace,
     ) -> IntValue<'a> {
-        unimplemented!()
+
+        println!("storage_subscript: {:?}", ty);
+        println!("index: {:?}", index);
+
+
+        let vec_new = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VectorNew.name())
+                    .unwrap(),
+                &[],
+                "vec_new",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        println!("slot {:?}", slot);
+
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                    .into_int_value()
+                    .const_cast(bin.context.i64_type(), false)
+        }
+        else {
+            slot
+        };
+
+        // push the slot to the vector
+        bin.builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VecPushBack.name())
+                    .unwrap(),
+                &[vec_new.as_basic_value_enum().into(), 
+                slot
+                .into()],
+                "push",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        // push the index to the vector
+        bin.builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VecPushBack.name())
+                    .unwrap(),
+                &[vec_new.as_basic_value_enum().into(), 
+                index.into()],
+                "push",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+       // vec_new
+       println!("vec_new {:?}", vec_new);
+       vec_new
+       //bin.context.i64_type().const_int(0, false)
     }
 
     fn storage_push(
@@ -251,7 +335,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         dest: PointerValue,
         ns: &Namespace,
     ) {
-        unimplemented!()
+        println!("Keccak256 hash not implemented for Soroban target");
+        //unimplemented!()
     }
 
     /// Prints a string
