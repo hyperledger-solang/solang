@@ -178,6 +178,17 @@ pub fn soroban_decode_arg(
                 signed: true,
             }),
         },
+        Type::Int(64) => Expression::ShiftRight {
+            loc: Loc::Codegen,
+            ty: Type::Int(64),
+            left: arg.into(),
+            right: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::from(8u64),
+            }),
+            signed: true,
+        },
 
         _ => unimplemented!(),
     }

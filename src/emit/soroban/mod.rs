@@ -270,6 +270,7 @@ impl SorobanTarget {
                                 ast::Type::Uint(32) => ScSpecTypeDef::U32,
                                 &ast::Type::Int(32) => ScSpecTypeDef::I32,
                                 ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                                &ast::Type::Int(64) => ScSpecTypeDef::I64,
                                 ast::Type::Int(128) => ScSpecTypeDef::I128,
                                 ast::Type::Uint(128) => ScSpecTypeDef::U128,
                                 ast::Type::Bool => ScSpecTypeDef::Bool,
