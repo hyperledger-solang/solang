@@ -105,7 +105,7 @@ The language server is much improved, and many fixes all over.
   syntax `tx.accounts.my_account`. [LucasSte](https://github.com/LucasSte)
 - `delegatecall()` builtin has been added for Substrate. [xermicus](https://github.com/xermicus)
 - `get_contents_of_file_no` for Solang parser. [BenTheKush](https://github.com/BenTheKush)
-- `set_code_hash()` builtin has been aded for Substrate. [xermicus](https://github.com/xermicus)
+- `set_code_hash()` builtin has been added for Substrate. [xermicus](https://github.com/xermicus)
 
 ### Fixed
 - Diagnostics do not include large numbers anymore. [seanyoung](https://github.com/seanyoung)
