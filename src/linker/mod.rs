@@ -3,6 +3,7 @@
 mod bpf;
 mod polkadot_wasm;
 mod soroban_wasm;
+mod stylus_wasm;
 use crate::Target;
 use once_cell::sync::Lazy;
 use std::ffi::CString;
@@ -23,6 +24,7 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
             address_length: _,
             value_length: _,
         } => polkadot_wasm::link(input, name),
+        Target::Stylus => stylus_wasm::link(input, name),
         _ => panic!("linker not implemented for target {target:?}"),
     }
 }

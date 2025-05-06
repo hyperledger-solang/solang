@@ -98,7 +98,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
 
             if contract.instantiable {
                 let code = match ns.target {
-                    Target::Solana | Target::Polkadot { .. } => {
+                    Target::Solana | Target::Polkadot { .. } | Target::Stylus => {
                         contract.emit(&ns, &Default::default(), contract_no)
                     }
                     Target::EVM => b"beep".to_vec(),

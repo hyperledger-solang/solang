@@ -42,6 +42,7 @@ impl Namespace {
             } => (address_length, value_length),
             Target::Solana => (32, 8),
             Target::Soroban => (32, 64),
+            Target::Stylus => (20, 32),
         };
 
         let mut ns = Namespace {
