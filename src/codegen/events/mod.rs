@@ -40,7 +40,7 @@ pub(super) fn new_event_emitter<'a>(
     ns: &'a Namespace,
 ) -> Box<dyn EventEmitter + 'a> {
     match ns.target {
-        Target::Polkadot { .. } | Target::EVM => {
+        Target::Polkadot { .. } | Target::EVM | Target::Stylus => {
             Box::new(PolkadotEventEmitter { args, ns, event_no })
         }
 

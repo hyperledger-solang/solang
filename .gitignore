@@ -11,3 +11,4 @@ Cargo.lock
 .vscode/
 
 /test_snapshots
+/llvm16.0*

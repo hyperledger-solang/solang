@@ -17,6 +17,7 @@ use tempfile::tempdir;
 use wasm_opt::OptimizationOptions;
 
 use crate::codegen::{cfg::ReturnCode, Options};
+use crate::emit::stylus;
 use crate::emit::{polkadot, TargetRuntime};
 use crate::emit::{solana, BinaryOp, Generate};
 use crate::linker::link;
@@ -191,6 +192,7 @@ impl<'a> Binary<'a> {
             Target::Soroban => {
                 soroban::SorobanTarget::build(context, &std_lib, contract, ns, opt, _contract_no)
             }
+            Target::Stylus => stylus::StylusTarget::build(context, &std_lib, contract, ns, opt),
             _ => unimplemented!("target not implemented"),
         }
     }

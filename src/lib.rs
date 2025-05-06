@@ -33,6 +33,7 @@ pub enum Target {
     /// Ethereum EVM, see <https://ethereum.org/en/developers/docs/evm/>
     EVM,
     Soroban,
+    Stylus,
 }
 
 impl fmt::Display for Target {
@@ -42,6 +43,7 @@ impl fmt::Display for Target {
             Target::Polkadot { .. } => write!(f, "Polkadot"),
             Target::EVM => write!(f, "EVM"),
             Target::Soroban => write!(f, "Soroban"),
+            Target::Stylus => write!(f, "Stylus"),
         }
     }
 }
@@ -55,6 +57,7 @@ impl PartialEq for Target {
             Target::Polkadot { .. } => matches!(other, Target::Polkadot { .. }),
             Target::EVM => matches!(other, Target::EVM),
             Target::Soroban => matches!(other, Target::Soroban),
+            Target::Stylus => matches!(other, Target::Stylus),
         }
     }
 }

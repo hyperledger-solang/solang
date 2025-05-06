@@ -6,6 +6,7 @@ use crate::{sema::ast::Namespace, Target};
 pub(crate) mod polkadot;
 pub(super) mod solana;
 pub(super) mod soroban;
+pub(super) mod stylus;
 
 pub(super) fn function_dispatch(
     contract_no: usize,
@@ -19,5 +20,6 @@ pub(super) fn function_dispatch(
             polkadot::function_dispatch(contract_no, all_cfg, ns, opt)
         }
         Target::Soroban => soroban::function_dispatch(contract_no, all_cfg, ns, opt),
+        Target::Stylus => stylus::function_dispatch(contract_no, all_cfg, ns, opt),
     }
 }
