@@ -69,7 +69,7 @@ pub(crate) fn function_dispatch(
     ]
 }
 
-struct Dispatch<'a> {
+pub(super) struct Dispatch<'a> {
     start: usize,
     input_len: usize,
     input_ptr: Expression,
@@ -110,7 +110,7 @@ impl<'a> Dispatch<'a> {
     /// Create a new `Dispatch` struct that has all the data needed for building the dispatch logic.
     ///
     /// `ty` specifies whether to include constructors or functions.
-    fn new(
+    pub(super) fn new(
         all_cfg: &'a [ControlFlowGraph],
         ns: &'a mut Namespace,
         opt: &'a Options,
@@ -195,7 +195,7 @@ impl<'a> Dispatch<'a> {
     }
 
     /// Build the dispatch logic into the returned control flow graph.
-    fn build(mut self) -> ControlFlowGraph {
+    pub(super) fn build(mut self) -> ControlFlowGraph {
         // Go to fallback or receive if there is no selector in the call input
         let cond = Expression::Less {
             loc: Codegen,

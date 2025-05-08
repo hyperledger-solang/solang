@@ -53,7 +53,10 @@ macro_rules! emit_context {
         #[allow(unused_macros)]
         macro_rules! byte_ptr {
             () => {
-                $binary.context.i8_type().ptr_type(AddressSpace::default())
+                $binary
+                    .context
+                    .i8_type()
+                    .ptr_type(inkwell::AddressSpace::default())
             };
         }
 
