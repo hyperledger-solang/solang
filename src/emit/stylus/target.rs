@@ -233,6 +233,12 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
     fn assert_failure(&self, bin: &Binary, data: PointerValue, length: IntValue) {
         emit_context!(bin);
 
+        bin.builder
+            .build_store(bin.return_code.unwrap().as_pointer_value(), i32_const!(1))
+            .unwrap();
+
+        // smoelius: We must return something here, or else the wasm won't parse. But I'm not sure
+        // that returning 0 or 1 makes a difference.
         let one: &dyn BasicValue = &i32_const!(1);
         bin.builder.build_return(Some(one)).unwrap();
     }

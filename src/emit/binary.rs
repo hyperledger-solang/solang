@@ -162,8 +162,11 @@ pub struct Binary<'a> {
     code: RefCell<Vec<u8>>,
     pub(crate) selector: GlobalValue<'a>,
     pub(crate) calldata_len: GlobalValue<'a>,
+    // `scratch_len` and `scratch` are used by Polkadot.
     pub(crate) scratch_len: Option<GlobalValue<'a>>,
     pub(crate) scratch: Option<GlobalValue<'a>>,
+    // `return_code` is used by Stylus.
+    pub(crate) return_code: Option<GlobalValue<'a>>,
     pub(crate) parameters: Option<PointerValue<'a>>,
     pub(crate) return_values: HashMap<ReturnCode, IntValue<'a>>,
     /// No initializer for vector_new
@@ -439,6 +442,7 @@ impl<'a> Binary<'a> {
             calldata_len,
             scratch: None,
             scratch_len: None,
+            return_code: None,
             parameters: None,
             return_values,
             vector_init_empty: context.ptr_type(AddressSpace::default()).const_null(),

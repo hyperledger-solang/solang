@@ -8,7 +8,7 @@ use crate::emit_context;
 use crate::sema::ast::{Contract, Namespace};
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
-use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerValue};
+use inkwell::values::{BasicMetadataValueEnum, BasicValue, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 
 mod target;
@@ -33,6 +33,16 @@ impl StylusTarget {
             std_lib,
             None,
         );
+
+        let return_code = binary.module.add_global(
+            context.i32_type(),
+            Some(AddressSpace::default()),
+            "return_code",
+        );
+        return_code.set_linkage(Linkage::Internal);
+        return_code.set_initializer(&context.i32_type().const_zero());
+
+        binary.return_code = Some(return_code);
 
         let mut target = StylusTarget;
 
@@ -136,6 +146,15 @@ impl StylusTarget {
             .build_call(cfg, args, dispatch_cfg_name)
             .unwrap();
 
-        bin.builder.build_unreachable().unwrap();
+        let return_code = bin
+            .builder
+            .build_load(
+                bin.context.i32_type(),
+                bin.return_code.unwrap().as_pointer_value(),
+                "return_code",
+            )
+            .unwrap();
+        let return_code: &dyn BasicValue = &return_code;
+        bin.builder.build_return(Some(return_code)).unwrap();
     }
 }
