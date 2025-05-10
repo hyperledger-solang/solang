@@ -46,6 +46,7 @@ use crate::sema::eval::eval_const_number;
 use crate::sema::Recurse;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
+use encoding::soroban_encoding::soroban_encode_arg;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
@@ -90,6 +91,68 @@ impl From<inkwell::OptimizationLevel> for OptimizationLevel {
             inkwell::OptimizationLevel::Less => OptimizationLevel::Less,
             inkwell::OptimizationLevel::Default => OptimizationLevel::Default,
             inkwell::OptimizationLevel::Aggressive => OptimizationLevel::Aggressive,
+        }
+    }
+}
+
+pub enum HostFunctions {
+    PutContractData,
+    GetContractData,
+    ExtendContractDataTtl,
+    ExtendCurrentContractInstanceAndCodeTtl,
+    LogFromLinearMemory,
+    SymbolNewFromLinearMemory,
+    VectorNew,
+    VectorNewFromLinearMemory,
+    MapNewFromLinearMemory,
+    Call,
+    ObjToU64,
+    ObjFromU64,
+    ObjToI128Lo64,
+    ObjToI128Hi64,
+    ObjToU128Lo64,
+    ObjToU128Hi64,
+    ObjFromI128Pieces,
+    ObjFromU128Pieces,
+    RequireAuth,
+    AuthAsCurrContract,
+    MapNew,
+    MapPut,
+    VecPushBack,
+    StringNewFromLinearMemory,
+    StrKeyToAddr,
+    GetCurrentContractAddress,
+}
+
+impl HostFunctions {
+    pub fn name(&self) -> &str {
+        match self {
+            HostFunctions::PutContractData => "l._",
+            HostFunctions::GetContractData => "l.1",
+            HostFunctions::ExtendContractDataTtl => "l.7",
+            HostFunctions::ExtendCurrentContractInstanceAndCodeTtl => "l.8",
+            HostFunctions::LogFromLinearMemory => "x._",
+            HostFunctions::SymbolNewFromLinearMemory => "b.j",
+            HostFunctions::VectorNew => "v._",
+            HostFunctions::VectorNewFromLinearMemory => "v.g",
+            HostFunctions::Call => "d._",
+            HostFunctions::ObjToU64 => "i.0",
+            HostFunctions::ObjFromU64 => "i._",
+            HostFunctions::ObjToI128Lo64 => "i.7",
+            HostFunctions::ObjToI128Hi64 => "i.8",
+            HostFunctions::ObjToU128Lo64 => "i.4",
+            HostFunctions::ObjToU128Hi64 => "i.5",
+            HostFunctions::ObjFromI128Pieces => "i.6",
+            HostFunctions::ObjFromU128Pieces => "i.3",
+            HostFunctions::RequireAuth => "a.0",
+            HostFunctions::AuthAsCurrContract => "a.3",
+            HostFunctions::MapNewFromLinearMemory => "m.9",
+            HostFunctions::MapNew => "m._",
+            HostFunctions::MapPut => "m.0",
+            HostFunctions::VecPushBack => "v.6",
+            HostFunctions::StringNewFromLinearMemory => "b.i",
+            HostFunctions::StrKeyToAddr => "a.1",
+            HostFunctions::GetCurrentContractAddress => "x.7",
         }
     }
 }
@@ -276,7 +339,11 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
                 None,
             );
 
-            let value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
+            let mut value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
+
+            if ns.target == Target::Soroban {
+                value = soroban_encode_arg(value, &mut cfg, &mut vartab, ns);
+            }
 
             cfg.add(
                 &mut vartab,
@@ -660,6 +727,9 @@ pub enum Expression {
         pointer: Box<Expression>,
         bytes_offset: Box<Expression>,
     },
+    VectorData {
+        pointer: Box<Expression>,
+    },
 }
 
 impl CodeLocation for Expression {
@@ -716,7 +786,8 @@ impl CodeLocation for Expression {
             Expression::InternalFunctionCfg { .. }
             | Expression::Poison
             | Expression::Undefined { .. }
-            | Expression::AdvancePointer { .. } => pt::Loc::Codegen,
+            | Expression::AdvancePointer { .. }
+            | Expression::VectorData { .. } => pt::Loc::Codegen,
         }
     }
 }
@@ -868,6 +939,7 @@ impl RetrieveType for Expression {
 
             Expression::AdvancePointer { .. } => Type::BufferPointer,
             Expression::FormatString { .. } => Type::String,
+            Expression::VectorData { .. } => Type::Uint(64),
             Expression::Poison => unreachable!("Expression does not have a type"),
         }
     }
@@ -1761,6 +1833,10 @@ pub enum Builtin {
     WriteUint256LE,
     WriteBytes,
     Concat,
+    RequireAuth,
+    AuthAsCurrContract,
+    ExtendTtl,
+    ExtendInstanceTtl,
 }
 
 impl From<&ast::Builtin> for Builtin {
@@ -1823,6 +1899,10 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::PrevRandao => Builtin::PrevRandao,
             ast::Builtin::ContractCode => Builtin::ContractCode,
             ast::Builtin::StringConcat | ast::Builtin::BytesConcat => Builtin::Concat,
+            ast::Builtin::RequireAuth => Builtin::RequireAuth,
+            ast::Builtin::AuthAsCurrContract => Builtin::AuthAsCurrContract,
+            ast::Builtin::ExtendTtl => Builtin::ExtendTtl,
+            ast::Builtin::ExtendInstanceTtl => Builtin::ExtendInstanceTtl,
             _ => panic!("Builtin should not be in the cfg"),
         }
     }

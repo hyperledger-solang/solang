@@ -5,6 +5,7 @@ pub mod soroban_testcases;
 
 use solang::codegen::Options;
 use solang::file_resolver::FileResolver;
+use solang::sema::ast::Namespace;
 use solang::sema::diagnostics::Diagnostics;
 use solang::{compile, Target};
 use soroban_sdk::testutils::Logs;
@@ -18,7 +19,16 @@ pub struct SorobanEnv {
     compiler_diagnostics: Diagnostics,
 }
 
-pub fn build_solidity(src: &str) -> SorobanEnv {
+pub fn build_solidity<F>(src: &str, configure_env: F) -> SorobanEnv
+where
+    F: FnOnce(&mut SorobanEnv),
+{
+    let (wasm_blob, ns) = build_wasm(src);
+
+    SorobanEnv::new_with_contract(wasm_blob, configure_env).insert_diagnostics(ns.diagnostics)
+}
+
+fn build_wasm(src: &str) -> (Vec<u8>, Namespace) {
     let tmp_file = OsStr::new("test.sol");
     let mut cache = FileResolver::default();
     cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
@@ -40,10 +50,8 @@ pub fn build_solidity(src: &str) -> SorobanEnv {
         std::vec!["unknown".to_string()],
         "0.0.1",
     );
-    ns.print_diagnostics_in_plain(&cache, false);
     assert!(!wasm.is_empty());
-    let wasm_blob = wasm[0].0.clone();
-    SorobanEnv::new_with_contract(wasm_blob).insert_diagnostics(ns.diagnostics)
+    (wasm[0].0.clone(), ns)
 }
 
 impl SorobanEnv {
@@ -60,9 +68,15 @@ impl SorobanEnv {
         self
     }
 
-    pub fn new_with_contract(contract_wasm: Vec<u8>) -> Self {
+    pub fn new_with_contract<F>(contract_wasm: Vec<u8>, configure_env: F) -> Self
+    where
+        F: FnOnce(&mut SorobanEnv),
+    {
         let mut env = Self::new();
+        configure_env(&mut env);
+
         env.register_contract(contract_wasm);
+
         env
     }
 
@@ -84,6 +98,8 @@ impl SorobanEnv {
             args_soroban.push_back(arg)
         }
         println!("args_soroban: {:?}", args_soroban);
+        // To avoid running out of fuel
+        self.env.cost_estimate().budget().reset_unlimited();
         self.env.invoke_contract(addr, &func, args_soroban)
     }
 
@@ -105,6 +121,16 @@ impl SorobanEnv {
             .try_invoke_contract::<Val, Val>(addr, &func, args_soroban);
 
         self.env.logs().all()
+    }
+
+    pub fn deploy_contract(&mut self, src: &str) -> Address {
+        let wasm = build_wasm(src).0;
+
+        let addr = self.register_contract(wasm);
+
+        self.contracts.push(addr.clone());
+
+        addr
     }
 }
 

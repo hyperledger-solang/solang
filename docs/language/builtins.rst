@@ -666,3 +666,47 @@ Assuming `arg1` is 512 and `arg2` is 196, the output to the log will be ``foo en
     When formatting integers in to decimals, types larger than 64 bits require expensive division.
     Be mindful this will increase the gas cost. Larger values will incur a higher gas cost.
     Alternatively, use a hexadecimal ``{:x}`` format specifier to reduce the cost.
+
+
+extendTtl(uint32 threshold, uint32 extend_to) 
++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+The ``extendTtl()`` method allows extending the time-to-live (TTL) of a contract storage entry.
+
+If the entry's TTL is below threshold ledgers, this function updates ``live_until_ledger_seq`` such that TTL equals ``extend_to``. The TTL is defined as:
+
+.. math::
+
+TTL = live_until_ledger_seq - current_ledger
+
+
+.. note:: This method is only available on the Soroban target
+
+.. code-block:: solidity
+
+    /// Extends the TTL for the `count` persistent key to 5000 ledgers
+    /// if the current TTL is smaller than 1000 ledgers
+    function extend_ttl() public view returns (int64) {
+        return count.extendTtl(1000, 5000);
+    }
+
+
+
+For more details on managing contract data TTLs in Soroban, refer to the docs for `TTL <https://developers.stellar.org/docs/build/smart-contracts/getting-started/storing-data#managing-contract-data-ttls-with-extend_ttl>`_.
+
+extendInstanceTtl(uint32 threshold, uint32 extend_to)
++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+The extendInstanceTtl() function extends the time-to-live (TTL) of contract instance storage.
+
+If the TTL for the current contract instance and code (if applicable) is below threshold ledgers, this function extends ``live_until_ledger_seq`` such that TTL equals ``extend_to``.
+
+.. note:: This is a global function, not a method, and is only available on the Soroban target
+
+.. code-block:: solidity
+
+    /// Extends the TTL for the contract instance storage to 10000 ledgers
+    /// if the current TTL is smaller than 2000 ledgers
+    function extendInstanceTtl() public view returns (int64) {
+        return extendInstanceTtl(2000, 10000);
+    }

@@ -128,7 +128,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         }
         Expression::BytesLiteral { value: bs, ty, .. } => {
             // If the type of a BytesLiteral is a String, embedd the bytes in the binary.
-            if ty == &Type::String {
+            if ty == &Type::String || ty == &Type::Address(true) {
                 let data = bin.emit_global_string("const_string", bs, true);
 
                 // A constant string, or array, is represented by a struct with two fields: a pointer to the data, and its length.
@@ -1581,7 +1581,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .into()
             } else {
                 let elem = match ty {
-                    Type::Slice(_) | Type::String | Type::DynamicBytes => Type::Bytes(1),
+                    Type::Slice(_) | Type::String | Type::DynamicBytes | Type::Bytes(_) => {
+                        Type::Bytes(1)
+                    }
                     _ => ty.array_elem(),
                 };
 
@@ -1593,7 +1595,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .unwrap()
                     .const_cast(bin.context.i32_type(), false);
 
-                bin.vector_new(size, elem_size, initializer.as_ref()).into()
+                bin.vector_new(size, elem_size, initializer.as_ref(), ty, ns)
             }
         }
         Expression::Builtin {
@@ -2145,6 +2147,16 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             };
 
             advanced.into()
+        }
+
+        Expression::VectorData { pointer } => {
+            let ptr = expression(target, bin, pointer, vartab, function, ns);
+            let data = bin.vector_bytes(ptr);
+            let res = bin
+                .builder
+                .build_ptr_to_int(data, bin.context.i32_type(), "ptr_as_int32");
+
+            res.unwrap().into()
         }
 
         Expression::RationalNumberLiteral { .. }

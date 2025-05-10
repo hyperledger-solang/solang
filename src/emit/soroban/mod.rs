@@ -3,7 +3,7 @@
 pub(super) mod target;
 use crate::codegen::{
     cfg::{ASTFunction, ControlFlowGraph},
-    Options, STORAGE_INITIALIZER,
+    HostFunctions, Options, STORAGE_INITIALIZER,
 };
 
 use crate::emit::cfg::emit_cfg;
@@ -12,6 +12,7 @@ use funty::Fundamental;
 use inkwell::{
     context::Context,
     module::{Linkage, Module},
+    types::FunctionType,
 };
 use soroban_sdk::xdr::{
     Limited, Limits, ScEnvMetaEntry, ScEnvMetaEntryInterfaceVersion, ScSpecEntry,
@@ -25,9 +26,93 @@ const SOROBAN_ENV_INTERFACE_VERSION: ScEnvMetaEntryInterfaceVersion =
         protocol: 22,
         pre_release: 0,
     };
-pub const PUT_CONTRACT_DATA: &str = "l._";
-pub const GET_CONTRACT_DATA: &str = "l.1";
-pub const LOG_FROM_LINEAR_MEMORY: &str = "x._";
+
+impl HostFunctions {
+    pub fn function_signature<'b>(&self, bin: &Binary<'b>) -> FunctionType<'b> {
+        let ty = bin.context.i64_type();
+        match self {
+            HostFunctions::PutContractData => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::GetContractData => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            // https://github.com/stellar/stellar-protocol/blob/2fdc77302715bc4a31a784aef1a797d466965024/core/cap-0046-03.md#ledger-host-functions-mod-l
+            // ;; If the entry's TTL is below `threshold` ledgers, extend `live_until_ledger_seq` such that TTL == `extend_to`, where TTL is defined as live_until_ledger_seq - current ledger.
+            // (func $extend_contract_data_ttl (param $k_val i64) (param $t_storage_type i64) (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
+            HostFunctions::ExtendContractDataTtl => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
+            // ;; If the TTL for the current contract instance and code (if applicable) is below `threshold` ledgers, extend `live_until_ledger_seq` such that TTL == `extend_to`, where TTL is defined as live_until_ledger_seq - current ledger.
+            // (func $extend_current_contract_instance_and_code_ttl (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
+            HostFunctions::ExtendCurrentContractInstanceAndCodeTtl => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::LogFromLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::SymbolNewFromLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::VectorNew => bin.context.i64_type().fn_type(&[], false),
+            HostFunctions::Call => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::VectorNewFromLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::ObjToU64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjFromU64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::RequireAuth => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::AuthAsCurrContract => {
+                bin.context.i64_type().fn_type(&[ty.into()], false)
+            }
+            HostFunctions::MapNewFromLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+
+            HostFunctions::MapNew => bin.context.i64_type().fn_type(&[], false),
+
+            HostFunctions::MapPut => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+
+            HostFunctions::VecPushBack => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+
+            HostFunctions::StringNewFromLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::StrKeyToAddr => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::GetCurrentContractAddress => bin.context.i64_type().fn_type(&[], false),
+            HostFunctions::ObjToI128Lo64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToI128Hi64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToU128Lo64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToU128Hi64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjFromI128Pieces => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::ObjFromU128Pieces => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+        }
+    }
+}
 
 pub struct SorobanTarget;
 
@@ -174,8 +259,26 @@ impl SorobanTarget {
                             .unwrap_or_else(|| i.to_string())
                             .try_into()
                             .expect("function input name exceeds limit"),
-                        type_: ScSpecTypeDef::U64, // TODO: Map type.
-                        doc: StringM::default(),   // TODO: Add doc.
+                        type_: {
+                            let ty = if let ast::Type::Ref(ty) = &p.ty {
+                                ty.as_ref()
+                            } else {
+                                &p.ty
+                            };
+
+                            match ty {
+                                ast::Type::Uint(32) => ScSpecTypeDef::U32,
+                                ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                                ast::Type::Int(128) => ScSpecTypeDef::I128,
+                                ast::Type::Uint(128) => ScSpecTypeDef::U128,
+                                ast::Type::Bool => ScSpecTypeDef::Bool,
+                                ast::Type::Address(_) => ScSpecTypeDef::Address,
+                                ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
+                                ast::Type::String => ScSpecTypeDef::String,
+                                _ => panic!("unsupported input type {:?}", p.ty),
+                            }
+                        }, // TODO: Map type.
+                        doc: StringM::default(), // TODO: Add doc.
                     })
                     .collect::<Vec<_>>()
                     .try_into()
@@ -184,10 +287,17 @@ impl SorobanTarget {
                     .returns
                     .iter()
                     .map(|return_type| {
-                        let ty = return_type.ty.clone();
+                        let ret_type = return_type.ty.clone();
+                        let ty = if let ast::Type::Ref(ty) = ret_type {
+                            *ty
+                        } else {
+                            ret_type
+                        };
                         match ty {
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
                             ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                            ast::Type::Int(128) => ScSpecTypeDef::I128,
+                            ast::Type::Uint(128) => ScSpecTypeDef::U128,
                             ast::Type::Int(_) => ScSpecTypeDef::I32,
                             ast::Type::Bool => ScSpecTypeDef::Bool,
                             ast::Type::Address(_) => ScSpecTypeDef::Address,
@@ -233,33 +343,43 @@ impl SorobanTarget {
     }
 
     fn declare_externals(binary: &mut Binary) {
-        let ty = binary.context.i64_type();
-        let function_ty_1 = binary
-            .context
-            .i64_type()
-            .fn_type(&[ty.into(), ty.into(), ty.into()], false);
-        let function_ty = binary
-            .context
-            .i64_type()
-            .fn_type(&[ty.into(), ty.into()], false);
+        let host_functions = [
+            HostFunctions::PutContractData,
+            HostFunctions::GetContractData,
+            HostFunctions::ExtendContractDataTtl,
+            HostFunctions::ExtendCurrentContractInstanceAndCodeTtl,
+            HostFunctions::LogFromLinearMemory,
+            HostFunctions::SymbolNewFromLinearMemory,
+            HostFunctions::VectorNew,
+            HostFunctions::Call,
+            HostFunctions::VectorNewFromLinearMemory,
+            HostFunctions::ObjToU64,
+            HostFunctions::ObjFromU64,
+            HostFunctions::PutContractData,
+            HostFunctions::ObjToI128Lo64,
+            HostFunctions::ObjToI128Hi64,
+            HostFunctions::ObjToU128Lo64,
+            HostFunctions::ObjToU128Hi64,
+            HostFunctions::ObjFromI128Pieces,
+            HostFunctions::ObjFromU128Pieces,
+            HostFunctions::RequireAuth,
+            HostFunctions::AuthAsCurrContract,
+            HostFunctions::MapNewFromLinearMemory,
+            HostFunctions::MapNew,
+            HostFunctions::MapPut,
+            HostFunctions::VecPushBack,
+            HostFunctions::StringNewFromLinearMemory,
+            HostFunctions::StrKeyToAddr,
+            HostFunctions::GetCurrentContractAddress,
+        ];
 
-        let log_function_ty = binary
-            .context
-            .i64_type()
-            .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false);
-
-        binary
-            .module
-            .add_function(PUT_CONTRACT_DATA, function_ty_1, Some(Linkage::External));
-        binary
-            .module
-            .add_function(GET_CONTRACT_DATA, function_ty, Some(Linkage::External));
-
-        binary.module.add_function(
-            LOG_FROM_LINEAR_MEMORY,
-            log_function_ty,
-            Some(Linkage::External),
-        );
+        for func in &host_functions {
+            binary.module.add_function(
+                func.name(),
+                func.function_signature(binary),
+                Some(Linkage::External),
+            );
+        }
     }
 
     fn emit_initializer(binary: &mut Binary, _ns: &ast::Namespace) {

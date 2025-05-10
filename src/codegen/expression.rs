@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::encoding::{abi_decode, abi_encode};
+use super::encoding::soroban_encoding::{soroban_decode_arg, soroban_encode_arg};
+use super::encoding::{abi_decode, abi_encode, soroban_encoding::soroban_encode};
 use super::revert::{
     assert_failure, expr_assert, log_runtime_error, require, PanicCode, SolidityError,
 };
@@ -16,7 +17,7 @@ use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::events::new_event_emitter;
 use crate::codegen::unused_variable::should_remove_assignment;
-use crate::codegen::{Builtin, Expression};
+use crate::codegen::{Builtin, Expression, HostFunctions};
 use crate::sema::ast::ExternalCallAccounts;
 use crate::sema::{
     ast,
@@ -30,6 +31,7 @@ use crate::sema::{
     expression::ResolveTo,
 };
 use crate::Target;
+use core::panic;
 use num_bigint::{BigInt, Sign};
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
 use solang_parser::pt::{self, CodeLocation, Loc};
@@ -61,7 +63,7 @@ pub fn expression(
             let storage_type = storage_type(expr, ns);
             let storage = expression(expr, cfg, contract_no, func, ns, vartab, opt);
 
-            load_storage(loc, ty, storage, cfg, vartab, storage_type)
+            load_storage(loc, ty, storage, cfg, vartab, storage_type, ns)
         }
         ast::Expression::Add {
             loc,
@@ -544,7 +546,7 @@ pub fn expression(
                                 elem_ty: elem_ty.clone(),
                             }
                         } else {
-                            load_storage(loc, &ns.storage_type(), array, cfg, vartab, None)
+                            load_storage(loc, &ns.storage_type(), array, cfg, vartab, None, ns)
                         }
                     }
                     ArrayLength::Fixed(length) => {
@@ -1249,6 +1251,7 @@ fn post_incdec(
             cfg,
             vartab,
             storage_type.clone(),
+            ns,
         ),
         _ => v,
     };
@@ -1315,14 +1318,20 @@ fn post_incdec(
 
             match var.ty() {
                 Type::StorageRef(..) => {
+                    let mut value = Expression::Variable {
+                        loc: *loc,
+                        ty: ty.clone(),
+                        var_no: res,
+                    };
+                    // If the target is Soroban, encode the value before storing it in storage.
+                    if ns.target == Target::Soroban {
+                        value = soroban_encode_arg(value, cfg, vartab, ns);
+                    }
+
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
-                            value: Expression::Variable {
-                                loc: *loc,
-                                ty: ty.clone(),
-                                var_no: res,
-                            },
+                            value,
                             ty: ty.clone(),
                             storage: dest,
                             storage_type,
@@ -1382,6 +1391,7 @@ fn pre_incdec(
             cfg,
             vartab,
             storage_type.clone(),
+            ns,
         ),
         _ => v,
     };
@@ -1436,14 +1446,20 @@ fn pre_incdec(
 
             match var.ty() {
                 Type::StorageRef(..) => {
+                    let mut value = Expression::Variable {
+                        loc: *loc,
+                        ty: ty.clone(),
+                        var_no: res,
+                    };
+
+                    if ns.target == Target::Soroban {
+                        value = soroban_encode_arg(value, cfg, vartab, ns)
+                    }
+
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
-                            value: Expression::Variable {
-                                loc: *loc,
-                                ty: ty.clone(),
-                                var_no: res,
-                            },
+                            value,
                             ty: ty.clone(),
                             storage: dest,
                             storage_type: storage_type.clone(),
@@ -2214,6 +2230,29 @@ fn expr_builtin(
                 };
             }
 
+            // In soroban, address is retrieved via a host function call
+            if ns.target == Target::Soroban {
+                let address_var_no = vartab.temp_anonymous(&Type::Uint(64));
+                let address_var = Expression::Variable {
+                    loc: *loc,
+                    ty: Type::Address(false),
+                    var_no: address_var_no,
+                };
+
+                let retrieve_address = Instr::Call {
+                    res: vec![address_var_no],
+                    return_tys: vec![Type::Uint(64)],
+                    call: InternalCallTy::HostFunction {
+                        name: HostFunctions::GetCurrentContractAddress.name().to_string(),
+                    },
+                    args: vec![],
+                };
+
+                cfg.add(vartab, retrieve_address);
+
+                return address_var;
+            }
+
             // In emit, GetAddress returns a pointer to the address
             let codegen_expr = Expression::Builtin {
                 loc: *loc,
@@ -2326,6 +2365,495 @@ fn expr_builtin(
             };
 
             code(loc, *contract_no, ns, opt)
+        }
+        ast::Builtin::RequireAuth => {
+            let var_temp = vartab.temp(
+                &pt::Identifier {
+                    name: "auth".to_owned(),
+                    loc: *loc,
+                },
+                &Type::Bool,
+            );
+
+            let var = Expression::Variable {
+                loc: *loc,
+                ty: Type::Address(false),
+                var_no: var_temp,
+            };
+            let expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+
+            let expr = if let Type::StorageRef(_, _) = args[0].ty() {
+                let expr_no = vartab.temp_anonymous(&Type::Address(false));
+                let expr = Expression::Variable {
+                    loc: Loc::Codegen,
+                    ty: Type::Address(false),
+                    var_no: expr_no,
+                };
+
+                let storage_load = Instr::LoadStorage {
+                    res: expr_no,
+                    ty: Type::Address(false),
+                    storage: expr.clone(),
+                    storage_type: None,
+                };
+
+                cfg.add(vartab, storage_load);
+
+                expr
+            } else {
+                expr
+            };
+
+            let instr = Instr::Call {
+                res: vec![var_temp],
+                return_tys: vec![Type::Void],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::RequireAuth.name().to_string(),
+                },
+                args: vec![expr],
+            };
+
+            cfg.add(vartab, instr);
+
+            var
+        }
+
+        // This is the trickiest host function to implement. The reason is takes `InvokerContractAuthEntry` enum as an argument.
+        // let x = SubContractInvocation {
+        //     context: ContractContext {
+        //         contract: c.clone(),
+        //         fn_name: symbol_short!("increment"),
+        //          args: vec![&env, current_contract.into_val(&env)],
+        //     },
+        //     sub_invocations: vec![&env],
+        //  };
+        //  let auth_context = auth::InvokerContractAuthEntry::Contract(x);
+        // Most of the logic done here is just to encode the above struct as the host expects it.
+        // FIXME: This uses a series of MapNewFromLinearMemory, and multiple inserts to create the struct.
+        // This is not efficient and should be optimized.
+        // Instead, we should use MapNewFromLinearMemory to create the struct in one go.
+        ast::Builtin::AuthAsCurrContract => {
+            let symbol_key_1 = Expression::BytesLiteral {
+                loc: Loc::Codegen,
+                ty: Type::String,
+                value: "contract".as_bytes().to_vec(),
+            };
+            let symbol_key_2 = Expression::BytesLiteral {
+                loc: Loc::Codegen,
+                ty: Type::String,
+                value: "fn_name".as_bytes().to_vec(),
+            };
+            let symbol_key_3 = Expression::BytesLiteral {
+                loc: Loc::Codegen,
+                ty: Type::String,
+                value: "args".as_bytes().to_vec(),
+            };
+
+            let symbols = soroban_encode(
+                loc,
+                vec![symbol_key_1, symbol_key_2, symbol_key_3],
+                ns,
+                vartab,
+                cfg,
+                false,
+            )
+            .2;
+
+            let contract_value = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+            let fn_name_symbol = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
+
+            let symbol_string =
+                if let Expression::BytesLiteral { loc, ty: _, value } = fn_name_symbol {
+                    Expression::BytesLiteral {
+                        loc,
+                        ty: Type::String,
+                        value,
+                    }
+                } else {
+                    unreachable!()
+                };
+            let encode_func_symbol =
+                soroban_encode(loc, vec![symbol_string], ns, vartab, cfg, false).2[0].clone();
+
+            ///////////////////////////////////PREPARE ARGS FOR CONTEXT MAP////////////////////////////////////
+
+            let mut args_vec = Vec::new();
+            for arg in args.iter().skip(2) {
+                let arg = expression(arg, cfg, contract_no, func, ns, vartab, opt);
+                args_vec.push(arg);
+            }
+
+            let args_encoded = abi_encode(loc, args_vec.clone(), ns, vartab, cfg, false);
+
+            let args_buf = args_encoded.0;
+
+            let args_buf_ptr = Expression::VectorData {
+                pointer: Box::new(args_buf.clone()),
+            };
+
+            let args_buf_extended = Expression::ZeroExt {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                expr: Box::new(args_buf_ptr.clone()),
+            };
+
+            let args_buf_shifted = Expression::ShiftLeft {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                left: Box::new(args_buf_extended.clone()),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(32),
+                }),
+            };
+
+            let args_buf_pos = Expression::Add {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                left: Box::new(args_buf_shifted.clone()),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(4),
+                }),
+                overflowing: false,
+            };
+
+            let args_len = Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::from(args_vec.len()),
+            };
+            let args_len_encoded = Expression::ShiftLeft {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                left: Box::new(args_len.clone()),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(32),
+                }),
+            };
+            let args_len_encoded = Expression::Add {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                left: Box::new(args_len_encoded.clone()),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(4),
+                }),
+                overflowing: false,
+            };
+
+            let args_vec_var_no = vartab.temp_anonymous(&Type::Uint(64));
+            let args_vec_var = Expression::Variable {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                var_no: args_vec_var_no,
+            };
+
+            let vec_new_from_linear_mem = Instr::Call {
+                res: vec![args_vec_var_no],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::VectorNewFromLinearMemory.name().to_string(),
+                },
+                args: vec![args_buf_pos.clone(), args_len_encoded],
+            };
+
+            cfg.add(vartab, vec_new_from_linear_mem);
+
+            let context_map = vartab.temp_anonymous(&Type::Uint(64));
+            let context_map_var = Expression::Variable {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                var_no: context_map,
+            };
+
+            let context_map_new = Instr::Call {
+                res: vec![context_map],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::MapNew.name().to_string(),
+                },
+                args: vec![],
+            };
+
+            cfg.add(vartab, context_map_new);
+
+            let context_map_put = Instr::Call {
+                res: vec![context_map],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::MapPut.name().to_string(),
+                },
+                args: vec![context_map_var.clone(), symbols[0].clone(), contract_value],
+            };
+
+            cfg.add(vartab, context_map_put);
+
+            let context_map_put_2 = Instr::Call {
+                res: vec![context_map],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::MapPut.name().to_string(),
+                },
+                args: vec![
+                    context_map_var.clone(),
+                    symbols[1].clone(),
+                    encode_func_symbol,
+                ],
+            };
+
+            cfg.add(vartab, context_map_put_2);
+
+            let context_map_put_3 = Instr::Call {
+                res: vec![context_map],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::MapPut.name().to_string(),
+                },
+                args: vec![
+                    context_map_var.clone(),
+                    symbols[2].clone(),
+                    args_vec_var.clone(),
+                ],
+            };
+
+            cfg.add(vartab, context_map_put_3);
+
+            ///////////////////////////////////////////////////////////////////////////////////
+
+            // Now forming "sub invocations" map
+            // FIXME: This should eventually be fixed to take other sub_invocations as arguments. For now, it is hardcoded to take an empty vector.
+
+            let key_1 = Expression::BytesLiteral {
+                loc: Loc::Codegen,
+                ty: Type::String,
+                value: "context".as_bytes().to_vec(),
+            };
+
+            let key_2 = Expression::BytesLiteral {
+                loc: Loc::Codegen,
+                ty: Type::String,
+                value: "sub_invocations".as_bytes().to_vec(),
+            };
+
+            let keys = soroban_encode(loc, vec![key_1, key_2], ns, vartab, cfg, false).2;
+
+            let sub_invocations_map = vartab.temp_anonymous(&Type::Uint(64));
+            let sub_invocations_map_var = Expression::Variable {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                var_no: sub_invocations_map,
+            };
+
+            let sub_invocations_map_new = Instr::Call {
+                res: vec![sub_invocations_map],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::MapNew.name().to_string(),
+                },
+                args: vec![],
+            };
+
+            cfg.add(vartab, sub_invocations_map_new);
+
+            let sub_invocations_map_put = Instr::Call {
+                res: vec![sub_invocations_map],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::MapPut.name().to_string(),
+                },
+                args: vec![
+                    sub_invocations_map_var.clone(),
+                    keys[0].clone(),
+                    context_map_var,
+                ],
+            };
+
+            cfg.add(vartab, sub_invocations_map_put);
+
+            let empy_vec_var = vartab.temp_anonymous(&Type::Uint(64));
+            let empty_vec_expr = Expression::Variable {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                var_no: empy_vec_var,
+            };
+            let empty_vec = Instr::Call {
+                res: vec![empy_vec_var],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::VectorNew.name().to_string(),
+                },
+                args: vec![],
+            };
+
+            cfg.add(vartab, empty_vec);
+
+            let sub_invocations_map_put_2 = Instr::Call {
+                res: vec![sub_invocations_map],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::MapPut.name().to_string(),
+                },
+                args: vec![
+                    sub_invocations_map_var.clone(),
+                    keys[1].clone(),
+                    empty_vec_expr,
+                ],
+            };
+
+            cfg.add(vartab, sub_invocations_map_put_2);
+
+            ///////////////////////////////////////////////////////////////////////////////////
+
+            // now forming the enum. The enum is a VecObject[Symbol("Contract"), sub invokations map].
+            // FIXME: This should use VecNewFromLinearMemory to create the enum in one go.
+
+            let contract_capitalized = Expression::BytesLiteral {
+                loc: Loc::Codegen,
+                ty: Type::String,
+                value: "Contract".as_bytes().to_vec(),
+            };
+
+            let contract_capitalized =
+                soroban_encode(loc, vec![contract_capitalized], ns, vartab, cfg, false).2[0]
+                    .clone();
+
+            let enum_vec = vartab.temp_anonymous(&Type::Uint(64));
+            let enum_vec_var = Expression::Variable {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                var_no: enum_vec,
+            };
+
+            let enum_vec_new = Instr::Call {
+                res: vec![enum_vec],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::VectorNew.name().to_string(),
+                },
+                args: vec![],
+            };
+
+            cfg.add(vartab, enum_vec_new);
+
+            let enum_vec_put = Instr::Call {
+                res: vec![enum_vec],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::VecPushBack.name().to_string(),
+                },
+                args: vec![enum_vec_var.clone(), contract_capitalized],
+            };
+
+            cfg.add(vartab, enum_vec_put);
+
+            let enum_vec_put_2 = Instr::Call {
+                res: vec![enum_vec],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::VecPushBack.name().to_string(),
+                },
+                args: vec![enum_vec_var.clone(), sub_invocations_map_var],
+            };
+
+            cfg.add(vartab, enum_vec_put_2);
+
+            ///////////////////////////////////////////////////////////////////////////////////
+            // now put the enum into a vec
+
+            let vec = vartab.temp_anonymous(&Type::Uint(64));
+            let vec_var = Expression::Variable {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                var_no: vec,
+            };
+
+            let vec_new = Instr::Call {
+                res: vec![vec],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::VectorNew.name().to_string(),
+                },
+                args: vec![],
+            };
+
+            cfg.add(vartab, vec_new);
+
+            let vec_push_back = Instr::Call {
+                res: vec![vec],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::VecPushBack.name().to_string(),
+                },
+                args: vec![vec_var.clone(), enum_vec_var],
+            };
+
+            cfg.add(vartab, vec_push_back);
+
+            ///////////////////////////////////////////////////////////////////////////////////
+            // now for the moment of truth - the call to the host function auth_as_curr_contract
+
+            let call_res = vartab.temp_anonymous(&Type::Uint(64));
+            let call_res_var = Expression::Variable {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                var_no: call_res,
+            };
+
+            let auth_call = Instr::Call {
+                res: vec![call_res],
+                return_tys: vec![Type::Void],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::AuthAsCurrContract.name().to_string(),
+                },
+                args: vec![vec_var],
+            };
+
+            cfg.add(vartab, auth_call);
+
+            call_res_var
+        }
+        ast::Builtin::ExtendTtl => {
+            let mut arguments: Vec<Expression> = args
+                .iter()
+                .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
+                .collect();
+
+            // var_no is the first argument of the builtin
+            let var_no = match arguments[0].clone() {
+                Expression::NumberLiteral { value, .. } => value,
+                _ => panic!("First argument of extendTtl() must be a number literal"),
+            }
+            .to_usize()
+            .expect("Unable to convert var_no to usize");
+            let var = ns.contracts[contract_no].variables.get(var_no).unwrap();
+            let storage_type_usize = match var
+            .storage_type
+            .clone()
+            .expect("Unable to get storage type") {
+                solang_parser::pt::StorageType::Temporary(_) => 0,
+                solang_parser::pt::StorageType::Persistent(_) => 1,
+                solang_parser::pt::StorageType::Instance(_) => panic!("Calling extendTtl() on instance storage is not allowed. Use `extendInstanceTtl()` instead."),
+            };
+
+            // append the storage type to the arguments
+            arguments.push(Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Uint(32),
+                value: BigInt::from(storage_type_usize),
+            });
+
+            Expression::Builtin {
+                loc: *loc,
+                tys: tys.to_vec(),
+                kind: (&builtin).into(),
+                args: arguments,
+            }
         }
         _ => {
             let arguments: Vec<Expression> = args
@@ -2724,14 +3252,20 @@ pub fn assign_single(
                     }
                 }
                 Type::StorageRef(..) => {
+                    let mut value = Expression::Variable {
+                        loc: left.loc(),
+                        ty: ty.clone(),
+                        var_no: pos,
+                    };
+
+                    if ns.target == Target::Soroban {
+                        value = soroban_encode_arg(value, cfg, vartab, ns);
+                    }
+
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
-                            value: Expression::Variable {
-                                loc: left.loc(),
-                                ty: ty.clone(),
-                                var_no: pos,
-                            },
+                            value,
                             ty: ty.deref_any().clone(),
                             storage: dest,
                             storage_type,
@@ -3198,7 +3732,12 @@ pub fn emit_function_call(
             args,
         } => {
             let data = expression(&args[0], cfg, caller_contract_no, func, ns, vartab, opt);
-            abi_decode(loc, &data, tys, ns, vartab, cfg, None)
+
+            if tys.len() == 1 && tys[0] == Type::Void {
+                vec![Expression::Poison]
+            } else {
+                abi_decode(loc, &data, tys, ns, vartab, cfg, None)
+            }
         }
         _ => unreachable!(),
     }
@@ -3294,8 +3833,15 @@ fn array_subscript(
                         }
                     } else {
                         // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
-                        let array_length =
-                            load_storage(loc, &Type::Uint(256), array.clone(), cfg, vartab, None);
+                        let array_length = load_storage(
+                            loc,
+                            &Type::Uint(256),
+                            array.clone(),
+                            cfg,
+                            vartab,
+                            None,
+                            ns,
+                        );
 
                         array = Expression::Keccak256 {
                             loc: *loc,
@@ -3643,6 +4189,7 @@ pub fn load_storage(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
     storage_type: Option<pt::StorageType>,
+    ns: &Namespace,
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
 
@@ -3652,14 +4199,20 @@ pub fn load_storage(
             res,
             ty: ty.clone(),
             storage,
-            storage_type,
+            storage_type: storage_type.clone(),
         },
     );
 
-    Expression::Variable {
+    let var = Expression::Variable {
         loc: *loc,
         ty: ty.clone(),
         var_no: res,
+    };
+
+    if ns.target == Target::Soroban {
+        soroban_decode_arg(var, cfg, vartab)
+    } else {
+        var
     }
 }
 

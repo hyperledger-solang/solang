@@ -32,7 +32,9 @@ use inkwell::targets::{CodeModel, FileType, RelocMode};
 use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix,
 };
-use inkwell::values::{BasicValueEnum, FunctionValue, GlobalValue, IntValue, PointerValue};
+use inkwell::values::{
+    BasicValue, BasicValueEnum, FunctionValue, GlobalValue, IntValue, PointerValue,
+};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
@@ -166,6 +168,8 @@ pub struct Binary<'a> {
     /// No initializer for vector_new
     pub(crate) vector_init_empty: PointerValue<'a>,
     global_constant_strings: RefCell<HashMap<Vec<u8>, PointerValue<'a>>>,
+
+    pub return_data: RefCell<Option<PointerValue<'a>>>,
 }
 
 impl<'a> Binary<'a> {
@@ -435,6 +439,7 @@ impl<'a> Binary<'a> {
                 .ptr_type(AddressSpace::default())
                 .const_null(),
             global_constant_strings: RefCell::new(HashMap::new()),
+            return_data: RefCell::new(None),
         }
     }
 
@@ -909,8 +914,7 @@ impl<'a> Binary<'a> {
     pub(crate) fn llvm_type(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
         emit_context!(self);
         if ty.is_builtin_struct() == Some(StructType::AccountInfo) {
-            return self
-                .context
+            self.context
                 .struct_type(
                     &[
                         byte_ptr!().as_basic_type_enum(),             // SolPubkey *
@@ -925,7 +929,7 @@ impl<'a> Binary<'a> {
                     ],
                     false,
                 )
-                .as_basic_type_enum();
+                .as_basic_type_enum()
         } else {
             match ty {
                 Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
@@ -937,7 +941,12 @@ impl<'a> Binary<'a> {
                         .custom_width_int_type(ns.value_length as u32 * 8),
                 ),
                 Type::Contract(_) | Type::Address(_) => {
-                    BasicTypeEnum::ArrayType(self.address_type(ns))
+                    // Soroban addresses are 64 bit wide integer that represents a refrenece for the real Address on the Host side.
+                    if ns.target == Target::Soroban {
+                        BasicTypeEnum::IntType(self.context.i64_type())
+                    } else {
+                        BasicTypeEnum::ArrayType(self.address_type(ns))
+                    }
                 }
                 Type::Bytes(n) => {
                     BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
@@ -974,10 +983,15 @@ impl<'a> Binary<'a> {
                     )
                     .as_basic_type_enum(),
                 Type::Mapping(..) => self.llvm_type(&ns.storage_type(), ns),
-                Type::Ref(r) => self
-                    .llvm_type(r, ns)
-                    .ptr_type(AddressSpace::default())
-                    .as_basic_type_enum(),
+                Type::Ref(r) => {
+                    if ns.target == Target::Soroban {
+                        return BasicTypeEnum::IntType(self.context.i64_type());
+                    }
+
+                    self.llvm_type(r, ns)
+                        .ptr_type(AddressSpace::default())
+                        .as_basic_type_enum()
+                }
                 Type::StorageRef(..) => self.llvm_type(&ns.storage_type(), ns),
                 Type::InternalFunction {
                     params, returns, ..
@@ -1034,7 +1048,73 @@ impl<'a> Binary<'a> {
         size: IntValue<'a>,
         elem_size: IntValue<'a>,
         init: Option<&Vec<u8>>,
-    ) -> PointerValue<'a> {
+        ty: &Type,
+        ns: &Namespace,
+    ) -> BasicValueEnum<'a> {
+        if self.target == Target::Soroban {
+            if matches!(ty, Type::Bytes(_)) {
+                let n = if let Type::Bytes(n) = ty {
+                    n
+                } else {
+                    unreachable!()
+                };
+
+                let data = self
+                    .builder
+                    .build_alloca(self.context.i64_type().array_type((*n / 8) as u32), "data")
+                    .unwrap();
+
+                let ty = self.context.struct_type(
+                    &[data.get_type().into(), self.context.i64_type().into()],
+                    false,
+                );
+
+                // Start with an undefined struct value
+                let mut struct_value = ty.get_undef();
+
+                // Insert `data` into the first field of the struct
+                struct_value = self
+                    .builder
+                    .build_insert_value(struct_value, data, 0, "insert_data")
+                    .unwrap()
+                    .into_struct_value();
+
+                // Insert `size` into the second field of the struct
+                struct_value = self
+                    .builder
+                    .build_insert_value(struct_value, size, 1, "insert_size")
+                    .unwrap()
+                    .into_struct_value();
+
+                // Return the constructed struct value
+                return struct_value.into();
+            } else if matches!(ty, Type::String) {
+                let bs = init.as_ref().unwrap();
+
+                let data = self.emit_global_string("const_string", bs, true);
+
+                // A constant string, or array, is represented by a struct with two fields: a pointer to the data, and its length.
+                let ty = self.context.struct_type(
+                    &[
+                        self.llvm_type(&Type::Bytes(bs.len() as u8), ns)
+                            .ptr_type(AddressSpace::default())
+                            .into(),
+                        self.context.i64_type().into(),
+                    ],
+                    false,
+                );
+
+                return ty
+                    .const_named_struct(&[
+                        data.into(),
+                        self.context
+                            .i64_type()
+                            .const_int(bs.len() as u64, false)
+                            .into(),
+                    ])
+                    .as_basic_value_enum();
+            }
+        }
         if let Some(init) = init {
             if init.is_empty() {
                 return self
@@ -1042,7 +1122,8 @@ impl<'a> Binary<'a> {
                     .get_struct_type("struct.vector")
                     .unwrap()
                     .ptr_type(AddressSpace::default())
-                    .const_null();
+                    .const_null()
+                    .as_basic_value_enum();
             }
         }
 
@@ -1061,7 +1142,6 @@ impl<'a> Binary<'a> {
             .try_as_basic_value()
             .left()
             .unwrap()
-            .into_pointer_value()
     }
 
     /// Number of element in a vector
@@ -1070,13 +1150,19 @@ impl<'a> Binary<'a> {
             // slice
             let slice = vector.into_struct_value();
 
+            let len_type = if self.target == Target::Soroban {
+                self.context.i64_type()
+            } else {
+                self.context.i32_type()
+            };
+
             self.builder
                 .build_int_truncate(
                     self.builder
                         .build_extract_value(slice, 1, "slice_len")
                         .unwrap()
                         .into_int_value(),
-                    self.context.i32_type(),
+                    len_type,
                     "len",
                 )
                 .unwrap()

@@ -14,6 +14,7 @@ fn log_runtime_error() {
                 return count;
             }
         }"#,
+        |_| {},
     );
 
     let addr = src.contracts.last().unwrap();
@@ -34,6 +35,7 @@ fn print() {
                 print("Hello, World!");
             }
         }"#,
+        |_| {},
     );
 
     let addr = src.contracts.last().unwrap();
@@ -57,6 +59,7 @@ fn print_then_runtime_error() {
                 return count;
             }
         }"#,
+        |_| {},
     );
 
     let addr = src.contracts.last().unwrap();
@@ -66,6 +69,5 @@ fn print_then_runtime_error() {
     let logs = src.invoke_contract_expect_error(addr, "decrement", vec![]);
 
     assert!(logs[0].contains("Second call will FAIL!"));
-    assert!(logs[1].contains("Second call will FAIL!"));
-    assert!(logs[2].contains("runtime_error: math overflow in test.sol:6:17-27"));
+    assert!(logs[1].contains("runtime_error: math overflow in test.sol:6:17-27"));
 }

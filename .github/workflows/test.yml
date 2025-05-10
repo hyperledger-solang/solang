@@ -13,14 +13,20 @@ jobs:
   repolinter:
     name: Repolinter
     runs-on: solang-ubuntu-latest
+    # spdx runs on python 3.10 but not any later versions
+    container: ubuntu:22.04
     steps:
+      - name: Install Python and npm
+        run: |
+          apt-get update
+          apt-get install -y python3 git npm
       - name: Checkout sources
         uses: actions/checkout@v4
       - name: Run repolinter
         run: npx repolinter --rulesetUrl https://raw.githubusercontent.com/hyperledger-labs/hyperledger-community-management-tools/master/repo_structure/repolint.json
       - uses: enarx/spdx@master
         with:
-          licenses: Apache-2.0 MIT
+          licenses: Apache-2.0
 
   docs:
     name: Docs
@@ -199,7 +205,7 @@ jobs:
 
   mac-intel:
     name: Mac Intel
-    runs-on: macos-12
+    runs-on: macos-13
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
@@ -223,7 +229,7 @@ jobs:
 
   mac-universal:
     name: Mac Universal Binary
-    runs-on: macos-12
+    runs-on: macos-13
     needs: [mac-arm, mac-intel]
     steps:
     - uses: actions/download-artifact@v4.1.8
@@ -319,6 +325,8 @@ jobs:
       with:
         node-version: '16'
     - uses: dtolnay/rust-toolchain@1.81.0
+      with:
+        target: wasm32-unknown-unknown
     - uses: actions/download-artifact@v4.1.8
       with:
         name: solang-linux-x86-64
@@ -329,7 +337,7 @@ jobs:
         echo "$(pwd)/bin" >> $GITHUB_PATH
     
     - name: Install Soroban
-      run: cargo install --locked soroban-cli --version 22.0.0
+      run: cargo install --locked stellar-cli --version 22.0.0
     - name: Add cargo install location to PATH
       run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
     - run: npm install
@@ -337,6 +345,9 @@ jobs:
     - name: Build Solang contracts
       run: npm run build
       working-directory: ./integration/soroban
+    - name: Build rust contracts
+      run: soroban contract build --profile release-with-logs
+      working-directory: ./integration/soroban/rust/contracts
     - name: Setup Soroban enivronment
       run: npm run setup
       working-directory: ./integration/soroban

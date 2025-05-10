@@ -281,7 +281,7 @@ pub(super) fn require(
                         FormatArg::StringLiteral,
                         Expression::BytesLiteral {
                             loc: Loc::Codegen,
-                            ty: Type::Bytes(error_string.as_bytes().len() as u8),
+                            ty: Type::Bytes(error_string.len() as u8),
                             value: error_string.as_bytes().to_vec(),
                         },
                     ),
@@ -350,7 +350,7 @@ pub(super) fn revert(
                             FormatArg::StringLiteral,
                             Expression::BytesLiteral {
                                 loc: Codegen,
-                                ty: Type::Bytes(error_string.as_bytes().len() as u8),
+                                ty: Type::Bytes(error_string.len() as u8),
                                 value: error_string.as_bytes().to_vec(),
                             },
                         ),
@@ -412,7 +412,7 @@ pub(super) fn string_to_expr(string: String) -> Expression {
             FormatArg::StringLiteral,
             Expression::BytesLiteral {
                 loc: Loc::Codegen,
-                ty: Type::Bytes(string.as_bytes().len() as u8),
+                ty: Type::Bytes(string.len() as u8),
                 value: string.as_bytes().to_vec(),
             },
         )],

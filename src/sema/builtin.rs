@@ -36,8 +36,19 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
+pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 29]> = Lazy::new(|| {
     [
+        Prototype {
+            builtin: Builtin::ExtendInstanceTtl,
+            namespace: None,
+            method: vec![],
+            name: "extendInstanceTtl",  
+            params: vec![Type::Uint(32), Type::Uint(32)],
+            ret: vec![Type::Int(64)],
+            target: vec![Target::Soroban],
+            doc: "If the TTL for the current contract instance and code (if applicable) is below `threshold` ledgers, extend `live_until_ledger_seq` such that TTL == `extend_to`, where TTL is defined as live_until_ledger_seq - current ledger.",
+            constant: false,
+        },
         Prototype {
             builtin: Builtin::Assert,
             namespace: None,
@@ -347,6 +358,17 @@ pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             doc: "Concatenate bytes",
             constant: true,
         },
+        Prototype {
+            builtin: Builtin::AuthAsCurrContract,
+            namespace: Some("auth"),
+            method: vec![],
+            name: "authAsCurrContract",
+            params: vec![],
+            ret: vec![],
+            target: vec![Target::Soroban],
+            doc: "Authorizes sub-contract calls for the next contract call on behalf of the current contract.",
+            constant: false,
+        },
     ]
 });
 
@@ -547,8 +569,20 @@ pub static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins methods
-pub static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
+pub static BUILTIN_METHODS: Lazy<[Prototype; 29]> = Lazy::new(|| {
     [
+        Prototype {
+            builtin: Builtin::ExtendTtl,
+            namespace: None,
+            // FIXME: For now as a PoC, we are only supporting this method for type `uint64`
+            method: vec![Type::StorageRef(false, Box::new(Type::Uint(64)))],
+            name: "extendTtl",
+            params: vec![Type::Uint(32), Type::Uint(32)], // Parameters `threshold` and `extend_to` of type `uint32`
+            ret: vec![Type::Int(64)],
+            target: vec![Target::Soroban],
+            doc: "If the entry's TTL is below `threshold` ledgers, extend `live_until_ledger_seq` such that TTL == `extend_to`, where TTL is defined as live_until_ledger_seq - current ledger.",
+            constant: false,
+        },
         Prototype {
             builtin: Builtin::ReadInt8,
             namespace: None,
@@ -846,6 +880,17 @@ pub static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             doc: "Write the contents of a bytes array (without its length) to the specified offset",
             constant: false,
         },
+        Prototype {
+            builtin: Builtin::RequireAuth,
+            namespace: None,
+            method: vec![Type::Address(false), Type::StorageRef(false, Box::new(Type::Address(false)))],
+            name: "requireAuth",
+            params: vec![],
+            ret: vec![],
+            target: vec![Target::Soroban],
+            doc: "Checks if the address has authorized the invocation of the current contract function with all the arguments of the invocation. Traps if the invocation hasn't been authorized.",
+            constant: false,
+        },
     ]
 });
 
@@ -1087,6 +1132,23 @@ pub(super) fn resolve_namespace_call(
         });
     }
 
+    if name == "authAsCurrContract" {
+        let mut resolved_args = Vec::new();
+
+        for arg in args {
+            let expr = expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
+
+            resolved_args.push(expr);
+        }
+
+        return Ok(Expression::Builtin {
+            loc: *loc,
+            tys: Vec::new(),
+            kind: Builtin::AuthAsCurrContract,
+            args: resolved_args,
+        });
+    }
+
     // The abi.* functions need special handling, others do not
     if namespace != "abi" && namespace != "string" {
         return resolve_call(
@@ -1135,24 +1197,30 @@ pub(super) fn resolve_namespace_call(
         let mut tys = Vec::new();
         let mut broken = false;
 
-        for arg in parameter_list_to_expr_list(&args[1], diagnostics)? {
-            let ty = ns.resolve_type(
-                context.file_no,
-                context.contract_no,
-                ResolveTypeContext::None,
-                arg.strip_parentheses(),
-                diagnostics,
-            )?;
+        let ty_exprs = parameter_list_to_expr_list(&args[1], diagnostics)?;
 
-            if ty.is_mapping() || ty.is_recursive(ns) {
-                diagnostics.push(Diagnostic::error(
+        if ty_exprs.is_empty() {
+            tys.push(Type::Void);
+        } else {
+            for arg in ty_exprs {
+                let ty = ns.resolve_type(
+                    context.file_no,
+                    context.contract_no,
+                    ResolveTypeContext::None,
+                    arg.strip_parentheses(),
+                    diagnostics,
+                )?;
+
+                if ty.is_mapping() || ty.is_recursive(ns) {
+                    diagnostics.push(Diagnostic::error(
                     *loc,
                     format!("Invalid type '{}': mappings and recursive types cannot be abi decoded or encoded", ty.to_string(ns))
                 ));
-                broken = true;
-            }
+                    broken = true;
+                }
 
-            tys.push(ty);
+                tys.push(ty);
+            }
         }
 
         return if broken {
