@@ -5,16 +5,18 @@ use std::process::Command;
 fn main() {
     #[cfg(feature = "llvm")]
     {
-        Command::new("make")
+        let status = Command::new("make")
             .args(["-C", "stdlib"])
-            .output()
-            .expect("Could not build stdlib");
+            .status()
+            .expect("could not execute make");
+        assert!(status.success(), "building stdlib failed");
 
         // compile our linker
         let cxxflags = Command::new("llvm-config")
             .args(["--cxxflags"])
             .output()
             .expect("could not execute llvm-config");
+        assert!(cxxflags.status.success(), "llvm-config failed");
 
         let cxxflags = String::from_utf8(cxxflags.stdout).unwrap();
 
