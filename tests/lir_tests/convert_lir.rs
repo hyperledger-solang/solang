@@ -52,7 +52,7 @@ fn assert_lir_str_eq_by_name(src: &str, cfg_name: &str, expected: &str, target: 
         .cfg
         .iter()
         .filter(|cfg| cfg.name == cfg_name)
-        .last()
+        .next_back()
         .unwrap();
 
     let converter = Converter::new(&ns, cfg);
