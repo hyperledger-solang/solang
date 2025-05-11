@@ -10,24 +10,6 @@ env:
   LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
 
 jobs:
-  repolinter:
-    name: Repolinter
-    runs-on: solang-ubuntu-latest
-    # spdx runs on python 3.10 but not any later versions
-    container: ubuntu:22.04
-    steps:
-      - name: Install Python and npm
-        run: |
-          apt-get update
-          apt-get install -y python3 git npm
-      - name: Checkout sources
-        uses: actions/checkout@v4
-      - name: Run repolinter
-        run: npx repolinter --rulesetUrl https://raw.githubusercontent.com/hyperledger-labs/hyperledger-community-management-tools/master/repo_structure/repolint.json
-      - uses: enarx/spdx@master
-        with:
-          licenses: Apache-2.0
-
   docs:
     name: Docs
     runs-on: solang-ubuntu-latest
