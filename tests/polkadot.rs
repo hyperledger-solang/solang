@@ -141,7 +141,7 @@ impl Contract {
         Ok((store, instance))
     }
 
-    /// Execute this contract at the exportet function `name` in the given `runtime` context.
+    /// Execute this contract at the exported function `name` in the given `runtime` context.
     ///
     /// On success, returns the Wasm store including the runtime state is returned.
     /// On failure, returns the Wasm execution Error together with the debug buffer.
@@ -221,9 +221,9 @@ struct Runtime {
     input: Option<Vec<u8>>,
     /// The output of the contract execution.
     output: HostReturn,
-    /// Descirbes how much value was given to the contract call.
+    /// Describes how much value was given to the contract call.
     transferred_value: u128,
-    /// Combined ouptut of all `seal_debug_message` calls
+    /// Combined output of all `seal_debug_message` calls
     debug_buffer: String,
     /// Stores all events emitted during contract execution.
     events: Vec<Event>,
@@ -262,7 +262,7 @@ impl Runtime {
         runtime
     }
 
-    /// After a succesfull contract execution, merge the runtime context of the callee back.
+    /// After a successful contract execution, merge the runtime context of the callee back.
     ///
     /// We take over accounts (the callee might deploy new ones), debug buffer and emitted events.
     /// The transferred balance will now be deducted from the caller.
@@ -767,7 +767,7 @@ impl Runtime {
         output_ptr: u32,
         output_len_ptr: u32,
     ) -> Result<u32, Trap> {
-        assert_eq!(id, 123, "unkown chain extension");
+        assert_eq!(id, 123, "unknown chain extension");
         assert!(read_len(mem, output_len_ptr) == 16384 && input_len <= 16384);
 
         let mut data = read_buf(mem, input_ptr, input_len);
@@ -825,7 +825,7 @@ impl MockSubstrate {
         Ok(())
     }
 
-    /// Overwrites the address at asssociated `account` index with the given `address`.
+    /// Overwrites the address at associated `account` index with the given `address`.
     pub fn set_account_address(&mut self, account: usize, address: [u8; 32]) {
         self.0.data_mut().accounts[account].address = address;
     }
@@ -899,7 +899,7 @@ impl MockSubstrate {
         self.raw_constructor(input);
     }
 
-    /// Get a list of all uploaded cotracts
+    /// Get a list of all uploaded contracts
     pub fn blobs(&self) -> Vec<WasmCode> {
         self.0.data().blobs.clone()
     }
@@ -1031,7 +1031,7 @@ impl MockSubstrate {
     }
 }
 
-/// Build all contracts foud in `src` and set up a mock runtime.
+/// Build all contracts found in `src` and set up a mock runtime.
 ///
 /// The mock runtime will contain a contract account for each contract in `src`.
 /// Constructors are _not_ called, therefore the storage will not be initialized.
@@ -1039,7 +1039,7 @@ pub fn build_solidity(src: &str) -> MockSubstrate {
     build_solidity_with_options(src, true)
 }
 
-/// A variant of `MockSubstrate::uild_solidity()` with the ability to specify compiler options:
+/// A variant of `MockSubstrate::build_solidity()` with the ability to specify compiler options:
 /// * log_ret: enable logging of host function return codes
 /// * log_err: enable logging of runtime errors
 pub fn build_solidity_with_options(src: &str, log_err: bool) -> MockSubstrate {
