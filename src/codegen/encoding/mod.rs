@@ -346,12 +346,22 @@ pub(crate) trait AbiEncoding {
             expr.clone()
         };
 
+        let maybe_swapped_expr = if ns.target == Target::Stylus {
+            Expression::ByteSwap {
+                ty: Type::Uint(encoding_size),
+                expr: Box::new(expr),
+                le_to_be: true,
+            }
+        } else {
+            expr
+        };
+
         cfg.add(
             vartab,
             Instr::WriteBuffer {
                 buf: buffer.clone(),
                 offset: offset.clone(),
-                value: expr,
+                value: maybe_swapped_expr,
             },
         );
 
@@ -747,6 +757,27 @@ pub(crate) trait AbiEncoding {
                     kind: Builtin::ReadFromBuffer,
                     args: vec![buffer.clone(), offset.clone()],
                 };
+
+                let maybe_truncated_expr = if encoding_size == *width {
+                    read_value
+                } else {
+                    Expression::Trunc {
+                        loc: Codegen,
+                        ty: ty.clone(),
+                        expr: Box::new(read_value),
+                    }
+                };
+
+                let maybe_swapped_expr = if ns.target == Target::Stylus {
+                    Expression::ByteSwap {
+                        ty: ty.clone(),
+                        expr: Box::new(maybe_truncated_expr),
+                        le_to_be: false,
+                    }
+                } else {
+                    maybe_truncated_expr
+                };
+
                 let read_var = vartab.temp_anonymous(ty);
 
                 cfg.add(
@@ -754,15 +785,7 @@ pub(crate) trait AbiEncoding {
                     Instr::Set {
                         loc: Codegen,
                         res: read_var,
-                        expr: if encoding_size == *width {
-                            read_value
-                        } else {
-                            Expression::Trunc {
-                                loc: Codegen,
-                                ty: ty.clone(),
-                                expr: Box::new(read_value),
-                            }
-                        },
+                        expr: maybe_swapped_expr,
                     },
                 );
 

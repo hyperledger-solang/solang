@@ -988,6 +988,9 @@ impl ControlFlowGraph {
             Expression::VectorData { pointer } => {
                 format!("pointer pos {}", self.expr_to_string(contract, ns, pointer))
             }
+            Expression::ByteSwap { expr, .. } => {
+                format!("byte swap {})", self.expr_to_string(contract, ns, expr))
+            }
         }
     }
 

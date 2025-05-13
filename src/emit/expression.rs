@@ -2136,6 +2136,49 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             res.unwrap().into()
         }
 
+        Expression::ByteSwap {
+            ty,
+            expr,
+            le_to_be: letobe,
+        } => {
+            let value = expression(target, bin, expr, vartab, function).into_int_value();
+
+            let llvm_ty = bin.llvm_type(ty);
+
+            let src = bin.build_alloca(function, llvm_ty, "src");
+
+            bin.builder.build_store(src, value).unwrap();
+
+            let dest = bin.build_alloca(
+                function,
+                bin.context
+                    .i8_type()
+                    .array_type((ty.get_type_size() / 8) as u32),
+                "dest",
+            );
+
+            let name = if *letobe { "__leNtobeN" } else { "__beNtoleN" };
+
+            bin.builder
+                .build_call(
+                    bin.module.get_function(name).unwrap(),
+                    &[
+                        src.into(),
+                        dest.into(),
+                        bin.context
+                            .i32_type()
+                            .const_int((ty.get_type_size() / 8) as u64, false)
+                            .into(),
+                    ],
+                    name,
+                )
+                .unwrap();
+
+            bin.builder
+                .build_load(llvm_ty, dest, "swapped bytes")
+                .unwrap()
+        }
+
         Expression::RationalNumberLiteral { .. }
         | Expression::Undefined { .. }
         | Expression::Poison

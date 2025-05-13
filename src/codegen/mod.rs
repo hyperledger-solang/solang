@@ -734,6 +734,11 @@ pub enum Expression {
     VectorData {
         pointer: Box<Expression>,
     },
+    ByteSwap {
+        ty: Type,
+        expr: Box<Expression>,
+        le_to_be: bool,
+    },
 }
 
 impl CodeLocation for Expression {
@@ -791,7 +796,8 @@ impl CodeLocation for Expression {
             | Expression::Poison
             | Expression::Undefined { .. }
             | Expression::AdvancePointer { .. }
-            | Expression::VectorData { .. } => pt::Loc::Codegen,
+            | Expression::VectorData { .. }
+            | Expression::ByteSwap { .. } => pt::Loc::Codegen,
         }
     }
 }
@@ -929,7 +935,8 @@ impl RetrieveType for Expression {
             | Expression::BytesCast { ty, .. }
             | Expression::RationalNumberLiteral { ty, .. }
             | Expression::Subscript { ty, .. }
-            | Expression::InternalFunctionCfg { ty, .. } => ty.clone(),
+            | Expression::InternalFunctionCfg { ty, .. }
+            | Expression::ByteSwap { ty, .. } => ty.clone(),
 
             Expression::BoolLiteral { .. }
             | Expression::MoreEqual { .. }

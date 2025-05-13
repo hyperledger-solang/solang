@@ -424,6 +424,9 @@ impl Converter<'_> {
             codegen::Expression::VectorData { pointer } => {
                 self.pointer_position(dest, pointer, vartable, results)
             }
+
+            // smoelius: I don't yet have a good sense for how `lower_expression` works.
+            codegen::Expression::ByteSwap { .. } => unimplemented!(),
         }
     }
 
