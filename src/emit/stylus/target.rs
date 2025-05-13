@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![allow(unused_variables)]
+#![warn(clippy::renamed_function_params)]
 
 use crate::codegen::cfg::HashTy;
 use crate::codegen::Expression;
@@ -331,10 +332,44 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         bin: &Binary<'b>,
         function: FunctionValue<'b>,
         hash: HashTy,
-        string: PointerValue<'b>,
-        length: IntValue<'b>,
+        input: PointerValue<'b>,
+        input_len: IntValue<'b>,
     ) -> IntValue<'b> {
-        unimplemented!()
+        emit_context!(bin);
+
+        const FNAME: &str = "native_keccak256";
+        const HASHLEN: u64 = 32;
+
+        if hash != HashTy::Keccak256 {
+            unimplemented!();
+        }
+
+        let res = bin
+            .builder
+            .build_array_alloca(bin.context.i8_type(), i32_const!(HASHLEN), "res")
+            .unwrap();
+
+        call!(FNAME, &[input.into(), input_len.into(), res.into()], "hash");
+
+        // bytes32 needs to reverse bytes
+        let temp = bin
+            .builder
+            .build_alloca(bin.llvm_type(&ast::Type::Bytes(HASHLEN as u8)), "hash")
+            .unwrap();
+
+        call!(
+            "__beNtoleN",
+            &[res.into(), temp.into(), i32_const!(HASHLEN).into()]
+        );
+
+        bin.builder
+            .build_load(
+                bin.llvm_type(&ast::Type::Bytes(HASHLEN as u8)),
+                temp,
+                "hash",
+            )
+            .unwrap()
+            .into_int_value()
     }
 
     /// Emit event

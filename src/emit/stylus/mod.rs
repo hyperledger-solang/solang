@@ -56,6 +56,7 @@ impl StylusTarget {
             "log_txt",
             "msg_reentrant",
             "msg_value",
+            "native_keccak256",
             "pay_for_memory_grow",
             "read_args",
             "storage_flush_cache",
@@ -117,6 +118,7 @@ impl StylusTarget {
         external!("log_txt", void_type, u8_ptr, i32_val);
         external!("msg_reentrant", i32_type);
         external!("msg_value", void_type, i32_val);
+        external!("native_keccak256", void_type, u8_ptr, i32_val, u8_ptr);
         external!("pay_for_memory_grow", void_type, i32_val);
         external!("read_args", void_type, u8_ptr);
         external!("storage_cache_bytes32", void_type, u8_ptr, u8_ptr);
