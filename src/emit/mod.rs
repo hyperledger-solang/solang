@@ -95,7 +95,7 @@ pub trait TargetRuntime<'a> {
         ty: &ast::Type,
         existing: bool,
         slot: &mut IntValue<'a>,
-        dest: BasicValueEnum<'a>,
+        value: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     );
@@ -278,10 +278,10 @@ pub trait TargetRuntime<'a> {
     fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b>;
 
     /// Return the value we received
-    fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b>;
+    fn value_transferred<'b>(&self, bin: &Binary<'b>) -> IntValue<'b>;
 
     /// Terminate execution, destroy bin and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>);
+    fn selfdestruct<'b>(&self, bin: &Binary<'b>, addr: ArrayValue<'b>);
 
     /// Crypto Hash
     fn hash<'b>(
@@ -289,8 +289,8 @@ pub trait TargetRuntime<'a> {
         bin: &Binary<'b>,
         function: FunctionValue<'b>,
         hash: HashTy,
-        string: PointerValue<'b>,
-        length: IntValue<'b>,
+        input: PointerValue<'b>,
+        input_len: IntValue<'b>,
     ) -> IntValue<'b>;
 
     /// Emit event

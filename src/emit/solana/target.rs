@@ -1510,7 +1510,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     /// Value received is not available on solana
-    fn value_transferred<'b>(&self, _binary: &Binary<'b>) -> IntValue<'b> {
+    fn value_transferred<'b>(&self, _bin: &Binary<'b>) -> IntValue<'b> {
         unreachable!();
     }
 
@@ -1528,7 +1528,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     /// Terminate execution, destroy binary and send remaining funds to addr
-    fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: ArrayValue<'b>) {
+    fn selfdestruct<'b>(&self, _bin: &Binary<'b>, _addr: ArrayValue<'b>) {
         unimplemented!();
     }
 
