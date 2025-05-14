@@ -26,6 +26,9 @@ fn deploy(path: impl AsRef<Path>, contract: &str) -> (TempDir, String) {
             "compile",
             &path.as_ref().to_string_lossy(),
             "--target=stylus",
+            // smoelius: The default LLVM optimization level can cause public functions to be
+            // inlined into the dispatch function.
+            "-O=less",
         ],
     );
 
