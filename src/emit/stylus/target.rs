@@ -4,7 +4,7 @@
 #![warn(clippy::renamed_function_params)]
 
 use crate::codegen::cfg::HashTy;
-use crate::codegen::Expression;
+use crate::codegen::{Builtin, Expression};
 use crate::emit::binary::Binary;
 use crate::emit::stylus::StylusTarget;
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
@@ -308,7 +308,28 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
     ) -> BasicValueEnum<'b> {
-        unimplemented!()
+        emit_context!(bin);
+
+        match expr {
+            Expression::Builtin {
+                kind: Builtin::GetAddress,
+                ..
+            } => {
+                let address = bin
+                    .builder
+                    .build_array_alloca(
+                        bin.context.i8_type(),
+                        i32_const!(bin.ns.address_length as u64),
+                        "address",
+                    )
+                    .unwrap();
+
+                call!("contract_address", &[address.into()], "contract_address");
+
+                address.into()
+            }
+            _ => unimplemented!(),
+        }
     }
 
     /// Return the return data from an external call (either revert error or return values)

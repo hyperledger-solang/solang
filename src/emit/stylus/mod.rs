@@ -34,7 +34,7 @@ impl StylusTarget {
             None,
         );
 
-        let return_code = binary.module.add_global(
+        let return_code = bin.module.add_global(
             context.i32_type(),
             Some(AddressSpace::default()),
             "return_code",
@@ -42,7 +42,7 @@ impl StylusTarget {
         return_code.set_linkage(Linkage::Internal);
         return_code.set_initializer(&context.i32_type().const_zero());
 
-        binary.return_code = Some(return_code);
+        bin.return_code = Some(return_code);
 
         let mut target = StylusTarget;
 
@@ -53,6 +53,7 @@ impl StylusTarget {
         target.emit_dispatch(&mut bin);
 
         bin.internalize(&[
+            "contract_address",
             "log_txt",
             "msg_reentrant",
             "msg_value",
@@ -115,6 +116,7 @@ impl StylusTarget {
             };
         }
 
+        external!("contract_address", void_type, u8_ptr);
         external!("log_txt", void_type, u8_ptr, i32_val);
         external!("msg_reentrant", i32_type);
         external!("msg_value", void_type, i32_val);
