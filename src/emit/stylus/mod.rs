@@ -103,8 +103,9 @@ impl StylusTarget {
 
     fn declare_externals(&self, bin: &Binary) {
         let ctx = bin.context;
-        let i32_val = ctx.i32_type().into();
         let u8_ptr = ctx.i8_type().ptr_type(AddressSpace::default()).into();
+        let u16_val = ctx.i16_type().into();
+        let u32_val = ctx.i32_type().into();
 
         macro_rules! external {
             ($name:literal, $fn_type:ident $(,)? $( $args:expr ),*) => {
@@ -117,16 +118,16 @@ impl StylusTarget {
         }
 
         external!("contract_address", void_type, u8_ptr);
-        external!("log_txt", void_type, u8_ptr, i32_val);
+        external!("log_txt", void_type, u8_ptr, u32_val);
         external!("msg_reentrant", i32_type);
-        external!("msg_value", void_type, i32_val);
-        external!("native_keccak256", void_type, u8_ptr, i32_val, u8_ptr);
-        external!("pay_for_memory_grow", void_type, i32_val);
+        external!("msg_value", void_type, u8_ptr);
+        external!("native_keccak256", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("pay_for_memory_grow", void_type, u16_val);
         external!("read_args", void_type, u8_ptr);
         external!("storage_cache_bytes32", void_type, u8_ptr, u8_ptr);
-        external!("storage_flush_cache", void_type, i32_val);
+        external!("storage_flush_cache", void_type, u32_val);
         external!("storage_load_bytes32", void_type, u8_ptr, u8_ptr);
-        external!("write_result", void_type, u8_ptr, i32_val);
+        external!("write_result", void_type, u8_ptr, u32_val);
     }
 
     fn emit_dispatch(&mut self, bin: &mut Binary) {
