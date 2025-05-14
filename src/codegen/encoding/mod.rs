@@ -327,7 +327,7 @@ pub(crate) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
         width: u16,
     ) -> Expression {
-        let encoding_size = width.next_power_of_two();
+        let encoding_size = encoding_size(ns, width);
         let expr = if encoding_size != width {
             if expr.ty().is_signed_int(ns) {
                 Expression::SignExt {
@@ -742,7 +742,7 @@ pub(crate) trait AbiEncoding {
     ) -> (Expression, Expression) {
         match ty {
             Type::Uint(width) | Type::Int(width) => {
-                let encoding_size = width.next_power_of_two();
+                let encoding_size = encoding_size(ns, *width);
 
                 let size = Expression::NumberLiteral {
                     loc: Codegen,
@@ -1415,7 +1415,7 @@ pub(crate) trait AbiEncoding {
             Type::Uint(n) | Type::Int(n) => Expression::NumberLiteral {
                 loc: Codegen,
                 ty: Uint(32),
-                value: BigInt::from(n.next_power_of_two() / 8),
+                value: BigInt::from(encoding_size(ns, *n) / 8),
             },
             Type::Enum(_) | Type::Contract(_) | Type::Bool | Type::Address(_) | Type::Bytes(_) => {
                 Expression::NumberLiteral {
@@ -1777,6 +1777,14 @@ pub(crate) trait AbiEncoding {
     /// Returns `None` if the data can not be encoded at compile time.
     fn const_encode(&self, _args: &[Expression]) -> Option<Vec<u8>> {
         None
+    }
+}
+
+fn encoding_size(ns: &Namespace, n: u16) -> u16 {
+    if ns.target == Target::Stylus {
+        256
+    } else {
+        n.next_power_of_two()
     }
 }
 
