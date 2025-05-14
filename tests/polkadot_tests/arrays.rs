@@ -1627,3 +1627,87 @@ fn abi_decode_dynamic_array3() {
 
     runtime.function("decode_empty", vec![]);
 }
+
+#[test]
+fn memory_array_delete() {
+    // Test that deleting an array element in memory only resets the element to its default value
+    // and doesn't delete the entire array (matches Solc behavior - issue #1785)
+    let mut runtime = build_solidity(
+        r#"
+        contract foo {
+            function test() public returns (uint ret) {
+                uint[] memory data = new uint[](2);
+                data[0] = 234;
+                data[1] = 123;
+                delete data[0];
+                
+                // Return length of array to verify it's still 2 (not deleted)
+                ret = data.length;
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+    let output = runtime.output();
+    assert!(output.len() >= 4);
+    assert_eq!(output[0], 2);
+}
+
+#[test]
+fn memory_array_delete_element_values() {
+    let mut runtime = build_solidity(
+        r#"
+        contract foo {
+            function test() public returns (uint, uint) {
+                uint[] memory data = new uint[](2);
+                data[0] = 234;
+                data[1] = 123;
+                delete data[0];
+                return (data[0], data[1]);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+    let output = runtime.output();
+    assert!(output.len() >= 8);
+    assert_eq!(output[0], 0);
+    
+    let mut found_123 = false;
+    for i in 0..output.len()-3 {
+        if output[i] == 123 && output[i+1] == 0 && output[i+2] == 0 && output[i+3] == 0 {
+            found_123 = true;
+            break;
+        }
+    }
+    assert!(found_123, "Should find 123 in the output");
+}
+
+#[test]
+fn memory_array_delete_assembly_length() {
+    // Test for issue #1785 - original case
+    // In Solc, after deleting elements, the array length should remain unchanged
+    let mut runtime = build_solidity(
+        r#"
+        contract C {
+            function len() public returns (uint ret) {
+                uint[] memory data = new uint[](2);
+                data[0] = 234;
+                data[1] = 123;
+                delete data[0];
+                delete data[1];
+                // For Polkadot, we can directly return the length property
+                // since array length is stored at the start of the array
+                ret = data.length;
+            }
+        }
+        "#,
+    );
+
+    runtime.function("len", Vec::new());
+    let output = runtime.output();
+    assert!(output.len() >= 4);
+    assert_eq!(output[0], 2);
+}

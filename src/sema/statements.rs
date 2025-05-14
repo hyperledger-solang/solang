@@ -4,7 +4,7 @@ use super::ast::*;
 use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
 use super::expression::{
-    function_call::{available_functions, call_expr, named_call_expr},
+    function_call::{available_functions, call_expr},
     ExprContext, ResolveTo,
 };
 use super::symtable::Symtable;
@@ -12,7 +12,7 @@ use crate::sema::expression::constructor::{
     constructor_named_args, match_constructor_to_args, new,
 };
 use crate::sema::expression::function_call::{
-    function_call_expr, function_call_pos_args, named_function_call_expr,
+    function_call_expr, function_call_pos_args, named_call_expr,
 };
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::function_annotation::function_body_annotations;
@@ -29,6 +29,8 @@ use solang_parser::pt::CodeLocation;
 use solang_parser::pt::OptionalCodeLocation;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
+use num_bigint::BigInt;
+use num_traits::Zero;
 
 pub fn resolve_function_body(
     def: &pt::FunctionDefinition,
@@ -713,7 +715,8 @@ fn statement(
                     let expr =
                         expression(expr, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
                     used_variable(ns, &expr, symtable);
-                    return if let Type::StorageRef(_, ty) = expr.ty() {
+                    
+                    if let Type::StorageRef(_, ty) = expr.ty() {
                         if expr.ty().is_mapping() {
                             ns.diagnostics.push(Diagnostic::error(
                                 *loc,
@@ -724,15 +727,33 @@ fn statement(
 
                         res.push(Statement::Delete(*loc, ty.as_ref().clone(), expr));
 
-                        Ok(true)
+                        return Ok(true);
                     } else {
+                        // For memory arrays and other types, we should only delete the element
+                        // by assigning the default value, not delete the entire array
+                        // Issue #1785 - match Solc behavior for delete array[index]
                         ns.diagnostics.push(Diagnostic::warning(
                             *loc,
                             "argument to 'delete' should be storage reference".to_string(),
                         ));
 
-                        Err(())
-                    };
+                        let expr_ty = expr.ty().clone();
+                        let element_ty = expr_ty.deref_any();
+                        
+                        if let Ok(default_expr) = get_default_value(*loc, element_ty, ns, diagnostics) {
+                            let assign = Expression::Assign {
+                                loc: *loc,
+                                ty: expr.ty(),
+                                left: Box::new(expr),
+                                right: Box::new(default_expr),
+                            };
+                            
+                            res.push(Statement::Expression(*loc, true, assign));
+                            return Ok(true);
+                        }
+                        
+                        return Err(());
+                    }
                 }
                 // is it an underscore modifier statement
                 pt::Expression::Variable(id)
@@ -1796,10 +1817,11 @@ fn destructure_values(
             res
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let res = named_function_call_expr(
+            let res = named_call_expr(
                 loc,
                 ty,
                 args,
+                true,
                 context,
                 ns,
                 symtable,
@@ -2310,10 +2332,11 @@ fn try_catch(
             res
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let res = named_function_call_expr(
+            let res = named_call_expr(
                 loc,
                 ty,
                 args,
+                true,
                 context,
                 ns,
                 symtable,
@@ -2751,4 +2774,65 @@ fn try_catch(
     );
 
     Ok((stmt, finally_reachable))
+}
+
+/// Helper function to get the default value expression for a type
+fn get_default_value(
+    loc: pt::Loc,
+    ty: &Type,
+    ns: &Namespace,
+    diagnostics: &mut Diagnostics,
+) -> Result<Expression, ()> {
+    match ty {
+        Type::Bool => Ok(Expression::BoolLiteral {
+            loc,
+            value: false,
+        }),
+        Type::Uint(size) => Ok(Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(*size),
+            value: BigInt::zero(),
+        }),
+        Type::Int(size) => Ok(Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(*size),
+            value: BigInt::zero(),
+        }),
+        Type::Value => Ok(Expression::NumberLiteral {
+            loc,
+            ty: Type::Value,
+            value: BigInt::zero(),
+        }),
+        Type::Address(_) => Ok(Expression::NumberLiteral {
+            loc,
+            ty: ty.clone(),
+            value: BigInt::zero(),
+        }),
+        Type::Bytes(n) => Ok(Expression::BytesLiteral {
+            loc,
+            ty: Type::Bytes(*n),
+            value: vec![0; *n as usize],
+        }),
+        Type::String => Ok(Expression::BytesLiteral {
+            loc,
+            ty: Type::String,
+            value: Vec::new(),
+        }),
+        Type::DynamicBytes => Ok(Expression::BytesLiteral {
+            loc,
+            ty: Type::DynamicBytes,
+            value: Vec::new(),
+        }),
+        Type::Ref(r) => get_default_value(loc, r, ns, diagnostics),
+        Type::StorageRef(_, r) => get_default_value(loc, r, ns, diagnostics),
+        // For arrays, structs, and complex types, a more involved default value would be needed
+        // but for now we'll return a basic default value for simple types
+        _ => {
+            diagnostics.push(Diagnostic::error(
+                loc,
+                format!("cannot create default value for type {}", ty.to_string(ns)),
+            ));
+            Err(())
+        }
+    }
 }
