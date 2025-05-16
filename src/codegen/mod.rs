@@ -1919,3 +1919,28 @@ impl From<&ast::Builtin> for Builtin {
         }
     }
 }
+
+// smoelius: I am not sure whether something like this already exists.
+#[allow(unused_macros)]
+macro_rules! debug_expr {
+    ($expr:expr, $cfg:expr, $vartab:expr) => {
+        let label = Expression::BytesLiteral {
+            loc: solang_parser::pt::Loc::Codegen,
+            ty: Type::String,
+            value: concat!("[", file!(), ":", line!(), "] ", stringify!($expr), " = ")
+                .as_bytes()
+                .to_owned(),
+        };
+        let expr = Expression::FormatString {
+            loc: solang_parser::pt::Loc::Codegen,
+            args: vec![
+                (crate::sema::ast::FormatArg::StringLiteral, label),
+                (crate::sema::ast::FormatArg::Default, $expr.clone()),
+            ],
+        };
+
+        $cfg.add($vartab, Instr::Print { expr });
+    };
+}
+#[allow(unused_imports)]
+pub(crate) use debug_expr;

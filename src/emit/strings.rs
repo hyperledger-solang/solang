@@ -18,22 +18,42 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
     vartab: &HashMap<usize, Variable<'a>>,
     function: FunctionValue<'a>,
 ) -> BasicValueEnum<'a> {
+    let evaluated_arg = args
+        .iter()
+        .map(|(spec, arg)| {
+            let string_literal = if let Expression::BytesLiteral { value, .. } = arg {
+                Some(value)
+            } else {
+                None
+            };
+            (
+                *spec,
+                string_literal,
+                arg.ty(),
+                expression(target, bin, arg, vartab, function),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    format_evaluated_args(bin, &evaluated_arg, function)
+}
+
+pub(super) fn format_evaluated_args<'a>(
+    bin: &Binary<'a>,
+    evaluated_arg: &[(FormatArg, Option<&Vec<u8>>, Type, BasicValueEnum<'a>)],
+    function: FunctionValue<'a>,
+) -> BasicValueEnum<'a> {
     // first we need to calculate the space we need
     let mut length = bin.context.i32_type().const_zero();
 
-    let mut evaluated_arg = Vec::new();
-
-    evaluated_arg.resize(args.len(), None);
-
-    for (i, (spec, arg)) in args.iter().enumerate() {
-        let len = if *spec == FormatArg::StringLiteral {
-            if let Expression::BytesLiteral { value, .. } = arg {
-                bin.context.i32_type().const_int(value.len() as u64, false)
-            } else {
-                unreachable!();
-            }
+    for (spec, string_literal, ty, val) in evaluated_arg.iter() {
+        let val = *val;
+        let len = if let Some(string_literal) = *string_literal {
+            bin.context
+                .i32_type()
+                .const_int(string_literal.len() as u64, false)
         } else {
-            match arg.ty() {
+            match ty {
                 // bool: "true" or "false"
                 Type::Bool => bin.context.i32_type().const_int(5, false),
                 // hex encode bytes
@@ -45,48 +65,41 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     };
                     bin.context.i32_type().const_int(len as u64, false)
                 }
-                Type::Bytes(size) => bin.context.i32_type().const_int(size as u64 * 2, false),
-                Type::String => {
-                    let val = expression(target, bin, arg, vartab, function);
-
-                    evaluated_arg[i] = Some(val);
-
-                    bin.vector_len(val)
-                }
+                Type::Bytes(size) => bin.context.i32_type().const_int(*size as u64 * 2, false),
+                Type::String => bin.vector_len(val),
                 Type::DynamicBytes => {
-                    let val = expression(target, bin, arg, vartab, function);
-
-                    evaluated_arg[i] = Some(val);
-
                     // will be hex encoded, so double
                     let len = bin.vector_len(val);
 
                     bin.builder.build_int_add(len, len, "hex_len").unwrap()
                 }
-                Type::Uint(bits) if *spec == FormatArg::Hex => {
-                    bin.context.i32_type().const_int(bits as u64 / 4 + 2, false)
-                }
-                Type::Int(bits) if *spec == FormatArg::Hex => {
-                    bin.context.i32_type().const_int(bits as u64 / 4 + 3, false)
-                }
+                Type::Uint(bits) if *spec == FormatArg::Hex => bin
+                    .context
+                    .i32_type()
+                    .const_int(*bits as u64 / 4 + 2, false),
+                Type::Int(bits) if *spec == FormatArg::Hex => bin
+                    .context
+                    .i32_type()
+                    .const_int(*bits as u64 / 4 + 3, false),
                 Type::Uint(bits) if *spec == FormatArg::Binary => {
-                    bin.context.i32_type().const_int(bits as u64 + 2, false)
+                    bin.context.i32_type().const_int(*bits as u64 + 2, false)
                 }
                 Type::Int(bits) if *spec == FormatArg::Binary => {
-                    bin.context.i32_type().const_int(bits as u64 + 3, false)
+                    bin.context.i32_type().const_int(*bits as u64 + 3, false)
                 }
                 // bits / 2 is a rough over-estimate of how many decimals we need
                 Type::Uint(bits) if *spec == FormatArg::Default => {
-                    bin.context.i32_type().const_int(bits as u64 / 2, false)
+                    bin.context.i32_type().const_int(*bits as u64 / 2, false)
                 }
-                Type::Int(bits) if *spec == FormatArg::Default => {
-                    bin.context.i32_type().const_int(bits as u64 / 2 + 1, false)
-                }
+                Type::Int(bits) if *spec == FormatArg::Default => bin
+                    .context
+                    .i32_type()
+                    .const_int(*bits as u64 / 2 + 1, false),
                 Type::Enum(enum_no) => bin
                     .context
                     .i32_type()
-                    .const_int(bin.ns.enums[enum_no].ty.bits(bin.ns) as u64 / 3, false),
-                _ => unimplemented!("can't format this argument: {:?}", arg),
+                    .const_int(bin.ns.enums[*enum_no].ty.bits(bin.ns) as u64 / 3, false),
+                _ => unimplemented!("can't format this argument: {:?}", val),
             }
         };
 
@@ -109,11 +122,15 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
     let mut output = output_start;
 
     // format it
-    for (i, (spec, arg)) in args.iter().enumerate() {
+    for (spec, string_literal, arg_ty, val) in evaluated_arg.iter() {
+        let val = *val;
         if *spec == FormatArg::StringLiteral {
-            if let Expression::BytesLiteral { value, .. } = arg {
-                let s = bin.emit_global_string("format_arg", value, true);
-                let len = bin.context.i32_type().const_int(value.len() as u64, false);
+            if let Some(string_literal) = string_literal {
+                let s = bin.emit_global_string("format_arg", string_literal, true);
+                let len = bin
+                    .context
+                    .i32_type()
+                    .const_int(string_literal.len() as u64, false);
 
                 bin.builder
                     .build_call(
@@ -130,10 +147,6 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                 };
             }
         } else {
-            let val =
-                evaluated_arg[i].unwrap_or_else(|| expression(target, bin, arg, vartab, function));
-            let arg_ty = arg.ty();
-
             match arg_ty {
                 Type::Bool => {
                     let len = bin
@@ -263,7 +276,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     bin.builder.build_store(buf, val.into_int_value()).unwrap();
 
-                    let len = bin.context.i32_type().const_int(size as u64, false);
+                    let len = bin.context.i32_type().const_int(*size as u64, false);
 
                     bin.builder
                         .build_call(
@@ -305,8 +318,8 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         .into_pointer_value();
                 }
                 Type::Uint(bits) => {
-                    if *spec == FormatArg::Default && bits <= 64 {
-                        let val = if bits == 64 {
+                    if *spec == FormatArg::Default && *bits <= 64 {
+                        let val = if *bits == 64 {
                             val.into_int_value()
                         } else {
                             bin.builder
@@ -330,8 +343,8 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             .left()
                             .unwrap()
                             .into_pointer_value();
-                    } else if *spec == FormatArg::Default && bits <= 128 {
-                        let val = if bits == 128 {
+                    } else if *spec == FormatArg::Default && *bits <= 128 {
+                        let val = if *bits == 128 {
                             val.into_int_value()
                         } else {
                             bin.builder
@@ -356,7 +369,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             .unwrap()
                             .into_pointer_value();
                     } else if *spec == FormatArg::Default {
-                        let val = if bits == 256 {
+                        let val = if *bits == 256 {
                             val.into_int_value()
                         } else {
                             bin.builder
@@ -393,7 +406,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                         bin.builder.build_store(buf, val.into_int_value()).unwrap();
 
-                        let len = bin.context.i32_type().const_int(bits as u64 / 8, false);
+                        let len = bin.context.i32_type().const_int(*bits as u64 / 8, false);
 
                         let func_name = if *spec == FormatArg::Hex {
                             "uint2hex"
@@ -462,8 +475,8 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     data_phi.add_incoming(&[(&neg_data, negative), (&output, entry)]);
                     val_phi.add_incoming(&[(&neg_val, negative), (&val, entry)]);
 
-                    if *spec == FormatArg::Default && bits <= 64 {
-                        let val = if bits == 64 {
+                    if *spec == FormatArg::Default && *bits <= 64 {
+                        let val = if *bits == 64 {
                             val_phi.as_basic_value().into_int_value()
                         } else {
                             bin.builder
@@ -489,8 +502,8 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             .left()
                             .unwrap()
                             .into_pointer_value();
-                    } else if *spec == FormatArg::Default && bits <= 128 {
-                        let val = if bits == 128 {
+                    } else if *spec == FormatArg::Default && *bits <= 128 {
+                        let val = if *bits == 128 {
                             val_phi.as_basic_value().into_int_value()
                         } else {
                             bin.builder
@@ -517,7 +530,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             .unwrap()
                             .into_pointer_value();
                     } else if *spec == FormatArg::Default {
-                        let val = if bits == 256 {
+                        let val = if *bits == 256 {
                             val_phi.as_basic_value().into_int_value()
                         } else {
                             bin.builder
@@ -558,7 +571,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             .build_store(buf, val_phi.as_basic_value().into_int_value())
                             .unwrap();
 
-                        let len = bin.context.i32_type().const_int(bits as u64 / 8, false);
+                        let len = bin.context.i32_type().const_int(*bits as u64 / 8, false);
 
                         let func_name = if *spec == FormatArg::Hex {
                             "uint2hex"

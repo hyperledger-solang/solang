@@ -375,3 +375,49 @@ impl ast::Contract {
             .to_vec()
     }
 }
+
+// smoelius: I am not sure whether something like this already exists.
+#[allow(unused_macros)]
+macro_rules! debug_value {
+    ($target:expr, $bin:expr, $ty:expr, $value:expr, $function:expr) => {
+        let string_literal = concat!("[", file!(), ":", line!(), "] ", stringify!($value), " = ")
+            .as_bytes()
+            .to_owned();
+        let label_expr = crate::codegen::Expression::BytesLiteral {
+            loc: solang_parser::pt::Loc::Codegen,
+            ty: Type::String,
+            value: string_literal.clone(),
+        };
+        let label_value = crate::emit::expression::expression(
+            $target,
+            $bin,
+            &label_expr,
+            &std::collections::HashMap::new(),
+            $function,
+            $ns,
+        );
+        let value = crate::emit::strings::format_evaluated_args(
+            $bin,
+            &[
+                (
+                    crate::sema::ast::FormatArg::StringLiteral,
+                    Some(&string_literal),
+                    Type::String,
+                    label_value.into(),
+                ),
+                (
+                    crate::sema::ast::FormatArg::Default,
+                    None,
+                    $ty,
+                    $value.into(),
+                ),
+            ],
+            $function,
+            $ns,
+        );
+
+        $target.print($bin, $bin.vector_bytes(value), $bin.vector_len(value));
+    };
+}
+#[allow(unused_imports)]
+pub(crate) use debug_value;
