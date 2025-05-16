@@ -284,7 +284,57 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         ty: CallTy,
         loc: Loc,
     ) {
-        unimplemented!()
+        emit_context!(bin);
+
+        let return_data_len = bin
+            .builder
+            .build_alloca(bin.llvm_type(&ast::Type::Uint(32)), "return_data_len")
+            .unwrap();
+
+        let name = match ty {
+            CallTy::Regular => "call_contract",
+            CallTy::Delegate => "delegate_call_contract",
+            CallTy::Static => "static_call_contract",
+        };
+
+        let mut args: Vec<BasicMetadataValueEnum> =
+            vec![address.unwrap().into(), payload.into(), payload_len.into()];
+
+        if matches!(ty, CallTy::Regular) {
+            let value = bin
+                .builder
+                .build_alloca(bin.context.custom_width_int_type(256), "value")
+                .unwrap();
+            bin.builder
+                .build_store(value, contract_args.value.unwrap())
+                .unwrap();
+            args.push(value.into());
+        }
+
+        let gas = gas_calculation(bin, contract_args.gas.unwrap());
+
+        args.extend_from_slice(&[gas.into(), return_data_len.into()]);
+
+        // smoelius: From: https://github.com/OffchainLabs/stylus-sdk-rs/blob/a9d54f5fac69c5dda3ee2fae0562aaefee5c2aad/src/hostio.rs#L77-L78
+        // > The return status indicates whether the call succeeded, and is nonzero on failure.
+        let status = call!(name, &args, "external call");
+
+        let temp = bin
+            .builder
+            .build_load(bin.context.i32_type(), return_data_len, "return_data_len")
+            .unwrap();
+        bin.builder
+            .build_store(bin.return_data_len.unwrap().as_pointer_value(), temp)
+            .unwrap();
+
+        // smoelius: `status` is a `u8`, but we need an `i32`. Also, as per the comment above, we
+        // need to map 0 to 1, and non-zero to 0.
+        let status_inverted = status_inverted(
+            bin,
+            status.try_as_basic_value().left().unwrap().into_int_value(),
+        );
+
+        *success.unwrap() = status_inverted.into();
     }
 
     /// send value to address
@@ -334,7 +384,45 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
     /// Return the return data from an external call (either revert error or return values)
     fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b> {
-        unimplemented!()
+        emit_context!(bin);
+
+        // smoelius: To test `return_data_size`, change `any()` to `all()`.
+        let size = if cfg!(any()) {
+            call!("return_data_size", &[], "return_data_size")
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+        } else {
+            bin.builder
+                .build_load(
+                    bin.context.i32_type(),
+                    bin.return_data_len.unwrap().as_pointer_value(),
+                    "return_data_len",
+                )
+                .unwrap()
+                .into_int_value()
+        };
+
+        let return_data = bin
+            .builder
+            .build_array_alloca(bin.context.i8_type(), size, "return_data")
+            .unwrap();
+
+        call!(
+            "read_return_data",
+            &[return_data.into(), i32_zero!().into(), size.into()],
+            "read_return_data"
+        );
+
+        call!(
+            "vector_new",
+            &[size.into(), i32_const!(1).into(), return_data.into(),]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_pointer_value()
     }
 
     /// Return the value we received
@@ -417,5 +505,52 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         let zero: &dyn BasicValue = &i32_zero!();
         bin.builder.build_return(Some(zero)).unwrap();
+    }
+}
+
+use local::{gas_calculation, status_inverted};
+
+mod local {
+    #![warn(unused_variables)]
+
+    use super::*;
+    use inkwell::IntPredicate;
+
+    pub fn gas_calculation<'a>(bin: &Binary<'a>, gas_value: IntValue<'a>) -> IntValue<'a> {
+        if_zero(
+            bin,
+            bin.context.i64_type(),
+            gas_value,
+            bin.context.i64_type().const_all_ones(),
+            gas_value,
+        )
+    }
+
+    pub fn status_inverted<'a>(bin: &Binary<'a>, status: IntValue<'a>) -> IntValue<'a> {
+        if_zero(
+            bin,
+            bin.context.i8_type(),
+            status,
+            bin.context.i32_type().const_int(1, false),
+            bin.context.i32_type().const_zero(),
+        )
+    }
+
+    fn if_zero<'a>(
+        bin: &Binary<'a>,
+        input_ty: IntType<'a>,
+        input: IntValue<'a>,
+        zero_output: IntValue<'a>,
+        non_zero_output: IntValue<'a>,
+    ) -> IntValue<'a> {
+        let is_zero = bin
+            .builder
+            .build_int_compare(IntPredicate::EQ, input, input_ty.const_zero(), "is_zero")
+            .unwrap();
+
+        bin.builder
+            .build_select(is_zero, zero_output, non_zero_output, "selection")
+            .unwrap()
+            .into_int_value()
     }
 }

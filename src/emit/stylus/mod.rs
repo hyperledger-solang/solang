@@ -40,9 +40,21 @@ impl StylusTarget {
             "return_code",
         );
         return_code.set_linkage(Linkage::Internal);
+        // smoelius: Stylus uses 0 for success and 1 for failure:
+        // https://github.com/OffchainLabs/stylus-sdk-rs/blob/8940922c2454b4edb8a560b7c24caa522d352364/stylus-proc/src/macros/entrypoint.rs#L176-L179
         return_code.set_initializer(&context.i32_type().const_zero());
 
         bin.return_code = Some(return_code);
+
+        let return_data_len = bin.module.add_global(
+            context.i32_type(),
+            Some(AddressSpace::default()),
+            "return_data_len",
+        );
+        return_data_len.set_linkage(Linkage::Internal);
+        return_data_len.set_initializer(&context.i32_type().get_undef());
+
+        bin.return_data_len = Some(return_data_len);
 
         let mut target = StylusTarget;
 
@@ -53,13 +65,18 @@ impl StylusTarget {
         target.emit_dispatch(&mut bin);
 
         bin.internalize(&[
+            "call_contract",
             "contract_address",
+            "delegate_call_contract",
             "log_txt",
             "msg_reentrant",
             "msg_value",
             "native_keccak256",
             "pay_for_memory_grow",
             "read_args",
+            "read_return_data",
+            "return_data_size",
+            "static_call_contract",
             "storage_flush_cache",
             "storage_cache_bytes32",
             "storage_load_bytes32",
@@ -105,7 +122,9 @@ impl StylusTarget {
         let ctx = bin.context;
         let u8_ptr = ctx.i8_type().ptr_type(AddressSpace::default()).into();
         let u16_val = ctx.i16_type().into();
+        let u32_ptr = ctx.i32_type().ptr_type(AddressSpace::default()).into();
         let u32_val = ctx.i32_type().into();
+        let u64_val = ctx.i64_type().into();
 
         macro_rules! external {
             ($name:literal, $fn_type:ident $(,)? $( $args:expr ),*) => {
@@ -117,13 +136,43 @@ impl StylusTarget {
             };
         }
 
+        external!(
+            "call_contract",
+            i8_type,
+            u8_ptr,
+            u8_ptr,
+            u32_val,
+            u8_ptr,
+            u64_val,
+            u32_ptr
+        );
         external!("contract_address", void_type, u8_ptr);
+        external!(
+            "delegate_call_contract",
+            i8_type,
+            u8_ptr,
+            u8_ptr,
+            u32_val,
+            u64_val,
+            u8_ptr
+        );
         external!("log_txt", void_type, u8_ptr, u32_val);
         external!("msg_reentrant", i32_type);
         external!("msg_value", void_type, u8_ptr);
         external!("native_keccak256", void_type, u8_ptr, u32_val, u8_ptr);
         external!("pay_for_memory_grow", void_type, u16_val);
         external!("read_args", void_type, u8_ptr);
+        external!("read_return_data", i32_type, u8_ptr, u32_val, u32_val);
+        external!("return_data_size", i32_type);
+        external!(
+            "static_call_contract",
+            i8_type,
+            u8_ptr,
+            u8_ptr,
+            u32_val,
+            u64_val,
+            u8_ptr
+        );
         external!("storage_cache_bytes32", void_type, u8_ptr, u8_ptr);
         external!("storage_flush_cache", void_type, u32_val);
         external!("storage_load_bytes32", void_type, u8_ptr, u8_ptr);

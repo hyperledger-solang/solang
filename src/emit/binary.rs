@@ -165,8 +165,9 @@ pub struct Binary<'a> {
     // `scratch_len` and `scratch` are used by Polkadot.
     pub(crate) scratch_len: Option<GlobalValue<'a>>,
     pub(crate) scratch: Option<GlobalValue<'a>>,
-    // `return_code` is used by Stylus.
+    // `return_code` and `return_data_len` are used by Stylus.
     pub(crate) return_code: Option<GlobalValue<'a>>,
+    pub(crate) return_data_len: Option<GlobalValue<'a>>,
     pub(crate) parameters: Option<PointerValue<'a>>,
     pub(crate) return_values: HashMap<ReturnCode, IntValue<'a>>,
     /// No initializer for vector_new
@@ -443,6 +444,7 @@ impl<'a> Binary<'a> {
             scratch: None,
             scratch_len: None,
             return_code: None,
+            return_data_len: None,
             parameters: None,
             return_values,
             vector_init_empty: context.ptr_type(AddressSpace::default()).const_null(),
