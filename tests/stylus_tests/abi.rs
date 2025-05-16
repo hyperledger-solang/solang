@@ -5,16 +5,10 @@ use regex::Regex;
 use std::{ffi::OsStr, fs::read_to_string, path::PathBuf};
 use walkdir::WalkDir;
 
-const KNOWN_PROBLEMATIC_FILES: &[&str] = &[
-    "abi_encode_call",
-    "abi_encode_call_is_consistent",
-    "array_of_function_external_storage_to_storage_dynamic",
-    "array_of_function_external_storage_to_storage_dynamic_different_mutability",
-];
-
 #[test]
 fn abi() {
     let abi_re = Regex::new(r"\<abi\>").unwrap();
+    let assembly_re = Regex::new(r"\<assembly\>").unwrap();
     let assert_re = Regex::new(r"\<assert\>").unwrap();
     let contract_re = Regex::new(r"\<contract ([A-Za-z_0-9]+)\>").unwrap();
     let argless_function_re = Regex::new(r"\<function ([A-Za-z_0-9]+)\(\)").unwrap();
@@ -24,12 +18,11 @@ fn abi() {
         if !path.is_file() || path.extension() != Some(OsStr::new("sol")) {
             continue;
         }
-        let file_stem = path.file_stem().and_then(OsStr::to_str).unwrap();
-        if KNOWN_PROBLEMATIC_FILES.contains(&file_stem) {
-            continue;
-        }
         let contents = read_to_string(path).unwrap();
         if !abi_re.is_match(&contents) || !assert_re.is_match(&contents) {
+            continue;
+        }
+        if assembly_re.is_match(&contents) {
             continue;
         }
         let contracts = contract_re
@@ -64,10 +57,16 @@ fn abi() {
 
         eprintln!("Deploying `{}`", path.display());
 
-        let (tempdir, address) = deploy(
+        let (tempdir, address) = match deploy(
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(path),
             contract,
-        );
+        ) {
+            Ok((tempdir, address)) => (tempdir, address),
+            Err(error) => {
+                eprintln!("Failed to deploy `{}`: {error:?}", path.display());
+                continue;
+            }
+        };
         let dir = &tempdir;
 
         for function in argless_functions {

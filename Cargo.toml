@@ -93,6 +93,7 @@ ink_primitives = "5.0.0"
 wasm_host_attr = { path = "tests/wasm_host_attr" }
 num-bigint = { version = "0.4", features = ["rand", "serde"]}
 strip-ansi-escapes = "0.2"
+anyhow = "1.0"
 
 
 [package.metadata.docs.rs]
