@@ -141,11 +141,11 @@ fn reaching_definitions(cfg: &mut ControlFlowGraph) -> (Vec<Vec<Vec<Transfer>>>,
         );
 
         for edge in cfg.blocks[block_no].successors() {
+            let mut changed = false;
+
             if !block_vars.contains_key(&edge) {
-                blocks_todo.insert(edge);
-                block_vars.insert(edge, vec![vars.clone()]);
+                changed |= block_vars.insert(edge, vec![vars.clone()]).is_none();
             } else if block_vars[&edge][0] != vars {
-                blocks_todo.insert(edge);
                 let block_vars = block_vars
                     .get_mut(&edge)
                     .expect("block vars must contain edge");
@@ -155,10 +155,11 @@ fn reaching_definitions(cfg: &mut ControlFlowGraph) -> (Vec<Vec<Vec<Transfer>>>,
                         for (incoming_def, storage) in defs {
                             if !entry.contains_key(incoming_def) {
                                 entry.insert(*incoming_def, storage.clone());
+                                changed = true;
                             }
                         }
                     } else {
-                        block_vars[0].vars.insert(*var_no, defs.clone());
+                        changed |= block_vars[0].vars.insert(*var_no, defs.clone()).is_none();
                     }
                 }
 
@@ -166,8 +167,13 @@ fn reaching_definitions(cfg: &mut ControlFlowGraph) -> (Vec<Vec<Vec<Transfer>>>,
                 for store in &vars.stores {
                     if !block_vars[0].stores.iter().any(|(def, _)| *def == store.0) {
                         block_vars[0].stores.push(store.clone());
+                        changed = true;
                     }
                 }
+            }
+
+            if changed {
+                blocks_todo.insert(edge);
             }
         }
     }
