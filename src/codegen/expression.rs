@@ -3785,25 +3785,29 @@ fn array_subscript(
         let array = expression(array, cfg, contract_no, func, ns, vartab, opt);
         let index = expression(index, cfg, contract_no, func, ns, vartab, opt);
 
-
-
         return match ns.target {
-            Target::Solana | Target::Soroban => {
-                Expression::Subscript {
-                    loc: *loc,
-                    ty: elem_ty.clone(),
-                    array_ty: array_ty.clone(),
-                    expr: Box::new(array),
-                    index: Box::new(index),
-                }
+            Target::Solana | Target::Soroban => Expression::Subscript {
+                loc: *loc,
+                ty: elem_ty.clone(),
+                array_ty: array_ty.clone(),
+                expr: Box::new(array),
+                index: Box::new(index),
             },
-            Target::Polkadot { .. } => {
-                Expression::Keccak256 { loc: *loc, ty: array_ty.clone(), exprs: vec![array, index] }
-            }
-            Target::Soroban => {
-                Expression::Builtin { loc: *loc, tys: vec![elem_ty.clone()], kind: Builtin::AccessMapping, args: vec![array, index] }
+            Target::Polkadot { .. } => Expression::Keccak256 {
+                loc: *loc,
+                ty: array_ty.clone(),
+                exprs: vec![array, index],
             },
-            _ => todo!("Mapping subscript is not supported yet for target {:?}", ns.target),
+            Target::Soroban => Expression::Builtin {
+                loc: *loc,
+                tys: vec![elem_ty.clone()],
+                kind: Builtin::AccessMapping,
+                args: vec![array, index],
+            },
+            _ => todo!(
+                "Mapping subscript is not supported yet for target {:?}",
+                ns.target
+            ),
         };
     }
 

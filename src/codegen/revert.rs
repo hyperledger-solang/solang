@@ -20,6 +20,7 @@ use crate::sema::{
 use crate::Target;
 use num_bigint::{BigInt, Sign};
 use parse_display::Display;
+use sha2::digest::typenum::Exp;
 use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 use tiny_keccak::{Hasher, Keccak};
 
@@ -186,8 +187,10 @@ pub(super) fn assert_failure(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) {
+
+    
     // On Solana, returning the encoded arguments has no effect
-    if ns.target == Target::Solana {
+    if ns.target == Target::Solana || ns.target == Target::Soroban {
         cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
         return;
     }
@@ -258,7 +261,7 @@ pub(super) fn require(
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
 
     // On Solana and Polkadot, print the reason
-    if opt.log_runtime_errors && (ns.target == Target::Solana || ns.target.is_polkadot()) {
+    if opt.log_runtime_errors {
         if let Some(expr) = expr.clone() {
             let prefix = b"runtime_error: ";
             let error_string = format!(
@@ -287,7 +290,26 @@ pub(super) fn require(
                     ),
                 ],
             };
-            cfg.add(vartab, Instr::Print { expr: print_expr });
+
+
+
+            
+            let expr_string = prefix.to_vec()
+            .iter()
+            .chain(error_string.as_bytes())
+            .copied()
+            .collect::<Vec<u8>>();
+
+        let to_print = Expression::BytesLiteral {
+            loc: Codegen,
+            ty: Type::String,
+            value: expr_string.to_vec(),
+        };
+
+
+
+
+            cfg.add(vartab, Instr::Print { expr: to_print });
         } else {
             log_runtime_error(
                 opt.log_runtime_errors,
@@ -325,15 +347,21 @@ pub(super) fn revert(
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<_>>();
 
+    println!("Revert: {:?}", exprs);
+    println!("Error no: {:?}", error_no);
+
     if opt.log_runtime_errors {
         match (error_no, exprs.first()) {
             // In the case of Error(string), we can print the reason
             (None, Some(expr)) => {
-                let prefix = b"runtime_error: ";
+                let prefix: &[u8; 15] = b"runtime_error: ";
                 let error_string = format!(
                     " revert encountered in {},\n",
                     ns.loc_to_string(PathDisplay::Filename, loc)
                 );
+
+
+
                 let print_expr = Expression::FormatString {
                     loc: Codegen,
                     args: vec![
@@ -356,7 +384,24 @@ pub(super) fn revert(
                         ),
                     ],
                 };
-                cfg.add(vartab, Instr::Print { expr: print_expr });
+
+
+                let expr_string = prefix.to_vec()
+                    .iter()
+                    .chain(error_string.as_bytes())
+                    .copied()
+                    .collect::<Vec<u8>>();
+
+                let to_print = Expression::BytesLiteral {
+                    loc: Codegen,
+                    ty: Type::String,
+                    value: expr_string.to_vec(),
+                };
+
+
+
+
+                cfg.add(vartab, Instr::Print { expr: to_print });
             }
             // Else: Not all fields might be formattable, just print the error type
             _ => {

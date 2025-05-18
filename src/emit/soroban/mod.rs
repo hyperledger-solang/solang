@@ -148,7 +148,7 @@ impl SorobanTarget {
         );
         binary.internalize(export_list.as_slice());
 
-        Self::emit_initializer(&mut binary, ns);
+        //Self::emit_initializer(&mut binary, ns, contract.constructors(ns).first());
 
         Self::emit_env_meta_entries(context, &mut binary, opt);
 
@@ -268,6 +268,7 @@ impl SorobanTarget {
 
                             match ty {
                                 ast::Type::Uint(32) => ScSpecTypeDef::U32,
+                                ast::Type::Int(32) => ScSpecTypeDef::I32,
                                 ast::Type::Uint(64) => ScSpecTypeDef::U64,
                                 ast::Type::Int(128) => ScSpecTypeDef::I128,
                                 ast::Type::Uint(128) => ScSpecTypeDef::U128,
@@ -382,7 +383,11 @@ impl SorobanTarget {
         }
     }
 
-    fn emit_initializer(binary: &mut Binary, _ns: &ast::Namespace) {
+    fn emit_initializer(
+        binary: &mut Binary,
+        _ns: &ast::Namespace,
+        constructor_cfg_no: Option<&usize>,
+    ) {
         let mut cfg = ControlFlowGraph::new("__constructor".to_string(), ASTFunction::None);
 
         cfg.public = true;
@@ -413,6 +418,22 @@ impl SorobanTarget {
             .builder
             .build_call(storage_initializer, &[], "storage_initializer")
             .unwrap();
+
+        // call the user defined constructor (if any)
+        if let Some(cfg_no) = constructor_cfg_no {
+            let constructor = binary.functions[cfg_no];
+            let constructor_name = constructor.get_name().to_str().unwrap();
+            let constructor_arg1 = constructor.get_params()[0];
+
+            println!("constructor_arg1: {:?}", constructor_arg1);
+
+            let arg1 = constructor_arg1.into();
+
+            binary
+                .builder
+                .build_call(constructor, &[arg1], constructor_name)
+                .unwrap();
+        }
 
         // return zero
         let zero_val = binary.context.i64_type().const_int(2, false);

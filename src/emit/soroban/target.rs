@@ -51,16 +51,13 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(binary);
 
-
         let slot = if slot.is_const() {
             slot.as_basic_value_enum()
-                    .into_int_value()
-                    .const_cast(binary.context.i64_type(), false)
-        }
-        else {
+                .into_int_value()
+                .const_cast(binary.context.i64_type(), false)
+        } else {
             *slot
         };
-
 
         let ret = call!(
             HostFunctions::GetContractData.name(),
@@ -104,10 +101,9 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .unwrap();
         let slot = if slot.is_const() {
             slot.as_basic_value_enum()
-                    .into_int_value()
-                    .const_cast(binary.context.i64_type(), false)
-        }
-        else {
+                .into_int_value()
+                .const_cast(binary.context.i64_type(), false)
+        } else {
             *slot
         };
 
@@ -220,10 +216,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         index: BasicValueEnum<'a>,
         ns: &Namespace,
     ) -> IntValue<'a> {
-
         println!("storage_subscript: {:?}", ty);
         println!("index: {:?}", index);
-
 
         let vec_new = bin
             .builder
@@ -244,10 +238,9 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
         let slot = if slot.is_const() {
             slot.as_basic_value_enum()
-                    .into_int_value()
-                    .const_cast(bin.context.i64_type(), false)
-        }
-        else {
+                .into_int_value()
+                .const_cast(bin.context.i64_type(), false)
+        } else {
             slot
         };
 
@@ -257,9 +250,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 bin.module
                     .get_function(HostFunctions::VecPushBack.name())
                     .unwrap(),
-                &[vec_new.as_basic_value_enum().into(), 
-                slot
-                .into()],
+                &[vec_new.as_basic_value_enum().into(), slot.into()],
                 "push",
             )
             .unwrap()
@@ -274,8 +265,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 bin.module
                     .get_function(HostFunctions::VecPushBack.name())
                     .unwrap(),
-                &[vec_new.as_basic_value_enum().into(), 
-                index.into()],
+                &[vec_new.as_basic_value_enum().into(), index.into()],
                 "push",
             )
             .unwrap()
@@ -284,10 +274,10 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .unwrap()
             .into_int_value();
 
-       // vec_new
-       println!("vec_new {:?}", vec_new);
-       vec_new
-       //bin.context.i64_type().const_int(0, false)
+        // vec_new
+        println!("vec_new {:?}", vec_new);
+        vec_new
+        //bin.context.i64_type().const_int(0, false)
     }
 
     fn storage_push(
@@ -366,6 +356,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                     "log",
                 )
                 .unwrap();
+            println!("to print: {:?}", string);
         } else {
             todo!("Dynamic String printing is not yet supported")
         }

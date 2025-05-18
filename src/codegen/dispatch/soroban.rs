@@ -27,6 +27,9 @@ pub fn function_dispatch(
     let mut wrapper_cfgs = Vec::new();
 
     for cfg in all_cfg.iter_mut() {
+        println!("cfg: {:?}", cfg.name);
+        println!("cfg: {:?}", cfg.function_no);
+        //println!("cfg: {:?}", cfg);
         let function = match &cfg.function_no {
             ASTFunction::SolidityFunction(no) => &ns.functions[*no],
             _ => continue,
@@ -36,6 +39,8 @@ pub fn function_dispatch(
             if cfg.public {
                 if function.mangled_name_contracts.contains(&contract_no) {
                     function.mangled_name.clone()
+                } else if cfg.name.contains("constructor") {
+                    "__constructor".to_string()
                 } else {
                     function.id.name.clone()
                 }
@@ -43,6 +48,7 @@ pub fn function_dispatch(
                 continue;
             }
         };
+        println!("wrapper_name: {:?}", wrapper_name);
 
         let mut wrapper_cfg = ControlFlowGraph::new(wrapper_name.to_string(), ASTFunction::None);
 
@@ -62,6 +68,8 @@ pub fn function_dispatch(
         }
 
         wrapper_cfg.params = Arc::new(params);
+
+        println!("params: {:?}", wrapper_cfg.params);
 
         if returns.is_empty() {
             returns.push(ast::Parameter::new_default(Type::Ref(Box::new(Type::Void))));
@@ -94,6 +102,19 @@ pub fn function_dispatch(
         };
 
         let decoded = decode_args(&mut wrapper_cfg, &mut vartab);
+
+        // call storage initializer if needed
+        if wrapper_cfg.name == "__constructor" {
+            let placeholder = Instr::Call {
+                res: vec![],
+                call: InternalCallTy::HostFunction {
+                    name: "storage_initializer".to_string(),
+                },
+                return_tys: vec![],
+                args: vec![],
+            };
+            wrapper_cfg.add(&mut vartab, placeholder);
+        }
 
         let placeholder = Instr::Call {
             res: call_returns,

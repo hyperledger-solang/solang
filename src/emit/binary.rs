@@ -953,7 +953,11 @@ impl<'a> Binary<'a> {
                 }
                 Type::Enum(n) => self.llvm_type(&ns.enums[*n].ty, ns),
                 Type::String | Type::DynamicBytes => {
-                    self.module.get_struct_type("struct.vector").unwrap().into()
+                    if ns.target == Target::Soroban {
+                        BasicTypeEnum::IntType(self.context.i64_type())
+                    } else {
+                        self.module.get_struct_type("struct.vector").unwrap().into()
+                    }   
                 }
                 Type::Array(base_ty, dims) => {
                     dims.iter()
@@ -1089,7 +1093,9 @@ impl<'a> Binary<'a> {
                 // Return the constructed struct value
                 return struct_value.into();
             } else if matches!(ty, Type::String) {
-                let bs = init.as_ref().unwrap();
+
+                let default = " ".as_bytes().to_vec();
+                let bs = init.unwrap_or_else(|| &default);
 
                 let data = self.emit_global_string("const_string", bs, true);
 
