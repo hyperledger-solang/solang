@@ -1,14 +1,16 @@
 use anyhow::{anyhow, Result};
 use assert_cmd::cargo::cargo_bin;
+use regex::Regex;
 use std::{
     env::var,
     ffi::OsStr,
-    fs::copy,
+    fs::{copy, read_to_string},
     path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::Mutex,
 };
 use tempfile::{tempdir, TempDir};
+use walkdir::WalkDir;
 
 mod stylus_tests;
 
@@ -16,6 +18,82 @@ const PRIVATE_KEY: &str = "0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c221388877
 
 // smoelius: Only one Stylus test can be run at a time.
 static MUTEX: Mutex<()> = Mutex::new(());
+
+fn test(required: &[&str], forbidden: &[&str]) {
+    let _lock = MUTEX.lock();
+    let required = required
+        .iter()
+        .map(|s| Regex::new(&format!(r"\<{s}\>")).unwrap())
+        .collect::<Vec<_>>();
+    let forbidden = forbidden
+        .iter()
+        .map(|s| Regex::new(&format!(r"\<{s}\>")).unwrap())
+        .collect::<Vec<_>>();
+    let contract_re = Regex::new(r"\<contract ([A-Za-z_0-9]+)\>").unwrap();
+    let argless_function_re = Regex::new(r"\<function ([A-Za-z_0-9]+)\(\)").unwrap();
+    for result in WalkDir::new("testdata/solidity/test/libsolidity/semanticTests") {
+        let entry = result.unwrap();
+        let path = entry.path();
+        if !path.is_file() || path.extension() != Some(OsStr::new("sol")) {
+            continue;
+        }
+        let contents = read_to_string(path).unwrap();
+        if !required.iter().all(|re| re.is_match(&contents)) {
+            continue;
+        }
+        if forbidden.iter().any(|re| re.is_match(&contents)) {
+            continue;
+        }
+        let contracts = contract_re
+            .captures_iter(&contents)
+            .map(|captures| {
+                assert_eq!(2, captures.len());
+                captures.get(1).unwrap().as_str()
+            })
+            .collect::<Vec<_>>();
+        let [contract] = contracts[..] else {
+            eprintln!(
+                "Skipping `{}` as it contains {} contracts",
+                path.display(),
+                contracts.len()
+            );
+            continue;
+        };
+        let argless_functions = argless_function_re
+            .captures_iter(&contents)
+            .map(|captures| {
+                assert_eq!(2, captures.len());
+                captures.get(1).unwrap().as_str()
+            })
+            .collect::<Vec<_>>();
+        if argless_functions.is_empty() {
+            eprintln!(
+                "Skipping `{}` as it contains no argless functions",
+                path.display(),
+            );
+            continue;
+        }
+
+        eprintln!("Deploying `{}`", path.display());
+
+        let (tempdir, address) = match deploy(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(path),
+            contract,
+        ) {
+            Ok((tempdir, address)) => (tempdir, address),
+            Err(error) => {
+                eprintln!("Failed to deploy `{}`: {error:?}", path.display());
+                continue;
+            }
+        };
+        let dir = &tempdir;
+
+        for function in argless_functions {
+            eprintln!("Testing `{function}`");
+            call(dir, &address, &[&format!("{function}()")]);
+        }
+    }
+}
 
 fn deploy(path: impl AsRef<Path>, contract: &str) -> Result<(TempDir, String)> {
     let tempdir = tempdir().unwrap();
