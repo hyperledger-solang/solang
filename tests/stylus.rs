@@ -6,12 +6,16 @@ use std::{
     fs::copy,
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    sync::Mutex,
 };
 use tempfile::{tempdir, TempDir};
 
 mod stylus_tests;
 
 const PRIVATE_KEY: &str = "0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659";
+
+// smoelius: Only one Stylus test can be run at a time.
+static MUTEX: Mutex<()> = Mutex::new(());
 
 fn deploy(path: impl AsRef<Path>, contract: &str) -> Result<(TempDir, String)> {
     let tempdir = tempdir().unwrap();

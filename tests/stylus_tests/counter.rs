@@ -9,12 +9,13 @@
 //! - <https://book.getfoundry.sh/cast/>
 #![warn(clippy::pedantic)]
 
-use crate::{call, deploy, send};
+use crate::{call, deploy, send, MUTEX};
 use std::path::PathBuf;
 
 #[allow(clippy::too_many_lines)]
 #[test]
 fn counter() {
+    let _lock = MUTEX.lock();
     let (tempdir, address) = deploy(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("integration/stylus/counter.sol"),
         "Counter",

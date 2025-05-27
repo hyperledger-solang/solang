@@ -1,12 +1,13 @@
 #![warn(clippy::pedantic)]
 
-use crate::{call, deploy};
+use crate::{call, deploy, MUTEX};
 use regex::Regex;
 use std::{ffi::OsStr, fs::read_to_string, path::PathBuf};
 use walkdir::WalkDir;
 
 #[test]
 fn abi() {
+    let _lock = MUTEX.lock();
     let abi_re = Regex::new(r"\<abi\>").unwrap();
     let assembly_re = Regex::new(r"\<assembly\>").unwrap();
     let assert_re = Regex::new(r"\<assert\>").unwrap();
