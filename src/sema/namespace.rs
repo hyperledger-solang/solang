@@ -74,6 +74,7 @@ impl Namespace {
             Target::Solana => ns.add_solana_builtins(),
             Target::Polkadot { .. } => ns.add_polkadot_builtins(),
             Target::Soroban => ns.add_soroban_builtins(),
+            Target::Stylus => ns.add_stylus_builtins(),
             _ => {}
         }
 

@@ -1929,4 +1929,15 @@ impl Namespace {
             assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
         }
     }
+
+    // smoelius: I'm not sure if this is necessary. But it makes comparing Polkadot and Stylus
+    // output easier.
+    pub fn add_stylus_builtins(&mut self) {
+        self.files.push(File {
+            path: PathBuf::from("stylus"),
+            line_starts: Vec::new(),
+            cache_no: None,
+            import_no: None,
+        });
+    }
 }
