@@ -388,6 +388,25 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                 address.into()
             }
             Expression::Builtin {
+                kind: Builtin::Origin,
+                ..
+            } => {
+                let address = bin
+                    .builder
+                    .build_array_alloca(
+                        bin.context.i8_type(),
+                        i32_const!(bin.ns.address_length as u64),
+                        "address",
+                    )
+                    .unwrap();
+
+                call!("tx_origin", &[address.into()], "tx_origin");
+
+                bin.builder
+                    .build_load(bin.address_type(), address, "tx_origin")
+                    .unwrap()
+            }
+            Expression::Builtin {
                 kind: Builtin::Sender,
                 ..
             } => {

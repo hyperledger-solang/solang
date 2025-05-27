@@ -547,7 +547,7 @@ pub static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
             name: "origin",
             params: vec![],
             ret: vec![Type::Address(false)],
-            target: vec![Target::EVM],
+            target: vec![Target::EVM, Target::Stylus],
             doc: "Original address of sender current transaction",
             constant: false,
         },

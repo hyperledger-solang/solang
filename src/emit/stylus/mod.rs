@@ -81,6 +81,7 @@ impl StylusTarget {
             "storage_flush_cache",
             "storage_cache_bytes32",
             "storage_load_bytes32",
+            "tx_origin",
             "write_result",
         ]);
 
@@ -178,6 +179,7 @@ impl StylusTarget {
         external!("storage_cache_bytes32", void_type, u8_ptr, u8_ptr);
         external!("storage_flush_cache", void_type, u32_val);
         external!("storage_load_bytes32", void_type, u8_ptr, u8_ptr);
+        external!("tx_origin", void_type, u8_ptr);
         external!("write_result", void_type, u8_ptr, u32_val);
     }
 
