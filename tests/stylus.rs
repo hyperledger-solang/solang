@@ -25,8 +25,8 @@ fn test(required: &[&str], forbidden: &[&str]) {
         .iter()
         .map(|s| Regex::new(&format!(r"\<{s}\>")).unwrap())
         .collect::<Vec<_>>();
-    let forbidden = forbidden
-        .iter()
+    let forbidden = std::iter::once("assembly")
+        .chain(forbidden.iter().copied())
         .map(|s| Regex::new(&format!(r"\<{s}\>")).unwrap())
         .collect::<Vec<_>>();
     let contract_re = Regex::new(r"\<contract ([A-Za-z_0-9]+)\>").unwrap();
