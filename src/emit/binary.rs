@@ -90,7 +90,14 @@ macro_rules! emit_context {
             ($name:expr, $args:expr) => {
                 $binary
                     .builder
-                    .build_call($binary.module.get_function($name).unwrap(), $args, "")
+                    .build_call(
+                        $binary
+                            .module
+                            .get_function($name)
+                            .unwrap_or_else(|| panic!("`{}` is unimplemented", $name)),
+                        $args,
+                        "",
+                    )
                     .unwrap()
             };
             ($name:expr, $args:expr, $call_name:literal) => {
