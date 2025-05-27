@@ -1450,7 +1450,7 @@ mod tests {
         };
     }
 
-    /// VersionComparsion
+    /// VersionComparison
     macro_rules! version {
         ($($l:literal),+) => {
             <[_]>::into_vec(Box::new([ $( $l.into() ),+ ]))

@@ -2710,7 +2710,7 @@ fn expr_builtin(
 
             ///////////////////////////////////////////////////////////////////////////////////
 
-            // now forming the enum. The enum is a VecObject[Symbol("Contract"), sub invokations map].
+            // now forming the enum. The enum is a VecObject[Symbol("Contract"), sub invocations map].
             // FIXME: This should use VecNewFromLinearMemory to create the enum in one go.
 
             let contract_capitalized = Expression::BytesLiteral {

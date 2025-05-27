@@ -953,7 +953,7 @@ pub enum VariableAttribute {
     /// `immutable`
     Immutable(Loc),
 
-    /// `ovveride(<1>,*)`
+    /// `override(<1>,*)`
     Override(Loc, Vec<IdentifierPath>),
 
     /// Storage type.
