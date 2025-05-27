@@ -375,7 +375,7 @@ pub enum InternalCallTy {
     HostFunction { name: String },
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HashTy {
     Keccak256,
     Ripemd160,

@@ -208,7 +208,12 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         length: IntValue,
         dest: PointerValue,
     ) {
-        unimplemented!()
+        emit_context!(bin);
+
+        call!(
+            "native_keccak256",
+            &[src.into(), length.into(), dest.into()]
+        );
     }
 
     /// Prints a string
@@ -450,7 +455,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         const HASHLEN: u64 = 32;
 
         if hash != HashTy::Keccak256 {
-            unimplemented!();
+            unimplemented!("{hash:?}");
         }
 
         let res = bin
