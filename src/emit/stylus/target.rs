@@ -48,9 +48,13 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         call!("storage_load_bytes32", &[slot_ptr.into(), value_ptr.into()]);
 
-        bin.builder
-            .build_load(bin.context.custom_width_int_type(256), value_ptr, "value")
-            .unwrap()
+        match ty {
+            Type::InternalFunction { .. } => unimplemented!(),
+            _ => bin
+                .builder
+                .build_load(bin.context.custom_width_int_type(256), value_ptr, "value")
+                .unwrap(),
+        }
     }
 
     /// Recursively store a type to storage
@@ -382,6 +386,25 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                 call!("contract_address", &[address.into()], "contract_address");
 
                 address.into()
+            }
+            Expression::Builtin {
+                kind: Builtin::Sender,
+                ..
+            } => {
+                let address = bin
+                    .builder
+                    .build_array_alloca(
+                        bin.context.i8_type(),
+                        i32_const!(bin.ns.address_length as u64),
+                        "address",
+                    )
+                    .unwrap();
+
+                call!("msg_sender", &[address.into()], "msg_sender");
+
+                bin.builder
+                    .build_load(bin.address_type(), address, "caller")
+                    .unwrap()
             }
             _ => unimplemented!(),
         }

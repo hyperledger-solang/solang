@@ -70,6 +70,7 @@ impl StylusTarget {
             "delegate_call_contract",
             "log_txt",
             "msg_reentrant",
+            "msg_sender",
             "msg_value",
             "native_keccak256",
             "pay_for_memory_grow",
@@ -158,6 +159,7 @@ impl StylusTarget {
         );
         external!("log_txt", void_type, u8_ptr, u32_val);
         external!("msg_reentrant", i32_type);
+        external!("msg_sender", void_type, u8_ptr);
         external!("msg_value", void_type, u8_ptr);
         external!("native_keccak256", void_type, u8_ptr, u32_val, u8_ptr);
         external!("pay_for_memory_grow", void_type, u16_val);
