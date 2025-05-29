@@ -1,3 +1,11 @@
+This is a fork of the Solang compiler that aims to support [Stylus](https://arbitrum.questbook.app/dashboard/?chainId=10&proposalId=6771b86f8f4a6bf405ad6d8c&grantId=671a105a2047c84bb8a73770).
+
+Progress is tracked in issue [#4](https://github.com/trail-of-forks/solang/issues/4).
+
+The original Solang README follows.
+
+---
+
 <img src="https://raw.githubusercontent.com/hyperledger/solang/main/docs/hl_solang_horizontal-color.svg" alt="Solang Logo" width="75%"/>
 
 # solang - Solidity Compiler for Solana, Polkadot and Soroban
