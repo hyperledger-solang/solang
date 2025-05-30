@@ -42,18 +42,24 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        let value_ptr = bin.builder.build_alloca(slot.get_type(), "value").unwrap();
-
         bin.builder.build_store(slot_ptr, *slot).unwrap();
 
-        call!("storage_load_bytes32", &[slot_ptr.into(), value_ptr.into()]);
-
         match ty {
+            Type::DynamicBytes | Type::String => {
+                self.get_storage_string(bin, function, slot_ptr).into()
+            }
             Type::InternalFunction { .. } => unimplemented!(),
-            _ => bin
-                .builder
-                .build_load(bin.context.custom_width_int_type(256), value_ptr, "value")
-                .unwrap(),
+            _ => {
+                dbg!(ty);
+
+                let ty = bin.context.custom_width_int_type(256);
+
+                let value_ptr = bin.builder.build_alloca(ty, "value").unwrap();
+
+                call!("storage_load_bytes32", &[slot_ptr.into(), value_ptr.into()]);
+
+                bin.builder.build_load(ty, value_ptr, "value").unwrap()
+            }
         }
     }
 
@@ -72,16 +78,26 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        let value_ptr = bin.builder.build_alloca(slot.get_type(), "value").unwrap();
-
         bin.builder.build_store(slot_ptr, *slot).unwrap();
 
-        bin.builder.build_store(value_ptr, value).unwrap();
-
-        call!(
-            "storage_cache_bytes32",
-            &[slot_ptr.into(), value_ptr.into()]
-        );
+        match ty {
+            Type::DynamicBytes | Type::String => {
+                self.set_storage_string(bin, function, slot_ptr, value);
+            }
+            Type::InternalFunction { .. } => unimplemented!(),
+            _ => {
+                dbg!(ty);
+                let value_ptr = bin
+                    .builder
+                    .build_alloca(bin.context.custom_width_int_type(256), "value")
+                    .unwrap();
+                bin.builder.build_store(value_ptr, value).unwrap();
+                call!(
+                    "storage_cache_bytes32",
+                    &[slot_ptr.into(), value_ptr.into()]
+                );
+            }
+        };
 
         call!("storage_flush_cache", &[i32_const!(1).into()]);
     }
@@ -105,7 +121,70 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         slot: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
     ) {
-        unimplemented!()
+        emit_context!(bin);
+
+        let len = bin.vector_len(dest);
+        let data = bin.vector_bytes(dest);
+
+        let len_ptr = bin
+            .builder
+            .build_alloca(bin.context.i32_type(), "len_ptr")
+            .unwrap();
+        bin.builder.build_store(len_ptr, len).unwrap();
+        call!("storage_cache_bytes32", &[slot.into(), len_ptr.into()]);
+
+        let n_chunks = bin
+            .builder
+            .build_int_unsigned_div(
+                bin.builder
+                    .build_int_add(len, i32_const!(31), "len_plus_31")
+                    .unwrap(),
+                i32_const!(32),
+                "n_chunks",
+            )
+            .unwrap();
+
+        let mut slot = next_slot(bin, slot, 32);
+
+        let slot_ptr = bin
+            .builder
+            .build_alloca(bin.context.custom_width_int_type(256), "slot")
+            .unwrap();
+
+        bin.emit_loop_cond_first_with_int(
+            function,
+            i32_zero!(),
+            n_chunks,
+            &mut slot,
+            |i_chunk: IntValue<'a>, slot: &mut IntValue<'a>| {
+                bin.builder.build_store(slot_ptr, *slot).unwrap();
+
+                let offset = bin
+                    .builder
+                    .build_int_mul(i_chunk, i32_const!(32), "ptr_plus_offset")
+                    .unwrap();
+                let chunk = bin
+                    .builder
+                    .build_load(
+                        bin.context.custom_width_int_type(256),
+                        ptr_plus_offset(bin, data, offset),
+                        "chunk",
+                    )
+                    .unwrap();
+
+                let chunk_ptr = bin
+                    .builder
+                    .build_alloca(bin.context.custom_width_int_type(256), "chunk_ptr")
+                    .unwrap();
+                bin.builder.build_store(chunk_ptr, chunk).unwrap();
+                call!(
+                    "storage_cache_bytes32",
+                    &[slot_ptr.into(), chunk_ptr.into()]
+                );
+            },
+        );
+
+        call!("storage_flush_cache", &[i32_const!(1).into()]);
     }
 
     fn get_storage_string(
@@ -114,7 +193,83 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
-        unimplemented!()
+        emit_context!(bin);
+
+        let len_ptr = bin
+            .builder
+            .build_alloca(bin.context.i32_type(), "len_ptr")
+            .unwrap();
+        call!("storage_load_bytes32", &[slot.into(), len_ptr.into()]);
+        let len = bin
+            .builder
+            .build_load(bin.context.i32_type(), len_ptr, "len")
+            .unwrap()
+            .into_int_value();
+
+        let n_chunks = bin
+            .builder
+            .build_int_unsigned_div(
+                bin.builder
+                    .build_int_add(len, i32_const!(31), "len_plus_31")
+                    .unwrap(),
+                i32_const!(32),
+                "n_chunks",
+            )
+            .unwrap();
+
+        let buffer_size = bin
+            .builder
+            .build_int_mul(n_chunks, i32_const!(32), "buffer_size")
+            .unwrap();
+        let buffer = call!("__malloc", &[buffer_size.into()])
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        let mut slot = next_slot(bin, slot, 32);
+
+        let slot_ptr = bin
+            .builder
+            .build_alloca(bin.context.custom_width_int_type(256), "slot")
+            .unwrap();
+
+        bin.emit_loop_cond_first_with_int(
+            function,
+            i32_zero!(),
+            n_chunks,
+            &mut slot,
+            |i_chunk: IntValue<'a>, slot: &mut IntValue<'a>| {
+                bin.builder.build_store(slot_ptr, *slot).unwrap();
+
+                let chunk_ptr = bin
+                    .builder
+                    .build_alloca(bin.context.custom_width_int_type(256), "chunk_ptr")
+                    .unwrap();
+                call!("storage_load_bytes32", &[slot_ptr.into(), chunk_ptr.into()]);
+                let chunk = bin
+                    .builder
+                    .build_load(bin.context.custom_width_int_type(256), chunk_ptr, "chunk")
+                    .unwrap();
+
+                let offset = bin
+                    .builder
+                    .build_int_mul(i_chunk, i32_const!(32), "ptr_plus_offset")
+                    .unwrap();
+                bin.builder
+                    .build_store(ptr_plus_offset(bin, buffer, offset), chunk)
+                    .unwrap();
+            },
+        );
+
+        call!(
+            "vector_new",
+            &[len.into(), i32_const!(1).into(), buffer.into(),]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_pointer_value()
     }
 
     fn set_storage_extfunc(
@@ -555,7 +710,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
     }
 }
 
-use local::{gas_calculation, status_inverted};
+use local::{gas_calculation, next_slot, ptr_plus_offset, status_inverted};
 
 mod local {
     #![warn(unused_variables)]
@@ -599,5 +754,49 @@ mod local {
             .build_select(is_zero, zero_output, non_zero_output, "selection")
             .unwrap()
             .into_int_value()
+    }
+
+    pub fn next_slot<'a>(
+        bin: &Binary<'a>,
+        value_ptr: PointerValue<'a>,
+        length: u32,
+    ) -> IntValue<'a> {
+        emit_context!(bin);
+
+        let ty = bin.context.custom_width_int_type(256);
+
+        let digest_ptr = bin.builder.build_alloca(ty, "digest").unwrap();
+
+        call!(
+            "native_keccak256",
+            &[
+                value_ptr.into(),
+                i32_const!(length as u64).into(),
+                digest_ptr.into()
+            ]
+        );
+
+        bin.builder
+            .build_load(ty, digest_ptr, "digest")
+            .unwrap()
+            .into_int_value()
+    }
+
+    pub fn ptr_plus_offset<'a>(
+        bin: &Binary<'a>,
+        ptr: PointerValue<'a>,
+        offset: IntValue<'a>,
+    ) -> PointerValue<'a> {
+        let ptr_as_int = bin
+            .builder
+            .build_ptr_to_int(ptr, offset.get_type(), "ptr_as_int")
+            .unwrap();
+        let ptr_as_int_plus_offset = bin
+            .builder
+            .build_int_add(ptr_as_int, offset, "ptr_as_int_plus_offset")
+            .unwrap();
+        bin.builder
+            .build_int_to_ptr(ptr_as_int_plus_offset, ptr.get_type(), "ptr_plus_offset")
+            .unwrap()
     }
 }
