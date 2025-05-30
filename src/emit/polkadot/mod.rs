@@ -30,7 +30,7 @@ impl PolkadotTarget {
         let filename = ns.files[contract.loc.file_no()].file_name();
         let mut bin = Binary::new(
             context,
-            ns.target,
+            ns,
             &contract.id.name,
             filename.as_str(),
             opt,
@@ -45,7 +45,7 @@ impl PolkadotTarget {
             .i32_type()
             .const_all_ones()
             .const_to_pointer(ptr);
-        bin.set_early_value_aborts(contract, ns);
+        bin.set_early_value_aborts(contract);
 
         let scratch_len = bin.module.add_global(
             context.i32_type(),
@@ -70,7 +70,7 @@ impl PolkadotTarget {
 
         target.declare_externals(&bin);
 
-        emit_functions(&mut target, &mut bin, contract, ns);
+        emit_functions(&mut target, &mut bin, contract);
 
         let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
         let mut storage_initializers = bin
@@ -82,8 +82,8 @@ impl PolkadotTarget {
             .expect("storage initializer is always present");
         assert!(storage_initializers.next().is_none());
 
-        target.emit_dispatch(Some(storage_initializer), &mut bin, ns);
-        target.emit_dispatch(None, &mut bin, ns);
+        target.emit_dispatch(Some(storage_initializer), &mut bin);
+        target.emit_dispatch(None, &mut bin);
 
         bin.internalize(&[
             "deploy",
@@ -274,12 +274,7 @@ impl PolkadotTarget {
     }
 
     /// Emits the "deploy" function if `storage_initializer` is `Some`, otherwise emits the "call" function.
-    fn emit_dispatch(
-        &mut self,
-        storage_initializer: Option<FunctionValue>,
-        bin: &mut Binary,
-        ns: &Namespace,
-    ) {
+    fn emit_dispatch(&mut self, storage_initializer: Option<FunctionValue>, bin: &mut Binary) {
         let ty = bin.context.void_type().fn_type(&[], false);
         let export_name = if storage_initializer.is_some() {
             "deploy"
@@ -291,7 +286,7 @@ impl PolkadotTarget {
         let args = vec![
             BasicMetadataValueEnum::PointerValue(input),
             BasicMetadataValueEnum::IntValue(input_length),
-            BasicMetadataValueEnum::IntValue(self.value_transferred(bin, ns)),
+            BasicMetadataValueEnum::IntValue(self.value_transferred(bin)),
             BasicMetadataValueEnum::PointerValue(bin.selector.as_pointer_value()),
         ];
         let dispatch_cfg_name = &storage_initializer
