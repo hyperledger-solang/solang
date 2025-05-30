@@ -19,18 +19,25 @@ const PRIVATE_KEY: &str = "0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c221388877
 // smoelius: Only one Stylus test can be run at a time.
 static MUTEX: Mutex<()> = Mutex::new(());
 
-fn test(required: &[&str], forbidden: &[&str]) {
+fn tests(required_forbidden_pairs: &[(&[&str], &[&str])]) {
     let _lock = MUTEX.lock();
-    let required = required
+    let required_forbidden_pairs = required_forbidden_pairs
         .iter()
-        .map(|s| Regex::new(&format!(r"\<{s}\>")).unwrap())
-        .collect::<Vec<_>>();
-    let forbidden = std::iter::once("assembly")
-        .chain(forbidden.iter().copied())
-        .map(|s| Regex::new(&format!(r"\<{s}\>")).unwrap())
+        .map(|(required, forbidden)| {
+            let required = required
+                .iter()
+                .map(|s| Regex::new(&format!(r"\<{s}\>")).unwrap())
+                .collect::<Vec<_>>();
+            let forbidden = std::iter::once("assembly")
+                .chain(forbidden.iter().copied())
+                .map(|s| Regex::new(&format!(r"\<{s}\>")).unwrap())
+                .collect::<Vec<_>>();
+            (required, forbidden)
+        })
         .collect::<Vec<_>>();
     let contract_re = Regex::new(r"\<contract ([A-Za-z_0-9]+)\>").unwrap();
     let argless_function_re = Regex::new(r"\<function ([A-Za-z_0-9]+)\(\)").unwrap();
+    let mut paths = Vec::new();
     for result in WalkDir::new("testdata/solidity/test/libsolidity/semanticTests") {
         let entry = result.unwrap();
         let path = entry.path();
@@ -38,12 +45,19 @@ fn test(required: &[&str], forbidden: &[&str]) {
             continue;
         }
         let contents = read_to_string(path).unwrap();
-        if !required.iter().all(|re| re.is_match(&contents)) {
+        if !required_forbidden_pairs
+            .iter()
+            .any(|(required, forbidden)| {
+                required.iter().all(|re| re.is_match(&contents))
+                    && !forbidden.iter().any(|re| re.is_match(&contents))
+            })
+        {
             continue;
         }
-        if forbidden.iter().any(|re| re.is_match(&contents)) {
-            continue;
-        }
+        paths.push(path.to_path_buf());
+    }
+    for path in paths {
+        let contents = read_to_string(&path).unwrap();
         let contracts = contract_re
             .captures_iter(&contents)
             .map(|captures| {
@@ -77,7 +91,7 @@ fn test(required: &[&str], forbidden: &[&str]) {
         eprintln!("Deploying `{}`", path.display());
 
         let (tempdir, address) = match deploy(
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(path),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(&path),
             contract,
         ) {
             Ok((tempdir, address)) => (tempdir, address),
@@ -217,11 +231,15 @@ where
         command.stderr(Stdio::inherit());
     }
     let output = command.output().unwrap();
-    if output.status.success() {
-        let stdout = String::from_utf8(output.stdout).unwrap();
-        Ok(strip_ansi_escapes::strip_str(stdout))
-    } else {
-        Err(anyhow!("command failed: {command:?}"))
+    match output.status.code() {
+        Some(0) => {
+            let stdout = String::from_utf8(output.stdout).unwrap();
+            Ok(strip_ansi_escapes::strip_str(stdout))
+        }
+        Some(1) => Err(anyhow!("command failed: {command:?}")),
+        other => {
+            panic!("command failed with code {other:?}: {command:?}");
+        }
     }
 }
 
