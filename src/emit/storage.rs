@@ -9,7 +9,7 @@ use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, Point
 pub(super) trait StorageSlot {
     fn set_storage(
         &self,
-        binary: &Binary,
+        bin: &Binary,
         slot: PointerValue,
         dest: PointerValue,
         dest_ty: BasicTypeEnum,
@@ -17,13 +17,13 @@ pub(super) trait StorageSlot {
 
     fn get_storage_address<'a>(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         slot: PointerValue<'a>,
         ns: &Namespace,
     ) -> ArrayValue<'a>;
 
     /// Clear a particlar storage slot (slot-based storage chains should implement)
-    fn storage_delete_single_slot(&self, binary: &Binary, slot: PointerValue);
+    fn storage_delete_single_slot(&self, bin: &Binary, slot: PointerValue);
 
     /// Recursively load a type from storage for slot based storage
     fn storage_load_slot<'a>(

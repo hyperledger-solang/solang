@@ -15,24 +15,24 @@ use num_traits::{One, ToPrimitive};
 impl StorageSlot for PolkadotTarget {
     fn set_storage(
         &self,
-        binary: &Binary,
+        bin: &Binary,
         slot: PointerValue,
         dest: PointerValue,
         dest_ty: BasicTypeEnum,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let dest_size = if dest_ty.is_array_type() {
             dest_ty
                 .into_array_type()
                 .size_of()
                 .expect("array should be fixed size")
-                .const_cast(binary.context.i32_type(), false)
+                .const_cast(bin.context.i32_type(), false)
         } else {
             dest_ty
                 .into_int_type()
                 .size_of()
-                .const_cast(binary.context.i32_type(), false)
+                .const_cast(bin.context.i32_type(), false)
         };
 
         seal_set_storage!(
@@ -45,16 +45,15 @@ impl StorageSlot for PolkadotTarget {
 
     fn get_storage_address<'a>(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         slot: PointerValue<'a>,
         ns: &Namespace,
     ) -> ArrayValue<'a> {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
-        binary
-            .builder
+        bin.builder
             .build_store(scratch_len, i32_const!(ns.address_length as u64))
             .unwrap();
 
@@ -65,29 +64,27 @@ impl StorageSlot for PolkadotTarget {
             scratch_len.into()
         );
 
-        let exists_is_zero = binary
+        let exists_is_zero = bin
             .builder
             .build_int_compare(IntPredicate::EQ, exists, i32_zero!(), "storage_exists")
             .unwrap();
 
-        binary
-            .builder
+        bin.builder
             .build_select(
                 exists_is_zero,
-                binary
-                    .builder
-                    .build_load(binary.address_type(ns), scratch_buf, "address")
+                bin.builder
+                    .build_load(bin.address_type(ns), scratch_buf, "address")
                     .unwrap()
                     .into_array_value(),
-                binary.address_type(ns).const_zero(),
+                bin.address_type(ns).const_zero(),
                 "retrieved_address",
             )
             .unwrap()
             .into_array_value()
     }
 
-    fn storage_delete_single_slot(&self, binary: &Binary, slot: PointerValue) {
-        emit_context!(binary);
+    fn storage_delete_single_slot(&self, bin: &Binary, slot: PointerValue) {
+        emit_context!(bin);
 
         call!("clear_storage", &[slot.into(), i32_const!(32).into()])
             .try_as_basic_value()

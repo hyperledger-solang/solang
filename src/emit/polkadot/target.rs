@@ -23,13 +23,13 @@ use std::collections::HashMap;
 impl<'a> TargetRuntime<'a> for PolkadotTarget {
     fn set_storage_extfunc(
         &self,
-        binary: &Binary,
+        bin: &Binary,
         _function: FunctionValue,
         slot: PointerValue,
         dest: PointerValue,
         dest_ty: BasicTypeEnum,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
         seal_set_storage!(
             slot.into(),
@@ -38,42 +38,37 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             dest_ty
                 .size_of()
                 .unwrap()
-                .const_cast(binary.context.i32_type(), false)
+                .const_cast(bin.context.i32_type(), false)
                 .into()
         );
     }
 
     fn get_storage_extfunc(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         _function: FunctionValue,
         slot: PointerValue<'a>,
         ns: &ast::Namespace,
     ) -> PointerValue<'a> {
-        emit_context!(binary);
+        emit_context!(bin);
 
         // This is the size of the external function struct
         let len = ns.address_length + 4;
 
         let ef = call!(
             "__malloc",
-            &[binary
-                .context
-                .i32_type()
-                .const_int(len as u64, false)
-                .into()]
+            &[bin.context.i32_type().const_int(len as u64, false).into()]
         )
         .try_as_basic_value()
         .left()
         .unwrap()
         .into_pointer_value();
 
-        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
-        binary
-            .builder
+        let scratch_len = bin.scratch_len.unwrap().as_pointer_value();
+        bin.builder
             .build_store(
                 scratch_len,
-                binary.context.i64_type().const_int(len as u64, false),
+                bin.context.i64_type().const_int(len as u64, false),
             )
             .unwrap();
 
@@ -98,42 +93,40 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
     fn set_storage_string(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue<'a>,
         slot: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
-        let len = binary.vector_len(dest);
-        let data = binary.vector_bytes(dest);
+        let len = bin.vector_len(dest);
+        let data = bin.vector_bytes(dest);
 
-        let exists = binary
+        let exists = bin
             .builder
             .build_int_compare(IntPredicate::NE, len, i32_zero!(), "exists")
             .unwrap();
 
-        let delete_block = binary.context.append_basic_block(function, "delete_block");
+        let delete_block = bin.context.append_basic_block(function, "delete_block");
 
-        let set_block = binary.context.append_basic_block(function, "set_block");
+        let set_block = bin.context.append_basic_block(function, "set_block");
 
-        let done_storage = binary.context.append_basic_block(function, "done_storage");
+        let done_storage = bin.context.append_basic_block(function, "done_storage");
 
-        binary
-            .builder
+        bin.builder
             .build_conditional_branch(exists, set_block, delete_block)
             .unwrap();
 
-        binary.builder.position_at_end(set_block);
+        bin.builder.position_at_end(set_block);
 
         seal_set_storage!(slot.into(), i32_const!(32).into(), data.into(), len.into());
 
-        binary
-            .builder
+        bin.builder
             .build_unconditional_branch(done_storage)
             .unwrap();
 
-        binary.builder.position_at_end(delete_block);
+        bin.builder.position_at_end(delete_block);
 
         call!("clear_storage", &[slot.into(), i32_const!(32).into()])
             .try_as_basic_value()
@@ -141,27 +134,26 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .unwrap()
             .into_int_value();
 
-        binary
-            .builder
+        bin.builder
             .build_unconditional_branch(done_storage)
             .unwrap();
 
-        binary.builder.position_at_end(done_storage);
+        bin.builder.position_at_end(done_storage);
     }
 
     /// Read from contract storage
     fn get_storage_int(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let (scratch_buf, scratch_len) = scratch_buf!();
-        let ty_len = ty.size_of().const_cast(binary.context.i32_type(), false);
-        binary.builder.build_store(scratch_len, ty_len).unwrap();
+        let ty_len = ty.size_of().const_cast(bin.context.i32_type(), false);
+        bin.builder.build_store(scratch_len, ty_len).unwrap();
 
         let exists = seal_get_storage!(
             slot.into(),
@@ -170,35 +162,33 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let exists_is_zero = binary
+        let exists_is_zero = bin
             .builder
             .build_int_compare(IntPredicate::EQ, exists, i32_zero!(), "storage_exists")
             .unwrap();
 
-        let entry = binary.builder.get_insert_block().unwrap();
-        let retrieve_block = binary.context.append_basic_block(function, "in_storage");
-        let done_storage = binary.context.append_basic_block(function, "done_storage");
+        let entry = bin.builder.get_insert_block().unwrap();
+        let retrieve_block = bin.context.append_basic_block(function, "in_storage");
+        let done_storage = bin.context.append_basic_block(function, "done_storage");
 
-        binary
-            .builder
+        bin.builder
             .build_conditional_branch(exists_is_zero, retrieve_block, done_storage)
             .unwrap();
 
-        binary.builder.position_at_end(retrieve_block);
+        bin.builder.position_at_end(retrieve_block);
 
-        let loaded_int = binary
+        let loaded_int = bin
             .builder
-            .build_load(ty, binary.scratch.unwrap().as_pointer_value(), "int")
+            .build_load(ty, bin.scratch.unwrap().as_pointer_value(), "int")
             .unwrap();
 
-        binary
-            .builder
+        bin.builder
             .build_unconditional_branch(done_storage)
             .unwrap();
 
-        binary.builder.position_at_end(done_storage);
+        bin.builder.position_at_end(done_storage);
 
-        let res = binary.builder.build_phi(ty, "storage_res").unwrap();
+        let res = bin.builder.build_phi(ty, "storage_res").unwrap();
 
         res.add_incoming(&[(&loaded_int, retrieve_block), (&ty.const_zero(), entry)]);
 
@@ -208,16 +198,15 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     /// Read string from contract storage
     fn get_storage_string(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
-        binary
-            .builder
+        bin.builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64))
             .unwrap();
 
@@ -228,35 +217,32 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let exists_is_zero = binary
+        let exists_is_zero = bin
             .builder
             .build_int_compare(IntPredicate::EQ, exists, i32_zero!(), "storage_exists")
             .unwrap();
 
-        let ty = binary
+        let ty = bin
             .module
             .get_struct_type("struct.vector")
             .unwrap()
             .ptr_type(AddressSpace::default());
 
-        let entry = binary.builder.get_insert_block().unwrap();
+        let entry = bin.builder.get_insert_block().unwrap();
 
-        let retrieve_block = binary
-            .context
-            .append_basic_block(function, "retrieve_block");
+        let retrieve_block = bin.context.append_basic_block(function, "retrieve_block");
 
-        let done_storage = binary.context.append_basic_block(function, "done_storage");
+        let done_storage = bin.context.append_basic_block(function, "done_storage");
 
-        binary
-            .builder
+        bin.builder
             .build_conditional_branch(exists_is_zero, retrieve_block, done_storage)
             .unwrap();
 
-        binary.builder.position_at_end(retrieve_block);
+        bin.builder.position_at_end(retrieve_block);
 
-        let length = binary
+        let length = bin
             .builder
-            .build_load(binary.context.i32_type(), scratch_len, "string_len")
+            .build_load(bin.context.i32_type(), scratch_len, "string_len")
             .unwrap();
 
         let loaded_string = call!(
@@ -268,20 +254,18 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         .unwrap()
         .into_pointer_value();
 
-        binary
-            .builder
+        bin.builder
             .build_unconditional_branch(done_storage)
             .unwrap();
 
-        binary.builder.position_at_end(done_storage);
+        bin.builder.position_at_end(done_storage);
 
-        let res = binary.builder.build_phi(ty, "storage_res").unwrap();
+        let res = bin.builder.build_phi(ty, "storage_res").unwrap();
 
         res.add_incoming(&[
             (&loaded_string, retrieve_block),
             (
-                &binary
-                    .module
+                &bin.module
                     .get_struct_type("struct.vector")
                     .unwrap()
                     .ptr_type(AddressSpace::default())
@@ -296,25 +280,21 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     /// Read string from contract storage
     fn get_storage_bytes_subscript(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue,
         slot: IntValue<'a>,
         index: IntValue<'a>,
         loc: Loc,
         ns: &Namespace,
     ) -> IntValue<'a> {
-        emit_context!(binary);
+        emit_context!(bin);
 
-        let slot_ptr = binary
-            .builder
-            .build_alloca(slot.get_type(), "slot")
-            .unwrap();
-        binary.builder.build_store(slot_ptr, slot).unwrap();
+        let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
+        bin.builder.build_store(slot_ptr, slot).unwrap();
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
-        binary
-            .builder
+        bin.builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64))
             .unwrap();
 
@@ -325,18 +305,17 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let exists_is_zero = binary
+        let exists_is_zero = bin
             .builder
             .build_int_compare(IntPredicate::EQ, exists, i32_zero!(), "storage_exists")
             .unwrap();
 
-        let length = binary
+        let length = bin
             .builder
             .build_select(
                 exists_is_zero,
-                binary
-                    .builder
-                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
+                bin.builder
+                    .build_load(bin.context.i32_type(), scratch_len, "string_len")
                     .unwrap(),
                 i32_zero!().into(),
                 "string_length",
@@ -345,54 +324,51 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .into_int_value();
 
         // do bounds check on index
-        let in_range = binary
+        let in_range = bin
             .builder
             .build_int_compare(IntPredicate::ULT, index, length, "index_in_range")
             .unwrap();
 
-        let retrieve_block = binary.context.append_basic_block(function, "in_range");
-        let bang_block = binary.context.append_basic_block(function, "bang_block");
+        let retrieve_block = bin.context.append_basic_block(function, "in_range");
+        let bang_block = bin.context.append_basic_block(function, "bang_block");
 
-        binary
-            .builder
+        bin.builder
             .build_conditional_branch(in_range, retrieve_block, bang_block)
             .unwrap();
 
-        binary.builder.position_at_end(bang_block);
+        bin.builder.position_at_end(bang_block);
 
-        binary.log_runtime_error(
+        bin.log_runtime_error(
             self,
             "storage array index out of bounds".to_string(),
             Some(loc),
             ns,
         );
-        let (revert_out, revert_out_len) = binary.panic_data_const(ns, PanicCode::ArrayIndexOob);
-        self.assert_failure(binary, revert_out, revert_out_len);
+        let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::ArrayIndexOob);
+        self.assert_failure(bin, revert_out, revert_out_len);
 
-        binary.builder.position_at_end(retrieve_block);
+        bin.builder.position_at_end(retrieve_block);
 
         let offset = unsafe {
-            binary
-                .builder
+            bin.builder
                 .build_gep(
-                    binary.context.i8_type().array_type(SCRATCH_SIZE),
-                    binary.scratch.unwrap().as_pointer_value(),
+                    bin.context.i8_type().array_type(SCRATCH_SIZE),
+                    bin.scratch.unwrap().as_pointer_value(),
                     &[i32_zero!(), index],
                     "data_offset",
                 )
                 .unwrap()
         };
 
-        binary
-            .builder
-            .build_load(binary.context.i8_type(), offset, "value")
+        bin.builder
+            .build_load(bin.context.i8_type(), offset, "value")
             .unwrap()
             .into_int_value()
     }
 
     fn set_storage_bytes_subscript(
         &self,
-        binary: &Binary,
+        bin: &Binary,
         function: FunctionValue,
         slot: IntValue,
         index: IntValue,
@@ -400,18 +376,14 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         ns: &Namespace,
         loc: Loc,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
-        let slot_ptr = binary
-            .builder
-            .build_alloca(slot.get_type(), "slot")
-            .unwrap();
-        binary.builder.build_store(slot_ptr, slot).unwrap();
+        let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
+        bin.builder.build_store(slot_ptr, slot).unwrap();
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
-        binary
-            .builder
+        bin.builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64))
             .unwrap();
 
@@ -422,18 +394,17 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let exists_is_zero = binary
+        let exists_is_zero = bin
             .builder
             .build_int_compare(IntPredicate::EQ, exists, i32_zero!(), "storage_exists")
             .unwrap();
 
-        let length = binary
+        let length = bin
             .builder
             .build_select(
                 exists_is_zero,
-                binary
-                    .builder
-                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
+                bin.builder
+                    .build_load(bin.context.i32_type(), scratch_len, "string_len")
                     .unwrap(),
                 i32_zero!().into(),
                 "string_length",
@@ -442,37 +413,35 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .into_int_value();
 
         // do bounds check on index
-        let in_range = binary
+        let in_range = bin
             .builder
             .build_int_compare(IntPredicate::ULT, index, length, "index_in_range")
             .unwrap();
 
-        let retrieve_block = binary.context.append_basic_block(function, "in_range");
-        let bang_block = binary.context.append_basic_block(function, "bang_block");
+        let retrieve_block = bin.context.append_basic_block(function, "in_range");
+        let bang_block = bin.context.append_basic_block(function, "bang_block");
 
-        binary
-            .builder
+        bin.builder
             .build_conditional_branch(in_range, retrieve_block, bang_block)
             .unwrap();
 
-        binary.builder.position_at_end(bang_block);
-        binary.log_runtime_error(
+        bin.builder.position_at_end(bang_block);
+        bin.log_runtime_error(
             self,
             "storage index out of bounds".to_string(),
             Some(loc),
             ns,
         );
-        let (revert_out, revert_out_len) = binary.panic_data_const(ns, PanicCode::ArrayIndexOob);
-        self.assert_failure(binary, revert_out, revert_out_len);
+        let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::ArrayIndexOob);
+        self.assert_failure(bin, revert_out, revert_out_len);
 
-        binary.builder.position_at_end(retrieve_block);
+        bin.builder.position_at_end(retrieve_block);
 
         let offset = unsafe {
-            binary
-                .builder
+            bin.builder
                 .build_gep(
-                    binary.context.i8_type().array_type(SCRATCH_SIZE),
-                    binary.scratch.unwrap().as_pointer_value(),
+                    bin.context.i8_type().array_type(SCRATCH_SIZE),
+                    bin.scratch.unwrap().as_pointer_value(),
                     &[i32_zero!(), index],
                     "data_offset",
                 )
@@ -480,7 +449,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         };
 
         // set the result
-        binary.builder.build_store(offset, val).unwrap();
+        bin.builder.build_store(offset, val).unwrap();
 
         seal_set_storage!(
             slot_ptr.into(),
@@ -493,29 +462,25 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     /// Push a byte onto a bytes string in storage
     fn storage_push(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         _function: FunctionValue,
         _ty: &ast::Type,
         slot: IntValue<'a>,
         val: Option<BasicValueEnum<'a>>,
         _ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let val = val.unwrap();
 
-        let slot_ptr = binary
-            .builder
-            .build_alloca(slot.get_type(), "slot")
-            .unwrap();
-        binary.builder.build_store(slot_ptr, slot).unwrap();
+        let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
+        bin.builder.build_store(slot_ptr, slot).unwrap();
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
         // Since we are going to add one byte, we set the buffer length to one less. This will
         // trap for us if it does not fit, so we don't have to code this ourselves
-        binary
-            .builder
+        bin.builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64 - 1))
             .unwrap();
 
@@ -526,18 +491,17 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let exists_is_zero = binary
+        let exists_is_zero = bin
             .builder
             .build_int_compare(IntPredicate::EQ, exists, i32_zero!(), "storage_exists")
             .unwrap();
 
-        let length = binary
+        let length = bin
             .builder
             .build_select(
                 exists_is_zero,
-                binary
-                    .builder
-                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
+                bin.builder
+                    .build_load(bin.context.i32_type(), scratch_len, "string_len")
                     .unwrap(),
                 i32_zero!().into(),
                 "string_length",
@@ -547,21 +511,20 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         // set the result
         let offset = unsafe {
-            binary
-                .builder
+            bin.builder
                 .build_gep(
-                    binary.context.i8_type().array_type(SCRATCH_SIZE),
-                    binary.scratch.unwrap().as_pointer_value(),
+                    bin.context.i8_type().array_type(SCRATCH_SIZE),
+                    bin.scratch.unwrap().as_pointer_value(),
                     &[i32_zero!(), length],
                     "data_offset",
                 )
                 .unwrap()
         };
 
-        binary.builder.build_store(offset, val).unwrap();
+        bin.builder.build_store(offset, val).unwrap();
 
         // Set the new length
-        let length = binary
+        let length = bin
             .builder
             .build_int_add(length, i32_const!(1), "new_length")
             .unwrap();
@@ -579,7 +542,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     /// Pop a value from a bytes string
     fn storage_pop(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue<'a>,
         ty: &ast::Type,
         slot: IntValue<'a>,
@@ -587,18 +550,14 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         ns: &ast::Namespace,
         loc: Loc,
     ) -> Option<BasicValueEnum<'a>> {
-        emit_context!(binary);
+        emit_context!(bin);
 
-        let slot_ptr = binary
-            .builder
-            .build_alloca(slot.get_type(), "slot")
-            .unwrap();
-        binary.builder.build_store(slot_ptr, slot).unwrap();
+        let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
+        bin.builder.build_store(slot_ptr, slot).unwrap();
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
-        binary
-            .builder
+        bin.builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64))
             .unwrap();
 
@@ -609,18 +568,17 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let exists_is_zero = binary
+        let exists_is_zero = bin
             .builder
             .build_int_compare(IntPredicate::EQ, exists, i32_zero!(), "storage_exists")
             .unwrap();
 
-        let length = binary
+        let length = bin
             .builder
             .build_select(
                 exists_is_zero,
-                binary
-                    .builder
-                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
+                bin.builder
+                    .build_load(bin.context.i32_type(), scratch_len, "string_len")
                     .unwrap(),
                 i32_zero!().into(),
                 "string_length",
@@ -629,44 +587,42 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .into_int_value();
 
         // do bounds check on index
-        let in_range = binary
+        let in_range = bin
             .builder
             .build_int_compare(IntPredicate::NE, i32_zero!(), length, "index_in_range")
             .unwrap();
 
-        let retrieve_block = binary.context.append_basic_block(function, "in_range");
-        let bang_block = binary.context.append_basic_block(function, "bang_block");
+        let retrieve_block = bin.context.append_basic_block(function, "in_range");
+        let bang_block = bin.context.append_basic_block(function, "bang_block");
 
-        binary
-            .builder
+        bin.builder
             .build_conditional_branch(in_range, retrieve_block, bang_block)
             .unwrap();
 
-        binary.builder.position_at_end(bang_block);
-        binary.log_runtime_error(
+        bin.builder.position_at_end(bang_block);
+        bin.log_runtime_error(
             self,
             "pop from empty storage array".to_string(),
             Some(loc),
             ns,
         );
-        let (revert_out, revert_out_len) = binary.panic_data_const(ns, PanicCode::EmptyArrayPop);
-        self.assert_failure(binary, revert_out, revert_out_len);
+        let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::EmptyArrayPop);
+        self.assert_failure(bin, revert_out, revert_out_len);
 
-        binary.builder.position_at_end(retrieve_block);
+        bin.builder.position_at_end(retrieve_block);
 
         // Set the new length
-        let new_length = binary
+        let new_length = bin
             .builder
             .build_int_sub(length, i32_const!(1), "new_length")
             .unwrap();
 
         let val = if load {
             let offset = unsafe {
-                binary
-                    .builder
+                bin.builder
                     .build_gep(
-                        binary.context.i8_type().array_type(SCRATCH_SIZE),
-                        binary.scratch.unwrap().as_pointer_value(),
+                        bin.context.i8_type().array_type(SCRATCH_SIZE),
+                        bin.scratch.unwrap().as_pointer_value(),
                         &[i32_zero!(), new_length],
                         "data_offset",
                     )
@@ -674,9 +630,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             };
 
             Some(
-                binary
-                    .builder
-                    .build_load(binary.llvm_type(ty, ns), offset, "popped_value")
+                bin.builder
+                    .build_load(bin.llvm_type(ty, ns), offset, "popped_value")
                     .unwrap(),
             )
         } else {
@@ -696,24 +651,20 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     /// Calculate length of storage dynamic bytes
     fn storage_array_length(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         _function: FunctionValue,
         slot: IntValue<'a>,
         _ty: &ast::Type,
         _ns: &ast::Namespace,
     ) -> IntValue<'a> {
-        emit_context!(binary);
+        emit_context!(bin);
 
-        let slot_ptr = binary
-            .builder
-            .build_alloca(slot.get_type(), "slot")
-            .unwrap();
-        binary.builder.build_store(slot_ptr, slot).unwrap();
+        let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
+        bin.builder.build_store(slot_ptr, slot).unwrap();
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
-        binary
-            .builder
+        bin.builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64))
             .unwrap();
 
@@ -724,18 +675,16 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             scratch_len.into()
         );
 
-        let exists_is_zero = binary
+        let exists_is_zero = bin
             .builder
             .build_int_compare(IntPredicate::EQ, exists, i32_zero!(), "storage_exists")
             .unwrap();
 
-        binary
-            .builder
+        bin.builder
             .build_select(
                 exists_is_zero,
-                binary
-                    .builder
-                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
+                bin.builder
+                    .build_load(bin.context.i32_type(), scratch_len, "string_len")
                     .unwrap(),
                 i32_zero!().into(),
                 "string_length",
@@ -744,8 +693,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .into_int_value()
     }
 
-    fn return_empty_abi(&self, binary: &Binary) {
-        emit_context!(binary);
+    fn return_empty_abi(&self, bin: &Binary) {
+        emit_context!(bin);
 
         call!(
             "seal_return",
@@ -756,48 +705,48 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             ]
         );
 
-        binary.builder.build_unreachable().unwrap();
+        bin.builder.build_unreachable().unwrap();
     }
 
-    fn return_code<'b>(&self, binary: &'b Binary, _ret: IntValue<'b>) {
-        emit_context!(binary);
+    fn return_code<'b>(&self, bin: &'b Binary, _ret: IntValue<'b>) {
+        emit_context!(bin);
 
         // we can't return specific errors
-        self.assert_failure(binary, byte_ptr!().const_zero(), i32_zero!());
+        self.assert_failure(bin, byte_ptr!().const_zero(), i32_zero!());
     }
 
     /// Call the  keccak256 host function
     fn keccak256_hash(
         &self,
-        binary: &Binary,
+        bin: &Binary,
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
         _ns: &ast::Namespace,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
         call!("hash_keccak_256", &[src.into(), length.into(), dest.into()]);
     }
 
     fn return_abi_data<'b>(
         &self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         data: PointerValue<'b>,
         data_len: BasicValueEnum<'b>,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
         call!(
             "seal_return",
             &[i32_zero!().into(), data.into(), data_len.into()]
         );
 
-        binary.builder.build_unreachable().unwrap();
+        bin.builder.build_unreachable().unwrap();
     }
 
-    fn assert_failure(&self, binary: &Binary, data: PointerValue, length: IntValue) {
-        emit_context!(binary);
+    fn assert_failure(&self, bin: &Binary, data: PointerValue, length: IntValue) {
+        emit_context!(bin);
 
         let flags = i32_const!(1).into(); // First bit set means revert
         call!("seal_return", &[flags, data.into(), length.into()]);
@@ -809,11 +758,11 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         // and we want to provide this higher level knowledge to the compiler.
         //
         // https://llvm.org/docs/LangRef.html#unreachable-instruction
-        binary.builder.build_unreachable().unwrap();
+        bin.builder.build_unreachable().unwrap();
     }
 
-    fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
-        emit_context!(binary);
+    fn print(&self, bin: &Binary, string_ptr: PointerValue, string_len: IntValue) {
+        emit_context!(bin);
 
         call!("debug_message", &[string_ptr.into(), string_len.into()])
             .try_as_basic_value()
@@ -824,7 +773,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
     fn create_contract<'b>(
         &mut self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
@@ -835,17 +784,16 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         ns: &ast::Namespace,
         _loc: Loc,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let created_contract = &ns.contracts[contract_no];
 
-        let code = created_contract.emit(ns, binary.options, contract_no);
+        let code = created_contract.emit(ns, bin.options, contract_no);
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
         // salt
-        let salt_buf =
-            binary.build_alloca(function, binary.context.i8_type().array_type(32), "salt");
+        let salt_buf = bin.build_alloca(function, bin.context.i8_type().array_type(32), "salt");
         let salt_len = i32_const!(32);
 
         let salt = contract_args.salt.unwrap_or_else(|| {
@@ -854,45 +802,42 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .left()
                 .unwrap()
                 .into_int_value();
-            let i256_t = binary.context.custom_width_int_type(256);
-            binary
-                .builder
+            let i256_t = bin.context.custom_width_int_type(256);
+            bin.builder
                 .build_int_z_extend_or_bit_cast(nonce, i256_t, "instantiation_nonce")
                 .unwrap()
         });
-        binary.builder.build_store(salt_buf, salt).unwrap();
+        bin.builder.build_store(salt_buf, salt).unwrap();
 
-        let encoded_args = binary.vector_bytes(encoded_args);
+        let encoded_args = bin.vector_bytes(encoded_args);
 
-        let value_ptr = binary
+        let value_ptr = bin
             .builder
-            .build_alloca(binary.value_type(ns), "balance")
+            .build_alloca(bin.value_type(ns), "balance")
             .unwrap();
 
         let value = contract_args
             .value
-            .unwrap_or_else(|| binary.value_type(ns).const_zero());
-        binary.builder.build_store(value_ptr, value).unwrap();
+            .unwrap_or_else(|| bin.value_type(ns).const_zero());
+        bin.builder.build_store(value_ptr, value).unwrap();
 
         // code hash
-        let codehash = binary.emit_global_string(
+        let codehash = bin.emit_global_string(
             &format!("binary_{}_codehash", created_contract.id),
             blake2_rfc::blake2b::blake2b(32, &[], &code).as_bytes(),
             true,
         );
 
-        let address_len_ptr = binary
+        let address_len_ptr = bin
             .builder
-            .build_alloca(binary.context.i32_type(), "address_len_ptr")
+            .build_alloca(bin.context.i32_type(), "address_len_ptr")
             .unwrap();
 
-        binary
-            .builder
+        bin.builder
             .build_store(address_len_ptr, i32_const!(ns.address_length as u64 * 32))
             .unwrap();
 
-        binary
-            .builder
+        bin.builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64 * 32))
             .unwrap();
 
@@ -922,7 +867,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     /// Call external binary
     fn external_call<'b>(
         &self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
@@ -933,23 +878,21 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         ns: &ast::Namespace,
         loc: Loc,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let (scratch_buf, scratch_len) = scratch_buf!();
-        binary
-            .builder
+        bin.builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64))
             .unwrap();
 
         // do the actual call
         *success.unwrap() = match call_type {
             ast::CallTy::Regular => {
-                let value_ptr = binary
+                let value_ptr = bin
                     .builder
-                    .build_alloca(binary.value_type(ns), "balance")
+                    .build_alloca(bin.value_type(ns), "balance")
                     .unwrap();
-                binary
-                    .builder
+                bin.builder
                     .build_store(value_ptr, contract_args.value.unwrap())
                     .unwrap();
                 call!(
@@ -974,16 +917,15 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             ast::CallTy::Delegate => {
                 // delegate_call asks for a code hash instead of an address
                 let hash_len = i32_const!(32); // FIXME: This is configurable like the address length
-                let code_hash_out_ptr = binary
+                let code_hash_out_ptr = bin
                     .builder
-                    .build_array_alloca(binary.context.i8_type(), hash_len, "code_hash_out_ptr")
+                    .build_array_alloca(bin.context.i8_type(), hash_len, "code_hash_out_ptr")
                     .unwrap();
-                let code_hash_out_len_ptr = binary
+                let code_hash_out_len_ptr = bin
                     .builder
-                    .build_alloca(binary.context.i32_type(), "code_hash_out_len_ptr")
+                    .build_alloca(bin.context.i32_type(), "code_hash_out_len_ptr")
                     .unwrap();
-                binary
-                    .builder
+                bin.builder
                     .build_store(code_hash_out_len_ptr, hash_len)
                     .unwrap();
                 let code_hash_ret = call!(
@@ -999,7 +941,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .unwrap()
                 .into_int_value();
 
-                let code_hash_found = binary
+                let code_hash_found = bin
                     .builder
                     .build_int_compare(
                         IntPredicate::EQ,
@@ -1008,28 +950,22 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                         "code_hash_found",
                     )
                     .unwrap();
-                let entry = binary.builder.get_insert_block().unwrap();
-                let call_block = binary
-                    .context
-                    .append_basic_block(function, "code_hash_found");
-                let not_found_block = binary
+                let entry = bin.builder.get_insert_block().unwrap();
+                let call_block = bin.context.append_basic_block(function, "code_hash_found");
+                let not_found_block = bin
                     .context
                     .append_basic_block(function, "code_hash_not_found");
-                let done_block = binary.context.append_basic_block(function, "done_block");
-                binary
-                    .builder
+                let done_block = bin.context.append_basic_block(function, "done_block");
+                bin.builder
                     .build_conditional_branch(code_hash_found, call_block, not_found_block)
                     .unwrap();
 
-                binary.builder.position_at_end(not_found_block);
+                bin.builder.position_at_end(not_found_block);
                 let msg = "delegatecall callee is not a contract account";
-                binary.log_runtime_error(self, msg.into(), Some(loc), ns);
-                binary
-                    .builder
-                    .build_unconditional_branch(done_block)
-                    .unwrap();
+                bin.log_runtime_error(self, msg.into(), Some(loc), ns);
+                bin.builder.build_unconditional_branch(done_block).unwrap();
 
-                binary.builder.position_at_end(call_block);
+                bin.builder.position_at_end(call_block);
                 let delegate_call_ret = call!(
                     "delegate_call",
                     &[
@@ -1045,14 +981,11 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .left()
                 .unwrap()
                 .into_int_value();
-                binary
-                    .builder
-                    .build_unconditional_branch(done_block)
-                    .unwrap();
+                bin.builder.build_unconditional_branch(done_block).unwrap();
 
-                binary.builder.position_at_end(done_block);
-                let ty = binary.context.i32_type();
-                let ret = binary.builder.build_phi(ty, "storage_res").unwrap();
+                bin.builder.position_at_end(done_block);
+                let ty = bin.context.i32_type();
+                let ret = bin.builder.build_phi(ty, "storage_res").unwrap();
                 ret.add_incoming(&[(&code_hash_ret, not_found_block), (&ty.const_zero(), entry)]);
                 ret.add_incoming(&[(&delegate_call_ret, call_block), (&ty.const_zero(), entry)]);
                 ret.as_basic_value()
@@ -1064,7 +997,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     /// Send value to address
     fn value_transfer<'b>(
         &self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         _function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,
         address: PointerValue<'b>,
@@ -1072,14 +1005,14 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         ns: &ast::Namespace,
         _loc: Loc,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
         // balance is a u128
-        let value_ptr = binary
+        let value_ptr = bin
             .builder
-            .build_alloca(binary.value_type(ns), "balance")
+            .build_alloca(bin.value_type(ns), "balance")
             .unwrap();
-        binary.builder.build_store(value_ptr, value).unwrap();
+        bin.builder.build_store(value_ptr, value).unwrap();
 
         // do the actual call
         *success.unwrap() = call!(
@@ -1098,13 +1031,13 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         .into();
     }
 
-    fn return_data<'b>(&self, binary: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {
-        emit_context!(binary);
+    fn return_data<'b>(&self, bin: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {
+        emit_context!(bin);
 
         // The `seal_call` syscall leaves the return data in the scratch buffer
         let (scratch_buf, scratch_len) = scratch_buf!();
-        let ty = binary.context.i32_type();
-        let length = binary
+        let ty = bin.context.i32_type();
+        let length = bin
             .builder
             .build_load(ty, scratch_len, "scratch_len")
             .unwrap();
@@ -1119,21 +1052,20 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     }
 
     /// Polkadot value is usually 128 bits
-    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
-        emit_context!(binary);
+    fn value_transferred<'b>(&self, bin: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
+        emit_context!(bin);
 
-        let value = binary
+        let value = bin
             .builder
-            .build_alloca(binary.value_type(ns), "value")
+            .build_alloca(bin.value_type(ns), "value")
             .unwrap();
 
-        let value_len = binary
+        let value_len = bin
             .builder
-            .build_alloca(binary.context.i32_type(), "value_len")
+            .build_alloca(bin.context.i32_type(), "value_len")
             .unwrap();
 
-        binary
-            .builder
+        bin.builder
             .build_store(value_len, i32_const!(ns.value_length as u64))
             .unwrap();
 
@@ -1143,33 +1075,32 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             "value_transferred"
         );
 
-        binary
-            .builder
-            .build_load(binary.value_type(ns), value, "value_transferred")
+        bin.builder
+            .build_load(bin.value_type(ns), value, "value_transferred")
             .unwrap()
             .into_int_value()
     }
 
     /// Terminate execution, destroy contract and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &ast::Namespace) {
-        emit_context!(binary);
+    fn selfdestruct<'b>(&self, bin: &Binary<'b>, addr: ArrayValue<'b>, ns: &ast::Namespace) {
+        emit_context!(bin);
 
-        let address = binary
+        let address = bin
             .builder
-            .build_alloca(binary.address_type(ns), "address")
+            .build_alloca(bin.address_type(ns), "address")
             .unwrap();
 
-        binary.builder.build_store(address, addr).unwrap();
+        bin.builder.build_store(address, addr).unwrap();
 
         call!("terminate", &[address.into()], "terminated");
 
-        binary.builder.build_unreachable().unwrap();
+        bin.builder.build_unreachable().unwrap();
     }
 
     /// Crypto Hash
     fn hash<'b>(
         &self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         _function: FunctionValue<'b>,
 
         hash: HashTy,
@@ -1177,7 +1108,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         input_len: IntValue<'b>,
         ns: &ast::Namespace,
     ) -> IntValue<'b> {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let (fname, hashlen) = match hash {
             HashTy::Keccak256 => ("hash_keccak_256", 32),
@@ -1187,20 +1118,17 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             HashTy::Blake2_256 => ("hash_blake2_256", 32),
         };
 
-        let res = binary
+        let res = bin
             .builder
-            .build_array_alloca(binary.context.i8_type(), i32_const!(hashlen), "res")
+            .build_array_alloca(bin.context.i8_type(), i32_const!(hashlen), "res")
             .unwrap();
 
         call!(fname, &[input.into(), input_len.into(), res.into()], "hash");
 
         // bytes32 needs to reverse bytes
-        let temp = binary
+        let temp = bin
             .builder
-            .build_alloca(
-                binary.llvm_type(&ast::Type::Bytes(hashlen as u8), ns),
-                "hash",
-            )
+            .build_alloca(bin.llvm_type(&ast::Type::Bytes(hashlen as u8), ns), "hash")
             .unwrap();
 
         call!(
@@ -1208,10 +1136,9 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             &[res.into(), temp.into(), i32_const!(hashlen).into()]
         );
 
-        binary
-            .builder
+        bin.builder
             .build_load(
-                binary.llvm_type(&ast::Type::Bytes(hashlen as u8), ns),
+                bin.llvm_type(&ast::Type::Bytes(hashlen as u8), ns),
                 temp,
                 "hash",
             )
@@ -1222,12 +1149,12 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     /// Emit event
     fn emit_event<'b>(
         &self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         _function: FunctionValue<'b>,
         data: BasicValueEnum<'b>,
         topics: &[BasicValueEnum<'b>],
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let topic_count = topics.len();
         let topic_size = i32_const!(if topic_count > 0 {
@@ -1238,33 +1165,25 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         let topic_buf = if topic_count > 0 {
             // the topic buffer is a vector of hashes.
-            let topic_buf = binary
+            let topic_buf = bin
                 .builder
-                .build_array_alloca(binary.context.i8_type(), topic_size, "topic")
+                .build_array_alloca(bin.context.i8_type(), topic_size, "topic")
                 .unwrap();
 
             // a vector with scale encoding first has the length. Since we will never have more than
             // 64 topics (we're limited to 4 at the moment), we can assume this is a single byte
-            binary
-                .builder
+            bin.builder
                 .build_store(
                     topic_buf,
-                    binary
-                        .context
+                    bin.context
                         .i8_type()
                         .const_int(topic_count as u64 * 4, false),
                 )
                 .unwrap();
 
             let mut dest = unsafe {
-                binary
-                    .builder
-                    .build_gep(
-                        binary.context.i8_type(),
-                        topic_buf,
-                        &[i32_const!(1)],
-                        "dest",
-                    )
+                bin.builder
+                    .build_gep(bin.context.i8_type(), topic_buf, &[i32_const!(1)], "dest")
                     .unwrap()
             };
 
@@ -1278,15 +1197,14 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                     "__memcpy",
                     &[
                         dest.into(),
-                        binary.vector_bytes(*topic).into(),
-                        binary.vector_len(*topic).into(),
+                        bin.vector_bytes(*topic).into(),
+                        bin.vector_len(*topic).into(),
                     ]
                 );
 
                 dest = unsafe {
-                    binary
-                        .builder
-                        .build_gep(binary.context.i8_type(), dest, &[i32_const!(32)], "dest")
+                    bin.builder
+                        .build_gep(bin.context.i8_type(), dest, &[i32_const!(32)], "dest")
                         .unwrap()
                 };
             }
@@ -1301,8 +1219,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             &[
                 topic_buf.into(),
                 topic_size.into(),
-                binary.vector_bytes(data).into(),
-                binary.vector_len(data).into(),
+                bin.vector_bytes(data).into(),
+                bin.vector_len(data).into(),
             ]
         );
     }
@@ -1310,35 +1228,30 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     /// builtin expressions
     fn builtin<'b>(
         &self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         expr: &codegen::Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
-        emit_context!(binary);
+        emit_context!(bin);
 
         macro_rules! get_seal_value {
             ($name:literal, $func:literal, $width:expr) => {{
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
-                binary
-                    .builder
+                bin.builder
                     .build_store(
                         scratch_len,
-                        binary
-                            .context
-                            .i32_type()
-                            .const_int($width as u64 / 8, false),
+                        bin.context.i32_type().const_int($width as u64 / 8, false),
                     )
                     .unwrap();
 
                 call!($func, &[scratch_buf.into(), scratch_len.into()], $name);
 
-                binary
-                    .builder
+                bin.builder
                     .build_load(
-                        binary.context.custom_width_int_type($width),
+                        bin.context.custom_width_int_type($width),
                         scratch_buf,
                         $name,
                     )
@@ -1355,20 +1268,18 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 let v = call!(
                     "vector_new",
                     &[
-                        binary
-                            .builder
+                        bin.builder
                             .build_load(
-                                binary.context.i32_type(),
-                                binary.calldata_len.as_pointer_value(),
+                                bin.context.i32_type(),
+                                bin.calldata_len.as_pointer_value(),
                                 "calldata_len"
                             )
                             .unwrap()
                             .into(),
                         i32_const!(1).into(),
-                        binary
-                            .builder
+                        bin.builder
                             .build_int_to_ptr(
-                                binary.context.i32_type().const_all_ones(),
+                                bin.context.i32_type().const_all_ones(),
                                 byte_ptr!(),
                                 "no_initializer",
                             )
@@ -1381,10 +1292,9 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .unwrap();
 
                 let data = unsafe {
-                    binary
-                        .builder
+                    bin.builder
                         .build_gep(
-                            binary.context.get_struct_type("struct.vector").unwrap(),
+                            bin.context.get_struct_type("struct.vector").unwrap(),
                             v.into_pointer_value(),
                             &[i32_zero!(), i32_const!(2)],
                             "",
@@ -1392,11 +1302,10 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                         .unwrap()
                 };
 
-                let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+                let scratch_len = bin.scratch_len.unwrap().as_pointer_value();
 
                 // copy arguments from input buffer
-                binary
-                    .builder
+                bin.builder
                     .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64))
                     .unwrap();
 
@@ -1413,11 +1322,10 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                     get_seal_value!("seal_block_number", "block_number", 32).into_int_value();
 
                 // Cast to 64 bit
-                binary
-                    .builder
+                bin.builder
                     .build_int_z_extend_or_bit_cast(
                         block_number,
-                        binary.context.i64_type(),
+                        bin.context.i64_type(),
                         "block_number",
                     )
                     .unwrap()
@@ -1430,11 +1338,10 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 let milliseconds = get_seal_value!("timestamp", "now", 64).into_int_value();
 
                 // Solidity expects the timestamp in seconds, not milliseconds
-                binary
-                    .builder
+                bin.builder
                     .build_int_unsigned_div(
                         milliseconds,
-                        binary.context.i64_type().const_int(1000, false),
+                        bin.context.i64_type().const_int(1000, false),
                         "seconds",
                     )
                     .unwrap()
@@ -1454,15 +1361,14 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 // gasprice is available as "tx.gasprice" which will give you the price for one unit
                 // of gas, or "tx.gasprice(uint64)" which will give you the price of N gas units
                 let gas = if args.is_empty() {
-                    binary.context.i64_type().const_int(1, false)
+                    bin.context.i64_type().const_int(1, false)
                 } else {
-                    expression(self, binary, &args[0], vartab, function, ns).into_int_value()
+                    expression(self, bin, &args[0], vartab, function, ns).into_int_value()
                 };
 
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
-                binary
-                    .builder
+                bin.builder
                     .build_store(scratch_len, i32_const!(ns.value_length as u64))
                     .unwrap();
 
@@ -1472,11 +1378,9 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                     "gas_price"
                 );
 
-                binary
-                    .builder
+                bin.builder
                     .build_load(
-                        binary
-                            .context
+                        bin.context
                             .custom_width_int_type(ns.value_length as u32 * 8),
                         scratch_buf,
                         "price",
@@ -1489,8 +1393,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             } => {
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
-                binary
-                    .builder
+                bin.builder
                     .build_store(scratch_len, i32_const!(ns.address_length as u64))
                     .unwrap();
 
@@ -1500,15 +1403,14 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                     "seal_caller"
                 );
 
-                binary
-                    .builder
-                    .build_load(binary.address_type(ns), scratch_buf, "caller")
+                bin.builder
+                    .build_load(bin.address_type(ns), scratch_buf, "caller")
                     .unwrap()
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::Value,
                 ..
-            } => self.value_transferred(binary, ns).into(),
+            } => self.value_transferred(bin, ns).into(),
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::MinimumBalance,
                 ..
@@ -1525,8 +1427,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             } => {
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
-                binary
-                    .builder
+                bin.builder
                     .build_store(scratch_len, i32_const!(ns.address_length as u64))
                     .unwrap();
 
@@ -1547,8 +1448,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             } => {
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
-                binary
-                    .builder
+                bin.builder
                     .build_store(scratch_len, i32_const!(ns.value_length as u64))
                     .unwrap();
 
@@ -1558,9 +1458,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                     "seal_balance"
                 );
 
-                binary
-                    .builder
-                    .build_load(binary.value_type(ns), scratch_buf, "balance")
+                bin.builder
+                    .build_load(bin.value_type(ns), scratch_buf, "balance")
                     .unwrap()
             }
             _ => unreachable!("{:?}", expr),
@@ -1569,7 +1468,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
     fn storage_load(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         ty: &Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue,
@@ -1578,17 +1477,14 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     ) -> BasicValueEnum<'a> {
         // The storage slot is an i256 accessed through a pointer, so we need
         // to store it
-        let slot_ptr = binary
-            .builder
-            .build_alloca(slot.get_type(), "slot")
-            .unwrap();
+        let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        self.storage_load_slot(binary, ty, slot, slot_ptr, function, ns)
+        self.storage_load_slot(bin, ty, slot, slot_ptr, function, ns)
     }
 
     fn storage_store(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         ty: &Type,
         _existing: bool,
         slot: &mut IntValue<'a>,
@@ -1597,12 +1493,9 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         ns: &Namespace,
         _: &Option<StorageType>,
     ) {
-        let slot_ptr = binary
-            .builder
-            .build_alloca(slot.get_type(), "slot")
-            .unwrap();
+        let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        self.storage_store_slot(binary, ty, slot, slot_ptr, dest, function, ns);
+        self.storage_store_slot(bin, ty, slot, slot_ptr, dest, function, ns);
     }
 
     fn storage_delete(
@@ -1620,23 +1513,22 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
     fn builtin_function(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         _function: FunctionValue<'a>,
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
         _first_arg_type: Option<BasicTypeEnum>,
         ns: &Namespace,
     ) -> Option<BasicValueEnum<'a>> {
-        emit_context!(binary);
+        emit_context!(bin);
 
         match builtin_func.id.name.as_str() {
             "chain_extension" => {
-                let input_ptr = binary.vector_bytes(args[1].into_pointer_value().into());
-                let input_len = binary.vector_len(args[1].into_pointer_value().into());
+                let input_ptr = bin.vector_bytes(args[1].into_pointer_value().into());
+                let input_len = bin.vector_len(args[1].into_pointer_value().into());
                 let (output_ptr, output_len_ptr) = scratch_buf!();
                 let len = 16384; // 16KB for the output buffer should be enough for virtually any case.
-                binary
-                    .builder
+                bin.builder
                     .build_store(output_len_ptr, i32_const!(len))
                     .unwrap();
                 call!("__bzero8", &[output_ptr.into(), i32_const!(len / 8).into()]);
@@ -1655,9 +1547,9 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .unwrap()
                 .into_int_value();
 
-                let buf_len = binary
+                let buf_len = bin
                     .builder
-                    .build_load(binary.context.i32_type(), output_len_ptr, "buf_len")
+                    .build_load(bin.context.i32_type(), output_len_ptr, "buf_len")
                     .unwrap()
                     .into_int_value();
                 let buf = call!(
@@ -1668,24 +1560,21 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .left()
                 .unwrap();
 
-                binary
-                    .builder
+                bin.builder
                     .build_store(args[2].into_pointer_value(), ret_val)
                     .unwrap();
-                binary
-                    .builder
+                bin.builder
                     .build_store(args[3].into_pointer_value(), buf.into_pointer_value())
                     .unwrap();
 
                 None
             }
             "is_contract" => {
-                let address = binary
+                let address = bin
                     .builder
-                    .build_alloca(binary.address_type(ns), "maybe_contract")
+                    .build_alloca(bin.address_type(ns), "maybe_contract")
                     .unwrap();
-                binary
-                    .builder
+                bin.builder
                     .build_store(address, args[0].into_array_value())
                     .unwrap();
                 let is_contract = call!("is_contract", &[address.into()], "seal_is_contract")
@@ -1693,8 +1582,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                     .left()
                     .unwrap()
                     .into_int_value();
-                binary
-                    .builder
+                bin.builder
                     .build_store(args[1].into_pointer_value(), is_contract)
                     .unwrap();
                 None
@@ -1706,8 +1594,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                     .left()
                     .unwrap()
                     .into_int_value();
-                binary
-                    .builder
+                bin.builder
                     .build_store(args[1].into_pointer_value(), ret)
                     .unwrap();
                 None
@@ -1718,8 +1605,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                     .left()
                     .unwrap()
                     .into_int_value();
-                binary
-                    .builder
+                bin.builder
                     .build_store(args[0].into_pointer_value(), is_root)
                     .unwrap();
                 None

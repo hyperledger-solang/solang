@@ -29,7 +29,7 @@ use std::collections::HashMap;
 impl<'a> TargetRuntime<'a> for SorobanTarget {
     fn get_storage_int(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
         ty: IntType<'a>,
@@ -39,7 +39,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     fn storage_load(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
@@ -47,19 +47,15 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
         let storage_type = storage_type_to_int(storage_type);
-        emit_context!(binary);
+        emit_context!(bin);
         let ret = call!(
             HostFunctions::GetContractData.name(),
             &[
                 slot.as_basic_value_enum()
                     .into_int_value()
-                    .const_cast(binary.context.i64_type(), false)
+                    .const_cast(bin.context.i64_type(), false)
                     .into(),
-                binary
-                    .context
-                    .i64_type()
-                    .const_int(storage_type, false)
-                    .into(),
+                bin.context.i64_type().const_int(storage_type, false).into(),
             ]
         )
         .try_as_basic_value()
@@ -73,7 +69,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     /// Recursively store a type to storage
     fn storage_store(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         ty: &ast::Type,
         existing: bool,
         slot: &mut IntValue<'a>,
@@ -82,30 +78,26 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         ns: &ast::Namespace,
         storage_type: &Option<StorageType>,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let storage_type = storage_type_to_int(storage_type);
 
-        let function_value = binary
+        let function_value = bin
             .module
             .get_function(HostFunctions::PutContractData.name())
             .unwrap();
 
-        let value = binary
+        let value = bin
             .builder
             .build_call(
                 function_value,
                 &[
                     slot.as_basic_value_enum()
                         .into_int_value()
-                        .const_cast(binary.context.i64_type(), false)
+                        .const_cast(bin.context.i64_type(), false)
                         .into(),
                     dest.into(),
-                    binary
-                        .context
-                        .i64_type()
-                        .const_int(storage_type, false)
-                        .into(),
+                    bin.context.i64_type().const_int(storage_type, false).into(),
                 ],
                 HostFunctions::PutContractData.name(),
             )
@@ -303,7 +295,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     fn builtin_function(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue<'a>,
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
@@ -618,12 +610,12 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     }
 
     /// Return the value we received
-    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &Namespace) -> IntValue<'b> {
+    fn value_transferred<'b>(&self, bin: &Binary<'b>, ns: &Namespace) -> IntValue<'b> {
         unimplemented!()
     }
 
     /// Terminate execution, destroy bin and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &Namespace) {
+    fn selfdestruct<'b>(&self, bin: &Binary<'b>, addr: ArrayValue<'b>, ns: &Namespace) {
         unimplemented!()
     }
 
@@ -654,7 +646,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     /// Return ABI encoded data
     fn return_abi_data<'b>(
         &self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         data: PointerValue<'b>,
         data_len: BasicValueEnum<'b>,
     ) {

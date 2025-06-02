@@ -80,7 +80,7 @@ pub trait TargetRuntime<'a> {
 
     fn storage_load(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
@@ -91,7 +91,7 @@ pub trait TargetRuntime<'a> {
     /// Recursively store a type to storage
     fn storage_store(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         ty: &ast::Type,
         existing: bool,
         slot: &mut IntValue<'a>,
@@ -229,7 +229,7 @@ pub trait TargetRuntime<'a> {
 
     fn builtin_function(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue<'a>,
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
@@ -293,10 +293,10 @@ pub trait TargetRuntime<'a> {
     fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b>;
 
     /// Return the value we received
-    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &Namespace) -> IntValue<'b>;
+    fn value_transferred<'b>(&self, bin: &Binary<'b>, ns: &Namespace) -> IntValue<'b>;
 
     /// Terminate execution, destroy bin and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &Namespace);
+    fn selfdestruct<'b>(&self, bin: &Binary<'b>, addr: ArrayValue<'b>, ns: &Namespace);
 
     /// Crypto Hash
     fn hash<'b>(
@@ -321,7 +321,7 @@ pub trait TargetRuntime<'a> {
     /// Return ABI encoded data
     fn return_abi_data<'b>(
         &self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         data: PointerValue<'b>,
         data_len: BasicValueEnum<'b>,
     );
@@ -385,8 +385,8 @@ impl ast::Contract {
         self.code
             .get_or_init(move || {
                 let context = inkwell::context::Context::create();
-                let binary = self.binary(ns, &context, opt, contract_no);
-                binary.code(Generate::Linked).expect("llvm build")
+                let bin = self.binary(ns, &context, opt, contract_no);
+                bin.code(Generate::Linked).expect("llvm build")
             })
             .to_vec()
     }

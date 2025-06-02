@@ -28,7 +28,7 @@ impl PolkadotTarget {
         opt: &'a Options,
     ) -> Binary<'a> {
         let filename = ns.files[contract.loc.file_no()].file_name();
-        let mut binary = Binary::new(
+        let mut bin = Binary::new(
             context,
             ns.target,
             &contract.id.name,
@@ -38,16 +38,16 @@ impl PolkadotTarget {
             None,
         );
 
-        let ptr = binary.context.i8_type().ptr_type(AddressSpace::default());
+        let ptr = bin.context.i8_type().ptr_type(AddressSpace::default());
 
-        binary.vector_init_empty = binary
+        bin.vector_init_empty = bin
             .context
             .i32_type()
             .const_all_ones()
             .const_to_pointer(ptr);
-        binary.set_early_value_aborts(contract, ns);
+        bin.set_early_value_aborts(contract, ns);
 
-        let scratch_len = binary.module.add_global(
+        let scratch_len = bin.module.add_global(
             context.i32_type(),
             Some(AddressSpace::default()),
             "scratch_len",
@@ -55,25 +55,25 @@ impl PolkadotTarget {
         scratch_len.set_linkage(Linkage::Internal);
         scratch_len.set_initializer(&context.i32_type().get_undef());
 
-        binary.scratch_len = Some(scratch_len);
+        bin.scratch_len = Some(scratch_len);
 
-        let scratch = binary.module.add_global(
+        let scratch = bin.module.add_global(
             context.i8_type().array_type(SCRATCH_SIZE),
             Some(AddressSpace::default()),
             "scratch",
         );
         scratch.set_linkage(Linkage::Internal);
         scratch.set_initializer(&context.i8_type().array_type(SCRATCH_SIZE).get_undef());
-        binary.scratch = Some(scratch);
+        bin.scratch = Some(scratch);
 
         let mut target = PolkadotTarget;
 
-        target.declare_externals(&binary);
+        target.declare_externals(&bin);
 
-        emit_functions(&mut target, &mut binary, contract, ns);
+        emit_functions(&mut target, &mut bin, contract, ns);
 
         let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
-        let mut storage_initializers = binary
+        let mut storage_initializers = bin
             .functions
             .values()
             .filter(|f| f.get_name() == function_name.as_c_str());
@@ -82,10 +82,10 @@ impl PolkadotTarget {
             .expect("storage initializer is always present");
         assert!(storage_initializers.next().is_none());
 
-        target.emit_dispatch(Some(storage_initializer), &mut binary, ns);
-        target.emit_dispatch(None, &mut binary, ns);
+        target.emit_dispatch(Some(storage_initializer), &mut bin, ns);
+        target.emit_dispatch(None, &mut bin, ns);
 
-        binary.internalize(&[
+        bin.internalize(&[
             "deploy",
             "call",
             "call_chain_extension",
@@ -121,64 +121,57 @@ impl PolkadotTarget {
             "caller_is_root",
         ]);
 
-        binary
+        bin
     }
 
     fn public_function_prelude<'a>(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue<'a>,
         storage_initializer: Option<FunctionValue>,
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        let entry = binary.context.append_basic_block(function, "entry");
+        let entry = bin.context.append_basic_block(function, "entry");
 
-        binary.builder.position_at_end(entry);
+        bin.builder.position_at_end(entry);
 
         // init our heap
-        binary
-            .builder
-            .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "")
+        bin.builder
+            .build_call(bin.module.get_function("__init_heap").unwrap(), &[], "")
             .unwrap();
 
         // Call the storage initializers on deploy
         if let Some(initializer) = storage_initializer {
-            binary.builder.build_call(initializer, &[], "").unwrap();
+            bin.builder.build_call(initializer, &[], "").unwrap();
         }
 
-        let scratch_buf = binary.scratch.unwrap().as_pointer_value();
-        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+        let scratch_buf = bin.scratch.unwrap().as_pointer_value();
+        let scratch_len = bin.scratch_len.unwrap().as_pointer_value();
 
         // copy arguments from input buffer
-        binary
-            .builder
+        bin.builder
             .build_store(
                 scratch_len,
-                binary
-                    .context
-                    .i32_type()
-                    .const_int(SCRATCH_SIZE as u64, false),
+                bin.context.i32_type().const_int(SCRATCH_SIZE as u64, false),
             )
             .unwrap();
 
-        binary
-            .builder
+        bin.builder
             .build_call(
-                binary.module.get_function("input").unwrap(),
+                bin.module.get_function("input").unwrap(),
                 &[scratch_buf.into(), scratch_len.into()],
                 "",
             )
             .unwrap();
 
-        let args_length = binary
+        let args_length = bin
             .builder
-            .build_load(binary.context.i32_type(), scratch_len, "input_len")
+            .build_load(bin.context.i32_type(), scratch_len, "input_len")
             .unwrap();
 
         // store the length in case someone wants it via msg.data
-        binary
-            .builder
+        bin.builder
             .build_store(
-                binary.calldata_len.as_pointer_value(),
+                bin.calldata_len.as_pointer_value(),
                 args_length.into_int_value(),
             )
             .unwrap();
@@ -186,8 +179,8 @@ impl PolkadotTarget {
         (scratch_buf, args_length.into_int_value())
     }
 
-    fn declare_externals(&self, binary: &Binary) {
-        let ctx = binary.context;
+    fn declare_externals(&self, bin: &Binary) {
+        let ctx = bin.context;
         let u8_ptr = ctx.i8_type().ptr_type(AddressSpace::default()).into();
         let u32_val = ctx.i32_type().into();
         let u32_ptr = ctx.i32_type().ptr_type(AddressSpace::default()).into();
@@ -195,7 +188,7 @@ impl PolkadotTarget {
 
         macro_rules! external {
             ($name:literal, $fn_type:ident, $( $args:expr ),*) => {
-                binary.module.add_function(
+                bin.module.add_function(
                     $name,
                     ctx.$fn_type().fn_type(&[$($args),*], false),
                     Some(Linkage::External),
