@@ -2170,7 +2170,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
 pub(super) fn compare_address<'a, T: TargetRuntime<'a> + ?Sized>(
     target: &T,
-    binary: &Binary<'a>,
+    bin: &Binary<'a>,
     left: &Expression,
     right: &Expression,
     op: inkwell::IntPredicate,
@@ -2178,24 +2178,23 @@ pub(super) fn compare_address<'a, T: TargetRuntime<'a> + ?Sized>(
     function: FunctionValue<'a>,
     ns: &Namespace,
 ) -> IntValue<'a> {
-    let l = expression(target, binary, left, vartab, function, ns).into_array_value();
-    let r = expression(target, binary, right, vartab, function, ns).into_array_value();
+    let l = expression(target, bin, left, vartab, function, ns).into_array_value();
+    let r = expression(target, bin, right, vartab, function, ns).into_array_value();
 
-    let left = binary.build_alloca(function, binary.address_type(ns), "left");
-    let right = binary.build_alloca(function, binary.address_type(ns), "right");
+    let left = bin.build_alloca(function, bin.address_type(ns), "left");
+    let right = bin.build_alloca(function, bin.address_type(ns), "right");
 
-    binary.builder.build_store(left, l).unwrap();
-    binary.builder.build_store(right, r).unwrap();
+    bin.builder.build_store(left, l).unwrap();
+    bin.builder.build_store(right, r).unwrap();
 
-    let res = binary
+    let res = bin
         .builder
         .build_call(
-            binary.module.get_function("__memcmp_ord").unwrap(),
+            bin.module.get_function("__memcmp_ord").unwrap(),
             &[
                 left.into(),
                 right.into(),
-                binary
-                    .context
+                bin.context
                     .i32_type()
                     .const_int(ns.address_length as u64, false)
                     .into(),
@@ -2208,9 +2207,8 @@ pub(super) fn compare_address<'a, T: TargetRuntime<'a> + ?Sized>(
         .unwrap()
         .into_int_value();
 
-    binary
-        .builder
-        .build_int_compare(op, res, binary.context.i32_type().const_zero(), "")
+    bin.builder
+        .build_int_compare(op, res, bin.context.i32_type().const_zero(), "")
         .unwrap()
 }
 
