@@ -4,7 +4,7 @@ use crate::codegen::{cfg::ControlFlowGraph, vartable::Storage};
 use crate::emit::binary::Binary;
 use crate::emit::instructions::process_instruction;
 use crate::emit::{TargetRuntime, Variable};
-use crate::sema::ast::{Contract, Namespace};
+use crate::sema::ast::Contract;
 use crate::Target;
 use inkwell::debug_info::{AsDIScope, DISubprogram, DIType};
 use inkwell::types::BasicType;
@@ -31,7 +31,6 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
     contract: &Contract,
     cfg: &ControlFlowGraph,
     function: FunctionValue<'a>,
-    ns: &Namespace,
 ) {
     let dibuilder = &bin.dibuilder;
     let compile_unit = &bin.compile_unit;
@@ -78,7 +77,7 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let func_loc = cfg.blocks[0].instr.first().unwrap().loc();
                 let line_num = if let pt::Loc::File(file_offset, offset, _) = func_loc {
-                    let (line, _) = ns.files[file_offset].offset_to_line_column(offset);
+                    let (line, _) = bin.ns.files[file_offset].offset_to_line_column(offset);
                     line
                 } else {
                     0
@@ -106,10 +105,10 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
 
     let mut work = VecDeque::new();
 
-    blocks.insert(0, create_block(0, bin, cfg, function, ns));
+    blocks.insert(0, create_block(0, bin, cfg, function));
 
     // On Solana, the last argument is the accounts
-    if ns.target == Target::Solana {
+    if bin.ns.target == Target::Solana {
         bin.parameters = Some(function.get_last_param().unwrap().into_pointer_value());
     }
 
@@ -118,10 +117,10 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
 
     for (no, v) in &cfg.vars {
         match v.storage {
-            Storage::Local if v.ty.is_reference_type(ns) && !v.ty.is_contract_storage() => {
+            Storage::Local if v.ty.is_reference_type(bin.ns) && !v.ty.is_contract_storage() => {
                 // a null pointer means an empty, zero'ed thing, be it string, struct or array
                 let value = bin
-                    .llvm_type(&v.ty, ns)
+                    .llvm_type(&v.ty)
                     .ptr_type(AddressSpace::default())
                     .const_null()
                     .into();
@@ -133,14 +132,14 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
                     *no,
                     Variable {
                         value: bin
-                            .llvm_type(&ns.storage_type(), ns)
+                            .llvm_type(&bin.ns.storage_type())
                             .into_int_type()
                             .const_zero()
                             .into(),
                     },
                 );
             }
-            Storage::Constant(_) | Storage::Contract(_) if v.ty.is_reference_type(ns) => {
+            Storage::Constant(_) | Storage::Contract(_) if v.ty.is_reference_type(bin.ns) => {
                 // This needs a placeholder
                 vars.insert(
                     *no,
@@ -150,7 +149,7 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
                 );
             }
             Storage::Local | Storage::Contract(_) | Storage::Constant(_) => {
-                let ty = bin.llvm_type(&v.ty, ns);
+                let ty = bin.llvm_type(&v.ty);
                 vars.insert(
                     *no,
                     Variable {
@@ -184,7 +183,7 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
             if bin.options.generate_debug_information {
                 let debug_loc = ins.loc();
                 if let pt::Loc::File(file_offset, offset, _) = debug_loc {
-                    let (line, col) = ns.files[file_offset].offset_to_line_column(offset);
+                    let (line, col) = bin.ns.files[file_offset].offset_to_line_column(offset);
                     let debug_loc = dibuilder.create_debug_location(
                         bin.context,
                         line as u32,
@@ -214,7 +213,6 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin,
                 &mut w,
                 function,
-                ns,
                 cfg,
                 &mut work,
                 &mut blocks,
@@ -231,7 +229,6 @@ pub(super) fn create_block<'a>(
     bin: &Binary<'a>,
     cfg: &ControlFlowGraph,
     function: FunctionValue<'a>,
-    ns: &Namespace,
 ) -> BasicBlock<'a> {
     let cfg_bb = &cfg.blocks[block_no];
     let mut phis = HashMap::new();
@@ -242,7 +239,7 @@ pub(super) fn create_block<'a>(
 
     if let Some(ref cfg_phis) = cfg_bb.phis {
         for v in cfg_phis {
-            let ty = bin.llvm_var_ty(&cfg.vars[v].ty, ns);
+            let ty = bin.llvm_var_ty(&cfg.vars[v].ty);
 
             phis.insert(*v, bin.builder.build_phi(ty, &cfg.vars[v].id.name).unwrap());
         }
