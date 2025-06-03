@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use assert_cmd::cargo::cargo_bin;
 use regex::Regex;
 use std::{
-    env::var,
+    env::{var, var_os},
     ffi::OsStr,
     fs::{copy, read_to_string},
     path::{Path, PathBuf},
@@ -38,23 +38,27 @@ fn tests(required_forbidden_pairs: &[(&[&str], &[&str])]) {
     let contract_re = Regex::new(r"\<contract ([A-Za-z_0-9]+)\>").unwrap();
     let argless_function_re = Regex::new(r"\<function ([A-Za-z_0-9]+)\(\)").unwrap();
     let mut paths = Vec::new();
-    for result in WalkDir::new("testdata/solidity/test/libsolidity/semanticTests") {
-        let entry = result.unwrap();
-        let path = entry.path();
-        if !path.is_file() || path.extension() != Some(OsStr::new("sol")) {
-            continue;
+    if let Some(testname) = var_os("TESTNAME") {
+        paths.push(PathBuf::from(testname))
+    } else {
+        for result in WalkDir::new("testdata/solidity/test/libsolidity/semanticTests") {
+            let entry = result.unwrap();
+            let path = entry.path();
+            if !path.is_file() || path.extension() != Some(OsStr::new("sol")) {
+                continue;
+            }
+            let contents = read_to_string(path).unwrap();
+            if !required_forbidden_pairs
+                .iter()
+                .any(|(required, forbidden)| {
+                    required.iter().all(|re| re.is_match(&contents))
+                        && !forbidden.iter().any(|re| re.is_match(&contents))
+                })
+            {
+                continue;
+            }
+            paths.push(path.to_path_buf());
         }
-        let contents = read_to_string(path).unwrap();
-        if !required_forbidden_pairs
-            .iter()
-            .any(|(required, forbidden)| {
-                required.iter().all(|re| re.is_match(&contents))
-                    && !forbidden.iter().any(|re| re.is_match(&contents))
-            })
-        {
-            continue;
-        }
-        paths.push(path.to_path_buf());
     }
     for path in paths {
         let contents = read_to_string(&path).unwrap();
