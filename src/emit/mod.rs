@@ -380,7 +380,7 @@ impl ast::Contract {
 // debug_value!(target, bin, ty, value, function)
 #[allow(unused_macros)]
 macro_rules! debug_value {
-    ($target:expr, $bin:expr, $ty:expr, $value:expr, $function:expr) => {
+    ($target:expr, $bin:expr, $ty:expr, $value:expr, $function:expr) => {{
         let string_literal = concat!("[", file!(), ":", line!(), "] ", stringify!($value), " = ")
             .as_bytes()
             .to_owned();
@@ -395,7 +395,6 @@ macro_rules! debug_value {
             &label_expr,
             &std::collections::HashMap::new(),
             $function,
-            $ns,
         );
         let value = crate::emit::strings::format_evaluated_args(
             $bin,
@@ -414,11 +413,25 @@ macro_rules! debug_value {
                 ),
             ],
             $function,
-            $ns,
         );
 
         $target.print($bin, $bin.vector_bytes(value), $bin.vector_len(value));
+
+        value
+    }};
+}
+#[allow(unused_macros)]
+macro_rules! here {
+    ($target:expr, $bin:expr, $function:expr) => {
+        let zero = $bin.context.i8_type().const_zero();
+        $crate::emit::debug_value!(
+            $target,
+            $bin,
+            $crate::sema::ast::Type::Uint(8),
+            zero,
+            $function
+        )
     };
 }
 #[allow(unused_imports)]
-pub(crate) use debug_value;
+pub(crate) use {debug_value, here};

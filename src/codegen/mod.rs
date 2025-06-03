@@ -1921,9 +1921,11 @@ impl From<&ast::Builtin> for Builtin {
 }
 
 // smoelius: I am not sure whether something like this already exists.
+// debug_expr!(expr, cfg, vartab)
 #[allow(unused_macros)]
 macro_rules! debug_expr {
-    ($expr:expr, $cfg:expr, $vartab:expr) => {
+    ($expr:expr, $cfg:expr, $vartab:expr) => {{
+        let expr = $expr;
         let label = Expression::BytesLiteral {
             loc: solang_parser::pt::Loc::Codegen,
             ty: Type::String,
@@ -1931,16 +1933,34 @@ macro_rules! debug_expr {
                 .as_bytes()
                 .to_owned(),
         };
-        let expr = Expression::FormatString {
+        let format_string = Expression::FormatString {
             loc: solang_parser::pt::Loc::Codegen,
             args: vec![
                 (crate::sema::ast::FormatArg::StringLiteral, label),
-                (crate::sema::ast::FormatArg::Default, $expr.clone()),
+                (crate::sema::ast::FormatArg::Default, expr.clone()),
             ],
         };
 
-        $cfg.add($vartab, Instr::Print { expr });
-    };
+        $cfg.add(
+            $vartab,
+            Instr::Print {
+                expr: format_string,
+            },
+        );
+
+        expr
+    }};
+}
+#[allow(unused_macros)]
+macro_rules! here {
+    ($cfg:expr, $vartab:expr) => {{
+        let zero = Expression::NumberLiteral {
+            loc: solang_parser::pt::Loc::Codegen,
+            ty: $crate::sema::ast::Type::Uint(8),
+            value: BigInt::zero(),
+        };
+        $crate::codegen::debug_expr!(zero, $cfg, $vartab)
+    }};
 }
 #[allow(unused_imports)]
-pub(crate) use debug_expr;
+pub(crate) use {debug_expr, here};
