@@ -99,7 +99,7 @@ pub(super) fn format_evaluated_args<'a>(
                     .context
                     .i32_type()
                     .const_int(bin.ns.enums[*enum_no].ty.bits(bin.ns) as u64 / 3, false),
-                _ => unimplemented!("can't format this argument: {:?}", val),
+                _ => unimplemented!("can't format argument of type {:?}: {:?}", ty, val),
             }
         };
 
