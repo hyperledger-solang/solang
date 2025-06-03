@@ -6,6 +6,7 @@
 use crate::codegen::cfg::HashTy;
 use crate::codegen::{Builtin, Expression};
 use crate::emit::binary::Binary;
+use crate::emit::storage::StorageSlot;
 use crate::emit::stylus::StylusTarget;
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
 use crate::emit_context;
@@ -16,6 +17,7 @@ use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue,
     PointerValue,
 };
+use inkwell::AddressSpace;
 use solang_parser::pt::{Loc, StorageType};
 use std::collections::HashMap;
 
@@ -27,7 +29,16 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
-        unimplemented!()
+        emit_context!(bin);
+
+        let value_ptr = bin.builder.build_alloca(ty, "value").unwrap();
+
+        call!("storage_load_bytes32", &[slot.into(), value_ptr.into()]);
+
+        bin.builder
+            .build_load(ty, value_ptr, "value")
+            .unwrap()
+            .into_int_value()
     }
 
     fn storage_load(
@@ -38,29 +49,13 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
-        emit_context!(bin);
-
+        // The storage slot is an i256 accessed through a pointer, so we need
+        // to store it
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        bin.builder.build_store(slot_ptr, *slot).unwrap();
+        let value = self.storage_load_slot(bin, ty, slot, slot_ptr, function);
 
-        match ty {
-            Type::DynamicBytes | Type::String => {
-                self.get_storage_string(bin, function, slot_ptr).into()
-            }
-            Type::InternalFunction { .. } => unimplemented!(),
-            _ => {
-                dbg!(ty);
-
-                let ty = bin.context.custom_width_int_type(256);
-
-                let value_ptr = bin.builder.build_alloca(ty, "value").unwrap();
-
-                call!("storage_load_bytes32", &[slot_ptr.into(), value_ptr.into()]);
-
-                bin.builder.build_load(ty, value_ptr, "value").unwrap()
-            }
-        }
+        value
     }
 
     /// Recursively store a type to storage
@@ -78,26 +73,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        bin.builder.build_store(slot_ptr, *slot).unwrap();
-
-        match ty {
-            Type::DynamicBytes | Type::String => {
-                self.set_storage_string(bin, function, slot_ptr, value);
-            }
-            Type::InternalFunction { .. } => unimplemented!(),
-            _ => {
-                dbg!(ty);
-                let value_ptr = bin
-                    .builder
-                    .build_alloca(bin.context.custom_width_int_type(256), "value")
-                    .unwrap();
-                bin.builder.build_store(value_ptr, value).unwrap();
-                call!(
-                    "storage_cache_bytes32",
-                    &[slot_ptr.into(), value_ptr.into()]
-                );
-            }
-        };
+        self.storage_store_slot(bin, ty, slot, slot_ptr, value, function);
 
         call!("storage_flush_cache", &[i32_const!(1).into()]);
     }
@@ -334,7 +310,93 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         slot: IntValue<'a>,
         val: Option<BasicValueEnum<'a>>,
     ) -> BasicValueEnum<'a> {
-        unimplemented!()
+        emit_context!(bin);
+
+        let val = val.unwrap();
+
+        // smoelius: Read length.
+        let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
+        bin.builder.build_store(slot_ptr, slot).unwrap();
+        let len_ptr = bin
+            .builder
+            .build_alloca(bin.context.i32_type(), "len_ptr")
+            .unwrap();
+        call!("storage_load_bytes32", &[slot_ptr.into(), len_ptr.into()]);
+        let len = bin
+            .builder
+            .build_load(bin.context.i32_type(), len_ptr, "len")
+            .unwrap()
+            .into_int_value();
+
+        // smoelius: Calculate last chunk index.
+        let i_chunk = bin
+            .builder
+            .build_int_unsigned_div(len, i32_const!(32), "i_chunk")
+            .unwrap();
+
+        // smoelius: Calculate last chunk slot.
+        let chunk_slot_base = next_slot(bin, slot_ptr, 32);
+        let chunk_slot = bin
+            .builder
+            .build_int_add(
+                chunk_slot_base,
+                bin.builder
+                    .build_int_z_extend(i_chunk, slot.get_type(), "i_chunk_as_slot_type")
+                    .unwrap(),
+                "chunk_slot",
+            )
+            .unwrap();
+
+        // smoelius: Read last chunk.
+        let chunk_slot_ptr = bin
+            .builder
+            .build_alloca(slot.get_type(), "chunk_slot")
+            .unwrap();
+        bin.builder.build_store(chunk_slot_ptr, chunk_slot).unwrap();
+        let chunk_ptr = bin
+            .builder
+            .build_alloca(bin.context.custom_width_int_type(256), "chunk_ptr")
+            .unwrap();
+        call!(
+            "storage_load_bytes32",
+            &[chunk_slot_ptr.into(), chunk_ptr.into()]
+        );
+
+        // smoelius: Calculate offset into chunk.
+        let offset = bin
+            .builder
+            .build_int_unsigned_rem(len, i32_const!(32), "offset")
+            .unwrap();
+
+        // smoelius: Write byte into chunk.
+        let chunk_ptr_as_byte_ptr = bin
+            .builder
+            .build_pointer_cast(
+                chunk_ptr,
+                bin.context.i8_type().ptr_type(AddressSpace::default()),
+                "chunk_ptr_as_byte_ptr",
+            )
+            .unwrap();
+        let byte_ptr = ptr_plus_offset(bin, chunk_ptr_as_byte_ptr, offset);
+        bin.builder.build_store(byte_ptr, val).unwrap();
+
+        // smoelius: Write updated chunk to storage.
+        call!(
+            "storage_cache_bytes32",
+            &[chunk_slot_ptr.into(), chunk_ptr.into()]
+        );
+
+        // smoelius: Update length.
+        let len = bin
+            .builder
+            .build_int_add(len, i32_const!(1), "updated_len")
+            .unwrap();
+
+        // smoelius: Write updated length to storage.
+        bin.builder.build_store(len_ptr, len).unwrap();
+        call!("storage_load_bytes32", &[slot_ptr.into(), len_ptr.into()]);
+
+        val
     }
 
     fn storage_pop(
