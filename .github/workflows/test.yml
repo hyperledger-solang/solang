@@ -306,7 +306,7 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: '16'
-    - uses: dtolnay/rust-toolchain@1.84.0
+    - uses: dtolnay/rust-toolchain@1.87.0
       with:
         target: wasm32-unknown-unknown
     - uses: actions/download-artifact@v4.1.8
