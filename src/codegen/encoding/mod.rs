@@ -539,8 +539,31 @@ pub(crate) trait AbiEncoding {
                     let (new_offset, size_length) = if self.is_packed() {
                         (offset.clone(), None)
                     } else {
-                        let encoded_size =
-                            self.encode_size(&value, buffer, offset, ns, vartab, cfg);
+                        let encoded_size = if ns.target == Target::Stylus {
+                            let swapped_bytes = Expression::ByteSwap {
+                                expr: Box::new(Expression::ZeroExt {
+                                    loc: Codegen,
+                                    ty: Type::Uint(256),
+                                    expr: Box::new(value.clone()),
+                                }),
+                                le_to_be: true,
+                            };
+                            cfg.add(
+                                vartab,
+                                Instr::WriteBuffer {
+                                    buf: buffer.clone(),
+                                    offset: offset.clone(),
+                                    value: swapped_bytes,
+                                },
+                            );
+                            Expression::NumberLiteral {
+                                loc: Codegen,
+                                ty: Type::Uint(32),
+                                value: BigInt::from(32),
+                            }
+                        } else {
+                            self.encode_size(&value, buffer, offset, ns, vartab, cfg)
+                        };
                         (
                             offset.clone().add_u32(encoded_size.clone()),
                             Some(encoded_size),
@@ -675,7 +698,31 @@ pub(crate) trait AbiEncoding {
                 ty: Uint(32),
                 var_no: offset_var,
             };
-            let encoded_size = self.encode_size(&size, buffer, &offset_expr, ns, vartab, cfg);
+            let encoded_size = if ns.target == Target::Stylus {
+                let swapped_bytes = Expression::ByteSwap {
+                    expr: Box::new(Expression::ZeroExt {
+                        loc: Codegen,
+                        ty: Type::Uint(256),
+                        expr: Box::new(size),
+                    }),
+                    le_to_be: true,
+                };
+                cfg.add(
+                    vartab,
+                    Instr::WriteBuffer {
+                        buf: buffer.clone(),
+                        offset: offset_expr.clone(),
+                        value: swapped_bytes,
+                    },
+                );
+                Expression::NumberLiteral {
+                    loc: Codegen,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(32),
+                }
+            } else {
+                self.encode_size(&size, buffer, &offset_expr, ns, vartab, cfg)
+            };
             cfg.add(
                 vartab,
                 Instr::Set {
@@ -850,8 +897,43 @@ pub(crate) trait AbiEncoding {
 
             Type::DynamicBytes | Type::String => {
                 // String and Dynamic bytes are encoded as size + elements
-                let (array_length_var, size_length) =
-                    self.retrieve_array_length(buffer, offset, vartab, cfg);
+                let (array_length_var, size_length) = if ns.target == Target::Stylus {
+                    let array_length_var = vartab.temp_anonymous(&Uint(32));
+                    let len = Expression::Builtin {
+                        loc: Codegen,
+                        tys: vec![Uint(256)],
+                        kind: Builtin::ReadFromBuffer,
+                        args: vec![buffer.clone(), offset.clone()],
+                    };
+                    let len_swapped = Expression::ByteSwap {
+                        expr: Box::new(len),
+                        le_to_be: false,
+                    };
+                    let len_swapped_truncated = Expression::Trunc {
+                        loc: Codegen,
+                        ty: Uint(32),
+                        expr: Box::new(len_swapped),
+                    };
+                    cfg.add(
+                        vartab,
+                        Instr::Set {
+                            loc: Codegen,
+                            res: array_length_var,
+                            expr: len_swapped_truncated,
+                        },
+                    );
+                    (
+                        array_length_var,
+                        Expression::NumberLiteral {
+                            loc: Codegen,
+                            ty: Type::Uint(32),
+                            value: BigInt::from(32),
+                        },
+                    )
+                } else {
+                    self.retrieve_array_length(buffer, offset, vartab, cfg)
+                };
+
                 let array_start = offset.clone().add_u32(size_length.clone());
                 validator.validate_offset(array_start.clone(), ns, vartab, cfg);
                 let array_length = Expression::Variable {
@@ -1155,8 +1237,42 @@ pub(crate) trait AbiEncoding {
 
         // Dynamic dimensions mean that the subarray we are processing must be allocated in memory.
         if dims[dimension] == ArrayLength::Dynamic {
-            let (array_length, size_length) =
-                self.retrieve_array_length(buffer, offset_expr, vartab, cfg);
+            let (array_length, size_length) = if ns.target == Target::Stylus {
+                let array_length_var = vartab.temp_anonymous(&Uint(32));
+                let len = Expression::Builtin {
+                    loc: Codegen,
+                    tys: vec![Uint(256)],
+                    kind: Builtin::ReadFromBuffer,
+                    args: vec![buffer.clone(), offset_expr.clone()],
+                };
+                let len_swapped = Expression::ByteSwap {
+                    expr: Box::new(len),
+                    le_to_be: false,
+                };
+                let len_swapped_truncated = Expression::Trunc {
+                    loc: Codegen,
+                    ty: Uint(32),
+                    expr: Box::new(len_swapped),
+                };
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: Codegen,
+                        res: array_length_var,
+                        expr: len_swapped_truncated,
+                    },
+                );
+                (
+                    array_length_var,
+                    Expression::NumberLiteral {
+                        loc: Codegen,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(32),
+                    },
+                )
+            } else {
+                self.retrieve_array_length(buffer, offset_expr, vartab, cfg)
+            };
             let array_start = offset_expr.clone().add_u32(size_length);
             validator.validate_offset(array_start.clone(), ns, vartab, cfg);
             cfg.add(
@@ -1563,7 +1679,15 @@ pub(crate) trait AbiEncoding {
                 };
             }
 
-            let size_width = self.size_width(&size, vartab, cfg);
+            let size_width = if ns.target == Target::Stylus {
+                Expression::NumberLiteral {
+                    loc: Codegen,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(32),
+                }
+            } else {
+                self.size_width(&size, vartab, cfg)
+            };
 
             let type_size = Expression::NumberLiteral {
                 loc: Codegen,
@@ -2084,6 +2208,11 @@ fn array_outer_length(
 
 /// Check if we can MemCpy a type to/from a buffer
 fn allow_memcpy(ty: &Type, ns: &Namespace) -> bool {
+    // smoelius: `memcpy` cannot be used for Stylus because integers are encoded big endian but are
+    // stored in memory little endian.
+    if ns.target == Target::Stylus {
+        return false;
+    }
     match ty {
         Type::Struct(struct_ty) => {
             if let Some(no_padded_size) = ns.calculate_struct_non_padded_size(struct_ty) {

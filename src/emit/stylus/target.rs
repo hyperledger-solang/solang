@@ -133,7 +133,21 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             n_chunks,
             &mut slot,
             |i_chunk: IntValue<'a>, slot: &mut IntValue<'a>| {
-                bin.builder.build_store(slot_ptr, *slot).unwrap();
+                let i_chunk_as_u256 = bin
+                    .builder
+                    .build_int_z_extend(
+                        i_chunk,
+                        bin.context.custom_width_int_type(256),
+                        "i_chunk_as_u256",
+                    )
+                    .unwrap();
+                let slot_plus_i_chunk = bin
+                    .builder
+                    .build_int_add(*slot, i_chunk_as_u256, "slot_plus_i_chunk")
+                    .unwrap();
+                bin.builder
+                    .build_store(slot_ptr, slot_plus_i_chunk)
+                    .unwrap();
 
                 let offset = bin
                     .builder
@@ -216,7 +230,21 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             n_chunks,
             &mut slot,
             |i_chunk: IntValue<'a>, slot: &mut IntValue<'a>| {
-                bin.builder.build_store(slot_ptr, *slot).unwrap();
+                let i_chunk_as_u256 = bin
+                    .builder
+                    .build_int_z_extend(
+                        i_chunk,
+                        bin.context.custom_width_int_type(256),
+                        "i_chunk_as_u256",
+                    )
+                    .unwrap();
+                let slot_plus_i_chunk = bin
+                    .builder
+                    .build_int_add(*slot, i_chunk_as_u256, "slot_plus_i_chunk")
+                    .unwrap();
+                bin.builder
+                    .build_store(slot_ptr, slot_plus_i_chunk)
+                    .unwrap();
 
                 let chunk_ptr = bin
                     .builder
