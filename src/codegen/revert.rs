@@ -258,8 +258,10 @@ pub(super) fn require(
         .get(1)
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
 
-    // On Solana and Polkadot, print the reason
-    if opt.log_runtime_errors {
+    // On Solana, Polkadot, and Stylus, print the reason
+    if opt.log_runtime_errors
+        && (ns.target == Target::Solana || ns.target.is_polkadot() || ns.target == Target::Stylus)
+    {
         if let Some(expr) = expr.clone() {
             let prefix = b"runtime_error: ";
             let error_string = format!(
