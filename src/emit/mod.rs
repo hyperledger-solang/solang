@@ -377,7 +377,7 @@ impl ast::Contract {
 }
 
 // smoelius: I am not sure whether something like this already exists.
-// debug_value!(target, bin, ty, value, function)
+/// debug_value!(target, bin, ty, value, function)
 #[allow(unused_macros)]
 macro_rules! debug_value {
     ($target:expr, $bin:expr, $ty:expr, $value:expr, $function:expr) => {{
