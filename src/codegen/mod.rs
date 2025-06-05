@@ -735,7 +735,6 @@ pub enum Expression {
         pointer: Box<Expression>,
     },
     ByteSwap {
-        ty: Type,
         expr: Box<Expression>,
         le_to_be: bool,
     },
@@ -935,8 +934,7 @@ impl RetrieveType for Expression {
             | Expression::BytesCast { ty, .. }
             | Expression::RationalNumberLiteral { ty, .. }
             | Expression::Subscript { ty, .. }
-            | Expression::InternalFunctionCfg { ty, .. }
-            | Expression::ByteSwap { ty, .. } => ty.clone(),
+            | Expression::InternalFunctionCfg { ty, .. } => ty.clone(),
 
             Expression::BoolLiteral { .. }
             | Expression::MoreEqual { .. }
@@ -952,6 +950,8 @@ impl RetrieveType for Expression {
             Expression::FormatString { .. } => Type::String,
             Expression::VectorData { .. } => Type::Uint(64),
             Expression::Poison => unreachable!("Expression does not have a type"),
+
+            Expression::ByteSwap { expr, .. } => expr.ty(),
         }
     }
 }
