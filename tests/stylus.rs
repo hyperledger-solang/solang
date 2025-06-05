@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
 use assert_cmd::cargo::cargo_bin;
 use regex::Regex;
 use std::{
@@ -15,6 +15,17 @@ use walkdir::WalkDir;
 mod stylus_tests;
 
 const PRIVATE_KEY: &str = "0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659";
+
+#[derive(Debug)]
+enum Severity {
+    Minor,
+    Major,
+}
+
+#[derive(Debug)]
+struct Error(Severity, anyhow::Error);
+
+type Result<T> = std::result::Result<T, Error>;
 
 // smoelius: Only one Stylus test can be run at a time.
 static MUTEX: Mutex<()> = Mutex::new(());
@@ -60,7 +71,9 @@ fn tests(required_forbidden_pairs: &[(&[&str], &[&str])]) {
             paths.push(path.to_path_buf());
         }
     }
-    for path in paths {
+    let mut successes = Vec::new();
+    let mut failures = Vec::new();
+    for path in &paths {
         let contents = read_to_string(&path).unwrap();
         let contracts = contract_re
             .captures_iter(&contents)
@@ -108,9 +121,17 @@ fn tests(required_forbidden_pairs: &[(&[&str], &[&str])]) {
 
         for function in argless_functions {
             eprintln!("Testing `{function}`");
-            call(dir, &address, &[&format!("{function}()")]);
+            match call(dir, &address, &[&format!("{function}()")]) {
+                Ok(_) => successes.push((path.to_path_buf(), function.to_owned())),
+                Err(Error(severity, error)) => {
+                    failures.push((path.to_path_buf(), function.to_owned(), severity, error))
+                }
+            }
         }
     }
+    eprintln!("Successes: {successes:#?}");
+    eprintln!("Failures: {failures:#?}");
+    assert!(failures.is_empty());
 }
 
 fn deploy(path: impl AsRef<Path>, contract: &str) -> Result<(TempDir, String)> {
@@ -168,7 +189,7 @@ fn deploy(path: impl AsRef<Path>, contract: &str) -> Result<(TempDir, String)> {
     Ok((tempdir, address.to_owned()))
 }
 
-pub fn call<I, S>(dir: impl AsRef<Path>, address: &str, args: I) -> String
+fn call<I, S>(dir: impl AsRef<Path>, address: &str, args: I) -> Result<String>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
@@ -176,7 +197,7 @@ where
     cast(dir, CastSubcommand::Call, address, args)
 }
 
-pub fn send<I, S>(dir: impl AsRef<Path>, address: &str, args: I) -> String
+fn send<I, S>(dir: impl AsRef<Path>, address: &str, args: I) -> Result<String>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
@@ -198,7 +219,12 @@ impl CastSubcommand {
     }
 }
 
-fn cast<I, S>(dir: impl AsRef<Path>, subcommand: CastSubcommand, address: &str, args: I) -> String
+fn cast<I, S>(
+    dir: impl AsRef<Path>,
+    subcommand: CastSubcommand,
+    address: &str,
+    args: I,
+) -> Result<String>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
@@ -219,7 +245,7 @@ where
         .map(|arg| arg.as_ref().to_owned())
         .collect::<Vec<_>>();
 
-    command(dir, iter.chain(other.iter().map(|s| s.as_os_str()))).unwrap()
+    command(dir, iter.chain(other.iter().map(|s| s.as_os_str())))
 }
 
 fn command<I, S>(dir: impl AsRef<Path>, args: I) -> Result<String>
@@ -240,10 +266,14 @@ where
             let stdout = String::from_utf8(output.stdout).unwrap();
             Ok(strip_ansi_escapes::strip_str(stdout))
         }
-        Some(1) => Err(anyhow!("command failed: {command:?}")),
-        other => {
-            panic!("command failed with code {other:?}: {command:?}");
-        }
+        Some(1) => Err(Error(
+            Severity::Minor,
+            anyhow!("command failed: {command:?}"),
+        )),
+        other => Err(Error(
+            Severity::Major,
+            anyhow!("command failed with code {other:?}: {command:?}"),
+        )),
     }
 }
 

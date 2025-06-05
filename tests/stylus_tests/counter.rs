@@ -23,16 +23,16 @@ fn counter() {
     .unwrap();
     let dir = &tempdir;
 
-    let stdout = call(dir, &address, ["number()(uint256)"]);
+    let stdout = call(dir, &address, ["number()(uint256)"]).unwrap();
     assert_eq!("0\n", stdout);
 
-    send(dir, &address, ["increment()"]);
+    send(dir, &address, ["increment()"]).unwrap();
 
-    let stdout = call(dir, &address, ["number()(uint256)"]);
+    let stdout = call(dir, &address, ["number()(uint256)"]).unwrap();
     assert_eq!("1\n", stdout);
 
-    send(dir, &address, ["setNumber(uint256)", "5"]);
+    send(dir, &address, ["setNumber(uint256)", "5"]).unwrap();
 
-    let stdout = call(dir, &address, ["number()(uint256)"]);
+    let stdout = call(dir, &address, ["number()(uint256)"]).unwrap();
     assert_eq!("5\n", stdout);
 }
