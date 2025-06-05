@@ -1952,15 +1952,24 @@ macro_rules! debug_expr {
     }};
 }
 #[allow(unused_macros)]
+macro_rules! debug_str {
+    ($s:expr, $cfg:expr, $vartab:expr) => {{
+        let mut labeled_string = concat!("[", file!(), ":", line!(), "] ").to_owned();
+        labeled_string.push_str($s);
+        let expr = Expression::BytesLiteral {
+            loc: solang_parser::pt::Loc::Codegen,
+            ty: Type::String,
+            value: labeled_string.as_bytes().to_owned(),
+        };
+
+        $cfg.add($vartab, Instr::Print { expr });
+    }};
+}
+#[allow(unused_macros)]
 macro_rules! here {
     ($cfg:expr, $vartab:expr) => {{
-        let zero = Expression::NumberLiteral {
-            loc: solang_parser::pt::Loc::Codegen,
-            ty: $crate::sema::ast::Type::Uint(8),
-            value: BigInt::zero(),
-        };
-        $crate::codegen::debug_expr!(zero, $cfg, $vartab)
+        $crate::codegen::debug_str!("", $cfg, $vartab)
     }};
 }
 #[allow(unused_imports)]
-pub(crate) use {debug_expr, here};
+pub(crate) use {debug_expr, debug_str, here};

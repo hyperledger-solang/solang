@@ -420,18 +420,35 @@ macro_rules! debug_value {
         value
     }};
 }
+/// debug_string!(target, bin, s, function)
+#[allow(unused_macros)]
+macro_rules! debug_str {
+    ($target:expr, $bin:expr, $s:expr, $function:expr) => {{
+        let mut labeled_string = concat!("[", file!(), ":", line!(), "] ").to_owned();
+        labeled_string.push_str($s);
+        let expr = crate::codegen::Expression::BytesLiteral {
+            loc: solang_parser::pt::Loc::Codegen,
+            ty: Type::String,
+            value: labeled_string.as_bytes().to_owned(),
+        };
+        let value = crate::emit::expression::expression(
+            $target,
+            $bin,
+            &expr,
+            &std::collections::HashMap::new(),
+            $function,
+        );
+
+        $target.print($bin, $bin.vector_bytes(value), $bin.vector_len(value));
+
+        value
+    }};
+}
 #[allow(unused_macros)]
 macro_rules! here {
     ($target:expr, $bin:expr, $function:expr) => {
-        let zero = $bin.context.i8_type().const_zero();
-        $crate::emit::debug_value!(
-            $target,
-            $bin,
-            $crate::sema::ast::Type::Uint(8),
-            zero,
-            $function
-        )
+        $crate::emit::debug_str!($target, $bin, "", $function)
     };
 }
 #[allow(unused_imports)]
-pub(crate) use {debug_value, here};
+pub(crate) use {debug_str, debug_value, here};
