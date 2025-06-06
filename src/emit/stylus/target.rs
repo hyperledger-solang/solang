@@ -553,14 +553,16 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             .build_store(bin.return_data_len.unwrap().as_pointer_value(), temp)
             .unwrap();
 
-        // smoelius: `status` is a `u8`, but we need an `i32`. Also, as per the comment above, we
-        // need to map 0 to 1, and non-zero to 0.
-        let status_inverted = status_inverted(
-            bin,
-            status.try_as_basic_value().left().unwrap().into_int_value(),
-        );
+        if let Some(success) = success {
+            // smoelius: `status` is a `u8`, but we need an `i32`. Also, as per the comment above, we
+            // need to map 0 to 1, and non-zero to 0.
+            let status_inverted = status_inverted(
+                bin,
+                status.try_as_basic_value().left().unwrap().into_int_value(),
+            );
 
-        *success.unwrap() = status_inverted.into();
+            *success = status_inverted.into();
+        }
     }
 
     /// send value to address
