@@ -803,7 +803,7 @@ impl<'input> Lexer<'input> {
                                     }
 
                                     if !ch.is_ascii_hexdigit() && ch != '_' {
-                                        // Eat up the remainer of the string
+                                        // Eat up the remainder of the string
                                         for (_, ch) in &mut self.chars {
                                             if ch == quote_char {
                                                 break;
