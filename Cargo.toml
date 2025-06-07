@@ -8,7 +8,7 @@ license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "solana", "polkadot", "substrate" ]
-rust-version = "1.82.0"
+rust-version = "1.84.0"
 edition = "2021"
 exclude = [ "/.*", "/docs",  "/examples", "/solana-library", "/tests", "/integration", "/vscode", "/testdata" ]
 
@@ -33,7 +33,7 @@ blake2-rfc = "0.2.18"
 handlebars = "5.1"
 contract-metadata = "4.0.2"
 semver = { version = "1.0", features = ["serde"] }
-tempfile = "3.10"
+tempfile = "3.20.0"
 libc = { version = "0.2", optional = true }
 tower-lsp = { version = "0.20", optional = true }
 tokio = { version = "1.27", features = ["rt", "io-std", "macros"], optional = true }
