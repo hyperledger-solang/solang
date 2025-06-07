@@ -2,7 +2,7 @@
 
 use crate::{
     emit::{binary::Binary, cfg::emit_cfg, TargetRuntime},
-    sema::ast::{Contract, Namespace, Type},
+    sema::ast::{Contract, Type},
 };
 use inkwell::module::Linkage;
 
@@ -11,7 +11,6 @@ pub(super) fn emit_functions<'a, T: TargetRuntime<'a>>(
     target: &mut T,
     bin: &mut Binary<'a>,
     contract: &Contract,
-    ns: &Namespace,
 ) {
     let mut defines = Vec::new();
 
@@ -26,7 +25,6 @@ pub(super) fn emit_functions<'a, T: TargetRuntime<'a>>(
                     .iter()
                     .map(|p| p.ty.clone())
                     .collect::<Vec<Type>>(),
-                ns,
             );
 
             let func_decl = if let Some(func) = bin.module.get_function(&cfg.name) {
@@ -46,6 +44,6 @@ pub(super) fn emit_functions<'a, T: TargetRuntime<'a>>(
     }
 
     for (func_decl, cfg) in defines {
-        emit_cfg(target, bin, contract, cfg, func_decl, ns);
+        emit_cfg(target, bin, contract, cfg, func_decl);
     }
 }

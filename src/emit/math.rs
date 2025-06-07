@@ -3,7 +3,6 @@
 use crate::codegen::revert::PanicCode;
 use crate::emit::binary::Binary;
 use crate::emit::{BinaryOp, TargetRuntime};
-use crate::sema::ast::Namespace;
 use inkwell::types::IntType;
 use inkwell::values::{FunctionValue, IntValue, PointerValue};
 use inkwell::IntPredicate;
@@ -22,7 +21,6 @@ fn signed_ovf_detect<'a, T: TargetRuntime<'a> + ?Sized>(
     right: IntValue<'a>,
     bits: u32,
     function: FunctionValue<'a>,
-    ns: &Namespace,
     loc: Loc,
 ) -> IntValue<'a> {
     // We check for signed overflow based on the facts:
@@ -238,8 +236,8 @@ fn signed_ovf_detect<'a, T: TargetRuntime<'a> + ?Sized>(
 
     bin.builder.position_at_end(error_block);
 
-    bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc), ns);
-    let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::MathOverflow);
+    bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc));
+    let (revert_out, revert_out_len) = bin.panic_data_const(PanicCode::MathOverflow);
     target.assert_failure(bin, revert_out, revert_out_len);
 
     bin.builder.position_at_end(return_block);
@@ -308,7 +306,6 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
     left: IntValue<'a>,
     right: IntValue<'a>,
     signed: bool,
-    ns: &Namespace,
     loc: Loc,
 ) -> IntValue<'a> {
     let bits = left.get_type().get_bit_width();
@@ -349,7 +346,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
         if !unchecked {
             if signed {
                 return signed_ovf_detect(
-                    target, bin, mul_ty, mul_bits, left, right, bits, function, ns, loc,
+                    target, bin, mul_ty, mul_bits, left, right, bits, function, loc,
                 );
             }
 
@@ -435,9 +432,9 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(error_block);
 
-            bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc), ns);
+            bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc));
 
-            let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::MathOverflow);
+            let (revert_out, revert_out_len) = bin.panic_data_const(PanicCode::MathOverflow);
             target.assert_failure(bin, revert_out, revert_out_len);
 
             bin.builder.position_at_end(return_block);
@@ -457,7 +454,6 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
             right,
             BinaryOp::Multiply,
             signed,
-            ns,
             loc,
         )
     } else {
@@ -472,7 +468,6 @@ pub(super) fn power<'a, T: TargetRuntime<'a> + ?Sized>(
     bits: u32,
     signed: bool,
     o: PointerValue<'a>,
-    ns: &Namespace,
     loc: Loc,
 ) -> FunctionValue<'a> {
     /*
@@ -558,7 +553,6 @@ pub(super) fn power<'a, T: TargetRuntime<'a> + ?Sized>(
         result.as_basic_value().into_int_value(),
         base.as_basic_value().into_int_value(),
         signed,
-        ns,
         loc,
     );
 
@@ -613,7 +607,6 @@ pub(super) fn power<'a, T: TargetRuntime<'a> + ?Sized>(
         base.as_basic_value().into_int_value(),
         base.as_basic_value().into_int_value(),
         signed,
-        ns,
         loc,
     );
 
@@ -639,7 +632,6 @@ pub(super) fn build_binary_op_with_overflow_check<'a, T: TargetRuntime<'a> + ?Si
     right: IntValue<'a>,
     op: BinaryOp,
     signed: bool,
-    ns: &Namespace,
     loc: Loc,
 ) -> IntValue<'a> {
     let ret_ty = bin.context.struct_type(
@@ -675,8 +667,8 @@ pub(super) fn build_binary_op_with_overflow_check<'a, T: TargetRuntime<'a> + ?Si
 
     bin.builder.position_at_end(error_block);
 
-    bin.log_runtime_error(target, "math overflow".to_string(), Some(loc), ns);
-    let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::MathOverflow);
+    bin.log_runtime_error(target, "math overflow".to_string(), Some(loc));
+    let (revert_out, revert_out_len) = bin.panic_data_const(PanicCode::MathOverflow);
     target.assert_failure(bin, revert_out, revert_out_len);
 
     bin.builder.position_at_end(success_block);
