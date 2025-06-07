@@ -131,9 +131,38 @@ pub fn soroban_decode_arg(
             }),
             signed: false,
         },
+        Type::Uint(32) | Type::Int(32) => {
+            let shifted = Expression::ShiftRight {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64), // The shift result is Uint(64)
+                left: arg.into(),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(8_u64),
+                }),
+                signed: false,
+            };
 
+            let truncated = Expression::Trunc {
+                // Truncate to the original size
+                loc: Loc::Codegen,
+                ty: ty.clone(), // Use the original type (Uint(32) or Int(32))
+                expr: Box::new(shifted),
+            };
+
+            if ty == Type::Int(32) {
+                Expression::Cast {
+                    // Cast to Int(32) if needed
+                    loc: Loc::Codegen,
+                    ty: Type::Int(32),
+                    expr: Box::new(truncated),
+                }
+            } else {
+                truncated
+            }
+        }
         Type::Address(_) => arg.clone(),
-
         Type::Int(128) | Type::Uint(128) => decode_i128(wrapper_cfg, vartab, arg),
         _ => unimplemented!(),
     }
@@ -264,6 +293,48 @@ pub fn soroban_encode_arg(
             let tag = match item.ty() {
                 Type::Uint(64) => 6,
                 Type::Int(64) => 7,
+                _ => unreachable!(),
+            };
+
+            let added = Expression::Add {
+                loc: item.loc(),
+                ty: Type::Uint(64),
+                left: Box::new(shift_left),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    value: BigInt::from(tag),
+                }),
+                overflowing: false,
+            };
+
+            Instr::Set {
+                loc: item.loc(),
+                res: obj,
+                expr: added,
+            }
+        }
+
+        Type::Uint(32) | Type::Int(32) => {
+            let extended = Expression::ZeroExt {
+                loc: item.loc(),
+                ty: Type::Uint(64),
+                expr: Box::new(item.clone()),
+            };
+            let shift_left = Expression::ShiftLeft {
+                loc: item.loc(),
+                ty: Type::Uint(64),
+                left: Box::new(extended),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    value: BigInt::from(8),
+                }),
+            };
+
+            let tag = match item.ty() {
+                Type::Uint(32) => 4,
+                Type::Int(32) => 5,
                 _ => unreachable!(),
             };
 

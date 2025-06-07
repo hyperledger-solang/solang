@@ -1,13 +1,35 @@
+# Build and project files
 /docs/build
 Cargo.lock
 /target
 **/*.rs.bk
 *.ll
-/tests/.tmp*
-/tests/create_me/
-/test_snapshots/
+package-lock.json
 
+# Test directories and snapshots
+tests/.tmp*
+tests/create_me/
+/test_snapshots
+test_snapshots/
+test_snapshots/
+
+# Editors and IDEs
 .helix/
 .vscode/
 
-/test_snapshots
+# OS generated files
+*.DS_Store
+
+# Compiled binaries and outputs
+*.wasm
+*.abi
+*.ll
+
+# Dependencies and modules
+node_modules/
+
+# Integration specific paths
+integration/soroban/addition.sol
+integration/soroban/rust/target/
+integration/anchor/target/
+integration/anchor/target/.rustc_info.json
