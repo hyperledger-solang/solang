@@ -142,7 +142,7 @@ Polkadot
 ~~~~~~~~
 
 uint128 ``block.minimum_deposit``
-    The minimum amonut needed to create a contract. This does not include
+    The minimum amount needed to create a contract. This does not include
     storage rent.
 
 Ethereum
