@@ -955,7 +955,7 @@ impl<'a> Binary<'a> {
                 }
                 Type::Enum(n) => self.llvm_type(&self.ns.enums[*n].ty),
                 Type::String | Type::DynamicBytes => {
-                    if ns.target == Target::Soroban {
+                    if self.ns.target == Target::Soroban {
                         BasicTypeEnum::IntType(self.context.i64_type())
                     } else {
                         self.module.get_struct_type("struct.vector").unwrap().into()

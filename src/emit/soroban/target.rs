@@ -48,12 +48,12 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         println!("storage_load: {:?}", ty);
         println!("slot: {:?}", slot);
         let storage_type = storage_type_to_int(storage_type);
-        emit_context!(binary);
+        emit_context!(bin);
 
         let slot = if slot.is_const() {
             slot.as_basic_value_enum()
                 .into_int_value()
-                .const_cast(binary.context.i64_type(), false)
+                .const_cast(bin.context.i64_type(), false)
         } else {
             *slot
         };
@@ -62,7 +62,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             HostFunctions::GetContractData.name(),
             &[
                 slot.into(),
-                binary
+                bin
                     .context
                     .i64_type()
                     .const_int(storage_type, false)
@@ -90,7 +90,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         storage_type: &Option<StorageType>,
     ) {
         println!("storage_store: {:?}", ty);
-        emit_context!(binary);
+        emit_context!(bin);
 
         let storage_type = storage_type_to_int(storage_type);
 
@@ -101,7 +101,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         let slot = if slot.is_const() {
             slot.as_basic_value_enum()
                 .into_int_value()
-                .const_cast(binary.context.i64_type(), false)
+                .const_cast(bin.context.i64_type(), false)
         } else {
             *slot
         };

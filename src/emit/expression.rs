@@ -1362,7 +1362,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let index = expression(target, bin, index, vartab, function);
 
                 target
-                    .storage_subscript(bin, function, ty, array, index, ns)
+                    .storage_subscript(bin, function, ty, array, index)
                     .as_basic_value_enum()
             } else if elem_ty.is_builtin_struct() == Some(StructType::AccountInfo) {
                 let array = expression(target, bin, a, vartab, function).into_pointer_value();

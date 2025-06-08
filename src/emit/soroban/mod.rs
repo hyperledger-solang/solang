@@ -386,10 +386,10 @@ impl SorobanTarget {
         let void_param = ast::Parameter::new_default(ast::Type::Void);
         cfg.returns = sync::Arc::new(vec![void_param]);
 
-        Self::emit_function_spec_entry(bin.context, &cfg, "__constructor".to_string(), bin);
+        Self::emit_function_spec_entry(binary.context, &cfg, "__constructor".to_string(), binary);
 
         let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
-        let mut storage_initializers = bin
+        let mut storage_initializers = binary
             .functions
             .values()
             .filter(|f: &&inkwell::values::FunctionValue| f.get_name() == function_name.as_c_str());
@@ -398,14 +398,14 @@ impl SorobanTarget {
             .expect("storage initializer is always present");
         assert!(storage_initializers.next().is_none());
 
-        let void_type = bin.context.i64_type().fn_type(&[], false);
+        let void_type = binary.context.i64_type().fn_type(&[], false);
         let constructor =
-            bin.module
+            binary.module
                 .add_function("__constructor", void_type, Some(Linkage::External));
-        let entry = bin.context.append_basic_block(constructor, "entry");
+        let entry = binary.context.append_basic_block(constructor, "entry");
 
-        bin.builder.position_at_end(entry);
-        bin.builder
+        binary.builder.position_at_end(entry);
+        binary.builder
             .build_call(storage_initializer, &[], "storage_initializer")
             .unwrap();
 
@@ -426,7 +426,7 @@ impl SorobanTarget {
         }
 
         // return zero
-        let zero_val = bin.context.i64_type().const_int(2, false);
-        bin.builder.build_return(Some(&zero_val)).unwrap();
+        let zero_val = binary.context.i64_type().const_int(2, false);
+        binary.builder.build_return(Some(&zero_val)).unwrap();
     }
 }
