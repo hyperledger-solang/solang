@@ -9,7 +9,7 @@ use crate::emit::binary::Binary;
 use crate::emit::cfg::{create_block, BasicBlock, Work};
 use crate::emit::expression::expression;
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
-use crate::sema::ast::{Contract, ExternalCallAccounts, Namespace, RetrieveType, Type};
+use crate::sema::ast::{Contract, ExternalCallAccounts, RetrieveType, Type};
 use crate::Target;
 use inkwell::types::BasicType;
 use inkwell::values::{
@@ -28,7 +28,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
     bin: &Binary<'a>,
     w: &mut Work<'a>,
     function: FunctionValue<'a>,
-    ns: &Namespace,
     cfg: &ControlFlowGraph,
     work: &mut VecDeque<Work<'a>>,
     blocks: &mut HashMap<usize, BasicBlock<'a>>,
@@ -36,16 +35,16 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 ) {
     match ins {
         Instr::Nop => (),
-        Instr::Return { value } if value.is_empty() && ns.target != Target::Soroban => {
+        Instr::Return { value } if value.is_empty() && bin.ns.target != Target::Soroban => {
             bin.builder
                 .build_return(Some(&bin.return_values[&ReturnCode::Success]))
                 .unwrap();
         }
-        Instr::Return { value } if ns.target != Target::Soroban => {
+        Instr::Return { value } if bin.ns.target != Target::Soroban => {
             let returns_offset = cfg.params.len();
             for (i, val) in value.iter().enumerate() {
                 let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
-                let retval = expression(target, bin, val, &w.vars, function, ns);
+                let retval = expression(target, bin, val, &w.vars, function);
 
                 bin.builder
                     .build_store(arg.into_pointer_value(), retval)
@@ -58,7 +57,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         }
         Instr::Return { value } => match value.iter().next() {
             Some(val) => {
-                let retval = expression(target, bin, val, &w.vars, function, ns);
+                let retval = expression(target, bin, val, &w.vars, function);
                 bin.builder.build_return(Some(&retval)).unwrap();
             }
             None => {
@@ -69,27 +68,26 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             if let Expression::Undefined { ty: expr_type } = expr {
                 // If the variable has been declared as undefined, but we can
                 // initialize it with a default value
-                if let Some(default_expr) = expr_type.default(ns) {
+                if let Some(default_expr) = expr_type.default(bin.ns) {
                     w.vars.get_mut(res).unwrap().value =
-                        expression(target, bin, &default_expr, &w.vars, function, ns);
+                        expression(target, bin, &default_expr, &w.vars, function);
                 }
             } else {
                 w.vars.get_mut(res).unwrap().value =
-                    expression(target, bin, expr, &w.vars, function, ns);
+                    expression(target, bin, expr, &w.vars, function);
             }
         }
         Instr::Branch { block: dest } => {
             let pos = bin.builder.get_insert_block().unwrap();
 
-            let bb = add_or_retrieve_block(*dest, pos, bin, function, blocks, work, w, cfg, ns);
+            let bb = add_or_retrieve_block(*dest, pos, bin, function, blocks, work, w, cfg);
 
             bin.builder.position_at_end(pos);
             bin.builder.build_unconditional_branch(bb).unwrap();
         }
         Instr::Store { dest, data } => {
-            let value_ref = expression(target, bin, data, &w.vars, function, ns);
-            let dest_ref =
-                expression(target, bin, dest, &w.vars, function, ns).into_pointer_value();
+            let value_ref = expression(target, bin, data, &w.vars, function);
+            let dest_ref = expression(target, bin, dest, &w.vars, function).into_pointer_value();
             bin.builder.build_store(dest_ref, value_ref).unwrap();
         }
         Instr::BranchCond {
@@ -97,15 +95,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             true_block: true_,
             false_block: false_,
         } => {
-            let cond = expression(target, bin, cond, &w.vars, function, ns);
+            let cond = expression(target, bin, cond, &w.vars, function);
 
             let pos = bin.builder.get_insert_block().unwrap();
 
-            let bb_true =
-                add_or_retrieve_block(*true_, pos, bin, function, blocks, work, w, cfg, ns);
+            let bb_true = add_or_retrieve_block(*true_, pos, bin, function, blocks, work, w, cfg);
 
-            let bb_false =
-                add_or_retrieve_block(*false_, pos, bin, function, blocks, work, w, cfg, ns);
+            let bb_false = add_or_retrieve_block(*false_, pos, bin, function, blocks, work, w, cfg);
 
             bin.builder.position_at_end(pos);
             bin.builder
@@ -118,15 +114,15 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             storage,
             storage_type,
         } => {
-            let mut slot = expression(target, bin, storage, &w.vars, function, ns).into_int_value();
+            let mut slot = expression(target, bin, storage, &w.vars, function).into_int_value();
 
             w.vars.get_mut(res).unwrap().value =
-                target.storage_load(bin, ty, &mut slot, function, ns, storage_type);
+                target.storage_load(bin, ty, &mut slot, function, storage_type);
         }
         Instr::ClearStorage { ty, storage } => {
-            let mut slot = expression(target, bin, storage, &w.vars, function, ns).into_int_value();
+            let mut slot = expression(target, bin, storage, &w.vars, function).into_int_value();
 
-            target.storage_delete(bin, ty, &mut slot, function, ns);
+            target.storage_delete(bin, ty, &mut slot, function);
         }
         Instr::SetStorage {
             ty,
@@ -134,11 +130,11 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             storage,
             storage_type,
         } => {
-            let value = expression(target, bin, value, &w.vars, function, ns);
+            let value = expression(target, bin, value, &w.vars, function);
 
-            let mut slot = expression(target, bin, storage, &w.vars, function, ns).into_int_value();
+            let mut slot = expression(target, bin, storage, &w.vars, function).into_int_value();
 
-            target.storage_store(bin, ty, true, &mut slot, value, function, ns, storage_type);
+            target.storage_store(bin, ty, true, &mut slot, value, function, storage_type);
         }
         Instr::SetStorageBytes {
             storage,
@@ -146,10 +142,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             offset,
         } => {
             let index_loc = offset.loc();
-            let value = expression(target, bin, value, &w.vars, function, ns);
+            let value = expression(target, bin, value, &w.vars, function);
 
-            let slot = expression(target, bin, storage, &w.vars, function, ns).into_int_value();
-            let offset = expression(target, bin, offset, &w.vars, function, ns).into_int_value();
+            let slot = expression(target, bin, storage, &w.vars, function).into_int_value();
+            let offset = expression(target, bin, offset, &w.vars, function).into_int_value();
 
             target.set_storage_bytes_subscript(
                 bin,
@@ -157,7 +153,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 slot,
                 offset,
                 value.into_int_value(),
-                ns,
                 index_loc,
             );
         }
@@ -169,17 +164,16 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         } => {
             let val = value
                 .as_ref()
-                .map(|expr| expression(target, bin, expr, &w.vars, function, ns));
-            let slot = expression(target, bin, storage, &w.vars, function, ns).into_int_value();
+                .map(|expr| expression(target, bin, expr, &w.vars, function));
+            let slot = expression(target, bin, storage, &w.vars, function).into_int_value();
 
-            w.vars.get_mut(res).unwrap().value =
-                target.storage_push(bin, function, ty, slot, val, ns);
+            w.vars.get_mut(res).unwrap().value = target.storage_push(bin, function, ty, slot, val);
         }
         Instr::PopStorage { res, ty, storage } => {
             let loc = storage.loc();
-            let slot = expression(target, bin, storage, &w.vars, function, ns).into_int_value();
+            let slot = expression(target, bin, storage, &w.vars, function).into_int_value();
 
-            let value = target.storage_pop(bin, function, ty, slot, res.is_some(), ns, loc);
+            let value = target.storage_pop(bin, function, ty, slot, res.is_some(), loc);
 
             if let Some(res) = res {
                 w.vars.get_mut(res).unwrap().value = value.unwrap();
@@ -193,11 +187,11 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         } => {
             let arr = w.vars[array].value;
 
-            let llvm_ty = bin.llvm_type(ty, ns);
+            let llvm_ty = bin.llvm_type(ty);
             let elem_ty = ty.array_elem();
 
             // Calculate total size for reallocation
-            let llvm_elem_ty = bin.llvm_field_ty(&elem_ty, ns);
+            let llvm_elem_ty = bin.llvm_field_ty(&elem_ty);
             let elem_size = llvm_elem_ty
                 .size_of()
                 .unwrap()
@@ -247,10 +241,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     )
                     .unwrap()
             };
-            let value = expression(target, bin, value, &w.vars, function, ns);
-            let value = if elem_ty.is_fixed_reference_type(ns) {
+            let value = expression(target, bin, value, &w.vars, function);
+            let value = if elem_ty.is_fixed_reference_type(bin.ns) {
                 w.vars.get_mut(res).unwrap().value = slot_ptr.into();
-                let load_ty = bin.llvm_type(&elem_ty, ns);
+                let load_ty = bin.llvm_type(&elem_ty);
                 bin.builder
                     .build_load(load_ty, value.into_pointer_value(), "elem")
                     .unwrap()
@@ -334,15 +328,15 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap();
 
             bin.builder.position_at_end(error);
-            bin.log_runtime_error(target, "pop from empty array".to_string(), Some(*loc), ns);
-            let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::EmptyArrayPop);
+            bin.log_runtime_error(target, "pop from empty array".to_string(), Some(*loc));
+            let (revert_out, revert_out_len) = bin.panic_data_const(PanicCode::EmptyArrayPop);
             target.assert_failure(bin, revert_out, revert_out_len);
 
             bin.builder.position_at_end(pop);
-            let llvm_ty = bin.llvm_type(ty, ns);
+            let llvm_ty = bin.llvm_type(ty);
 
             let elem_ty = ty.array_elem();
-            let llvm_elem_ty = bin.llvm_field_ty(&elem_ty, ns);
+            let llvm_elem_ty = bin.llvm_field_ty(&elem_ty);
 
             // Calculate total size for reallocation
             let elem_size = llvm_elem_ty
@@ -378,12 +372,12 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     )
                     .unwrap()
             };
-            if elem_ty.is_fixed_reference_type(ns) {
+            if elem_ty.is_fixed_reference_type(bin.ns) {
                 w.vars.get_mut(res).unwrap().value = slot_ptr.into();
             } else {
                 let ret_val = bin
                     .builder
-                    .build_load(bin.llvm_type(&elem_ty, ns), slot_ptr, "")
+                    .build_load(bin.llvm_type(&elem_ty), slot_ptr, "")
                     .unwrap();
                 w.vars.get_mut(res).unwrap().value = ret_val;
             }
@@ -447,14 +441,14 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         Instr::AssertFailure {
             encoded_args: Some(expr),
         } => {
-            let data = expression(target, bin, expr, &w.vars, function, ns);
+            let data = expression(target, bin, expr, &w.vars, function);
             let vector_bytes = bin.vector_bytes(data);
             let len = bin.vector_len(data);
 
             target.assert_failure(bin, vector_bytes, len);
         }
         Instr::Print { expr } => {
-            let expr = expression(target, bin, expr, &w.vars, function, ns);
+            let expr = expression(target, bin, expr, &w.vars, function);
 
             target.print(bin, bin.vector_bytes(expr), bin.vector_len(expr));
         }
@@ -468,18 +462,18 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let mut parms = args
                 .iter()
-                .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
+                .map(|p| expression(target, bin, p, &w.vars, function).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
             // Soroban doesn't write return values to imported memory
-            if !res.is_empty() && ns.target != Target::Soroban {
+            if !res.is_empty() && bin.ns.target != Target::Soroban {
                 for v in f.returns.iter() {
-                    parms.push(if ns.target == Target::Solana {
-                        bin.build_alloca(function, bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
+                    parms.push(if bin.ns.target == Target::Solana {
+                        bin.build_alloca(function, bin.llvm_var_ty(&v.ty), v.name_as_str())
                             .into()
                     } else {
                         bin.builder
-                            .build_alloca(bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
+                            .build_alloca(bin.llvm_var_ty(&v.ty), v.name_as_str())
                             .unwrap()
                             .into()
                     });
@@ -498,7 +492,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .left();
 
             // Soroban doesn't have return codes, and only returns a single i64 value
-            if ns.target != Target::Soroban {
+            if bin.ns.target != Target::Soroban {
                 let success = bin
                     .builder
                     .build_int_compare(
@@ -522,7 +516,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 if !res.is_empty() {
                     for (i, v) in f.returns.iter().enumerate() {
-                        let load_ty = bin.llvm_var_ty(&v.ty, ns);
+                        let load_ty = bin.llvm_var_ty(&v.ty);
                         let val = bin
                             .builder
                             .build_load(
@@ -534,7 +528,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                         let dest = w.vars[&res[i]].value;
 
                         if dest.is_pointer_value()
-                            && !(v.ty.is_reference_type(ns)
+                            && !(v.ty.is_reference_type(bin.ns)
                                 || matches!(v.ty, Type::ExternalFunction { .. }))
                         {
                             bin.builder
@@ -557,19 +551,19 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         } => {
             let mut parms = args
                 .iter()
-                .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
+                .map(|p| expression(target, bin, p, &w.vars, function).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
-            let callee = &ns.functions[*ast_func_no];
+            let callee = &bin.ns.functions[*ast_func_no];
 
             if !res.is_empty() {
                 for v in callee.returns.iter() {
-                    parms.push(if ns.target == Target::Solana {
-                        bin.build_alloca(function, bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
+                    parms.push(if bin.ns.target == Target::Solana {
+                        bin.build_alloca(function, bin.llvm_var_ty(&v.ty), v.name_as_str())
                             .into()
                     } else {
                         bin.builder
-                            .build_alloca(bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
+                            .build_alloca(bin.llvm_var_ty(&v.ty), v.name_as_str())
                             .unwrap()
                             .into()
                     });
@@ -581,8 +575,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 function,
                 callee,
                 &parms,
-                args.first().map(|arg| bin.llvm_type(&arg.ty(), ns)),
-                ns,
+                args.first().map(|arg| bin.llvm_type(&arg.ty())),
             ) {
                 let success = bin
                     .builder
@@ -607,12 +600,12 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             if !res.is_empty() {
                 for (i, v) in callee.returns.iter().enumerate() {
-                    let load_ty = if v.ty.is_reference_type(ns) {
-                        bin.llvm_type(&v.ty, ns)
+                    let load_ty = if v.ty.is_reference_type(bin.ns) {
+                        bin.llvm_type(&v.ty)
                             .ptr_type(AddressSpace::default())
                             .as_basic_type_enum()
                     } else {
-                        bin.llvm_type(&v.ty, ns)
+                        bin.llvm_type(&v.ty)
                     };
                     let val = bin
                         .builder
@@ -626,7 +619,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     let dest = w.vars[&res[i]].value;
 
                     if dest.is_pointer_value()
-                        && !(v.ty.is_reference_type(ns)
+                        && !(v.ty.is_reference_type(bin.ns)
                             || matches!(v.ty, Type::ExternalFunction { .. }))
                     {
                         bin.builder
@@ -650,22 +643,19 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 params, returns, ..
             } = ty.deref_any()
             {
-                (bin.function_type(params, returns, ns), returns)
+                (bin.function_type(params, returns), returns)
             } else {
                 panic!("should be Type::InternalFunction type");
             };
 
             let mut parms = args
                 .iter()
-                .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
+                .map(|p| expression(target, bin, p, &w.vars, function).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
             if !res.is_empty() {
                 for ty in returns.iter() {
-                    parms.push(
-                        bin.build_alloca(function, bin.llvm_var_ty(ty, ns), "")
-                            .into(),
-                    );
+                    parms.push(bin.build_alloca(function, bin.llvm_var_ty(ty), "").into());
                 }
             }
 
@@ -675,7 +665,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             }
 
             let callable =
-                expression(target, bin, call_expr, &w.vars, function, ns).into_pointer_value();
+                expression(target, bin, call_expr, &w.vars, function).into_pointer_value();
 
             let ptr_ok = bin.context.append_basic_block(function, "fn_ptr_ok");
             let ptr_nil_block = bin.context.append_basic_block(function, "fn_ptr_nil");
@@ -693,14 +683,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap();
 
             bin.builder.position_at_end(ptr_nil_block);
-            bin.log_runtime_error(
-                target,
-                "internal function uninitialized".to_string(),
-                None,
-                ns,
-            );
+            bin.log_runtime_error(target, "internal function uninitialized".to_string(), None);
             let (revert_out, revert_out_len) =
-                bin.panic_data_const(ns, PanicCode::InternalFunctionUninitialized);
+                bin.panic_data_const(PanicCode::InternalFunctionUninitialized);
             target.assert_failure(bin, revert_out, revert_out_len);
 
             bin.builder.position_at_end(ptr_ok);
@@ -735,7 +720,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             if !res.is_empty() {
                 for (i, ty) in returns.iter().enumerate() {
-                    let load_ty = bin.llvm_var_ty(ty, ns);
+                    let load_ty = bin.llvm_var_ty(ty);
                     let val = bin
                         .builder
                         .build_load(load_ty, parms[args.len() + i].into_pointer_value(), "")
@@ -743,7 +728,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     let dest = w.vars[&res[i]].value;
 
-                    if dest.is_pointer_value() && !ty.is_reference_type(ns) {
+                    if dest.is_pointer_value() && !ty.is_reference_type(bin.ns) {
                         bin.builder
                             .build_store(dest.into_pointer_value(), val)
                             .unwrap();
@@ -761,7 +746,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         } => {
             let parms = args
                 .iter()
-                .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
+                .map(|p| expression(target, bin, p, &w.vars, function).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
             let call = bin.module.get_function(name).unwrap();
@@ -791,34 +776,33 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             accounts,
             constructor_no: _,
         } => {
-            let encoded_args = expression(target, bin, encoded_args, &w.vars, function, ns);
+            let encoded_args = expression(target, bin, encoded_args, &w.vars, function);
             let encoded_args_len = bin.vector_len(encoded_args).as_basic_value_enum();
 
-            let address_stack = bin.build_alloca(function, bin.address_type(ns), "address");
+            let address_stack = bin.build_alloca(function, bin.address_type(), "address");
 
-            let gas = expression(target, bin, gas, &w.vars, function, ns).into_int_value();
+            let gas = expression(target, bin, gas, &w.vars, function).into_int_value();
             let value = value
                 .as_ref()
-                .map(|v| expression(target, bin, v, &w.vars, function, ns).into_int_value());
+                .map(|v| expression(target, bin, v, &w.vars, function).into_int_value());
             let salt = salt
                 .as_ref()
-                .map(|v| expression(target, bin, v, &w.vars, function, ns).into_int_value());
+                .map(|v| expression(target, bin, v, &w.vars, function).into_int_value());
 
-            let llvm_accounts = process_account_metas(target, accounts, bin, &w.vars, function, ns);
+            let llvm_accounts = process_account_metas(target, accounts, bin, &w.vars, function);
 
             if let Some(address) = address {
                 let address =
-                    expression(target, bin, address, &w.vars, function, ns).into_array_value();
+                    expression(target, bin, address, &w.vars, function).into_array_value();
 
                 bin.builder.build_store(address_stack, address).unwrap();
             }
 
             let seeds = if let Some(seeds) = seeds {
                 let len = seeds.ty().array_length().unwrap().to_u64().unwrap();
-                let seeds_ty = bin.llvm_type(
-                    &Type::Slice(Box::new(Type::Slice(Box::new(Type::Bytes(1))))),
-                    ns,
-                );
+                let seeds_ty = bin.llvm_type(&Type::Slice(Box::new(Type::Slice(Box::new(
+                    Type::Bytes(1),
+                )))));
 
                 let output_seeds = bin.build_array_alloca(
                     function,
@@ -829,8 +813,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 if let Expression::ArrayLiteral { values, .. } = seeds {
                     for i in 0..len {
-                        let val =
-                            expression(target, bin, &values[i as usize], &w.vars, function, ns);
+                        let val = expression(target, bin, &values[i as usize], &w.vars, function);
 
                         let seed_count = values[i as usize]
                             .ty()
@@ -898,13 +881,12 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     seeds,
                     flags: None,
                 },
-                ns,
                 *loc,
             );
 
             w.vars.get_mut(res).unwrap().value = bin
                 .builder
-                .build_load(bin.address_type(ns), address_stack, "address")
+                .build_load(bin.address_type(), address_stack, "address")
                 .unwrap();
         }
         Instr::ExternalCall {
@@ -920,14 +902,14 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             ..
         } => {
             let loc = payload.loc();
-            let gas = expression(target, bin, gas, &w.vars, function, ns).into_int_value();
-            let value = expression(target, bin, value, &w.vars, function, ns).into_int_value();
+            let gas = expression(target, bin, gas, &w.vars, function).into_int_value();
+            let value = expression(target, bin, value, &w.vars, function).into_int_value();
             let payload_ty = payload.ty();
-            let payload = expression(target, bin, payload, &w.vars, function, ns);
+            let payload = expression(target, bin, payload, &w.vars, function);
 
             let address = if let Some(address) = address {
-                let address = expression(target, bin, address, &w.vars, function, ns);
-                if ns.target == Target::Soroban {
+                let address = expression(target, bin, address, &w.vars, function);
+                if bin.ns.target == Target::Soroban {
                     Some(address)
                 } else {
                     let addr = bin.build_array_alloca(
@@ -935,7 +917,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.context.i8_type(),
                         bin.context
                             .i32_type()
-                            .const_int(ns.address_length as u64, false),
+                            .const_int(bin.ns.address_length as u64, false),
                         "address",
                     );
 
@@ -947,13 +929,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 None
             };
 
-            let accounts = process_account_metas(target, accounts, bin, &w.vars, function, ns);
+            let accounts = process_account_metas(target, accounts, bin, &w.vars, function);
 
             let (payload_ptr, payload_len) = if payload_ty == Type::DynamicBytes {
                 (bin.vector_bytes(payload), bin.vector_len(payload))
             } else {
                 let ptr = payload.into_pointer_value();
-                let len = bin.llvm_type(&payload_ty, ns).size_of().unwrap();
+                let len = bin.llvm_type(&payload_ty).size_of().unwrap();
 
                 (ptr, len)
             };
@@ -965,13 +947,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let seeds_ty =
                 Type::Slice(Type::Slice(Type::Slice(Type::Bytes(1).into()).into()).into());
 
-            let seeds = seeds.as_ref().map(|seeds| {
-                expression_to_slice(target, bin, seeds, &seeds_ty, &w.vars, function, ns)
-            });
+            let seeds = seeds
+                .as_ref()
+                .map(|seeds| expression_to_slice(target, bin, seeds, &seeds_ty, &w.vars, function));
 
             let flags = flags
                 .as_ref()
-                .map(|e| expression(target, bin, e, &w.vars, function, ns).into_int_value());
+                .map(|e| expression(target, bin, e, &w.vars, function).into_int_value());
             let success = match success {
                 Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
                 None => None,
@@ -994,7 +976,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     flags,
                 },
                 callty.clone(),
-                ns,
                 loc,
             );
         }
@@ -1004,11 +985,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             value,
         } => {
             let loc = value.loc();
-            let value = expression(target, bin, value, &w.vars, function, ns).into_int_value();
-            let address =
-                expression(target, bin, address, &w.vars, function, ns).into_array_value();
+            let value = expression(target, bin, value, &w.vars, function).into_int_value();
+            let address = expression(target, bin, address, &w.vars, function).into_array_value();
 
-            let addr = bin.build_alloca(function, bin.address_type(ns), "address");
+            let addr = bin.build_alloca(function, bin.address_type(), "address");
 
             bin.builder.build_store(addr, address).unwrap();
             let success = match success {
@@ -1016,30 +996,30 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 None => None,
             };
 
-            target.value_transfer(bin, function, success, addr, value, ns, loc);
+            target.value_transfer(bin, function, success, addr, value, loc);
         }
         Instr::SelfDestruct { recipient } => {
             let recipient =
-                expression(target, bin, recipient, &w.vars, function, ns).into_array_value();
+                expression(target, bin, recipient, &w.vars, function).into_array_value();
 
-            target.selfdestruct(bin, recipient, ns);
+            target.selfdestruct(bin, recipient);
         }
         Instr::EmitEvent { data, topics, .. } => {
-            let data = expression(target, bin, data, &w.vars, function, ns);
+            let data = expression(target, bin, data, &w.vars, function);
             let topics = topics
                 .iter()
-                .map(|a| expression(target, bin, a, &w.vars, function, ns))
+                .map(|a| expression(target, bin, a, &w.vars, function))
                 .collect::<Vec<BasicValueEnum>>();
             target.emit_event(bin, function, data, &topics);
         }
         Instr::WriteBuffer { buf, offset, value } => {
-            let v = expression(target, bin, buf, &w.vars, function, ns);
+            let v = expression(target, bin, buf, &w.vars, function);
             let data = bin.vector_bytes(v);
 
-            let offset = expression(target, bin, offset, &w.vars, function, ns).into_int_value();
-            let emit_value = expression(target, bin, value, &w.vars, function, ns);
+            let offset = expression(target, bin, offset, &w.vars, function).into_int_value();
+            let emit_value = expression(target, bin, value, &w.vars, function);
 
-            if ns.target == Target::Soroban {
+            if bin.ns.target == Target::Soroban {
                 let new_offset = bin
                     .builder
                     .build_int_unsigned_div(
@@ -1067,10 +1047,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                         .unwrap()
                 };
 
-                let is_bytes = if let Type::Bytes(n) = value.ty().unwrap_user_type(ns) {
+                let is_bytes = if let Type::Bytes(n) = value.ty().unwrap_user_type(bin.ns) {
                     n
                 } else if value.ty() == Type::FunctionSelector {
-                    ns.target.selector_length()
+                    bin.ns.target.selector_length()
                 } else {
                     0
                 };
@@ -1109,18 +1089,18 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             bytes,
         } => {
             let src = if from.ty().is_dynamic_memory() {
-                bin.vector_bytes(expression(target, bin, from, &w.vars, function, ns))
+                bin.vector_bytes(expression(target, bin, from, &w.vars, function))
             } else {
-                expression(target, bin, from, &w.vars, function, ns).into_pointer_value()
+                expression(target, bin, from, &w.vars, function).into_pointer_value()
             };
 
             let dest = if to.ty().is_dynamic_memory() {
-                bin.vector_bytes(expression(target, bin, to, &w.vars, function, ns))
+                bin.vector_bytes(expression(target, bin, to, &w.vars, function))
             } else {
-                expression(target, bin, to, &w.vars, function, ns).into_pointer_value()
+                expression(target, bin, to, &w.vars, function).into_pointer_value()
             };
 
-            let size = expression(target, bin, bytes, &w.vars, function, ns);
+            let size = expression(target, bin, bytes, &w.vars, function);
 
             bin.builder
                 .build_call(
@@ -1136,20 +1116,19 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             default,
         } => {
             let pos = bin.builder.get_insert_block().unwrap();
-            let cond = expression(target, bin, cond, &w.vars, function, ns);
+            let cond = expression(target, bin, cond, &w.vars, function);
             let cases = cases
                 .iter()
                 .map(|(exp, block_no)| {
-                    let exp = expression(target, bin, exp, &w.vars, function, ns);
-                    let bb = add_or_retrieve_block(
-                        *block_no, pos, bin, function, blocks, work, w, cfg, ns,
-                    );
+                    let exp = expression(target, bin, exp, &w.vars, function);
+                    let bb =
+                        add_or_retrieve_block(*block_no, pos, bin, function, blocks, work, w, cfg);
                     (exp.into_int_value(), bb)
                 })
                 .collect::<Vec<(IntValue, inkwell::basic_block::BasicBlock)>>();
 
             let default_bb =
-                add_or_retrieve_block(*default, pos, bin, function, blocks, work, w, cfg, ns);
+                add_or_retrieve_block(*default, pos, bin, function, blocks, work, w, cfg);
             bin.builder.position_at_end(pos);
             bin.builder
                 .build_switch(cond.into_int_value(), default_bb, cases.as_ref())
@@ -1157,13 +1136,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         }
 
         Instr::ReturnData { data, data_len } => {
-            let data = if data.ty().is_reference_type(ns) {
-                bin.vector_bytes(expression(target, bin, data, &w.vars, function, ns))
+            let data = if data.ty().is_reference_type(bin.ns) {
+                bin.vector_bytes(expression(target, bin, data, &w.vars, function))
             } else {
-                expression(target, bin, data, &w.vars, function, ns).into_pointer_value()
+                expression(target, bin, data, &w.vars, function).into_pointer_value()
             };
 
-            let data_len = expression(target, bin, data_len, &w.vars, function, ns);
+            let data_len = expression(target, bin, data_len, &w.vars, function);
             target.return_abi_data(bin, data, data_len);
         }
 
@@ -1188,10 +1167,9 @@ fn add_or_retrieve_block<'a>(
     work: &mut VecDeque<Work<'a>>,
     w: &mut Work<'a>,
     cfg: &ControlFlowGraph,
-    ns: &Namespace,
 ) -> inkwell::basic_block::BasicBlock<'a> {
     if let std::collections::hash_map::Entry::Vacant(e) = blocks.entry(block_no) {
-        e.insert(create_block(block_no, bin, cfg, function, ns));
+        e.insert(create_block(block_no, bin, cfg, function));
         work.push_back(Work {
             block_no,
             vars: w.vars.clone(),
@@ -1215,11 +1193,10 @@ fn process_account_metas<'a, T: TargetRuntime<'a> + ?Sized>(
     bin: &Binary<'a>,
     vartab: &HashMap<usize, Variable<'a>>,
     function: FunctionValue<'a>,
-    ns: &Namespace,
 ) -> Option<(PointerValue<'a>, IntValue<'a>)> {
     if let ExternalCallAccounts::Present(accounts) = accounts {
         let ty = accounts.ty();
-        let expr = expression(target, bin, accounts, vartab, function, ns);
+        let expr = expression(target, bin, accounts, vartab, function);
 
         if let Some(n) = ty.array_length() {
             let accounts = expr.into_pointer_value();

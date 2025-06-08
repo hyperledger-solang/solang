@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::emit::binary::Binary;
-use crate::sema::ast::{Namespace, Type};
+use crate::sema::ast::Type;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, PointerValue};
 
@@ -9,21 +9,16 @@ use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, Point
 pub(super) trait StorageSlot {
     fn set_storage(
         &self,
-        binary: &Binary,
+        bin: &Binary,
         slot: PointerValue,
         dest: PointerValue,
         dest_ty: BasicTypeEnum,
     );
 
-    fn get_storage_address<'a>(
-        &self,
-        binary: &Binary<'a>,
-        slot: PointerValue<'a>,
-        ns: &Namespace,
-    ) -> ArrayValue<'a>;
+    fn get_storage_address<'a>(&self, bin: &Binary<'a>, slot: PointerValue<'a>) -> ArrayValue<'a>;
 
     /// Clear a particlar storage slot (slot-based storage chains should implement)
-    fn storage_delete_single_slot(&self, binary: &Binary, slot: PointerValue);
+    fn storage_delete_single_slot(&self, bin: &Binary, slot: PointerValue);
 
     /// Recursively load a type from storage for slot based storage
     fn storage_load_slot<'a>(
@@ -33,7 +28,6 @@ pub(super) trait StorageSlot {
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue,
-        ns: &Namespace,
     ) -> BasicValueEnum<'a>;
 
     /// Recursively store a type to storage for slot-based storage
@@ -45,7 +39,6 @@ pub(super) trait StorageSlot {
         slot_ptr: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
-        ns: &Namespace,
     );
 
     /// Recursively clear bin storage for slot-based storage
@@ -56,6 +49,5 @@ pub(super) trait StorageSlot {
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue<'a>,
-        ns: &Namespace,
     );
 }

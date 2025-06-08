@@ -120,6 +120,15 @@ pub fn soroban_decode_arg(
     };
 
     match ty {
+        Type::Bool => Expression::NotEqual {
+            loc: Loc::Codegen,
+            left: arg.into(),
+            right: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: 0u64.into(),
+            }),
+        },
         Type::Uint(64) => Expression::ShiftRight {
             loc: Loc::Codegen,
             ty: Type::Uint(64),
@@ -169,6 +178,17 @@ pub fn soroban_decode_arg(
                 signed: true,
             }),
         },
+        Type::Int(64) => Expression::ShiftRight {
+            loc: Loc::Codegen,
+            ty: Type::Int(64),
+            left: arg.into(),
+            right: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::from(8u64),
+            }),
+            signed: true,
+        },
 
         _ => unimplemented!(),
     }
@@ -183,6 +203,22 @@ pub fn soroban_encode_arg(
     let obj = vartab.temp_name("obj_".to_string().as_str(), &Type::Uint(64));
 
     let ret = match item.ty() {
+        Type::Bool => {
+            let encoded = match item {
+                Expression::BoolLiteral { value, .. } => Expression::NumberLiteral {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    value: if value { 1u64.into() } else { 0u64.into() },
+                },
+                _ => item.cast(&Type::Uint(64), ns),
+            };
+
+            Instr::Set {
+                loc: item.loc(),
+                res: obj,
+                expr: encoded,
+            }
+        }
         Type::String => {
             if let Expression::Variable { loc, ty, var_no } = item.clone() {
                 Instr::Set {
@@ -291,6 +327,55 @@ pub fn soroban_encode_arg(
                     },
                     args: vec![encoded, len],
                 }
+            }
+        }
+        Type::Uint(32) | Type::Int(32) => {
+            // widen to 64 bits so we can shift
+            let widened = match item.ty() {
+                Type::Uint(32) => Expression::ZeroExt {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    expr: Box::new(item.clone()),
+                },
+                Type::Int(32) => Expression::SignExt {
+                    loc: item.loc(),
+                    ty: Type::Int(64),
+                    expr: Box::new(item.clone()),
+                },
+                _ => unreachable!(),
+            };
+
+            // the value goes into the major bits of the 64 bit value
+            let shifted = Expression::ShiftLeft {
+                loc: item.loc(),
+                ty: Type::Uint(64),
+                left: Box::new(widened.cast(&Type::Uint(64), ns)),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    value: 32u64.into(), // 24 (minor) + 8 (tag)
+                }),
+            };
+
+            let tag = if matches!(item.ty(), Type::Uint(32)) {
+                4
+            } else {
+                5
+            };
+            Instr::Set {
+                loc: item.loc(),
+                res: obj,
+                expr: Expression::Add {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    left: Box::new(shifted),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: item.loc(),
+                        ty: Type::Uint(64),
+                        value: tag.into(),
+                    }),
+                    overflowing: false,
+                },
             }
         }
         Type::Uint(64) | Type::Int(64) => {

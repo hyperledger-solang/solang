@@ -126,9 +126,9 @@ impl SorobanTarget {
         contract_no: usize,
     ) -> Binary<'a> {
         let filename = ns.files[contract.loc.file_no()].file_name();
-        let mut binary = Binary::new(
+        let mut bin = Binary::new(
             context,
-            ns.target,
+            ns,
             &contract.id.name,
             &filename,
             opt,
@@ -137,30 +137,22 @@ impl SorobanTarget {
         );
 
         let mut export_list = Vec::new();
-        Self::declare_externals(&mut binary);
-        Self::emit_functions_with_spec(
-            contract,
-            &mut binary,
-            ns,
-            context,
-            contract_no,
-            &mut export_list,
-        );
-        binary.internalize(export_list.as_slice());
+        Self::declare_externals(&mut bin);
+        Self::emit_functions_with_spec(contract, &mut bin, context, contract_no, &mut export_list);
+        bin.internalize(export_list.as_slice());
 
         //Self::emit_initializer(&mut binary, ns, contract.constructors(ns).first());
 
-        Self::emit_env_meta_entries(context, &mut binary, opt);
+        Self::emit_env_meta_entries(context, &mut bin, opt);
 
-        binary
+        bin
     }
 
     // In Soroban, the public functions specifications is embeded in the contract binary.
     // for each function, emit both the function spec entry and the function body.
     fn emit_functions_with_spec<'a>(
         contract: &'a ast::Contract,
-        binary: &mut Binary<'a>,
-        ns: &'a ast::Namespace,
+        bin: &mut Binary<'a>,
         context: &'a Context,
         _contract_no: usize,
         export_list: &mut Vec<&'a str>,
@@ -168,10 +160,9 @@ impl SorobanTarget {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
-            let ftype = binary.function_type(
+            let ftype = bin.function_type(
                 &cfg.params.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
                 &cfg.returns.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
-                ns,
             );
 
             // For each function, determine the name and the linkage
@@ -187,38 +178,37 @@ impl SorobanTarget {
                 } else {
                     &cfg.name
                 };
-                Self::emit_function_spec_entry(context, cfg, name.to_string(), binary);
+                Self::emit_function_spec_entry(context, cfg, name.to_string(), bin);
                 export_list.push(name);
                 Linkage::External
             } else {
                 Linkage::Internal
             };
 
-            let func_decl = if let Some(func) = binary.module.get_function(&cfg.name) {
+            let func_decl = if let Some(func) = bin.module.get_function(&cfg.name) {
                 // must not have a body yet
                 assert_eq!(func.get_first_basic_block(), None);
 
                 func
             } else {
-                binary.module.add_function(&cfg.name, ftype, Some(linkage))
+                bin.module.add_function(&cfg.name, ftype, Some(linkage))
             };
 
-            binary.functions.insert(cfg_no, func_decl);
+            bin.functions.insert(cfg_no, func_decl);
 
             defines.push((func_decl, cfg));
         }
 
         let init_type = context.i64_type().fn_type(&[], false);
-        binary
-            .module
+        bin.module
             .add_function("storage_initializer", init_type, None);
 
         for (func_decl, cfg) in defines {
-            emit_cfg(&mut SorobanTarget, binary, contract, cfg, func_decl, ns);
+            emit_cfg(&mut SorobanTarget, bin, contract, cfg, func_decl);
         }
     }
 
-    fn emit_env_meta_entries<'a>(context: &'a Context, binary: &mut Binary<'a>, opt: &'a Options) {
+    fn emit_env_meta_entries<'a>(context: &'a Context, bin: &mut Binary<'a>, opt: &'a Options) {
         let mut meta = Limited::new(Vec::new(), Limits::none());
         let soroban_env_interface_version = opt.soroban_version;
         let soroban_env_interface_version = match soroban_env_interface_version {
@@ -231,14 +221,14 @@ impl SorobanTarget {
         ScEnvMetaEntry::ScEnvMetaKindInterfaceVersion(soroban_env_interface_version)
             .write_xdr(&mut meta)
             .expect("writing env meta interface version to xdr");
-        Self::add_custom_section(context, &binary.module, "contractenvmetav0", meta.inner);
+        Self::add_custom_section(context, &bin.module, "contractenvmetav0", meta.inner);
     }
 
     fn emit_function_spec_entry<'a>(
         context: &'a Context,
         cfg: &ControlFlowGraph,
         name: String,
-        binary: &mut Binary<'a>,
+        bin: &mut Binary<'a>,
     ) {
         if cfg.public && !cfg.is_placeholder() {
             // TODO: Emit custom type spec entries
@@ -270,6 +260,7 @@ impl SorobanTarget {
                                 ast::Type::Uint(32) => ScSpecTypeDef::U32,
                                 ast::Type::Int(32) => ScSpecTypeDef::I32,
                                 ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                                &ast::Type::Int(64) => ScSpecTypeDef::I64,
                                 ast::Type::Int(128) => ScSpecTypeDef::I128,
                                 ast::Type::Uint(128) => ScSpecTypeDef::U128,
                                 ast::Type::Bool => ScSpecTypeDef::Bool,
@@ -296,6 +287,7 @@ impl SorobanTarget {
                         };
                         match ty {
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
+                            ast::Type::Int(32) => ScSpecTypeDef::I32,
                             ast::Type::Uint(64) => ScSpecTypeDef::U64,
                             ast::Type::Int(128) => ScSpecTypeDef::I128,
                             ast::Type::Uint(128) => ScSpecTypeDef::U128,
@@ -316,7 +308,7 @@ impl SorobanTarget {
             .write_xdr(&mut spec)
             .unwrap_or_else(|_| panic!("writing spec to xdr for function {}", cfg.name));
 
-            Self::add_custom_section(context, &binary.module, "contractspecv0", spec.inner);
+            Self::add_custom_section(context, &bin.module, "contractspecv0", spec.inner);
         }
     }
 
@@ -343,7 +335,7 @@ impl SorobanTarget {
             .expect("adding spec as metadata");
     }
 
-    fn declare_externals(binary: &mut Binary) {
+    fn declare_externals(bin: &mut Binary) {
         let host_functions = [
             HostFunctions::PutContractData,
             HostFunctions::GetContractData,
@@ -375,9 +367,9 @@ impl SorobanTarget {
         ];
 
         for func in &host_functions {
-            binary.module.add_function(
+            bin.module.add_function(
                 func.name(),
-                func.function_signature(binary),
+                func.function_signature(bin),
                 Some(Linkage::External),
             );
         }
@@ -394,10 +386,10 @@ impl SorobanTarget {
         let void_param = ast::Parameter::new_default(ast::Type::Void);
         cfg.returns = sync::Arc::new(vec![void_param]);
 
-        Self::emit_function_spec_entry(binary.context, &cfg, "__constructor".to_string(), binary);
+        Self::emit_function_spec_entry(bin.context, &cfg, "__constructor".to_string(), bin);
 
         let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
-        let mut storage_initializers = binary
+        let mut storage_initializers = bin
             .functions
             .values()
             .filter(|f: &&inkwell::values::FunctionValue| f.get_name() == function_name.as_c_str());
@@ -406,16 +398,14 @@ impl SorobanTarget {
             .expect("storage initializer is always present");
         assert!(storage_initializers.next().is_none());
 
-        let void_type = binary.context.i64_type().fn_type(&[], false);
+        let void_type = bin.context.i64_type().fn_type(&[], false);
         let constructor =
-            binary
-                .module
+            bin.module
                 .add_function("__constructor", void_type, Some(Linkage::External));
-        let entry = binary.context.append_basic_block(constructor, "entry");
+        let entry = bin.context.append_basic_block(constructor, "entry");
 
-        binary.builder.position_at_end(entry);
-        binary
-            .builder
+        bin.builder.position_at_end(entry);
+        bin.builder
             .build_call(storage_initializer, &[], "storage_initializer")
             .unwrap();
 
@@ -436,7 +426,7 @@ impl SorobanTarget {
         }
 
         // return zero
-        let zero_val = binary.context.i64_type().const_int(2, false);
-        binary.builder.build_return(Some(&zero_val)).unwrap();
+        let zero_val = bin.context.i64_type().const_int(2, false);
+        bin.builder.build_return(Some(&zero_val)).unwrap();
     }
 }

@@ -15,7 +15,7 @@ use solang_parser::pt::{FunctionTy, Loc::Codegen};
 use std::fmt::{Display, Formatter, Result};
 
 /// On Polkadot, contracts export  a `call` and a `deploy` function.
-/// The `contracts` pallet will invoke `deploy` on contract instatiation,
+/// The `contracts` pallet will invoke `deploy` on contract instantiation,
 /// and `call` on any contract calls after the instantiation.
 ///
 /// On Ethereum, constructors do not exist on-chain; they are only executed once.

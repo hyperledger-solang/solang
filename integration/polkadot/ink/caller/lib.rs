@@ -20,7 +20,7 @@ mod caller {
         }
 
         /// Do a proxy call to `callee` and return its result.
-        /// The message under `selector` should have exactly one `u32` arguemnt and return a `u32`.
+        /// The message under `selector` should have exactly one `u32` argument and return a `u32`.
         #[ink(message)]
         pub fn u32_proxy(
             &self,

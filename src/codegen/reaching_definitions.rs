@@ -65,19 +65,27 @@ pub fn find(cfg: &mut ControlFlowGraph) {
 
         for edge in cfg.blocks[block_no].successors() {
             if cfg.blocks[edge].defs != vars {
-                blocks_todo.insert(edge);
+                let mut changed = false;
+
                 // merge incoming set
                 for (var_no, defs) in &vars {
                     if let Some(entry) = cfg.blocks[edge].defs.get_mut(var_no) {
                         for (incoming_def, incoming_modified) in defs {
                             if let Some(e) = entry.get_mut(incoming_def) {
-                                *e |= *incoming_modified;
+                                if !*e && *incoming_modified {
+                                    *e = true;
+                                    changed = true;
+                                }
                             } else {
-                                entry.insert(*incoming_def, *incoming_modified);
+                                changed |=
+                                    entry.insert(*incoming_def, *incoming_modified).is_none();
                             }
                         }
                     } else {
-                        cfg.blocks[edge].defs.insert(*var_no, defs.clone());
+                        changed |= cfg.blocks[edge]
+                            .defs
+                            .insert(*var_no, defs.clone())
+                            .is_none();
                     }
 
                     // If a definition from a block executed later reaches this block,
@@ -85,9 +93,13 @@ pub fn find(cfg: &mut ControlFlowGraph) {
                     // common subexpression elimination.
                     for (incoming_def, _) in defs {
                         if incoming_def.block_no >= edge {
-                            cfg.blocks[edge].loop_reaching_variables.insert(*var_no);
+                            changed |= cfg.blocks[edge].loop_reaching_variables.insert(*var_no);
                         }
                     }
+                }
+
+                if changed {
+                    blocks_todo.insert(edge);
                 }
             }
         }

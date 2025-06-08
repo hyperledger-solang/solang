@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::Expression;
-use crate::sema::ast::{CallTy, Function, Namespace, Type};
+use crate::sema::ast::{CallTy, Function, Type};
 use std::collections::HashMap;
 use std::fmt;
 use std::str;
@@ -80,24 +80,22 @@ pub trait TargetRuntime<'a> {
 
     fn storage_load(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a>;
 
     /// Recursively store a type to storage
     fn storage_store(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         ty: &ast::Type,
         existing: bool,
         slot: &mut IntValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
         storage_type: &Option<StorageType>,
     );
 
@@ -108,7 +106,6 @@ pub trait TargetRuntime<'a> {
         ty: &Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
-        ns: &Namespace,
     );
 
     // Bytes and string have special storage layout
@@ -141,7 +138,6 @@ pub trait TargetRuntime<'a> {
         bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
-        ns: &Namespace,
     ) -> PointerValue<'a>;
 
     fn get_storage_bytes_subscript(
@@ -151,7 +147,6 @@ pub trait TargetRuntime<'a> {
         slot: IntValue<'a>,
         index: IntValue<'a>,
         loc: Loc,
-        ns: &Namespace,
     ) -> IntValue<'a>;
 
     fn set_storage_bytes_subscript(
@@ -161,7 +156,6 @@ pub trait TargetRuntime<'a> {
         slot: IntValue<'a>,
         index: IntValue<'a>,
         value: IntValue<'a>,
-        ns: &Namespace,
         loc: Loc,
     );
 
@@ -172,7 +166,6 @@ pub trait TargetRuntime<'a> {
         ty: &Type,
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
-        ns: &Namespace,
     ) -> IntValue<'a>;
 
     fn storage_push(
@@ -182,7 +175,6 @@ pub trait TargetRuntime<'a> {
         ty: &Type,
         slot: IntValue<'a>,
         val: Option<BasicValueEnum<'a>>,
-        ns: &Namespace,
     ) -> BasicValueEnum<'a>;
 
     fn storage_pop(
@@ -192,7 +184,6 @@ pub trait TargetRuntime<'a> {
         ty: &Type,
         slot: IntValue<'a>,
         load: bool,
-        ns: &Namespace,
         loc: Loc,
     ) -> Option<BasicValueEnum<'a>>;
 
@@ -202,7 +193,6 @@ pub trait TargetRuntime<'a> {
         _function: FunctionValue,
         _slot: IntValue<'a>,
         _elem_ty: &Type,
-        _ns: &Namespace,
     ) -> IntValue<'a>;
 
     /// keccak256 hash
@@ -212,7 +202,6 @@ pub trait TargetRuntime<'a> {
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
-        ns: &Namespace,
     );
 
     /// Prints a string
@@ -229,12 +218,11 @@ pub trait TargetRuntime<'a> {
 
     fn builtin_function(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue<'a>,
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
         first_arg_type: Option<BasicTypeEnum>,
-        ns: &Namespace,
     ) -> Option<BasicValueEnum<'a>>;
 
     /// Calls constructor
@@ -248,7 +236,6 @@ pub trait TargetRuntime<'a> {
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
         contract_args: ContractArgs<'b>,
-        ns: &Namespace,
         loc: Loc,
     );
 
@@ -263,7 +250,6 @@ pub trait TargetRuntime<'a> {
         address: Option<BasicValueEnum<'b>>,
         contract_args: ContractArgs<'b>,
         ty: CallTy,
-        ns: &Namespace,
         loc: Loc,
     );
 
@@ -275,7 +261,6 @@ pub trait TargetRuntime<'a> {
         _success: Option<&mut BasicValueEnum<'b>>,
         _address: PointerValue<'b>,
         _value: IntValue<'b>,
-        _ns: &Namespace,
         loc: Loc,
     );
 
@@ -286,17 +271,16 @@ pub trait TargetRuntime<'a> {
         expr: &Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
-        ns: &Namespace,
     ) -> BasicValueEnum<'b>;
 
     /// Return the return data from an external call (either revert error or return values)
     fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b>;
 
     /// Return the value we received
-    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &Namespace) -> IntValue<'b>;
+    fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b>;
 
     /// Terminate execution, destroy bin and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &Namespace);
+    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>);
 
     /// Crypto Hash
     fn hash<'b>(
@@ -306,7 +290,6 @@ pub trait TargetRuntime<'a> {
         hash: HashTy,
         string: PointerValue<'b>,
         length: IntValue<'b>,
-        ns: &Namespace,
     ) -> IntValue<'b>;
 
     /// Emit event
@@ -321,7 +304,7 @@ pub trait TargetRuntime<'a> {
     /// Return ABI encoded data
     fn return_abi_data<'b>(
         &self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         data: PointerValue<'b>,
         data_len: BasicValueEnum<'b>,
     );
@@ -385,8 +368,8 @@ impl ast::Contract {
         self.code
             .get_or_init(move || {
                 let context = inkwell::context::Context::create();
-                let binary = self.binary(ns, &context, opt, contract_no);
-                binary.code(Generate::Linked).expect("llvm build")
+                let bin = self.binary(ns, &context, opt, contract_no);
+                bin.code(Generate::Linked).expect("llvm build")
             })
             .to_vec()
     }
