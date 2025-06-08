@@ -264,7 +264,7 @@ pub fn soroban_encode_arg(
                         value: BigInt::from(4),
                     }),
                 };
-                
+
                 let len = match item.clone() {
                     Expression::AllocDynamicBytes { size, .. } => {
                         let sesa = Expression::ShiftLeft {

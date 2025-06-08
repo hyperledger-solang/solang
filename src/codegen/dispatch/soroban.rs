@@ -27,7 +27,6 @@ pub fn function_dispatch(
     let mut wrapper_cfgs = Vec::new();
 
     for cfg in all_cfg.iter_mut() {
-
         let wrapper_name = if cfg.public {
             if cfg.name.contains("constructor") {
                 "__constructor".to_string()
@@ -40,10 +39,8 @@ pub fn function_dispatch(
                 };
 
                 if function.mangled_name_contracts.contains(&contract_no) {
-
                     function.mangled_name.clone()
                 } else {
-
                     function.id.name.clone()
                 }
             }

@@ -45,7 +45,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
-
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(bin);
 
@@ -69,8 +68,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         .unwrap()
         .into_int_value();
 
-        println!("ret: {:?}", ret);
-
         ret.into()
     }
 
@@ -85,7 +82,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) {
-
         emit_context!(bin);
 
         let storage_type = storage_type_to_int(storage_type);
@@ -202,7 +198,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
-
         let vec_new = bin
             .builder
             .build_call(

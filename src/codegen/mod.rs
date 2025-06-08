@@ -330,7 +330,6 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
     for layout in &ns.contracts[contract_no].layout {
         let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
-
         if let Some(init) = &var.initializer {
             let storage = ns.contracts[contract_no].get_storage_slot(
                 pt::Loc::Codegen,
