@@ -141,7 +141,7 @@ pub fn soroban_decode_arg(
             signed: false,
         },
 
-        Type::Address(_) => arg.clone(),
+        Type::Address(_) | Type::String => arg.clone(),
 
         Type::Int(128) | Type::Uint(128) => decode_i128(wrapper_cfg, vartab, arg),
         Type::Uint(32) => {
@@ -220,104 +220,117 @@ pub fn soroban_encode_arg(
             }
         }
         Type::String => {
-            let inp = Expression::VectorData {
-                pointer: Box::new(item.clone()),
-            };
+            if let Expression::Variable {
+                loc: _,
+                ty: _,
+                var_no: _,
+            } = item.clone()
+            {
+                Instr::Set {
+                    loc: Loc::Codegen,
+                    res: obj,
+                    expr: item.clone(),
+                }
+            } else {
+                let inp = Expression::VectorData {
+                    pointer: Box::new(item.clone()),
+                };
 
-            let inp_extend = Expression::ZeroExt {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                expr: Box::new(inp),
-            };
-
-            let encoded = Expression::ShiftLeft {
-                loc: Loc::Codegen,
-                ty: Uint(64),
-                left: Box::new(inp_extend),
-                right: Box::new(Expression::NumberLiteral {
+                let inp_extend = Expression::ZeroExt {
                     loc: Loc::Codegen,
                     ty: Type::Uint(64),
-                    value: BigInt::from(32),
-                }),
-            };
+                    expr: Box::new(inp),
+                };
 
-            let encoded = Expression::Add {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                overflowing: true,
-                left: Box::new(encoded),
-                right: Box::new(Expression::NumberLiteral {
+                let encoded = Expression::ShiftLeft {
+                    loc: Loc::Codegen,
+                    ty: Uint(64),
+                    left: Box::new(inp_extend),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(64),
+                        value: BigInt::from(32),
+                    }),
+                };
+
+                let encoded = Expression::Add {
                     loc: Loc::Codegen,
                     ty: Type::Uint(64),
-                    value: BigInt::from(4),
-                }),
-            };
-
-            let len = match item {
-                Expression::AllocDynamicBytes { size, .. } => {
-                    let sesa = Expression::ShiftLeft {
-                        loc: Loc::Codegen,
-                        ty: Uint(64),
-                        left: Box::new(size.clone().cast(&Type::Uint(64), ns)),
-                        right: Box::new(Expression::NumberLiteral {
-                            loc: Loc::Codegen,
-                            ty: Type::Uint(64),
-                            value: BigInt::from(32),
-                        }),
-                    };
-
-                    Expression::Add {
+                    overflowing: true,
+                    left: Box::new(encoded),
+                    right: Box::new(Expression::NumberLiteral {
                         loc: Loc::Codegen,
                         ty: Type::Uint(64),
-                        overflowing: true,
-                        left: Box::new(sesa),
-                        right: Box::new(Expression::NumberLiteral {
+                        value: BigInt::from(4),
+                    }),
+                };
+
+                let len = match item.clone() {
+                    Expression::AllocDynamicBytes { size, .. } => {
+                        let sesa = Expression::ShiftLeft {
+                            loc: Loc::Codegen,
+                            ty: Uint(64),
+                            left: Box::new(size.clone().cast(&Type::Uint(64), ns)),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc: Loc::Codegen,
+                                ty: Type::Uint(64),
+                                value: BigInt::from(32),
+                            }),
+                        };
+
+                        Expression::Add {
                             loc: Loc::Codegen,
                             ty: Type::Uint(64),
-                            value: BigInt::from(4),
-                        }),
+                            overflowing: true,
+                            left: Box::new(sesa),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc: Loc::Codegen,
+                                ty: Type::Uint(64),
+                                value: BigInt::from(4),
+                            }),
+                        }
                     }
-                }
-                Expression::BytesLiteral { loc, ty: _, value } => {
-                    let len = Expression::NumberLiteral {
-                        loc,
-                        ty: Type::Uint(64),
-                        value: BigInt::from(value.len() as u64),
-                    };
-
-                    let len = Expression::ShiftLeft {
-                        loc,
-                        ty: Type::Uint(64),
-                        left: Box::new(len),
-                        right: Box::new(Expression::NumberLiteral {
+                    Expression::BytesLiteral { loc, ty: _, value } => {
+                        let len = Expression::NumberLiteral {
                             loc,
                             ty: Type::Uint(64),
-                            value: BigInt::from(32),
-                        }),
-                    };
+                            value: BigInt::from(value.len() as u64),
+                        };
 
-                    Expression::Add {
-                        loc,
-                        ty: Type::Uint(64),
-                        left: Box::new(len),
-                        right: Box::new(Expression::NumberLiteral {
+                        let len = Expression::ShiftLeft {
                             loc,
                             ty: Type::Uint(64),
-                            value: BigInt::from(4),
-                        }),
-                        overflowing: false,
-                    }
-                }
-                _ => unreachable!(),
-            };
+                            left: Box::new(len),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc,
+                                ty: Type::Uint(64),
+                                value: BigInt::from(32),
+                            }),
+                        };
 
-            Instr::Call {
-                res: vec![obj],
-                return_tys: vec![Type::Uint(64)],
-                call: crate::codegen::cfg::InternalCallTy::HostFunction {
-                    name: HostFunctions::SymbolNewFromLinearMemory.name().to_string(),
-                },
-                args: vec![encoded, len],
+                        Expression::Add {
+                            loc,
+                            ty: Type::Uint(64),
+                            left: Box::new(len),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc,
+                                ty: Type::Uint(64),
+                                value: BigInt::from(4),
+                            }),
+                            overflowing: false,
+                        }
+                    }
+                    _ => unreachable!(),
+                };
+
+                Instr::Call {
+                    res: vec![obj],
+                    return_tys: vec![Type::Uint(64)],
+                    call: crate::codegen::cfg::InternalCallTy::HostFunction {
+                        name: HostFunctions::SymbolNewFromLinearMemory.name().to_string(),
+                    },
+                    args: vec![encoded, len],
+                }
             }
         }
         Type::Uint(32) | Type::Int(32) => {

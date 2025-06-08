@@ -27,27 +27,31 @@ pub fn function_dispatch(
     let mut wrapper_cfgs = Vec::new();
 
     for cfg in all_cfg.iter_mut() {
-        let function = match &cfg.function_no {
-            ASTFunction::SolidityFunction(no) => &ns.functions[*no],
-            _ => continue,
-        };
+        let wrapper_name = if cfg.public {
+            if cfg.name.contains("constructor") {
+                "__constructor".to_string()
+            } else {
+                let function = match &cfg.function_no {
+                    ASTFunction::SolidityFunction(no) => &ns.functions[*no],
 
-        let wrapper_name = {
-            if cfg.public {
+                    // untill this stage, we have processed constructor and storage_initializer, so all that is left is the solidity functions
+                    _ => unreachable!(),
+                };
+
                 if function.mangled_name_contracts.contains(&contract_no) {
                     function.mangled_name.clone()
                 } else {
                     function.id.name.clone()
                 }
-            } else {
-                continue;
             }
+        } else {
+            continue;
         };
 
         let mut wrapper_cfg = ControlFlowGraph::new(wrapper_name.to_string(), ASTFunction::None);
 
         let mut params = Vec::new();
-        for p in function.params.as_ref() {
+        for p in cfg.params.as_ref() {
             let type_ref = Type::Ref(Box::new(p.ty.clone()));
             let mut param = ast::Parameter::new_default(type_ref);
             param.id = p.id.clone();
@@ -55,7 +59,7 @@ pub fn function_dispatch(
         }
 
         let mut returns = Vec::new();
-        for ret in function.returns.as_ref() {
+        for ret in cfg.returns.as_ref() {
             let type_ref = Type::Ref(Box::new(ret.ty.clone()));
             let ret = ast::Parameter::new_default(type_ref);
             returns.push(ret);
@@ -77,7 +81,7 @@ pub fn function_dispatch(
         let mut return_tys = Vec::new();
 
         let mut call_returns = Vec::new();
-        for arg in function.returns.iter() {
+        for arg in cfg.returns.iter() {
             let new = vartab.temp_anonymous(&arg.ty);
             value.push(Expression::Variable {
                 loc: arg.loc,
@@ -88,21 +92,36 @@ pub fn function_dispatch(
             call_returns.push(new);
         }
 
-        let cfg_no = match cfg.function_no {
-            ASTFunction::SolidityFunction(no) => no,
-            _ => 0,
-        };
-
         let decoded = decode_args(&mut wrapper_cfg, &mut vartab);
 
-        let placeholder = Instr::Call {
-            res: call_returns,
-            call: InternalCallTy::Static { cfg_no },
-            return_tys,
-            args: decoded,
-        };
+        // call storage initializer if needed
+        if wrapper_cfg.name == "__constructor" {
+            let placeholder = Instr::Call {
+                res: vec![],
+                call: InternalCallTy::HostFunction {
+                    name: "storage_initializer".to_string(),
+                },
+                return_tys: vec![],
+                args: vec![],
+            };
+            wrapper_cfg.add(&mut vartab, placeholder);
+        }
 
-        wrapper_cfg.add(&mut vartab, placeholder);
+        if wrapper_cfg.name != "__constructor" {
+            let cfg_no = match cfg.function_no {
+                ASTFunction::SolidityFunction(no) => no,
+                _ => unreachable!(),
+            };
+
+            // add a call to the storage initializer
+            let placeholder = Instr::Call {
+                res: call_returns,
+                call: InternalCallTy::Static { cfg_no },
+                return_tys,
+                args: decoded,
+            };
+            wrapper_cfg.add(&mut vartab, placeholder);
+        }
 
         let ret = encode_return(value, ns, &mut vartab, &mut wrapper_cfg);
         wrapper_cfg.add(&mut vartab, Instr::Return { value: vec![ret] });

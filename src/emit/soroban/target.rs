@@ -47,13 +47,19 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     ) -> BasicValueEnum<'a> {
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(bin);
+
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                .into_int_value()
+                .const_cast(bin.context.i64_type(), false)
+        } else {
+            *slot
+        };
+
         let ret = call!(
             HostFunctions::GetContractData.name(),
             &[
-                slot.as_basic_value_enum()
-                    .into_int_value()
-                    .const_cast(bin.context.i64_type(), false)
-                    .into(),
+                slot.into(),
                 bin.context.i64_type().const_int(storage_type, false).into(),
             ]
         )
@@ -84,16 +90,20 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .module
             .get_function(HostFunctions::PutContractData.name())
             .unwrap();
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                .into_int_value()
+                .const_cast(bin.context.i64_type(), false)
+        } else {
+            *slot
+        };
 
         let value = bin
             .builder
             .build_call(
                 function_value,
                 &[
-                    slot.as_basic_value_enum()
-                        .into_int_value()
-                        .const_cast(bin.context.i64_type(), false)
-                        .into(),
+                    slot.into(),
                     dest.into(),
                     bin.context.i64_type().const_int(storage_type, false).into(),
                 ],
@@ -188,7 +198,59 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
-        unimplemented!()
+        let vec_new = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VectorNew.name())
+                    .unwrap(),
+                &[],
+                "vec_new",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                .into_int_value()
+                .const_cast(bin.context.i64_type(), false)
+        } else {
+            slot
+        };
+
+        // push the slot to the vector
+        bin.builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VecPushBack.name())
+                    .unwrap(),
+                &[vec_new.as_basic_value_enum().into(), slot.into()],
+                "push",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        // push the index to the vector
+        bin.builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VecPushBack.name())
+                    .unwrap(),
+                &[vec_new.as_basic_value_enum().into(), index.into()],
+                "push",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+        vec_new
     }
 
     fn storage_push(

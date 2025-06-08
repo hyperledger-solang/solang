@@ -1837,6 +1837,7 @@ pub enum Builtin {
     AuthAsCurrContract,
     ExtendTtl,
     ExtendInstanceTtl,
+    AccessMapping,
 }
 
 impl From<&ast::Builtin> for Builtin {

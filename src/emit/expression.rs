@@ -12,7 +12,9 @@ use crate::sema::ast::{ArrayLength, RetrieveType, StructType, Type};
 use crate::Target;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, StringRadix};
-use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, PointerValue};
+use inkwell::values::{
+    ArrayValue, BasicValue, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+};
 use inkwell::{AddressSpace, IntPredicate};
 use num_bigint::Sign;
 use num_traits::ToPrimitive;
@@ -1359,7 +1361,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 target
                     .storage_subscript(bin, function, ty, array, index)
-                    .into()
+                    .as_basic_value_enum()
             } else if elem_ty.is_builtin_struct() == Some(StructType::AccountInfo) {
                 let array = expression(target, bin, a, vartab, function).into_pointer_value();
                 let index = expression(target, bin, index, vartab, function).into_int_value();
