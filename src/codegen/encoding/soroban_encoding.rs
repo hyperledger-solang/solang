@@ -220,7 +220,12 @@ pub fn soroban_encode_arg(
             }
         }
         Type::String => {
-            if let Expression::Variable { loc, ty, var_no } = item.clone() {
+            if let Expression::Variable {
+                loc: _,
+                ty: _,
+                var_no: _,
+            } = item.clone()
+            {
                 Instr::Set {
                     loc: Loc::Codegen,
                     res: obj,

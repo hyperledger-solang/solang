@@ -40,7 +40,7 @@ fn balance_and_allowance_test() {
     let get_args = vec![user1.clone().into_val(&runtime.env)];
 
     // Set and get balance
-    let set_args = vec![user1.clone().into_val(&runtime.env), bal.clone()];
+    let set_args = vec![user1.clone().into_val(&runtime.env), bal];
     runtime.invoke_contract(addr, "setBalance", set_args);
     let res = runtime.invoke_contract(addr, "getBalance", get_args.clone());
     assert!(bal.shallow_eq(&res));
@@ -50,14 +50,11 @@ fn balance_and_allowance_test() {
     let set_allow_args = vec![
         user1.clone().into_val(&runtime.env),
         user2.clone().into_val(&runtime.env),
-        allowance_val.clone(),
+        allowance_val,
     ];
     runtime.invoke_contract(addr, "setAllowance", set_allow_args);
 
-    let get_allow_args = vec![
-        user1.into_val(&runtime.env),
-        user2.into_val(&runtime.env),
-    ];
+    let get_allow_args = vec![user1.into_val(&runtime.env), user2.into_val(&runtime.env)];
     let res = runtime.invoke_contract(addr, "getAllowance", get_allow_args);
     assert!(allowance_val.shallow_eq(&res));
 }

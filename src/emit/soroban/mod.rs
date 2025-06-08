@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub(super) mod target;
-use crate::codegen::{
-    cfg::{ASTFunction, ControlFlowGraph},
-    HostFunctions, Options, STORAGE_INITIALIZER,
-};
+use crate::codegen::{cfg::ControlFlowGraph, HostFunctions, Options};
 
 use crate::emit::cfg::emit_cfg;
 use crate::{emit::Binary, sema::ast};
@@ -18,8 +15,6 @@ use soroban_sdk::xdr::{
     Limited, Limits, ScEnvMetaEntry, ScEnvMetaEntryInterfaceVersion, ScSpecEntry,
     ScSpecFunctionInputV0, ScSpecFunctionV0, ScSpecTypeDef, StringM, WriteXdr,
 };
-use std::ffi::CString;
-use std::sync;
 
 const SOROBAN_ENV_INTERFACE_VERSION: ScEnvMetaEntryInterfaceVersion =
     ScEnvMetaEntryInterfaceVersion {
@@ -373,62 +368,5 @@ impl SorobanTarget {
                 Some(Linkage::External),
             );
         }
-    }
-
-    fn emit_initializer(
-        binary: &mut Binary,
-        _ns: &ast::Namespace,
-        constructor_cfg_no: Option<&usize>,
-    ) {
-        let mut cfg = ControlFlowGraph::new("__constructor".to_string(), ASTFunction::None);
-
-        cfg.public = true;
-        let void_param = ast::Parameter::new_default(ast::Type::Void);
-        cfg.returns = sync::Arc::new(vec![void_param]);
-
-        Self::emit_function_spec_entry(binary.context, &cfg, "__constructor".to_string(), binary);
-
-        let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
-        let mut storage_initializers = binary
-            .functions
-            .values()
-            .filter(|f: &&inkwell::values::FunctionValue| f.get_name() == function_name.as_c_str());
-        let storage_initializer = *storage_initializers
-            .next()
-            .expect("storage initializer is always present");
-        assert!(storage_initializers.next().is_none());
-
-        let void_type = binary.context.i64_type().fn_type(&[], false);
-        let constructor =
-            binary
-                .module
-                .add_function("__constructor", void_type, Some(Linkage::External));
-        let entry = binary.context.append_basic_block(constructor, "entry");
-
-        binary.builder.position_at_end(entry);
-        binary
-            .builder
-            .build_call(storage_initializer, &[], "storage_initializer")
-            .unwrap();
-
-        // call the user defined constructor (if any)
-        if let Some(cfg_no) = constructor_cfg_no {
-            let constructor = binary.functions[cfg_no];
-            let constructor_name = constructor.get_name().to_str().unwrap();
-            let constructor_arg1 = constructor.get_params()[0];
-
-            println!("constructor_arg1: {:?}", constructor_arg1);
-
-            let arg1 = constructor_arg1.into();
-
-            binary
-                .builder
-                .build_call(constructor, &[arg1], constructor_name)
-                .unwrap();
-        }
-
-        // return zero
-        let zero_val = binary.context.i64_type().const_int(2, false);
-        binary.builder.build_return(Some(&zero_val)).unwrap();
     }
 }

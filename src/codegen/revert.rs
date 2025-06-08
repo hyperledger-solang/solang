@@ -305,12 +305,6 @@ pub(super) fn require(
                 print_expr
             };
 
-            Expression::BytesLiteral {
-                loc: Codegen,
-                ty: Type::String,
-                value: expr_string.to_vec(),
-            };
-
             cfg.add(vartab, Instr::Print { expr: to_print });
         } else {
             log_runtime_error(

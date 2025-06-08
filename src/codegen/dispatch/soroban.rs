@@ -49,7 +49,6 @@ pub fn function_dispatch(
                     println!("inside last else{:?}", function.id.name);
                     function.id.name.clone()
                 }
-
             }
         } else {
             continue;
@@ -118,7 +117,7 @@ pub fn function_dispatch(
             wrapper_cfg.add(&mut vartab, placeholder);
         }
 
-        if wrapper_cfg.name != "__constructor" { 
+        if wrapper_cfg.name != "__constructor" {
             let cfg_no = match cfg.function_no {
                 ASTFunction::SolidityFunction(no) => no,
                 _ => unreachable!(),
@@ -181,12 +180,4 @@ fn encode_return(
             value: BigInt::from(2),
         }
     }
-}
-
-fn extract_function_name(s: &str) -> Option<&str> {
-    let parts: Vec<&str> = s.split("::").collect();
-    if let Some(last) = parts.last() {
-        return last.split('_').next();
-    }
-    None
 }

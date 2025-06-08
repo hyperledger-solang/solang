@@ -3798,10 +3798,6 @@ fn array_subscript(
                 ty: array_ty.clone(),
                 exprs: vec![array, index],
             },
-            _ => todo!(
-                "Mapping subscript is not supported yet for target {:?}",
-                ns.target
-            ),
         };
     }
 

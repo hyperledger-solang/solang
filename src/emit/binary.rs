@@ -1093,7 +1093,7 @@ impl<'a> Binary<'a> {
                 return struct_value.into();
             } else if matches!(ty, Type::String) {
                 let default = " ".as_bytes().to_vec();
-                let bs = init.unwrap_or_else(|| &default);
+                let bs = init.unwrap_or(&default);
 
                 let data = self.emit_global_string("const_string", bs, true);
 
