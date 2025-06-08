@@ -342,10 +342,6 @@ pub(super) fn revert(
         .iter()
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<_>>();
-
-    println!("Revert: {:?}", exprs);
-    println!("Error no: {:?}", error_no);
-
     if opt.log_runtime_errors {
         match (error_no, exprs.first()) {
             // In the case of Error(string), we can print the reason

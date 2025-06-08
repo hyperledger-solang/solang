@@ -3781,7 +3781,6 @@ fn array_subscript(
     }
 
     if array_ty.is_mapping() {
-        println!("Warning: Mapping subscript is not supported yet. Returning poison value.");
         let array = expression(array, cfg, contract_no, func, ns, vartab, opt);
         let index = expression(index, cfg, contract_no, func, ns, vartab, opt);
 

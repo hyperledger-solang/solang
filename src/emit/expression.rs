@@ -1349,8 +1349,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             expr: a,
             index,
         } => {
-            //println!("Subscript: {ty:?} {elem_ty:?}");
-            println!("Subscript: {a:?} {index:?}");
             if ty.is_storage_bytes() {
                 let index = expression(target, bin, index, vartab, function).into_int_value();
                 let slot = expression(target, bin, a, vartab, function).into_int_value();

@@ -45,7 +45,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
-        println!("storage_load: {:?}", ty);
 
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(bin);
@@ -57,8 +56,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         } else {
             *slot
         };
-
-        println!("slot: {:?}", slot);
 
         let ret = call!(
             HostFunctions::GetContractData.name(),
@@ -88,7 +85,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) {
-        println!("storage_store: {:?}", ty);
+
         emit_context!(bin);
 
         let storage_type = storage_type_to_int(storage_type);
@@ -205,8 +202,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
-        println!("storage_subscript: {:?}", ty);
-        println!("index: {:?}", index);
 
         let vec_new = bin
             .builder
@@ -222,8 +217,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .left()
             .unwrap()
             .into_int_value();
-
-        println!("slot {:?}", slot);
 
         let slot = if slot.is_const() {
             slot.as_basic_value_enum()
@@ -262,11 +255,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .left()
             .unwrap()
             .into_int_value();
-
-        // vec_new
-        println!("vec_new {:?}", vec_new);
         vec_new
-        //bin.context.i64_type().const_int(0, false)
     }
 
     fn storage_push(
@@ -310,8 +299,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         length: IntValue,
         dest: PointerValue,
     ) {
-        println!("Keccak256 hash not implemented for Soroban target");
-        //unimplemented!()
+        unimplemented!()
     }
 
     /// Prints a string
@@ -341,7 +329,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                     "log",
                 )
                 .unwrap();
-            println!("to print: {:?}", string);
         } else {
             todo!("Dynamic String printing is not yet supported")
         }

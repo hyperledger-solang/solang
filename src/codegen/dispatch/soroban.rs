@@ -27,9 +27,6 @@ pub fn function_dispatch(
     let mut wrapper_cfgs = Vec::new();
 
     for cfg in all_cfg.iter_mut() {
-        println!("cfg name: {:?}", cfg.name);
-        println!("cfg function no: {:?}", cfg.function_no);
-        println!("cfg public: {:?}", cfg.public);
 
         let wrapper_name = if cfg.public {
             if cfg.name.contains("constructor") {
@@ -43,18 +40,16 @@ pub fn function_dispatch(
                 };
 
                 if function.mangled_name_contracts.contains(&contract_no) {
-                    println!("mangled function LOCATED: {:?}", function.id.name);
+
                     function.mangled_name.clone()
                 } else {
-                    println!("inside last else{:?}", function.id.name);
+
                     function.id.name.clone()
                 }
             }
         } else {
             continue;
         };
-
-        println!("wrapper_name final: {:?}", wrapper_name);
 
         let mut wrapper_cfg = ControlFlowGraph::new(wrapper_name.to_string(), ASTFunction::None);
 
@@ -74,8 +69,6 @@ pub fn function_dispatch(
         }
 
         wrapper_cfg.params = Arc::new(params);
-
-        println!("params are: {:?}", wrapper_cfg.params);
 
         if returns.is_empty() {
             returns.push(ast::Parameter::new_default(Type::Ref(Box::new(Type::Void))));
@@ -139,7 +132,6 @@ pub fn function_dispatch(
         vartab.finalize(ns, &mut wrapper_cfg);
         cfg.public = false;
         wrapper_cfgs.push(wrapper_cfg);
-        println!("==========================================================");
     }
 
     wrapper_cfgs
