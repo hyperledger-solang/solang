@@ -400,12 +400,14 @@ impl SorobanTarget {
 
         let void_type = binary.context.i64_type().fn_type(&[], false);
         let constructor =
-            binary.module
+            binary
+                .module
                 .add_function("__constructor", void_type, Some(Linkage::External));
         let entry = binary.context.append_basic_block(constructor, "entry");
 
         binary.builder.position_at_end(entry);
-        binary.builder
+        binary
+            .builder
             .build_call(storage_initializer, &[], "storage_initializer")
             .unwrap();
 

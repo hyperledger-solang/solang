@@ -46,7 +46,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
         println!("storage_load: {:?}", ty);
-        println!("slot: {:?}", slot);
+
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(bin);
 
@@ -58,15 +58,12 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             *slot
         };
 
+        println!("slot: {:?}", slot);
+
         let ret = call!(
             HostFunctions::GetContractData.name(),
             &[
                 slot.into(),
-                bin
-                    .context
-                    .i64_type()
-                    .const_int(storage_type, false)
-                    .into(),
                 bin.context.i64_type().const_int(storage_type, false).into(),
             ]
         )
@@ -74,6 +71,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         .left()
         .unwrap()
         .into_int_value();
+
+        println!("ret: {:?}", ret);
 
         ret.into()
     }

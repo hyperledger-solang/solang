@@ -20,7 +20,6 @@ use crate::sema::{
 use crate::Target;
 use num_bigint::{BigInt, Sign};
 use parse_display::Display;
-use sha2::digest::typenum::Exp;
 use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 use tiny_keccak::{Hasher, Keccak};
 
@@ -187,8 +186,6 @@ pub(super) fn assert_failure(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) {
-
-    
     // On Solana, returning the encoded arguments has no effect
     if ns.target == Target::Solana || ns.target == Target::Soroban {
         cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
@@ -291,23 +288,28 @@ pub(super) fn require(
                 ],
             };
 
+            let expr_string = prefix
+                .to_vec()
+                .iter()
+                .chain(error_string.as_bytes())
+                .copied()
+                .collect::<Vec<u8>>();
 
+            let to_print = if ns.target == Target::Soroban {
+                Expression::BytesLiteral {
+                    loc: Codegen,
+                    ty: Type::String,
+                    value: expr_string.to_vec(),
+                }
+            } else {
+                print_expr
+            };
 
-            
-            let expr_string = prefix.to_vec()
-            .iter()
-            .chain(error_string.as_bytes())
-            .copied()
-            .collect::<Vec<u8>>();
-
-        let to_print = Expression::BytesLiteral {
-            loc: Codegen,
-            ty: Type::String,
-            value: expr_string.to_vec(),
-        };
-
-
-
+            Expression::BytesLiteral {
+                loc: Codegen,
+                ty: Type::String,
+                value: expr_string.to_vec(),
+            };
 
             cfg.add(vartab, Instr::Print { expr: to_print });
         } else {
@@ -360,8 +362,6 @@ pub(super) fn revert(
                     ns.loc_to_string(PathDisplay::Filename, loc)
                 );
 
-
-
                 let print_expr = Expression::FormatString {
                     loc: Codegen,
                     args: vec![
@@ -385,8 +385,8 @@ pub(super) fn revert(
                     ],
                 };
 
-
-                let expr_string = prefix.to_vec()
+                let expr_string = prefix
+                    .to_vec()
                     .iter()
                     .chain(error_string.as_bytes())
                     .copied()
@@ -398,10 +398,11 @@ pub(super) fn revert(
                     value: expr_string.to_vec(),
                 };
 
-
-
-
-                cfg.add(vartab, Instr::Print { expr: to_print });
+                if ns.target == Target::Soroban {
+                    cfg.add(vartab, Instr::Print { expr: to_print });
+                } else {
+                    cfg.add(vartab, Instr::Print { expr: print_expr });
+                }
             }
             // Else: Not all fields might be formattable, just print the error type
             _ => {

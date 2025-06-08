@@ -556,55 +556,6 @@ pub fn soroban_encode_arg(
                 expr: encoded,
             }
         }
-        Type::Uint(32) | Type::Int(32) => {
-            // widen to 64 bits so we can shift
-            let widened = match item.ty() {
-                Type::Uint(32) => Expression::ZeroExt {
-                    loc: item.loc(),
-                    ty: Type::Uint(64),
-                    expr: Box::new(item.clone()),
-                },
-                Type::Int(32) => Expression::SignExt {
-                    loc: item.loc(),
-                    ty: Type::Int(64),
-                    expr: Box::new(item.clone()),
-                },
-                _ => unreachable!(),
-            };
-
-            // the value goes into the major bits of the 64 bit value
-            let shifted = Expression::ShiftLeft {
-                loc: item.loc(),
-                ty: Type::Uint(64),
-                left: Box::new(widened.cast(&Type::Uint(64), ns)),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: item.loc(),
-                    ty: Type::Uint(64),
-                    value: 32u64.into(), // 24 (minor) + 8 (tag)
-                }),
-            };
-
-            let tag = if matches!(item.ty(), Type::Uint(32)) {
-                4
-            } else {
-                5
-            };
-            Instr::Set {
-                loc: item.loc(),
-                res: obj,
-                expr: Expression::Add {
-                    loc: item.loc(),
-                    ty: Type::Uint(64),
-                    left: Box::new(shifted),
-                    right: Box::new(Expression::NumberLiteral {
-                        loc: item.loc(),
-                        ty: Type::Uint(64),
-                        value: tag.into(),
-                    }),
-                    overflowing: false,
-                },
-            }
-        }
         _ => todo!("Type not yet supported"),
     };
 
