@@ -112,8 +112,17 @@ fn tests(required_forbidden_pairs: &[(&[&str], &[&str])]) {
             contract,
         ) {
             Ok((tempdir, address)) => (tempdir, address),
-            Err(error) => {
-                eprintln!("Failed to deploy `{}`: {error:?}", path.display());
+            Err(Error(severity, error)) => {
+                if matches!(severity, Severity::Minor) {
+                    eprintln!("Failed to deploy `{}`: {error:?}", path.display());
+                } else {
+                    failures.push((
+                        path.to_path_buf(),
+                        String::from("<deployment>"),
+                        severity,
+                        error,
+                    ));
+                }
                 continue;
             }
         };
