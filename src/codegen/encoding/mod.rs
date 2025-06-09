@@ -408,7 +408,31 @@ pub(crate) trait AbiEncoding {
         let (data_offset, size) = if self.is_packed() {
             (offset.clone(), None)
         } else {
-            let size = self.encode_size(&len, buffer, offset, ns, vartab, cfg);
+            let size = if ns.target == Target::Stylus {
+                let swapped_bytes = Expression::ByteSwap {
+                    expr: Box::new(Expression::ZeroExt {
+                        loc: Codegen,
+                        ty: Type::Uint(256),
+                        expr: Box::new(len.clone()),
+                    }),
+                    le_to_be: true,
+                };
+                cfg.add(
+                    vartab,
+                    Instr::WriteBuffer {
+                        buf: buffer.clone(),
+                        offset: offset.clone(),
+                        value: swapped_bytes,
+                    },
+                );
+                Expression::NumberLiteral {
+                    loc: Codegen,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(32),
+                }
+            } else {
+                self.encode_size(&len, buffer, offset, ns, vartab, cfg)
+            };
             (offset.clone().add_u32(size.clone()), Some(size))
         };
         // ptr + offset + size_of_integer
@@ -1591,7 +1615,30 @@ pub(crate) trait AbiEncoding {
                 self.storage_cache_insert(arg_no, var.clone());
                 size
             }
-            Type::String | Type::DynamicBytes => self.calculate_string_size(expr, vartab, cfg),
+            Type::String | Type::DynamicBytes => {
+                if ns.target == Target::Stylus {
+                    let size_prefix = Expression::NumberLiteral {
+                        loc: Codegen,
+                        ty: Uint(32),
+                        value: BigInt::from(32),
+                    };
+                    let length = Expression::Builtin {
+                        loc: Codegen,
+                        tys: vec![Uint(32)],
+                        kind: Builtin::ArrayLength,
+                        args: vec![expr.clone()],
+                    };
+                    Expression::Add {
+                        loc: Codegen,
+                        ty: Uint(32),
+                        overflowing: false,
+                        left: Box::new(size_prefix),
+                        right: Box::new(length),
+                    }
+                } else {
+                    self.calculate_string_size(expr, vartab, cfg)
+                }
+            }
             Type::InternalFunction { .. }
             | Type::Void
             | Type::Unreachable
