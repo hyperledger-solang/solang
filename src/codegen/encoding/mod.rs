@@ -32,6 +32,18 @@ use self::buffer_validator::BufferValidator;
 
 /// Insert encoding instructions into the `cfg` for any `Expression` in `args`.
 /// Returns a pointer to the encoded data and the size as a 32bit integer.
+//
+// smoelius: If you see a message like the following, it may mean your trying to write into an
+// improperly sized vector:
+//
+// ```
+// WARN [...] program failure                          err="execution reverted"            msg="call failed
+//
+// Caused by:
+//    0: hard user error
+//    1: RuntimeError: out of bounds memory access
+//    ...
+// ```
 pub(super) fn abi_encode(
     loc: &Loc,
     args: Vec<Expression>,
@@ -327,7 +339,7 @@ pub(crate) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
         width: u16,
     ) -> Expression {
-        let encoding_size = encoding_size(ns, width);
+        let encoding_size = self.encoding_size(ns, width);
         let expr = if encoding_size != width {
             if expr.ty().is_signed_int(ns) {
                 Expression::SignExt {
@@ -742,7 +754,7 @@ pub(crate) trait AbiEncoding {
     ) -> (Expression, Expression) {
         match ty {
             Type::Uint(width) | Type::Int(width) => {
-                let encoding_size = encoding_size(ns, *width);
+                let encoding_size = self.encoding_size(ns, *width);
 
                 let size = Expression::NumberLiteral {
                     loc: Codegen,
@@ -1415,7 +1427,7 @@ pub(crate) trait AbiEncoding {
             Type::Uint(n) | Type::Int(n) => Expression::NumberLiteral {
                 loc: Codegen,
                 ty: Uint(32),
-                value: BigInt::from(encoding_size(ns, *n) / 8),
+                value: BigInt::from(self.encoding_size(ns, *n) / 8),
             },
             Type::Enum(_) | Type::Contract(_) | Type::Bool | Type::Address(_) | Type::Bytes(_) => {
                 Expression::NumberLiteral {
@@ -1778,13 +1790,13 @@ pub(crate) trait AbiEncoding {
     fn const_encode(&self, _args: &[Expression]) -> Option<Vec<u8>> {
         None
     }
-}
 
-fn encoding_size(ns: &Namespace, n: u16) -> u16 {
-    if ns.target == Target::Stylus {
-        256
-    } else {
-        n.next_power_of_two()
+    fn encoding_size(&self, ns: &Namespace, n: u16) -> u16 {
+        if !self.is_packed() && ns.target == Target::Stylus {
+            256
+        } else {
+            n.next_power_of_two()
+        }
     }
 }
 
