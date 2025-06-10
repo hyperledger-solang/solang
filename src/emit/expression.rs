@@ -2136,48 +2136,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             res.unwrap().into()
         }
 
-        Expression::ByteSwap {
-            expr,
-            le_to_be: letobe,
-        } => {
+        Expression::ByteSwap { expr, le_to_be } => {
             let ty = expr.ty();
-
-            let value = expression(target, bin, expr, vartab, function).into_int_value();
-
-            let llvm_ty = bin.llvm_type(&ty);
-
-            let src = bin.build_alloca(function, llvm_ty, "src");
-
-            bin.builder.build_store(src, value).unwrap();
-
-            let dest = bin.build_alloca(
-                function,
-                bin.context
-                    .i8_type()
-                    .array_type((ty.get_type_size() / 8) as u32),
-                "dest",
-            );
-
-            let name = if *letobe { "__leNtobeN" } else { "__beNtoleN" };
-
-            bin.builder
-                .build_call(
-                    bin.module.get_function(name).unwrap(),
-                    &[
-                        src.into(),
-                        dest.into(),
-                        bin.context
-                            .i32_type()
-                            .const_int((ty.get_type_size() / 8) as u64, false)
-                            .into(),
-                    ],
-                    name,
-                )
-                .unwrap();
-
-            bin.builder
-                .build_load(llvm_ty, dest, "swapped bytes")
-                .unwrap()
+            bytes_swap(target, bin, &ty, expr, *le_to_be, vartab, function)
         }
 
         Expression::RationalNumberLiteral { .. }
@@ -2720,5 +2681,63 @@ fn basic_value_to_slice<'a>(
             (output, length)
         }
         _ => unreachable!(),
+    }
+}
+
+// smoelius: I think this type-walking must be done during the emit phase and not during the codegen
+// phase. For example, the bounds on a dynamic array cannot be known. Hence, a loop must be emitted.
+fn bytes_swap<'a, T: TargetRuntime<'a> + ?Sized>(
+    target: &T,
+    bin: &Binary<'a>,
+    ty: &Type,
+    expr: &Expression,
+    le_to_be: bool,
+    vartab: &HashMap<usize, Variable<'a>>,
+    function: FunctionValue<'a>,
+) -> BasicValueEnum<'a> {
+    match ty {
+        Type::Int(_) | Type::Uint(_) => {
+            let value = expression(target, bin, expr, vartab, function).into_int_value();
+
+            let llvm_ty = bin.llvm_type(&ty);
+
+            let src = bin.build_alloca(function, llvm_ty, "src");
+
+            bin.builder.build_store(src, value).unwrap();
+
+            let dest = bin.build_alloca(
+                function,
+                bin.context
+                    .i8_type()
+                    .array_type((ty.get_type_size() / 8) as u32),
+                "dest",
+            );
+
+            let name = if le_to_be { "__leNtobeN" } else { "__beNtoleN" };
+
+            bin.builder
+                .build_call(
+                    bin.module.get_function(name).unwrap(),
+                    &[
+                        src.into(),
+                        dest.into(),
+                        bin.context
+                            .i32_type()
+                            .const_int((ty.get_type_size() / 8) as u64, false)
+                            .into(),
+                    ],
+                    name,
+                )
+                .unwrap();
+
+            bin.builder
+                .build_load(llvm_ty, dest, "swapped bytes")
+                .unwrap()
+        }
+        Type::UserType(no) => {
+            let ty = &bin.ns.user_types[*no].ty;
+            bytes_swap(target, bin, ty, expr, le_to_be, vartab, function)
+        }
+        _ => unimplemented!("{ty:?}"),
     }
 }
