@@ -252,7 +252,7 @@ pub(super) fn format_evaluated_args<'a>(
                 };
             }
             (false, Type::Bytes(size)) => {
-                let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty), "bytesN");
+                let buf = bin.build_alloca(function, bin.llvm_type(arg_ty), "bytesN");
 
                 bin.builder.build_store(buf, val.into_int_value()).unwrap();
 
@@ -375,7 +375,7 @@ pub(super) fn format_evaluated_args<'a>(
                         .unwrap()
                         .into_pointer_value();
                 } else {
-                    let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty), "uint");
+                    let buf = bin.build_alloca(function, bin.llvm_type(arg_ty), "uint");
 
                     bin.builder.build_store(buf, val.into_int_value()).unwrap();
 
@@ -535,7 +535,7 @@ pub(super) fn format_evaluated_args<'a>(
                         .unwrap()
                         .into_pointer_value();
                 } else {
-                    let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty), "int");
+                    let buf = bin.build_alloca(function, bin.llvm_type(arg_ty), "int");
 
                     bin.builder
                         .build_store(buf, val_phi.as_basic_value().into_int_value())

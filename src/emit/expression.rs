@@ -2699,7 +2699,7 @@ fn bytes_swap<'a, T: TargetRuntime<'a> + ?Sized>(
         Type::Int(_) | Type::Uint(_) => {
             let value = expression(target, bin, expr, vartab, function).into_int_value();
 
-            let llvm_ty = bin.llvm_type(&ty);
+            let llvm_ty = bin.llvm_type(ty);
 
             let src = bin.build_alloca(function, llvm_ty, "src");
 

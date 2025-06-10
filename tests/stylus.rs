@@ -74,7 +74,7 @@ fn tests(required_forbidden_pairs: &[(&[&str], &[&str])]) {
     let mut successes = Vec::new();
     let mut failures = Vec::new();
     for path in &paths {
-        let contents = read_to_string(&path).unwrap();
+        let contents = read_to_string(path).unwrap();
         let contracts = contract_re
             .captures_iter(&contents)
             .map(|captures| {
@@ -108,7 +108,7 @@ fn tests(required_forbidden_pairs: &[(&[&str], &[&str])]) {
         eprintln!("Deploying `{}`", path.display());
 
         let (tempdir, address) = match deploy(
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(&path),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(path),
             contract,
         ) {
             Ok((tempdir, address)) => (tempdir, address),
@@ -130,7 +130,7 @@ fn tests(required_forbidden_pairs: &[(&[&str], &[&str])]) {
 
         for function in argless_functions {
             eprintln!("Testing `{function}`");
-            match call(dir, &address, &[&format!("{function}()")]) {
+            match call(dir, &address, [format!("{function}()")]) {
                 Ok(_) => successes.push((path.to_path_buf(), function.to_owned())),
                 Err(Error(severity, error)) => {
                     failures.push((path.to_path_buf(), function.to_owned(), severity, error))
@@ -244,7 +244,7 @@ where
         "--rpc-url=http://localhost:8547",
         "--private-key",
         PRIVATE_KEY,
-        &address,
+        address,
     ]
     .into_iter()
     .map(OsStr::new);

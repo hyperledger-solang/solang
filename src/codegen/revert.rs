@@ -31,6 +31,7 @@ pub(crate) const PANIC_SELECTOR: [u8; 4] = [0x4e, 0x48, 0x7b, 0x71];
 /// Corresponds to the error types from the Solidity language.
 ///
 /// Marked as non-exhaustive because Solidity may add more variants in the future.
+#[allow(clippy::large_enum_variant)]
 #[non_exhaustive]
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, PartialEq, Clone)]
