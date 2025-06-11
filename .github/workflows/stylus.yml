@@ -1,0 +1,65 @@
+name: Stylus
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            llvm.16/
+            nitro-devnode/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Maybe enable verbose logging
+        if: ${{ runner.debug == 1 }}
+        run: echo 'VERBOSE=1' >> "$GITHUB_ENV"
+
+      - name: Setup
+        run: |
+          if ! cargo stylus --version; then
+            cargo install cargo-stylus
+          fi
+
+          if ! cast --version; then
+            cargo install cast --git https://github.com/foundry-rs/foundry.git --profile release --locked
+          fi
+
+          if [ ! -d 'nitro-devnode' ]; then
+            git clone https://github.com/OffchainLabs/nitro-devnode.git
+          fi
+
+          if [ ! -d 'llvm16.0' ]; then
+            wget https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-linux-x86-64.tar.xz
+            tar Jxf llvm16.0-linux-x86-64.tar.xz
+          fi
+
+          echo "$(pwd)/llvm16.0/bin" >> "$GITHUB_PATH"
+
+      - name: Test
+        run: |
+          nitro-devnode/run-dev-node.sh &
+          cargo test --test stylus -- --nocapture
