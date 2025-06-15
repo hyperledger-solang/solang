@@ -34,7 +34,7 @@ pub fn function_dispatch(
                 let function = match &cfg.function_no {
                     ASTFunction::SolidityFunction(no) => &ns.functions[*no],
 
-                    // untill this stage, we have processed constructor and storage_initializer, so all that is left is the solidity functions
+                    // until this stage, we have processed constructor and storage_initializer, so all that is left is the solidity functions
                     _ => unreachable!(),
                 };
 
@@ -105,6 +105,18 @@ pub fn function_dispatch(
                 args: vec![],
             };
             wrapper_cfg.add(&mut vartab, placeholder);
+
+            // check if constructor exists. If it does, we need to call it
+            if let ASTFunction::SolidityFunction(cfg_no) = cfg.function_no {
+                // add a call to the constructor
+                let placeholder = Instr::Call {
+                    res: call_returns.clone(),
+                    call: InternalCallTy::Static { cfg_no },
+                    return_tys: vec![],
+                    args: decoded.clone(),
+                };
+                wrapper_cfg.add(&mut vartab, placeholder);
+            };
         }
 
         if wrapper_cfg.name != "__constructor" {
@@ -113,7 +125,6 @@ pub fn function_dispatch(
                 _ => unreachable!(),
             };
 
-            // add a call to the storage initializer
             let placeholder = Instr::Call {
                 res: call_returns,
                 call: InternalCallTy::Static { cfg_no },
