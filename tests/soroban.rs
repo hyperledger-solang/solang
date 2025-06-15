@@ -9,7 +9,7 @@ use solang::sema::ast::Namespace;
 use solang::sema::diagnostics::Diagnostics;
 use solang::{compile, Target};
 use soroban_sdk::testutils::Logs;
-use soroban_sdk::{vec, Address, Env, Symbol, Val};
+use soroban_sdk::{vec, Address, ConstructorArgs, Env, Symbol, Val};
 use std::ffi::OsStr;
 
 // TODO: register accounts, related balances, events, etc.
@@ -127,6 +127,19 @@ impl SorobanEnv {
         let wasm = build_wasm(src).0;
 
         let addr = self.register_contract(wasm);
+
+        self.contracts.push(addr.clone());
+
+        addr
+    }
+
+    pub fn deploy_contract_with_args<A>(&mut self, src: &str, args: A) -> Address
+    where
+        A: ConstructorArgs,
+    {
+        let wasm = build_wasm(src).0;
+
+        let addr = self.env.register(wasm.as_slice(), args);
 
         self.contracts.push(addr.clone());
 
