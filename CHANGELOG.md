@@ -4,7 +4,13 @@ will be documented here.
 
 ## Unreleased
 
+## v0.3.4 London
+
 ### Added
+- **Soroban** Support for [Stellar Asset Contract(SAC)](https://developers.stellar.org/docs/tokens/stellar-asset-contract)
+- **Soroban** Support for [Cross Contract Calls](https://developers.stellar.org/docs/build/smart-contracts/example-contracts/cross-contract-call)
+- **Soroban** Support for [Soroban Authorization Framework](https://developers.stellar.org/docs/learn/fundamentals/contract-development/authorization)
+- **Soroban** Support for different [Soroban Storage types](https://developers.stellar.org/docs/build/guides/storage/choosing-the-right-storage)
 - **Soroban** Work on adding support for [Stellar's Soroban](https://soroban.stellar.org/docs) contracts platforms started, by adding a skeleton that supports the Soroban runtime. [Salaheldin Soliman](https://github.com/salaheldinsoliman)
 
 - The `string.concat()` and `bytes.concat()` builtin functions are supported. [seanyoung](https://github.com/seanyoung)
@@ -13,6 +19,10 @@ will be documented here.
 - **BREAKING** The non-standard extension of concatenating strings using the `+` operator
   has been removed, use `string.concat()` instead. [seanyoung](https://github.com/seanyoung)
 - Removed the `--no-log-api-return-codes` compile flag as this is now done by the runtime [xermicus](https://github.com/xermicus)
+
+### Fixed
+- [Two Infinite loops in codegen](https://github.com/hyperledger-solang/solang/commit/c6db2acc8a3927fae17c437eeeea0d0ae49a67df), thanks to @smoelius.
+- [Handle abi.encode() with infinite empty arguments](https://github.com/hyperledger-solang/solang/commit/12a6d83b91f7f5a4cc48156e1112638e733e143a), thanks to @smoelius.
 
 ## v0.3.3 Atlantis
 
