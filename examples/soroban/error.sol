@@ -1,3 +1,5 @@
+/// SPDX-License-Identifier: Apache-2.0
+
 contract error {
     uint64 public count = 1;
 

@@ -1,3 +1,5 @@
+/// SPDX-License-Identifier: Apache-2.0
+
 contract token {
     address public admin;
     uint32 public decimals;

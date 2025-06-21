@@ -1,3 +1,5 @@
+/// SPDX-License-Identifier: Apache-2.0
+
 contract ttl_storage {
     uint64 public persistent pCount = 11;
     uint64 temporary tCount = 7;

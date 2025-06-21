@@ -1,3 +1,4 @@
+/// SPDX-License-Identifier: Apache-2.0
 contract a {
     function call_b (address b, address c) public returns (uint64) {
         address addr = address(this);
