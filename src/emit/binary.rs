@@ -885,6 +885,10 @@ impl<'a> Binary<'a> {
 
     /// Return the llvm type for a variable holding the type, not the type itself
     pub(crate) fn llvm_var_ty(&self, ty: &Type) -> BasicTypeEnum<'a> {
+        if self.ns.target == Target::Soroban {
+            return self.llvm_type(ty);
+        }
+
         let llvm_ty = self.llvm_type(ty);
         match ty.deref_memory() {
             Type::Struct(_)

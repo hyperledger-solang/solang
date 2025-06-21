@@ -98,6 +98,7 @@ impl From<inkwell::OptimizationLevel> for OptimizationLevel {
 pub enum HostFunctions {
     PutContractData,
     GetContractData,
+    HasContractData,
     ExtendContractDataTtl,
     ExtendCurrentContractInstanceAndCodeTtl,
     LogFromLinearMemory,
@@ -129,6 +130,7 @@ impl HostFunctions {
         match self {
             HostFunctions::PutContractData => "l._",
             HostFunctions::GetContractData => "l.1",
+            HostFunctions::HasContractData => "l.0",
             HostFunctions::ExtendContractDataTtl => "l.7",
             HostFunctions::ExtendCurrentContractInstanceAndCodeTtl => "l.8",
             HostFunctions::LogFromLinearMemory => "x._",
