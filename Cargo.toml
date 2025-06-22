@@ -10,7 +10,7 @@ description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "solana", "polkadot", "substrate" ]
 rust-version = "1.85.0"
 edition = "2021"
-exclude = [ "/.*", "/docs",  "/examples", "/solana-library", "/tests", "/integration", "/vscode", "/testdata" ]
+exclude = [ "/.*", "/docs", "/solana-library", "/tests", "/integration", "/vscode", "/testdata" ]
 
 [build-dependencies]
 cc = "1.0"
@@ -92,9 +92,6 @@ walkdir = "2.4"
 ink_primitives = "5.0.0"
 wasm_host_attr = { path = "tests/wasm_host_attr" }
 num-bigint = { version = "0.4", features = ["rand", "serde"]}
-
-[patch.crates-io]
-solang-forge-fmt = { path = "fmt" }
 
 
 [package.metadata.docs.rs]
