@@ -29,8 +29,6 @@ use solang_parser::pt::CodeLocation;
 use solang_parser::pt::OptionalCodeLocation;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
-use num_bigint::BigInt;
-use num_traits::Zero;
 
 pub fn resolve_function_body(
     def: &pt::FunctionDefinition,
@@ -732,27 +730,10 @@ fn statement(
                         // For memory arrays and other types, we should only delete the element
                         // by assigning the default value, not delete the entire array
                         // Issue #1785 - match Solc behavior for delete array[index]
-                        ns.diagnostics.push(Diagnostic::warning(
-                            *loc,
-                            "argument to 'delete' should be storage reference".to_string(),
-                        ));
-
-                        let expr_ty = expr.ty().clone();
-                        let element_ty = expr_ty.deref_any();
-                        
-                        if let Ok(default_expr) = get_default_value(*loc, element_ty, ns, diagnostics) {
-                            let assign = Expression::Assign {
-                                loc: *loc,
-                                ty: expr.ty(),
-                                left: Box::new(expr),
-                                right: Box::new(default_expr),
-                            };
-                            
-                            res.push(Statement::Expression(*loc, true, assign));
-                            return Ok(true);
-                        }
-                        
-                        return Err(());
+                        // The AST should be an accurate representation of the source code
+                        // The actual behavior will be handled in codegen
+                        res.push(Statement::Delete(*loc, expr.ty().clone(), expr));
+                        return Ok(true);
                     }
                 }
                 // is it an underscore modifier statement
@@ -2774,65 +2755,4 @@ fn try_catch(
     );
 
     Ok((stmt, finally_reachable))
-}
-
-/// Helper function to get the default value expression for a type
-fn get_default_value(
-    loc: pt::Loc,
-    ty: &Type,
-    ns: &Namespace,
-    diagnostics: &mut Diagnostics,
-) -> Result<Expression, ()> {
-    match ty {
-        Type::Bool => Ok(Expression::BoolLiteral {
-            loc,
-            value: false,
-        }),
-        Type::Uint(size) => Ok(Expression::NumberLiteral {
-            loc,
-            ty: Type::Uint(*size),
-            value: BigInt::zero(),
-        }),
-        Type::Int(size) => Ok(Expression::NumberLiteral {
-            loc,
-            ty: Type::Int(*size),
-            value: BigInt::zero(),
-        }),
-        Type::Value => Ok(Expression::NumberLiteral {
-            loc,
-            ty: Type::Value,
-            value: BigInt::zero(),
-        }),
-        Type::Address(_) => Ok(Expression::NumberLiteral {
-            loc,
-            ty: ty.clone(),
-            value: BigInt::zero(),
-        }),
-        Type::Bytes(n) => Ok(Expression::BytesLiteral {
-            loc,
-            ty: Type::Bytes(*n),
-            value: vec![0; *n as usize],
-        }),
-        Type::String => Ok(Expression::BytesLiteral {
-            loc,
-            ty: Type::String,
-            value: Vec::new(),
-        }),
-        Type::DynamicBytes => Ok(Expression::BytesLiteral {
-            loc,
-            ty: Type::DynamicBytes,
-            value: Vec::new(),
-        }),
-        Type::Ref(r) => get_default_value(loc, r, ns, diagnostics),
-        Type::StorageRef(_, r) => get_default_value(loc, r, ns, diagnostics),
-        // For arrays, structs, and complex types, a more involved default value would be needed
-        // but for now we'll return a basic default value for simple types
-        _ => {
-            diagnostics.push(Diagnostic::error(
-                loc,
-                format!("cannot create default value for type {}", ty.to_string(ns)),
-            ));
-            Err(())
-        }
-    }
 }
