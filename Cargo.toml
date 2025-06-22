@@ -67,7 +67,7 @@ primitive-types = { version = "0.12", features = ["codec"] }
 normalize-path = "0.2.1"
 bitflags = "2.4"
 scopeguard = "1.2.0"
-forge-fmt = { path = "fmt", optional = true }
+solang-forge-fmt = { version = "0.2.0", optional = true }
 # We don't use ethers-core directly, but need the correct version for the
 # build to work.
 ethers-core = { version = "2.0.10", optional = true }
@@ -93,6 +93,10 @@ ink_primitives = "5.0.0"
 wasm_host_attr = { path = "tests/wasm_host_attr" }
 num-bigint = { version = "0.4", features = ["rand", "serde"]}
 
+[patch.crates-io]
+solang-forge-fmt = { path = "fmt" }
+
+
 [package.metadata.docs.rs]
 no-default-features = true
 
@@ -104,7 +108,7 @@ soroban = ["soroban-sdk"]
 default = ["llvm", "wasm_opt", "language_server", "soroban"]
 llvm = ["inkwell", "libc"]
 wasm_opt = ["llvm", "wasm-opt", "contract-build"]
-language_server = ["tower-lsp", "forge-fmt", "ethers-core", "tokio", "rust-lapper"]
+language_server = ["tower-lsp", "solang-forge-fmt", "ethers-core", "tokio", "rust-lapper"]
 
 [workspace]
 members = ["solang-parser", "fmt", "tests/wasm_host_attr"]
