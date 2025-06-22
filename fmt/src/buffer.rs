@@ -379,7 +379,10 @@ mod tests {
             let mut buf = buf.clone();
             buf.dedent(delta);
         }));
-        assert!(res.is_err(), "Expected panic on extra dedent, but did not get one");
+        assert!(
+            res.is_err(),
+            "Expected panic on extra dedent, but did not get one"
+        );
     }
 
     #[test]
