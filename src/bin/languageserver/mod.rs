@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use solang_forge_fmt::{format_to, parse, FormatterConfig};
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use rust_lapper::{Interval, Lapper};
@@ -18,6 +17,7 @@ use solang::{
     },
     Target,
 };
+use solang_forge_fmt::{format_to, parse, FormatterConfig};
 use solang_parser::pt;
 use std::{
     collections::{HashMap, HashSet},

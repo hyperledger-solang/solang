@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use solang_forge_fmt::{format_to, parse, solang_ext::AstEq, FormatterConfig};
 use itertools::Itertools;
+use solang_forge_fmt::{format_to, parse, solang_ext::AstEq, FormatterConfig};
 use std::{fs, path::PathBuf};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
