@@ -6,6 +6,7 @@ authors = ["Foundry Contributors"]
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/foundry-rs/foundry"
 repository = "https://github.com/foundry-rs/foundry"
+description = "Solang's fork of forge-fmt"
 
 [dependencies]
 ariadne = "0.4"
