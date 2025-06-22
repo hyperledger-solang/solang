@@ -25,6 +25,7 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
         generate_debug_information: false,
         log_runtime_errors: false,
         log_prints: true,
+        strict_soroban_types: false,
         #[cfg(feature = "wasm_opt")]
         wasm_opt: None,
         soroban_version: None,
@@ -659,7 +660,6 @@ fn try_catch() {
                 r = hex"ABCD";
                 emit StringFailure(_err);
             } catch (bytes memory _err) {
-                r = hex"ABCD";
                 emit BytesFailure(_err);
             }
 
