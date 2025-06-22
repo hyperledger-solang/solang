@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use forge_fmt::{format_to, parse, FormatterConfig};
+use solang_forge_fmt::{format_to, parse, FormatterConfig};
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use rust_lapper::{Interval, Lapper};
