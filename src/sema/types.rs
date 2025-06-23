@@ -1950,8 +1950,17 @@ impl Type {
     }
 
     /// Is it an address (with some sugar)
-    pub fn is_address(&self) -> bool {
-        matches!(self, Type::Address(_) | Type::Contract(_))
+    pub fn is_address(&self, ns: &Namespace) -> bool {
+        if matches!(self, Type::Address(_) | Type::Contract(_)) {
+            return true;
+        }
+
+        if let &Type::UserType(no) = self {
+            let ty = &ns.user_types[no].ty;
+            return ty.is_address(ns);
+        }
+
+        false
     }
 
     /// Does the type contain any mapping type

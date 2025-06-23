@@ -423,7 +423,7 @@ fn cast_to_number(expr: Expression, ns: &Namespace) -> Expression {
             ty: Type::Uint(ns.target.ptr_size()),
             expr: expr.into(),
         }
-    } else if ty.is_address() {
+    } else if ty.is_address(ns) {
         Expression::Cast {
             loc: pt::Loc::Codegen,
             ty: Type::Uint((ns.address_length * 8) as u16),
