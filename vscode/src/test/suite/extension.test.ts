@@ -621,7 +621,7 @@ async function testhover(docUri: vscode.Uri) {
 
   const contentarr3 = actualhover3[0].contents as vscode.MarkdownString[];
 
-  assert.strictEqual(contentarr3[0].value, 'Abort execution if argument evaulates to false\n\n```solidity\n[built-in] void require (bool)\n```');
+  assert.strictEqual(contentarr3[0].value, 'Abort execution if argument evaluates to false\n\n```solidity\n[built-in] void require (bool)\n```');
 
   const pos4 = new vscode.Position(32, 13);
 
