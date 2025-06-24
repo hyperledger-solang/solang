@@ -47,7 +47,11 @@ pub(super) fn format_evaluated_args<'a>(
     let mut length = bin.context.i32_type().const_zero();
 
     for (spec, string_literal, ty, val) in evaluated_arg.iter() {
+        let mut ty = ty;
         let val = *val;
+        while let Type::UserType(no) = ty {
+            ty = &bin.ns.user_types[*no].ty;
+        }
         let len = if let Some(string_literal) = *string_literal {
             bin.context
                 .i32_type()
@@ -126,8 +130,12 @@ pub(super) fn format_evaluated_args<'a>(
 
     // format it
     for (spec, string_literal, arg_ty, val) in evaluated_arg.iter() {
+        let mut arg_ty = arg_ty;
         let val = *val;
         let is_string_literal = *spec == FormatArg::StringLiteral;
+        while let Type::UserType(no) = arg_ty {
+            arg_ty = &bin.ns.user_types[*no].ty;
+        }
         match (is_string_literal, arg_ty) {
             (false, Type::Bool) => {
                 let len = bin
