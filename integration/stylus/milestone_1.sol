@@ -50,7 +50,7 @@ contract C {
 
         // tx_origin
         address origin = this.tx_origin();
-        print("{}".format(origin));
+        print("origin = {}".format(origin));
         assert(origin != address(this));
     }
 }
