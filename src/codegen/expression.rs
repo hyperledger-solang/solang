@@ -3785,16 +3785,14 @@ fn array_subscript(
         let index = expression(index, cfg, contract_no, func, ns, vartab, opt);
 
         return match ns.target {
-            Target::Solana | Target::Soroban | Target::EVM | Target::Stylus => {
-                Expression::Subscript {
-                    loc: *loc,
-                    ty: elem_ty.clone(),
-                    array_ty: array_ty.clone(),
-                    expr: Box::new(array),
-                    index: Box::new(index),
-                }
-            }
-            Target::Polkadot { .. } => Expression::Keccak256 {
+            Target::Solana | Target::Soroban | Target::EVM => Expression::Subscript {
+                loc: *loc,
+                ty: elem_ty.clone(),
+                array_ty: array_ty.clone(),
+                expr: Box::new(array),
+                index: Box::new(index),
+            },
+            Target::Polkadot { .. } | Target::Stylus => Expression::Keccak256 {
                 loc: *loc,
                 ty: array_ty.clone(),
                 exprs: vec![array, index],
