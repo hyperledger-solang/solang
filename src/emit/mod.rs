@@ -420,7 +420,7 @@ macro_rules! debug_value {
         value
     }};
 }
-/// debug_string!(target, bin, s, function)
+/// debug_str!(target, bin, s, function)
 #[allow(unused_macros)]
 macro_rules! debug_str {
     ($target:expr, $bin:expr, $s:expr, $function:expr) => {{
