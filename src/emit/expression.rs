@@ -2209,6 +2209,16 @@ fn runtime_cast<'a>(
             Type::ExternalFunction { .. } | Type::Struct(StructType::ExternalFunction),
             Type::ExternalFunction { .. } | Type::Struct(StructType::ExternalFunction),
         ) => val,
+        // smoelius: We cannot simply add this case to the next arm, because it would override the
+        // following arm below:
+        // ```
+        // (Type::Bool, Type::Int(_) | Type::Uint(_)) => ...
+        // ```
+        (Type::Bool, Type::UserType(_)) => {
+            assert_eq!(from.bytes(bin.ns), to.bytes(bin.ns),);
+
+            val
+        }
         (
             Type::Uint(_)
             | Type::Int(_)
@@ -2428,7 +2438,7 @@ fn runtime_cast<'a>(
 
             bin.builder.build_load(slice_ty, slice, "slice").unwrap()
         }
-        _ => unreachable!(),
+        _ => unimplemented!("from = {from:?}, to = {to:?}"),
     }
 }
 

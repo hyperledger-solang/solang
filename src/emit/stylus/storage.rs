@@ -319,6 +319,10 @@ impl StorageSlot for StylusTarget {
 
                 ret.into()
             }
+            Type::UserType(no) => {
+                let ty = &bin.ns.user_types[*no].ty;
+                self.storage_load_slot(bin, ty, slot, slot_ptr, function)
+            }
             _ => {
                 bin.builder.build_store(slot_ptr, *slot).unwrap();
 
@@ -652,6 +656,10 @@ impl StorageSlot for StylusTarget {
                         bin.address_type().as_basic_type_enum(),
                     );
                 }
+            }
+            Type::UserType(no) => {
+                let ty = &bin.ns.user_types[*no].ty;
+                self.storage_store_slot(bin, ty, slot, slot_ptr, dest, function)
             }
             _ => {
                 dbg!(ty);
