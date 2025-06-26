@@ -443,12 +443,28 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
     fn storage_array_length(
         &self,
-        _bin: &Binary<'a>,
-        _function: FunctionValue,
-        _slot: IntValue<'a>,
-        _elem_ty: &Type,
+        bin: &Binary<'a>,
+        function: FunctionValue,
+        slot: IntValue<'a>,
+        elem_ty: &Type,
     ) -> IntValue<'a> {
-        unimplemented!()
+        emit_context!(bin);
+
+        let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
+        bin.builder.build_store(slot_ptr, slot).unwrap();
+
+        let len_ptr = bin
+            .builder
+            .build_alloca(bin.context.i32_type(), "len_ptr")
+            .unwrap();
+        call!("storage_load_bytes32", &[slot_ptr.into(), len_ptr.into()]);
+        let len = bin
+            .builder
+            .build_load(bin.context.i32_type(), len_ptr, "len")
+            .unwrap()
+            .into_int_value();
+
+        len
     }
 
     /// keccak256 hash
