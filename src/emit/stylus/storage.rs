@@ -10,7 +10,7 @@ use crate::emit_context;
 use crate::sema::ast::{ArrayLength, Type};
 use inkwell::types::{BasicType, BasicTypeEnum};
 use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, PointerValue};
-use inkwell::{AddressSpace, IntPredicate};
+use inkwell::AddressSpace;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
@@ -30,34 +30,13 @@ impl StorageSlot for StylusTarget {
     fn get_storage_address<'a>(&self, bin: &Binary<'a>, slot: PointerValue<'a>) -> ArrayValue<'a> {
         emit_context!(bin);
 
-        let (scratch_buf, scratch_len) = scratch_buf!();
-
-        bin.builder
-            .build_store(scratch_len, i32_const!(bin.ns.address_length as u64))
-            .unwrap();
-
-        let exists = seal_get_storage!(
-            slot.into(),
-            i32_const!(32).into(),
-            scratch_buf.into(),
-            scratch_len.into()
-        );
-
-        let exists_is_zero = bin
+        let slot_ptr = bin
             .builder
-            .build_int_compare(IntPredicate::EQ, exists, i32_zero!(), "storage_exists")
+            .build_alloca(bin.context.custom_width_int_type(256), "slot_ptr")
             .unwrap();
-
+        call!("storage_load_bytes32", &[slot.into(), slot_ptr.into()]);
         bin.builder
-            .build_select(
-                exists_is_zero,
-                bin.builder
-                    .build_load(bin.address_type(), scratch_buf, "address")
-                    .unwrap()
-                    .into_array_value(),
-                bin.address_type().const_zero(),
-                "retrieved_address",
-            )
+            .build_load(bin.address_type(), slot_ptr, "address")
             .unwrap()
             .into_array_value()
     }
