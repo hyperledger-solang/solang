@@ -35,6 +35,31 @@ impl StylusTarget {
             None,
         );
 
+        let args = bin.module.add_global(
+            bin.context.i8_type().ptr_type(AddressSpace::default()),
+            Some(AddressSpace::default()),
+            "args",
+        );
+        args.set_linkage(Linkage::Internal);
+        args.set_initializer(
+            &bin.context
+                .i8_type()
+                .ptr_type(AddressSpace::default())
+                .get_undef(),
+        );
+
+        bin.args = Some(args);
+
+        let args_len = bin.module.add_global(
+            bin.context.i32_type(),
+            Some(AddressSpace::default()),
+            "args_len",
+        );
+        args_len.set_linkage(Linkage::Internal);
+        args_len.set_initializer(&bin.context.i32_type().get_undef());
+
+        bin.args_len = Some(args_len);
+
         let return_code = bin.module.add_global(
             context.i32_type(),
             Some(AddressSpace::default()),
@@ -69,6 +94,7 @@ impl StylusTarget {
             "call_contract",
             "contract_address",
             "delegate_call_contract",
+            "emit_log",
             "log_txt",
             "msg_reentrant",
             "msg_sender",
@@ -159,6 +185,7 @@ impl StylusTarget {
             u64_val,
             u8_ptr
         );
+        external!("emit_log", void_type, u8_ptr, u32_val, u32_val);
         external!("log_txt", void_type, u8_ptr, u32_val);
         external!("msg_reentrant", i32_type);
         external!("msg_sender", void_type, u8_ptr);
@@ -191,6 +218,7 @@ impl StylusTarget {
             .fn_type(&[bin.context.i32_type().into()], false);
         let func = bin.module.add_function("user_entrypoint", ty, None);
         let (args, args_len) = self.public_function_prelude(bin, func);
+        self.assign_args_globals(bin, args, args_len);
         // smoelius: FIXME: zero
         let zero = bin.context.custom_width_int_type(256).const_zero();
         let args = &[
@@ -215,5 +243,19 @@ impl StylusTarget {
             .unwrap();
         let return_code: &dyn BasicValue = &return_code;
         bin.builder.build_return(Some(return_code)).unwrap();
+    }
+
+    fn assign_args_globals<'a>(
+        &self,
+        bin: &Binary<'a>,
+        args: PointerValue<'a>,
+        args_len: IntValue<'a>,
+    ) {
+        bin.builder
+            .build_store(bin.args.unwrap().as_pointer_value(), args)
+            .unwrap();
+        bin.builder
+            .build_store(bin.args_len.unwrap().as_pointer_value(), args_len)
+            .unwrap();
     }
 }

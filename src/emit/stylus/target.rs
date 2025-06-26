@@ -17,7 +17,7 @@ use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue,
     PointerValue,
 };
-use inkwell::AddressSpace;
+use inkwell::{AddressSpace, IntPredicate};
 use solang_parser::pt::{Loc, StorageType};
 use std::collections::HashMap;
 
@@ -316,7 +316,113 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         value: IntValue<'a>,
         loc: Loc,
     ) {
-        unimplemented!()
+        emit_context!(bin);
+
+        let len_slot_ptr = bin
+            .builder
+            .build_alloca(slot.get_type(), "len_slot_ptr")
+            .unwrap();
+        bin.builder.build_store(len_slot_ptr, slot).unwrap();
+
+        // smoelius: Read length.
+        let len_ptr = bin
+            .builder
+            .build_alloca(bin.context.i32_type(), "len_ptr")
+            .unwrap();
+        call!(
+            "storage_load_bytes32",
+            &[len_slot_ptr.into(), len_ptr.into()]
+        );
+        let len = bin
+            .builder
+            .build_load(bin.context.i32_type(), len_ptr, "len")
+            .unwrap()
+            .into_int_value();
+
+        let chunk_slot = next_slot(bin, len_slot_ptr, 32);
+
+        // smoelius: Read chunk.
+        let chunk_slot_ptr = bin
+            .builder
+            .build_alloca(slot.get_type(), "chunk_slot")
+            .unwrap();
+        let i_chunk = bin
+            .builder
+            .build_int_unsigned_div(index, i32_const!(32), "i_chunk")
+            .unwrap();
+        let i_chunk_as_u256 = bin
+            .builder
+            .build_int_z_extend(
+                i_chunk,
+                bin.context.custom_width_int_type(256),
+                "i_chunk_as_u256",
+            )
+            .unwrap();
+        let slot_plus_i_chunk = bin
+            .builder
+            .build_int_add(chunk_slot, i_chunk_as_u256, "slot_plus_i_chunk")
+            .unwrap();
+        bin.builder
+            .build_store(chunk_slot_ptr, slot_plus_i_chunk)
+            .unwrap();
+        let chunk_ptr = bin
+            .builder
+            .build_alloca(bin.context.custom_width_int_type(256), "chunk_ptr")
+            .unwrap();
+        call!(
+            "storage_load_bytes32",
+            &[chunk_slot_ptr.into(), chunk_ptr.into()]
+        );
+
+        // smoelius: Calculate offset into chunk.
+        let offset = bin
+            .builder
+            .build_int_unsigned_rem(index, i32_const!(32), "offset")
+            .unwrap();
+
+        // smoelius: Write byte into chunk.
+        let chunk_ptr_as_byte_ptr = bin
+            .builder
+            .build_pointer_cast(
+                chunk_ptr,
+                bin.context.i8_type().ptr_type(AddressSpace::default()),
+                "chunk_ptr_as_byte_ptr",
+            )
+            .unwrap();
+        let byte_ptr = ptr_plus_offset(bin, chunk_ptr_as_byte_ptr, offset);
+        bin.builder.build_store(byte_ptr, value).unwrap();
+
+        // smoelius: Write updated chunk to storage.
+        call!(
+            "storage_cache_bytes32",
+            &[chunk_slot_ptr.into(), chunk_ptr.into()]
+        );
+
+        // smoelius: Update length.
+        let index_less_than_len = bin
+            .builder
+            .build_int_compare(IntPredicate::ULT, index, len, "index_less_than_len")
+            .unwrap();
+        let len = bin
+            .builder
+            .build_select(
+                index_less_than_len,
+                len,
+                bin.builder
+                    .build_int_add(index, i32_const!(1), "index_plus_1")
+                    .unwrap(),
+                "updated_length",
+            )
+            .unwrap();
+
+        // smoelius: Write updated length to storage.
+        bin.builder.build_store(len_ptr, len).unwrap();
+        call!(
+            "storage_cache_bytes32",
+            &[len_slot_ptr.into(), len_ptr.into()]
+        );
+
+        call!("storage_flush_cache", &[i32_const!(1).into()]);
     }
 
     fn storage_subscript(
@@ -653,6 +759,36 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                 address.into()
             }
             Expression::Builtin {
+                kind: Builtin::Calldata,
+                ..
+            } => {
+                let args = bin
+                    .builder
+                    .build_load(
+                        bin.context.i8_type().ptr_type(AddressSpace::default()),
+                        bin.args.unwrap().as_pointer_value(),
+                        "args",
+                    )
+                    .unwrap();
+                let args_len = bin
+                    .builder
+                    .build_load(
+                        bin.context.i32_type(),
+                        bin.args_len.unwrap().as_pointer_value(),
+                        "args_len",
+                    )
+                    .unwrap();
+                let v = bin.vector_new(
+                    args_len.into_int_value(),
+                    bin.context.i32_type().const_int(1, false),
+                    None,
+                    &Type::Uint(8),
+                );
+                let dest = bin.vector_bytes(v);
+                call!("__memcpy", &[dest.into(), args.into(), args_len.into()]);
+                v
+            }
+            Expression::Builtin {
                 kind: Builtin::Origin,
                 ..
             } => {
@@ -801,7 +937,66 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         data: BasicValueEnum<'b>,
         topics: &[BasicValueEnum<'b>],
     ) {
-        unimplemented!()
+        emit_context!(bin);
+
+        let len = bin.vector_len(data);
+        let data = bin.vector_bytes(data);
+
+        let topic_count = topics.len();
+        let topic_size = bin
+            .builder
+            .build_int_add(i32_const!(32 * topic_count as u64), len, "topic_size")
+            .unwrap();
+
+        let topic_buf = if topic_count > 0 {
+            // the topic buffer is a vector of hashes.
+            // smoelius: Followed by `data`.
+            let topic_buf = bin
+                .builder
+                .build_array_alloca(bin.context.i8_type(), topic_size, "topic")
+                .unwrap();
+
+            let mut dest = unsafe {
+                bin.builder
+                    .build_gep(bin.context.i8_type(), topic_buf, &[i32_const!(0)], "dest")
+                    .unwrap()
+            };
+
+            for topic in topics.iter() {
+                call!(
+                    "__memcpy",
+                    &[
+                        dest.into(),
+                        bin.vector_bytes(*topic).into(),
+                        bin.vector_len(*topic).into(),
+                    ]
+                );
+
+                dest = unsafe {
+                    bin.builder
+                        .build_gep(bin.context.i8_type(), dest, &[i32_const!(32)], "dest")
+                        .unwrap()
+                };
+            }
+
+            call!("__memcpy", &[dest.into(), data.into(), len.into()]);
+
+            topic_buf
+        } else {
+            byte_ptr!().const_null()
+        };
+
+        call!(
+            "emit_log",
+            &[
+                topic_buf.into(),
+                topic_size.into(),
+                bin.context
+                    .i32_type()
+                    .const_int(topics.len() as u64, false)
+                    .into()
+            ]
+        );
     }
 
     /// Return ABI encoded data

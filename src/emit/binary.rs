@@ -172,7 +172,9 @@ pub struct Binary<'a> {
     // `scratch_len` and `scratch` are used by Polkadot.
     pub(crate) scratch_len: Option<GlobalValue<'a>>,
     pub(crate) scratch: Option<GlobalValue<'a>>,
-    // `return_code` and `return_data_len` are used by Stylus.
+    // `args`, `args_len`, `return_code`, and `return_data_len` are used by Stylus.
+    pub(crate) args: Option<GlobalValue<'a>>,
+    pub(crate) args_len: Option<GlobalValue<'a>>,
     pub(crate) return_code: Option<GlobalValue<'a>>,
     pub(crate) return_data_len: Option<GlobalValue<'a>>,
     pub(crate) parameters: Option<PointerValue<'a>>,
@@ -450,6 +452,8 @@ impl<'a> Binary<'a> {
             calldata_len,
             scratch: None,
             scratch_len: None,
+            args: None,
+            args_len: None,
             return_code: None,
             return_data_len: None,
             parameters: None,

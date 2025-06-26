@@ -3,12 +3,17 @@
 use crate::tests;
 
 #[test]
-fn abi() {
+fn api() {
     tests(&[
-        (&["abi"], &["afterCorrupt", "emit", "withinArray"]),
+        (&["abi"], &["afterCorrupt", "n", "withinArray"]),
+        (&["emit"], &["E", "library", "n", "renounceOwnership"]),
         (
             &[r"msg\.sender"],
-            &[r"address => function\(\) internal", "emit", "library"],
+            &[
+                r"address => function\(\) internal",
+                "library",
+                "renounceOwnership",
+            ],
         ),
         (&[r"tx\.origin"], &[]),
     ]);

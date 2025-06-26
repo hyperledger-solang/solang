@@ -641,7 +641,7 @@ impl StorageSlot for StylusTarget {
                 self.storage_store_slot(bin, ty, slot, slot_ptr, dest, function)
             }
             _ => {
-                dbg!(ty);
+                // dbg!(ty);
 
                 bin.builder.build_store(slot_ptr, *slot).unwrap();
 

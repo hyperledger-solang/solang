@@ -2,10 +2,12 @@
 
 mod polkadot;
 mod solana;
+mod stylus;
 
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::events::polkadot::PolkadotEventEmitter;
 use crate::codegen::events::solana::SolanaEventEmitter;
+use crate::codegen::events::stylus::StylusEventEmitter;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
 use crate::sema::ast;
@@ -53,6 +55,6 @@ pub(super) fn new_event_emitter<'a>(
 
         Target::Soroban => todo!(),
 
-        Target::Stylus => todo!(),
+        Target::Stylus => Box::new(StylusEventEmitter { args, ns, event_no }),
     }
 }
