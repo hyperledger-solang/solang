@@ -422,7 +422,9 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         // smoelius: Write updated length to storage.
         bin.builder.build_store(len_ptr, len).unwrap();
-        call!("storage_load_bytes32", &[slot_ptr.into(), len_ptr.into()]);
+        call!("storage_cache_bytes32", &[slot_ptr.into(), len_ptr.into()]);
+
+        call!("storage_flush_cache", &[i32_const!(1).into()]);
 
         val
     }
