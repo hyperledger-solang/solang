@@ -233,7 +233,26 @@ pub(crate) trait AbiEncoding {
         let expr_ty = &expr.ty().unwrap_user_type(ns);
         match expr_ty {
             Type::Contract(_) | Type::Address(_) => {
-                self.encode_directly(expr, buffer, offset, vartab, cfg, ns.address_length.into())
+                if ns.target == Target::Stylus {
+                    self.encode_int(
+                        &expr.cast(&Type::Uint(160), ns).cast(&Type::Uint(256), ns),
+                        buffer,
+                        offset,
+                        ns,
+                        vartab,
+                        cfg,
+                        256,
+                    )
+                } else {
+                    self.encode_directly(
+                        expr,
+                        buffer,
+                        offset,
+                        vartab,
+                        cfg,
+                        ns.address_length.into(),
+                    )
+                }
             }
             Type::Bool => self.encode_directly(expr, buffer, offset, vartab, cfg, 1.into()),
             Type::Uint(width) | Type::Int(width) => {
@@ -1567,11 +1586,24 @@ pub(crate) trait AbiEncoding {
                 ty: Uint(32),
                 value: BigInt::from(self.encoding_size(ns, *n) / 8),
             },
-            Type::Enum(_) | Type::Contract(_) | Type::Bool | Type::Address(_) | Type::Bytes(_) => {
-                Expression::NumberLiteral {
-                    loc: Codegen,
-                    ty: Uint(32),
-                    value: ty.memory_size_of(ns),
+            Type::Enum(_) | Type::Bool | Type::Bytes(_) => Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Uint(32),
+                value: ty.memory_size_of(ns),
+            },
+            Type::Contract(_) | Type::Address(_) => {
+                if ns.target == Target::Stylus {
+                    Expression::NumberLiteral {
+                        loc: Codegen,
+                        ty: Uint(32),
+                        value: BigInt::from(256),
+                    }
+                } else {
+                    Expression::NumberLiteral {
+                        loc: Codegen,
+                        ty: Uint(32),
+                        value: ty.memory_size_of(ns),
+                    }
                 }
             }
             Type::FunctionSelector => Expression::NumberLiteral {
