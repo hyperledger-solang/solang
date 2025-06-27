@@ -91,10 +91,17 @@ impl StylusTarget {
         target.emit_dispatch(&mut bin);
 
         bin.internalize(&[
+            "block_basefee",
+            "block_coinbase",
+            "block_gas_limit",
+            "block_number",
+            "block_timestamp",
+            "chainid",
             "call_contract",
             "contract_address",
             "delegate_call_contract",
             "emit_log",
+            "evm_gas_left",
             "log_txt",
             "msg_reentrant",
             "msg_sender",
@@ -165,6 +172,11 @@ impl StylusTarget {
             };
         }
 
+        external!("block_basefee", void_type, u8_ptr);
+        external!("block_coinbase", void_type, u8_ptr);
+        external!("block_gas_limit", i64_type);
+        external!("block_number", i64_type);
+        external!("block_timestamp", i64_type);
         external!(
             "call_contract",
             i8_type,
@@ -175,6 +187,7 @@ impl StylusTarget {
             u64_val,
             u32_ptr
         );
+        external!("chainid", i64_type);
         external!("contract_address", void_type, u8_ptr);
         external!(
             "delegate_call_contract",
@@ -186,6 +199,7 @@ impl StylusTarget {
             u8_ptr
         );
         external!("emit_log", void_type, u8_ptr, u32_val, u32_val);
+        external!("evm_gas_left", i64_type);
         external!("log_txt", void_type, u8_ptr, u32_val);
         external!("msg_reentrant", i32_type);
         external!("msg_sender", void_type, u8_ptr);

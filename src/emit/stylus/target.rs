@@ -742,6 +742,84 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         match expr {
             Expression::Builtin {
+                kind: Builtin::BaseFee,
+                ..
+            } => {
+                let basefee = bin
+                    .builder
+                    .build_array_alloca(bin.context.i8_type(), i32_const!(256), "basefee")
+                    .unwrap();
+
+                call!("block_basefee", &[basefee.into()], "block_basefee");
+
+                bin.builder
+                    .build_load(bin.context.custom_width_int_type(256), basefee, "basefee")
+                    .unwrap()
+            }
+            Expression::Builtin {
+                kind: Builtin::BlockCoinbase,
+                ..
+            } => {
+                let coinbase = bin
+                    .builder
+                    .build_array_alloca(
+                        bin.context.i8_type(),
+                        i32_const!(bin.ns.address_length as u64),
+                        "coinbase",
+                    )
+                    .unwrap();
+
+                call!("block_coinbase", &[coinbase.into()], "block_coinbase");
+
+                bin.builder
+                    .build_load(bin.address_type(), coinbase, "coinbase")
+                    .unwrap()
+            }
+            Expression::Builtin {
+                kind: Builtin::BlockNumber,
+                ..
+            } => {
+                let number = call!("block_number", &[], "block_number")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                number.into()
+            }
+            Expression::Builtin {
+                kind: Builtin::ChainId,
+                ..
+            } => {
+                let chainid = call!("chainid", &[], "chainid")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                chainid.into()
+            }
+            Expression::Builtin {
+                kind: Builtin::Gasleft,
+                ..
+            } => {
+                let gasleft = call!("evm_gas_left", &[], "evm_gas_left")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                gasleft.into()
+            }
+            Expression::Builtin {
+                kind: Builtin::GasLimit,
+                ..
+            } => {
+                let gaslimit = call!("block_gas_limit", &[], "block_gas_limit")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                gaslimit.into()
+            }
+            Expression::Builtin {
                 kind: Builtin::GetAddress,
                 ..
             } => {
@@ -826,7 +904,18 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                     .build_load(bin.address_type(), address, "caller")
                     .unwrap()
             }
-            _ => unimplemented!(),
+            Expression::Builtin {
+                kind: Builtin::Timestamp,
+                ..
+            } => {
+                let timestamp = call!("block_timestamp", &[], "block_timestamp")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                timestamp.into()
+            }
+            _ => unimplemented!("{expr:?}"),
         }
     }
 
