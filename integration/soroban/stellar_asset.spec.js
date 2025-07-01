@@ -1,6 +1,5 @@
 // import { Server } from '@stellar/stellar-sdk/rpc';
 import * as StellarSdk from '@stellar/stellar-sdk';
-import fetch from 'node-fetch';
 import { readFileSync } from 'fs';
 import { expect } from 'chai';
 import path from 'path';
