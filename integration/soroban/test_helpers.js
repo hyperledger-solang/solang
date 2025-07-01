@@ -1,6 +1,6 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
 
-export async function call_contract_function(method, server, keypair, contract, ... params) {
+export async function call_contract_function(method, server, keypair, contract, ...params) {
     let res = null;
 
     try {
@@ -28,14 +28,8 @@ export async function call_contract_function(method, server, keypair, contract, 
             }
 
             if (getResponse.status === "SUCCESS") {
-                // Ensure the transaction's resultMetaXDR is not empty
-                if (!getResponse.resultMetaXdr) {
-                    throw "Empty resultMetaXDR in getTransaction response";
-                }
-                // Extract and return the return value from the contract
-                let transactionMeta = getResponse.resultMetaXdr;
-                let returnValue = transactionMeta.v3().sorobanMeta();
-                res = returnValue;
+                // Return the contract call return value (ScVal)
+                res = getResponse.returnValue;
             } else {
                 throw `Transaction failed: ${getResponse.resultXdr}`;
             }
