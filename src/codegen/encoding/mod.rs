@@ -166,6 +166,13 @@ fn calculate_size_args(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> Expression {
+    if args.is_empty() {
+        return Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Uint(32),
+            value: BigInt::zero(),
+        };
+    }
     let mut size = encoder.get_expr_size(0, &args[0], ns, vartab, cfg);
     for (i, item) in args.iter().enumerate().skip(1) {
         let additional = encoder.get_expr_size(i, item, ns, vartab, cfg);

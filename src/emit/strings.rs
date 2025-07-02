@@ -4,7 +4,7 @@ use crate::codegen::Expression;
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
 use crate::emit::{TargetRuntime, Variable};
-use crate::sema::ast::{FormatArg, Namespace, RetrieveType, StringLocation, Type};
+use crate::sema::ast::{FormatArg, RetrieveType, StringLocation, Type};
 use crate::Target;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::IntPredicate;
@@ -17,7 +17,6 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
     args: &[(FormatArg, Expression)],
     vartab: &HashMap<usize, Variable<'a>>,
     function: FunctionValue<'a>,
-    ns: &Namespace,
 ) -> BasicValueEnum<'a> {
     // first we need to calculate the space we need
     let mut length = bin.context.i32_type().const_zero();
@@ -39,23 +38,23 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                 Type::Bool => bin.context.i32_type().const_int(5, false),
                 // hex encode bytes
                 Type::Contract(_) | Type::Address(_) => {
-                    let len = if ns.target == Target::Solana && *spec != FormatArg::Hex {
-                        base58_size(ns.address_length)
+                    let len = if bin.ns.target == Target::Solana && *spec != FormatArg::Hex {
+                        base58_size(bin.ns.address_length)
                     } else {
-                        2 * ns.address_length
+                        2 * bin.ns.address_length
                     };
                     bin.context.i32_type().const_int(len as u64, false)
                 }
                 Type::Bytes(size) => bin.context.i32_type().const_int(size as u64 * 2, false),
                 Type::String => {
-                    let val = expression(target, bin, arg, vartab, function, ns);
+                    let val = expression(target, bin, arg, vartab, function);
 
                     evaluated_arg[i] = Some(val);
 
                     bin.vector_len(val)
                 }
                 Type::DynamicBytes => {
-                    let val = expression(target, bin, arg, vartab, function, ns);
+                    let val = expression(target, bin, arg, vartab, function);
 
                     evaluated_arg[i] = Some(val);
 
@@ -86,7 +85,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                 Type::Enum(enum_no) => bin
                     .context
                     .i32_type()
-                    .const_int(ns.enums[enum_no].ty.bits(ns) as u64 / 3, false),
+                    .const_int(bin.ns.enums[enum_no].ty.bits(bin.ns) as u64 / 3, false),
                 _ => unimplemented!("can't format this argument: {:?}", arg),
             }
         };
@@ -101,7 +100,6 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.context.i32_type().const_int(1, false),
             None,
             &Type::String,
-            ns,
         )
         .into_pointer_value();
 
@@ -132,8 +130,8 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                 };
             }
         } else {
-            let val = evaluated_arg[i]
-                .unwrap_or_else(|| expression(target, bin, arg, vartab, function, ns));
+            let val =
+                evaluated_arg[i].unwrap_or_else(|| expression(target, bin, arg, vartab, function));
             let arg_ty = arg.ty();
 
             match arg_ty {
@@ -213,7 +211,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                 }
                 Type::Address(_) | Type::Contract(_) => {
                     // FIXME: For Polkadot we should encode in the SS58 format
-                    let buf = bin.build_alloca(function, bin.address_type(ns), "address");
+                    let buf = bin.build_alloca(function, bin.address_type(), "address");
                     bin.builder
                         .build_store(buf, val.into_array_value())
                         .unwrap();
@@ -221,10 +219,11 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     let len = bin
                         .context
                         .i32_type()
-                        .const_int(ns.address_length as u64, false);
+                        .const_int(bin.ns.address_length as u64, false);
 
-                    let written_len = if ns.target == Target::Solana && *spec != FormatArg::Hex {
-                        let calculated_len = base58_size(ns.address_length);
+                    let written_len = if bin.ns.target == Target::Solana && *spec != FormatArg::Hex
+                    {
+                        let calculated_len = base58_size(bin.ns.address_length);
                         let base58_len = bin
                             .context
                             .i32_type()
@@ -250,7 +249,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                         bin.context
                             .i32_type()
-                            .const_int(2 * ns.address_length as u64, false)
+                            .const_int(2 * bin.ns.address_length as u64, false)
                     };
 
                     output = unsafe {
@@ -260,7 +259,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     };
                 }
                 Type::Bytes(size) => {
-                    let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "bytesN");
+                    let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty), "bytesN");
 
                     bin.builder.build_store(buf, val.into_int_value()).unwrap();
 
@@ -390,7 +389,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             .unwrap()
                             .into_pointer_value();
                     } else {
-                        let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "uint");
+                        let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty), "uint");
 
                         bin.builder.build_store(buf, val.into_int_value()).unwrap();
 
@@ -553,7 +552,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             .unwrap()
                             .into_pointer_value();
                     } else {
-                        let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "int");
+                        let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty), "int");
 
                         bin.builder
                             .build_store(buf, val_phi.as_basic_value().into_int_value())
@@ -628,7 +627,6 @@ pub(super) fn string_location<'a, T: TargetRuntime<'a> + ?Sized>(
     location: &StringLocation<Expression>,
     vartab: &HashMap<usize, Variable<'a>>,
     function: FunctionValue<'a>,
-    ns: &Namespace,
 ) -> (PointerValue<'a>, IntValue<'a>) {
     match location {
         StringLocation::CompileTime(literal) => (
@@ -644,7 +642,7 @@ pub(super) fn string_location<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.context.i32_type().const_int(value.len() as u64, false),
                 )
             } else {
-                let v = expression(target, bin, e, vartab, function, ns);
+                let v = expression(target, bin, e, vartab, function);
 
                 (bin.vector_bytes(v), bin.vector_len(v))
             }

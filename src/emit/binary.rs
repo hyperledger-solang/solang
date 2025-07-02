@@ -150,7 +150,7 @@ pub struct Binary<'a> {
     pub module: Module<'a>,
     pub(crate) options: &'a Options,
     pub runtime: Option<Box<Binary<'a>>>,
-    target: Target,
+    pub ns: &'a Namespace,
     pub(crate) function_abort_value_transfers: bool,
     pub(crate) constructor_abort_value_transfers: bool,
     pub builder: Builder<'a>,
@@ -219,13 +219,14 @@ impl<'a> Binary<'a> {
             _ => {}
         }
 
-        let target = inkwell::targets::Target::from_name(self.target.llvm_target_name()).unwrap();
+        let target =
+            inkwell::targets::Target::from_name(self.ns.target.llvm_target_name()).unwrap();
 
         let target_machine = target
             .create_target_machine(
-                &self.target.llvm_target_triple(),
+                &self.ns.target.llvm_target_triple(),
                 "",
-                self.target.llvm_features(),
+                self.ns.target.llvm_features(),
                 self.options.opt_level.into(),
                 RelocMode::Default,
                 CodeModel::Default,
@@ -245,7 +246,7 @@ impl<'a> Binary<'a> {
                 let slice = out.as_slice();
 
                 if generate == Generate::Linked {
-                    link(slice, &self.name, self.target).to_vec()
+                    link(slice, &self.name, self.ns.target).to_vec()
                 } else {
                     slice.to_vec()
                 }
@@ -253,7 +254,11 @@ impl<'a> Binary<'a> {
             .map_err(|s| s.to_string())?;
 
         #[cfg(feature = "wasm_opt")]
-        if let Some(level) = self.options.wasm_opt.filter(|_| self.target.is_polkadot()) {
+        if let Some(level) = self
+            .options
+            .wasm_opt
+            .filter(|_| self.ns.target.is_polkadot())
+        {
             let mut infile = tempdir().map_err(|e| e.to_string())?.keep();
             infile.push("code.wasm");
             let outfile = infile.with_extension("wasmopt");
@@ -325,7 +330,7 @@ impl<'a> Binary<'a> {
 
     pub fn new(
         context: &'a Context,
-        target: Target,
+        ns: &'a Namespace,
         name: &str,
         filename: &str,
         opt: &'a Options,
@@ -352,7 +357,7 @@ impl<'a> Binary<'a> {
             }
         });
 
-        let triple = target.llvm_target_triple();
+        let triple = ns.target.llvm_target_triple();
         let module = context.create_module(name);
 
         let debug_metadata_version = context.i32_type().const_int(3, false);
@@ -424,7 +429,7 @@ impl<'a> Binary<'a> {
             dibuilder,
             compile_unit,
             context,
-            target,
+            ns,
             functions: HashMap::new(),
             code: RefCell::new(Vec::new()),
             options: opt,
@@ -444,29 +449,31 @@ impl<'a> Binary<'a> {
     }
 
     /// Set flags for early aborts if a value transfer is done and no function/constructor can handle it
-    pub fn set_early_value_aborts(&mut self, contract: &Contract, ns: &Namespace) {
+    pub fn set_early_value_aborts(&mut self, contract: &Contract) {
         // if there is no payable function, fallback or receive then abort all value transfers at the top
         // note that receive() is always payable so this just checkes for presence.
         self.function_abort_value_transfers = !contract.functions.iter().any(|function_no| {
-            let f = &ns.functions[*function_no];
+            let f = &self.ns.functions[*function_no];
             !f.is_constructor() && f.is_payable()
         });
 
         self.constructor_abort_value_transfers = !contract.functions.iter().any(|function_no| {
-            let f = &ns.functions[*function_no];
+            let f = &self.ns.functions[*function_no];
             f.is_constructor() && f.is_payable()
         });
     }
 
     /// llvm value type, as in chain currency (usually 128 bits int)
-    pub(crate) fn value_type(&self, ns: &Namespace) -> IntType<'a> {
+    pub(crate) fn value_type(&self) -> IntType<'a> {
         self.context
-            .custom_width_int_type(ns.value_length as u32 * 8)
+            .custom_width_int_type(self.ns.value_length as u32 * 8)
     }
 
     /// llvm address type
-    pub(crate) fn address_type(&self, ns: &Namespace) -> ArrayType<'a> {
-        self.context.i8_type().array_type(ns.address_length as u32)
+    pub(crate) fn address_type(&self) -> ArrayType<'a> {
+        self.context
+            .i8_type()
+            .array_type(self.ns.address_length as u32)
     }
 
     /// Creates global string in the llvm module with initializer
@@ -771,7 +778,7 @@ impl<'a> Binary<'a> {
     }
 
     /// Convert a BigInt number to llvm const value
-    pub(crate) fn number_literal(&self, bits: u32, n: &BigInt, _ns: &Namespace) -> IntValue<'a> {
+    pub(crate) fn number_literal(&self, bits: u32, n: &BigInt) -> IntValue<'a> {
         let ty = self.context.custom_width_int_type(bits);
         let s = n.to_string();
 
@@ -779,40 +786,35 @@ impl<'a> Binary<'a> {
     }
 
     /// Emit function prototype
-    pub(crate) fn function_type(
-        &self,
-        params: &[Type],
-        returns: &[Type],
-        ns: &Namespace,
-    ) -> FunctionType<'a> {
+    pub(crate) fn function_type(&self, params: &[Type], returns: &[Type]) -> FunctionType<'a> {
         // function parameters
         let mut args = params
             .iter()
-            .map(|ty| self.llvm_var_ty(ty, ns).into())
+            .map(|ty| self.llvm_var_ty(ty).into())
             .collect::<Vec<BasicMetadataTypeEnum>>();
 
-        if ns.target == Target::Soroban {
+        if self.ns.target == Target::Soroban {
             match returns.iter().next() {
-                Some(ret) => return self.llvm_type(ret, ns).fn_type(&args, false),
+                Some(ret) => return self.llvm_type(ret).fn_type(&args, false),
                 None => return self.context.void_type().fn_type(&args, false),
             }
         }
         // add return values
         for ty in returns {
-            args.push(if ty.is_reference_type(ns) && !ty.is_contract_storage() {
-                self.llvm_type(ty, ns)
-                    .ptr_type(AddressSpace::default())
-                    .ptr_type(AddressSpace::default())
-                    .into()
-            } else {
-                self.llvm_type(ty, ns)
-                    .ptr_type(AddressSpace::default())
-                    .into()
-            });
+            args.push(
+                if ty.is_reference_type(self.ns) && !ty.is_contract_storage() {
+                    self.llvm_type(ty)
+                        .ptr_type(AddressSpace::default())
+                        .ptr_type(AddressSpace::default())
+                        .into()
+                } else {
+                    self.llvm_type(ty).ptr_type(AddressSpace::default()).into()
+                },
+            );
         }
 
         // On Solana, we need to pass around the accounts
-        if ns.target == Target::Solana {
+        if self.ns.target == Target::Solana {
             args.push(
                 self.module
                     .get_struct_type("struct.SolParameters")
@@ -882,8 +884,12 @@ impl<'a> Binary<'a> {
     }
 
     /// Return the llvm type for a variable holding the type, not the type itself
-    pub(crate) fn llvm_var_ty(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
-        let llvm_ty = self.llvm_type(ty, ns);
+    pub(crate) fn llvm_var_ty(&self, ty: &Type) -> BasicTypeEnum<'a> {
+        if self.ns.target == Target::Soroban {
+            return self.llvm_type(ty);
+        }
+
+        let llvm_ty = self.llvm_type(ty);
         match ty.deref_memory() {
             Type::Struct(_)
             | Type::Array(..)
@@ -897,8 +903,8 @@ impl<'a> Binary<'a> {
     }
 
     /// Return the llvm type for field in struct or array
-    pub(crate) fn llvm_field_ty(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
-        let llvm_ty = self.llvm_type(ty, ns);
+    pub(crate) fn llvm_field_ty(&self, ty: &Type) -> BasicTypeEnum<'a> {
+        let llvm_ty = self.llvm_type(ty);
         match ty.deref_memory() {
             Type::Array(_, dim) if dim.last() == Some(&ArrayLength::Dynamic) => llvm_ty
                 .ptr_type(AddressSpace::default())
@@ -911,7 +917,7 @@ impl<'a> Binary<'a> {
     }
 
     /// Return the llvm type for the resolved type.
-    pub(crate) fn llvm_type(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
+    pub(crate) fn llvm_type(&self, ty: &Type) -> BasicTypeEnum<'a> {
         emit_context!(self);
         if ty.is_builtin_struct() == Some(StructType::AccountInfo) {
             self.context
@@ -938,26 +944,30 @@ impl<'a> Binary<'a> {
                 }
                 Type::Value => BasicTypeEnum::IntType(
                     self.context
-                        .custom_width_int_type(ns.value_length as u32 * 8),
+                        .custom_width_int_type(self.ns.value_length as u32 * 8),
                 ),
                 Type::Contract(_) | Type::Address(_) => {
                     // Soroban addresses are 64 bit wide integer that represents a refrenece for the real Address on the Host side.
-                    if ns.target == Target::Soroban {
+                    if self.ns.target == Target::Soroban {
                         BasicTypeEnum::IntType(self.context.i64_type())
                     } else {
-                        BasicTypeEnum::ArrayType(self.address_type(ns))
+                        BasicTypeEnum::ArrayType(self.address_type())
                     }
                 }
                 Type::Bytes(n) => {
                     BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
                 }
-                Type::Enum(n) => self.llvm_type(&ns.enums[*n].ty, ns),
+                Type::Enum(n) => self.llvm_type(&self.ns.enums[*n].ty),
                 Type::String | Type::DynamicBytes => {
-                    self.module.get_struct_type("struct.vector").unwrap().into()
+                    if self.ns.target == Target::Soroban {
+                        BasicTypeEnum::IntType(self.context.i64_type())
+                    } else {
+                        self.module.get_struct_type("struct.vector").unwrap().into()
+                    }
                 }
                 Type::Array(base_ty, dims) => {
                     dims.iter()
-                        .fold(self.llvm_field_ty(base_ty, ns), |aty, dim| match dim {
+                        .fold(self.llvm_field_ty(base_ty), |aty, dim| match dim {
                             ArrayLength::Fixed(d) => aty.array_type(d.to_u32().unwrap()).into(),
                             ArrayLength::Dynamic => {
                                 self.module.get_struct_type("struct.vector").unwrap().into()
@@ -974,35 +984,35 @@ impl<'a> Binary<'a> {
                     .context
                     .struct_type(
                         &str_ty
-                            .definition(ns)
+                            .definition(self.ns)
                             .fields
                             .iter()
-                            .map(|f| self.llvm_field_ty(&f.ty, ns))
+                            .map(|f| self.llvm_field_ty(&f.ty))
                             .collect::<Vec<BasicTypeEnum>>(),
                         false,
                     )
                     .as_basic_type_enum(),
-                Type::Mapping(..) => self.llvm_type(&ns.storage_type(), ns),
+                Type::Mapping(..) => self.llvm_type(&self.ns.storage_type()),
                 Type::Ref(r) => {
-                    if ns.target == Target::Soroban {
+                    if self.ns.target == Target::Soroban {
                         return BasicTypeEnum::IntType(self.context.i64_type());
                     }
 
-                    self.llvm_type(r, ns)
+                    self.llvm_type(r)
                         .ptr_type(AddressSpace::default())
                         .as_basic_type_enum()
                 }
-                Type::StorageRef(..) => self.llvm_type(&ns.storage_type(), ns),
+                Type::StorageRef(..) => self.llvm_type(&self.ns.storage_type()),
                 Type::InternalFunction {
                     params, returns, ..
                 } => {
-                    let ftype = self.function_type(params, returns, ns);
+                    let ftype = self.function_type(params, returns);
 
                     BasicTypeEnum::PointerType(ftype.ptr_type(AddressSpace::default()))
                 }
                 Type::ExternalFunction { .. } => {
-                    let address = self.llvm_type(&Type::Address(false), ns);
-                    let selector = self.llvm_type(&Type::FunctionSelector, ns);
+                    let address = self.llvm_type(&Type::Address(false));
+                    let selector = self.llvm_type(&Type::FunctionSelector);
                     self.context
                         .struct_type(&[selector, address], false)
                         .as_basic_type_enum()
@@ -1010,28 +1020,26 @@ impl<'a> Binary<'a> {
                 Type::Slice(ty) => BasicTypeEnum::StructType(
                     self.context.struct_type(
                         &[
-                            self.llvm_type(ty, ns)
-                                .ptr_type(AddressSpace::default())
-                                .into(),
+                            self.llvm_type(ty).ptr_type(AddressSpace::default()).into(),
                             self.context
-                                .custom_width_int_type(ns.target.ptr_size().into())
+                                .custom_width_int_type(self.ns.target.ptr_size().into())
                                 .into(),
                         ],
                         false,
                     ),
                 ),
-                Type::UserType(no) => self.llvm_type(&ns.user_types[*no].ty, ns),
+                Type::UserType(no) => self.llvm_type(&self.ns.user_types[*no].ty),
                 Type::BufferPointer => self
                     .context
                     .i8_type()
                     .ptr_type(AddressSpace::default())
                     .as_basic_type_enum(),
                 Type::FunctionSelector => {
-                    self.llvm_type(&Type::Bytes(ns.target.selector_length()), ns)
+                    self.llvm_type(&Type::Bytes(self.ns.target.selector_length()))
                 }
                 // Soroban functions always return a 64 bit value.
                 Type::Void => {
-                    if ns.target == Target::Soroban {
+                    if self.ns.target == Target::Soroban {
                         BasicTypeEnum::IntType(self.context.i64_type())
                     } else {
                         unreachable!()
@@ -1049,9 +1057,8 @@ impl<'a> Binary<'a> {
         elem_size: IntValue<'a>,
         init: Option<&Vec<u8>>,
         ty: &Type,
-        ns: &Namespace,
     ) -> BasicValueEnum<'a> {
-        if self.target == Target::Soroban {
+        if self.ns.target == Target::Soroban {
             if matches!(ty, Type::Bytes(_)) {
                 let n = if let Type::Bytes(n) = ty {
                     n
@@ -1089,14 +1096,15 @@ impl<'a> Binary<'a> {
                 // Return the constructed struct value
                 return struct_value.into();
             } else if matches!(ty, Type::String) {
-                let bs = init.as_ref().unwrap();
+                let default = " ".as_bytes().to_vec();
+                let bs = init.unwrap_or(&default);
 
                 let data = self.emit_global_string("const_string", bs, true);
 
                 // A constant string, or array, is represented by a struct with two fields: a pointer to the data, and its length.
                 let ty = self.context.struct_type(
                     &[
-                        self.llvm_type(&Type::Bytes(bs.len() as u8), ns)
+                        self.llvm_type(&Type::Bytes(bs.len() as u8))
                             .ptr_type(AddressSpace::default())
                             .into(),
                         self.context.i64_type().into(),
@@ -1150,7 +1158,7 @@ impl<'a> Binary<'a> {
             // slice
             let slice = vector.into_struct_value();
 
-            let len_type = if self.target == Target::Soroban {
+            let len_type = if self.ns.target == Target::Soroban {
                 self.context.i64_type()
             } else {
                 self.context.i32_type()
@@ -1235,13 +1243,12 @@ impl<'a> Binary<'a> {
         array_ty: &Type,
         array: PointerValue<'a>,
         index: IntValue<'a>,
-        ns: &Namespace,
     ) -> PointerValue<'a> {
         match array_ty {
             Type::Array(_, dim) => {
                 if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
                     // fixed size array
-                    let llvm_ty = self.llvm_type(array_ty, ns);
+                    let llvm_ty = self.llvm_type(array_ty);
                     unsafe {
                         self.builder
                             .build_gep(
@@ -1254,7 +1261,7 @@ impl<'a> Binary<'a> {
                     }
                 } else {
                     let elem_ty = array_ty.array_deref();
-                    let llvm_elem_ty = self.llvm_type(elem_ty.deref_memory(), ns);
+                    let llvm_elem_ty = self.llvm_type(elem_ty.deref_memory());
 
                     // dynamic length array or vector
                     let index = self
@@ -1296,12 +1303,11 @@ impl<'a> Binary<'a> {
         target: &T,
         reason_string: String,
         reason_loc: Option<pt::Loc>,
-        ns: &Namespace,
     ) {
         if !self.options.log_runtime_errors {
             return;
         }
-        let error_with_loc = error_msg_with_loc(ns, reason_string, reason_loc);
+        let error_with_loc = error_msg_with_loc(self.ns, reason_string, reason_loc);
         let global_string =
             self.emit_global_string("runtime_error", error_with_loc.as_bytes(), true);
         target.print(
@@ -1316,12 +1322,8 @@ impl<'a> Binary<'a> {
     /// Emit encoded error data of "Panic(uint256)" as interned global string.
     ///
     /// On Solana, because reverts do not return data, a nil ptr is returned.
-    pub(super) fn panic_data_const(
-        &self,
-        ns: &Namespace,
-        code: PanicCode,
-    ) -> (PointerValue<'a>, IntValue<'a>) {
-        if ns.target == Target::Solana || ns.target == Target::Soroban {
+    pub(super) fn panic_data_const(&self, code: PanicCode) -> (PointerValue<'a>, IntValue<'a>) {
+        if self.ns.target == Target::Solana || self.ns.target == Target::Soroban {
             return (
                 self.context
                     .i8_type()
@@ -1336,8 +1338,11 @@ impl<'a> Binary<'a> {
             ty: Type::Uint(256),
             value: (code as u8).into(),
         };
-        let bytes = create_encoder(ns, false)
-            .const_encode(&[SolidityError::Panic(code).selector_expression(ns), expr])
+        let bytes = create_encoder(self.ns, false)
+            .const_encode(&[
+                SolidityError::Panic(code).selector_expression(self.ns),
+                expr,
+            ])
             .unwrap();
         (
             self.emit_global_string(&code.to_string(), &bytes, true),

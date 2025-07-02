@@ -10,7 +10,7 @@ use crate::emit::{TargetRuntime, Variable};
 use crate::emit_context;
 use crate::sema::ast;
 use crate::sema::ast::CallTy;
-use crate::sema::ast::{Function, Namespace, Type};
+use crate::sema::ast::{Function, Type};
 
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{
@@ -29,7 +29,7 @@ use std::collections::HashMap;
 impl<'a> TargetRuntime<'a> for SorobanTarget {
     fn get_storage_int(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
         ty: IntType<'a>,
@@ -39,27 +39,29 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     fn storage_load(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
         let storage_type = storage_type_to_int(storage_type);
-        emit_context!(binary);
-        let ret = call!(
-            HostFunctions::GetContractData.name(),
+        emit_context!(bin);
+
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                .into_int_value()
+                .const_cast(bin.context.i64_type(), false)
+        } else {
+            *slot
+        };
+
+        // === Call HasContractData ===
+        let has_data_val = call!(
+            HostFunctions::HasContractData.name(),
             &[
-                slot.as_basic_value_enum()
-                    .into_int_value()
-                    .const_cast(binary.context.i64_type(), false)
-                    .into(),
-                binary
-                    .context
-                    .i64_type()
-                    .const_int(storage_type, false)
-                    .into(),
+                slot.into(),
+                bin.context.i64_type().const_int(storage_type, false).into(),
             ]
         )
         .try_as_basic_value()
@@ -67,45 +69,86 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         .unwrap()
         .into_int_value();
 
-        ret.into()
+        // === Use helper to check if it's true ===
+        let condition = is_val_true(bin, has_data_val);
+
+        // === Prepare blocks ===
+        let parent = function;
+        let then_bb = bin.context.append_basic_block(parent, "has_data");
+        let else_bb = bin.context.append_basic_block(parent, "no_data");
+        let merge_bb = bin.context.append_basic_block(parent, "merge");
+
+        bin.builder
+            .build_conditional_branch(condition, then_bb, else_bb)
+            .unwrap();
+
+        // === THEN block: call GetContractData ===
+        bin.builder.position_at_end(then_bb);
+        let value_from_contract = call!(
+            HostFunctions::GetContractData.name(),
+            &[
+                slot.into(),
+                bin.context.i64_type().const_int(storage_type, false).into(),
+            ]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap();
+        bin.builder.build_unconditional_branch(merge_bb).unwrap();
+        let then_value = value_from_contract;
+
+        // === ELSE block: return default ===
+        bin.builder.position_at_end(else_bb);
+        let default_value = type_to_tagged_zero_val(bin, ty);
+
+        bin.builder.build_unconditional_branch(merge_bb).unwrap();
+
+        // === MERGE block with phi node ===
+        bin.builder.position_at_end(merge_bb);
+        let phi = bin
+            .builder
+            .build_phi(bin.context.i64_type(), "storage_result")
+            .unwrap();
+        phi.add_incoming(&[(&then_value, then_bb), (&default_value, else_bb)]);
+
+        phi.as_basic_value()
     }
 
     /// Recursively store a type to storage
     fn storage_store(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         ty: &ast::Type,
         existing: bool,
         slot: &mut IntValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
-        ns: &ast::Namespace,
         storage_type: &Option<StorageType>,
     ) {
-        emit_context!(binary);
+        emit_context!(bin);
 
         let storage_type = storage_type_to_int(storage_type);
 
-        let function_value = binary
+        let function_value = bin
             .module
             .get_function(HostFunctions::PutContractData.name())
             .unwrap();
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                .into_int_value()
+                .const_cast(bin.context.i64_type(), false)
+        } else {
+            *slot
+        };
 
-        let value = binary
+        let value = bin
             .builder
             .build_call(
                 function_value,
                 &[
-                    slot.as_basic_value_enum()
-                        .into_int_value()
-                        .const_cast(binary.context.i64_type(), false)
-                        .into(),
+                    slot.into(),
                     dest.into(),
-                    binary
-                        .context
-                        .i64_type()
-                        .const_int(storage_type, false)
-                        .into(),
+                    bin.context.i64_type().const_int(storage_type, false).into(),
                 ],
                 HostFunctions::PutContractData.name(),
             )
@@ -123,7 +166,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         ty: &Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
-        ns: &Namespace,
     ) {
         unimplemented!()
     }
@@ -164,7 +206,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
-        ns: &Namespace,
     ) -> PointerValue<'a> {
         unimplemented!()
     }
@@ -176,7 +217,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: IntValue<'a>,
         loc: Loc,
-        ns: &Namespace,
     ) -> IntValue<'a> {
         unimplemented!()
     }
@@ -188,7 +228,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: IntValue<'a>,
         value: IntValue<'a>,
-        ns: &Namespace,
         loc: Loc,
     ) {
         unimplemented!()
@@ -201,9 +240,62 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         ty: &Type,
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
-        ns: &Namespace,
     ) -> IntValue<'a> {
-        unimplemented!()
+        let vec_new = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VectorNew.name())
+                    .unwrap(),
+                &[],
+                "vec_new",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                .into_int_value()
+                .const_cast(bin.context.i64_type(), false)
+        } else {
+            slot
+        };
+
+        // push the slot to the vector
+        let res = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VecPushBack.name())
+                    .unwrap(),
+                &[vec_new.as_basic_value_enum().into(), slot.into()],
+                "push",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        // push the index to the vector
+        let res = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VecPushBack.name())
+                    .unwrap(),
+                &[res.as_basic_value_enum().into(), index.into()],
+                "push",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+        res
     }
 
     fn storage_push(
@@ -213,7 +305,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         ty: &Type,
         slot: IntValue<'a>,
         val: Option<BasicValueEnum<'a>>,
-        ns: &Namespace,
     ) -> BasicValueEnum<'a> {
         unimplemented!()
     }
@@ -225,7 +316,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         ty: &Type,
         slot: IntValue<'a>,
         load: bool,
-        ns: &Namespace,
         loc: Loc,
     ) -> Option<BasicValueEnum<'a>> {
         unimplemented!()
@@ -237,7 +327,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         _function: FunctionValue,
         _slot: IntValue<'a>,
         _elem_ty: &Type,
-        _ns: &Namespace,
     ) -> IntValue<'a> {
         unimplemented!()
     }
@@ -249,7 +338,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
-        ns: &Namespace,
     ) {
         unimplemented!()
     }
@@ -303,12 +391,11 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     fn builtin_function(
         &self,
-        binary: &Binary<'a>,
+        bin: &Binary<'a>,
         function: FunctionValue<'a>,
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
         first_arg_type: Option<BasicTypeEnum>,
-        ns: &Namespace,
     ) -> Option<BasicValueEnum<'a>> {
         unimplemented!()
     }
@@ -324,7 +411,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
         contract_args: ContractArgs<'b>,
-        ns: &Namespace,
         loc: Loc,
     ) {
         unimplemented!()
@@ -341,7 +427,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         address: Option<BasicValueEnum<'b>>,
         contract_args: ContractArgs<'b>,
         ty: CallTy,
-        ns: &Namespace,
         loc: Loc,
     ) {
         let offset = bin.context.i64_type().const_int(0, false);
@@ -448,7 +533,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         _success: Option<&mut BasicValueEnum<'b>>,
         _address: PointerValue<'b>,
         _value: IntValue<'b>,
-        _ns: &Namespace,
         loc: Loc,
     ) {
         unimplemented!()
@@ -461,7 +545,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         expr: &Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
-        ns: &Namespace,
     ) -> BasicValueEnum<'b> {
         emit_context!(bin);
 
@@ -618,12 +701,12 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     }
 
     /// Return the value we received
-    fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &Namespace) -> IntValue<'b> {
+    fn value_transferred<'b>(&self, bin: &Binary<'b>) -> IntValue<'b> {
         unimplemented!()
     }
 
     /// Terminate execution, destroy bin and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &Namespace) {
+    fn selfdestruct<'b>(&self, bin: &Binary<'b>, addr: ArrayValue<'b>) {
         unimplemented!()
     }
 
@@ -635,7 +718,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         hash: HashTy,
         string: PointerValue<'b>,
         length: IntValue<'b>,
-        ns: &Namespace,
     ) -> IntValue<'b> {
         unimplemented!()
     }
@@ -654,7 +736,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     /// Return ABI encoded data
     fn return_abi_data<'b>(
         &self,
-        binary: &Binary<'b>,
+        bin: &Binary<'b>,
         data: PointerValue<'b>,
         data_len: BasicValueEnum<'b>,
     ) {
@@ -690,4 +772,48 @@ fn encode_value<'a>(value: IntValue<'a>, shift: u64, add: u64, bin: &'a Binary) 
             "encoded",
         )
         .unwrap()
+}
+
+fn is_val_true<'ctx>(bin: &Binary<'ctx>, val: IntValue<'ctx>) -> IntValue<'ctx> {
+    let tag_mask = bin.context.i64_type().const_int(0xff, false);
+    let tag_true = bin.context.i64_type().const_int(1, false);
+
+    let tag = bin
+        .builder
+        .build_and(val, tag_mask, "val_tag")
+        .expect("build_and failed");
+
+    bin.builder
+        .build_int_compare(inkwell::IntPredicate::EQ, tag, tag_true, "is_val_true")
+        .expect("build_int_compare failed")
+}
+
+/// Returns a Val representing a default zero value with the correct Soroban Tag.
+pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<'ctx> {
+    let context = &bin.context;
+    let i64_type = context.i64_type();
+
+    // Tag definitions from CAP-0046
+    let tag = match ty {
+        Type::Bool => 0,        // Tag::False
+        Type::Uint(32) => 4,    // Tag::U32Val
+        Type::Int(32) => 5,     // Tag::I32Val
+        Type::Uint(64) => 6,    // Tag::U64Small
+        Type::Int(64) => 7,     // Tag::I64Small
+        Type::Uint(128) => 10,  // Tag::U128Small
+        Type::Int(128) => 11,   // Tag::I128Small
+        Type::Uint(256) => 12,  // Tag::U256Small
+        Type::Int(256) => 13,   // Tag::I256Small
+        Type::String => 73,     // Tag::StringObject
+        Type::Address(_) => 77, // Tag::AddressObject
+        Type::Void => 2,        // Tag::Void
+        _ => {
+            // Fallback to Void for unsupported types
+            2 // Tag::Void
+        }
+    };
+
+    // All zero body + tag in lower 8 bits
+    let tag_val: u64 = tag;
+    i64_type.const_int(tag_val, false)
 }
