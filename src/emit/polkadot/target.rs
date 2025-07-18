@@ -1441,13 +1441,13 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         ty: &Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue,
-        _storage_type: &Option<StorageType>,
+        storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
         // The storage slot is an i256 accessed through a pointer, so we need
         // to store it
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        self.storage_load_slot(bin, ty, slot, slot_ptr, function)
+        self.storage_load_slot(bin, ty, slot, slot_ptr, function, &storage_type)
     }
 
     fn storage_store(
@@ -1458,11 +1458,11 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         slot: &mut IntValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
-        _: &Option<StorageType>,
+        storage_type: &Option<StorageType>,
     ) {
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        self.storage_store_slot(bin, ty, slot, slot_ptr, dest, function);
+        self.storage_store_slot(bin, ty, slot, slot_ptr, dest, function, &storage_type);
     }
 
     fn storage_delete(
@@ -1474,7 +1474,14 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     ) {
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        self.storage_delete_slot(bin, ty, slot, slot_ptr, function);
+        self.storage_delete_slot(
+            bin,
+            ty,
+            slot,
+            slot_ptr,
+            function,
+            &Some(StorageType::Persistent(None)),
+        );
     }
 
     fn builtin_function(

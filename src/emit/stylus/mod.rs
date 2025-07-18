@@ -99,6 +99,8 @@ impl StylusTarget {
             "chainid",
             "call_contract",
             "contract_address",
+            "create1",
+            "create2",
             "delegate_call_contract",
             "emit_log",
             "evm_gas_left",
@@ -115,6 +117,8 @@ impl StylusTarget {
             "storage_flush_cache",
             "storage_cache_bytes32",
             "storage_load_bytes32",
+            "transient_store_bytes32",
+            "transient_load_bytes32",
             "tx_origin",
             "write_result",
         ]);
@@ -189,6 +193,8 @@ impl StylusTarget {
         );
         external!("chainid", i64_type);
         external!("contract_address", void_type, u8_ptr);
+        external!("create1", void_type, u8_ptr, u32_val, u8_ptr, u8_ptr, u32_ptr);
+        external!("create2", void_type, u8_ptr, u32_val, u8_ptr, u8_ptr, u8_ptr, u32_ptr);
         external!(
             "delegate_call_contract",
             i8_type,
@@ -221,6 +227,8 @@ impl StylusTarget {
         external!("storage_cache_bytes32", void_type, u8_ptr, u8_ptr);
         external!("storage_flush_cache", void_type, u32_val);
         external!("storage_load_bytes32", void_type, u8_ptr, u8_ptr);
+        external!("transient_store_bytes32", void_type, u8_ptr, u8_ptr);
+        external!("transient_load_bytes32", void_type, u8_ptr, u8_ptr);
         external!("tx_origin", void_type, u8_ptr);
         external!("write_result", void_type, u8_ptr, u32_val);
     }

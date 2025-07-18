@@ -11,6 +11,7 @@ use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, Point
 use inkwell::{AddressSpace, IntPredicate};
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
+use solang_parser::pt::StorageType;
 
 impl StorageSlot for PolkadotTarget {
     fn set_storage(
@@ -19,6 +20,7 @@ impl StorageSlot for PolkadotTarget {
         slot: PointerValue,
         dest: PointerValue,
         dest_ty: BasicTypeEnum,
+        _storage_type: &Option<StorageType>,
     ) {
         emit_context!(bin);
 
@@ -43,7 +45,12 @@ impl StorageSlot for PolkadotTarget {
         );
     }
 
-    fn get_storage_address<'a>(&self, bin: &Binary<'a>, slot: PointerValue<'a>) -> ArrayValue<'a> {
+    fn get_storage_address<'a>(
+        &self,
+        bin: &Binary<'a>,
+        slot: PointerValue<'a>,
+        _storage_type: &Option<StorageType>,
+    ) -> ArrayValue<'a> {
         emit_context!(bin);
 
         let (scratch_buf, scratch_len) = scratch_buf!();
@@ -95,11 +102,14 @@ impl StorageSlot for PolkadotTarget {
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue,
+        storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
         emit_context!(bin);
 
         match ty {
-            Type::Ref(ty) => self.storage_load_slot(bin, ty, slot, slot_ptr, function),
+            Type::Ref(ty) => {
+                self.storage_load_slot(bin, ty, slot, slot_ptr, function, &storage_type)
+            }
             Type::Array(elem_ty, dim) => {
                 if let Some(ArrayLength::Fixed(d)) = dim.last() {
                     let llvm_ty = bin.llvm_type(ty.deref_any());
@@ -132,7 +142,14 @@ impl StorageSlot for PolkadotTarget {
                                     .unwrap()
                             };
 
-                            let val = self.storage_load_slot(bin, &ty, slot, slot_ptr, function);
+                            let val = self.storage_load_slot(
+                                bin,
+                                &ty,
+                                slot,
+                                slot_ptr,
+                                function,
+                                &storage_type,
+                            );
 
                             let val = if ty.deref_memory().is_fixed_reference_type(bin.ns) {
                                 let load_ty = bin.llvm_type(ty.deref_any());
@@ -155,8 +172,15 @@ impl StorageSlot for PolkadotTarget {
                     let size = bin
                         .builder
                         .build_int_truncate(
-                            self.storage_load_slot(bin, &slot_ty, slot, slot_ptr, function)
-                                .into_int_value(),
+                            self.storage_load_slot(
+                                bin,
+                                &slot_ty,
+                                slot,
+                                slot_ptr,
+                                function,
+                                &storage_type,
+                            )
+                            .into_int_value(),
                             bin.context.i32_type(),
                             "size",
                         )
@@ -212,8 +236,14 @@ impl StorageSlot for PolkadotTarget {
                         |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
                             let elem = bin.array_subscript(ty, dest, elem_no);
 
-                            let entry =
-                                self.storage_load_slot(bin, elem_ty, slot, slot_ptr, function);
+                            let entry = self.storage_load_slot(
+                                bin,
+                                elem_ty,
+                                slot,
+                                slot_ptr,
+                                function,
+                                &storage_type,
+                            );
 
                             let entry = if elem_ty.deref_memory().is_fixed_reference_type(bin.ns) {
                                 bin.builder
@@ -253,7 +283,14 @@ impl StorageSlot for PolkadotTarget {
                     .into_pointer_value();
 
                 for (i, field) in str_ty.definition(bin.ns).fields.iter().enumerate() {
-                    let val = self.storage_load_slot(bin, &field.ty, slot, slot_ptr, function);
+                    let val = self.storage_load_slot(
+                        bin,
+                        &field.ty,
+                        slot,
+                        slot_ptr,
+                        function,
+                        &storage_type,
+                    );
 
                     let elem = unsafe {
                         bin.builder
@@ -321,7 +358,7 @@ impl StorageSlot for PolkadotTarget {
             Type::Address(_) | Type::Contract(_) => {
                 bin.builder.build_store(slot_ptr, *slot).unwrap();
 
-                let ret = self.get_storage_address(bin, slot_ptr);
+                let ret = self.get_storage_address(bin, slot_ptr, &storage_type);
 
                 *slot = bin
                     .builder
@@ -358,6 +395,7 @@ impl StorageSlot for PolkadotTarget {
         slot_ptr: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
+        storage_type: &Option<StorageType>,
     ) {
         match ty.deref_any() {
             Type::Array(elem_ty, dim) => {
@@ -397,6 +435,7 @@ impl StorageSlot for PolkadotTarget {
                                 slot_ptr,
                                 elem.into(),
                                 function,
+                                &storage_type,
                             );
 
                             if !elem_ty.is_reference_type(bin.ns) {
@@ -433,8 +472,15 @@ impl StorageSlot for PolkadotTarget {
                     let previous_size = bin
                         .builder
                         .build_int_truncate(
-                            self.storage_load_slot(bin, &slot_ty, slot, slot_ptr, function)
-                                .into_int_value(),
+                            self.storage_load_slot(
+                                bin,
+                                &slot_ty,
+                                slot,
+                                slot_ptr,
+                                function,
+                                &storage_type,
+                            )
+                            .into_int_value(),
                             bin.context.i32_type(),
                             "previous_size",
                         )
@@ -459,7 +505,13 @@ impl StorageSlot for PolkadotTarget {
                         )
                         .unwrap();
 
-                    self.set_storage(bin, slot_ptr, new_slot, bin.llvm_type(&slot_ty));
+                    self.set_storage(
+                        bin,
+                        slot_ptr,
+                        new_slot,
+                        bin.llvm_type(&slot_ty),
+                        &storage_type,
+                    );
 
                     self.keccak256_hash(
                         bin,
@@ -520,6 +572,7 @@ impl StorageSlot for PolkadotTarget {
                                 slot_ptr,
                                 elem.into(),
                                 function,
+                                &storage_type,
                             );
 
                             if !elem_ty.is_reference_type(bin.ns) {
@@ -543,7 +596,14 @@ impl StorageSlot for PolkadotTarget {
                         previous_size,
                         &mut elem_slot,
                         |_: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_delete_slot(bin, elem_ty, slot, slot_ptr, function);
+                            self.storage_delete_slot(
+                                bin,
+                                elem_ty,
+                                slot,
+                                slot_ptr,
+                                function,
+                                &storage_type,
+                            );
 
                             if !elem_ty.is_reference_type(bin.ns) {
                                 *slot = bin
@@ -586,7 +646,15 @@ impl StorageSlot for PolkadotTarget {
                             .into_pointer_value();
                     }
 
-                    self.storage_store_slot(bin, &field.ty, slot, slot_ptr, elem.into(), function);
+                    self.storage_store_slot(
+                        bin,
+                        &field.ty,
+                        slot,
+                        slot_ptr,
+                        elem.into(),
+                        function,
+                        &storage_type,
+                    );
 
                     if !field.ty.is_reference_type(bin.ns)
                         || matches!(field.ty, Type::String | Type::DynamicBytes)
@@ -636,13 +704,19 @@ impl StorageSlot for PolkadotTarget {
 
                 bin.builder.build_store(slot_ptr, *slot).unwrap();
 
-                self.set_storage(bin, slot_ptr, m, ptr_ty.as_basic_type_enum());
+                self.set_storage(bin, slot_ptr, m, ptr_ty.as_basic_type_enum(), &storage_type);
             }
             Type::Address(_) | Type::Contract(_) => {
                 if dest.is_pointer_value() {
                     bin.builder.build_store(slot_ptr, *slot).unwrap();
 
-                    self.set_storage(bin, slot_ptr, dest.into_pointer_value(), bin.llvm_type(ty));
+                    self.set_storage(
+                        bin,
+                        slot_ptr,
+                        dest.into_pointer_value(),
+                        bin.llvm_type(ty),
+                        &storage_type,
+                    );
                 } else {
                     let address = bin
                         .builder
@@ -660,6 +734,7 @@ impl StorageSlot for PolkadotTarget {
                         slot_ptr,
                         address,
                         bin.address_type().as_basic_type_enum(),
+                        &storage_type,
                     );
                 }
             }
@@ -678,7 +753,13 @@ impl StorageSlot for PolkadotTarget {
                 // TODO ewasm allocates 32 bytes here, even though we have just
                 // allocated test. This can be folded into one allocation, if llvm
                 // does not already fold it into one.
-                self.set_storage(bin, slot_ptr, dest, bin.llvm_type(ty.deref_any()));
+                self.set_storage(
+                    bin,
+                    slot_ptr,
+                    dest,
+                    bin.llvm_type(ty.deref_any()),
+                    &storage_type,
+                );
             }
         }
     }
@@ -690,6 +771,7 @@ impl StorageSlot for PolkadotTarget {
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue<'a>,
+        storage_type: &Option<StorageType>,
     ) {
         match ty.deref_any() {
             Type::Array(_, dim) => {
@@ -702,7 +784,14 @@ impl StorageSlot for PolkadotTarget {
                         bin.context.i64_type().const_int(d.to_u64().unwrap(), false),
                         slot,
                         |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_delete_slot(bin, &ty, slot, slot_ptr, function);
+                            self.storage_delete_slot(
+                                bin,
+                                &ty,
+                                slot,
+                                slot_ptr,
+                                function,
+                                &storage_type,
+                            );
 
                             if !ty.is_reference_type(bin.ns) {
                                 *slot = bin
@@ -751,7 +840,14 @@ impl StorageSlot for PolkadotTarget {
                         length,
                         &mut entry_slot,
                         |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_delete_slot(bin, &ty, slot, slot_ptr, function);
+                            self.storage_delete_slot(
+                                bin,
+                                &ty,
+                                slot,
+                                slot_ptr,
+                                function,
+                                &storage_type,
+                            );
 
                             if !ty.is_reference_type(bin.ns) {
                                 *slot = bin
@@ -767,12 +863,26 @@ impl StorageSlot for PolkadotTarget {
                     );
 
                     // clear length itself
-                    self.storage_delete_slot(bin, &Type::Uint(256), slot, slot_ptr, function);
+                    self.storage_delete_slot(
+                        bin,
+                        &Type::Uint(256),
+                        slot,
+                        slot_ptr,
+                        function,
+                        &storage_type,
+                    );
                 }
             }
             Type::Struct(str_ty) => {
                 for field in &str_ty.definition(bin.ns).fields {
-                    self.storage_delete_slot(bin, &field.ty, slot, slot_ptr, function);
+                    self.storage_delete_slot(
+                        bin,
+                        &field.ty,
+                        slot,
+                        slot_ptr,
+                        function,
+                        &storage_type,
+                    );
 
                     if !field.ty.is_reference_type(bin.ns)
                         || matches!(field.ty, Type::String | Type::DynamicBytes)

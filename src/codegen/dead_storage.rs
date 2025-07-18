@@ -3,7 +3,7 @@
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, RetrieveType, Type};
-use solang_parser::pt::Loc;
+use solang_parser::pt::{Loc, StorageType};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -51,6 +51,7 @@ enum Transfer {
     Store {
         def: Definition,
         expr: Option<Expression>,
+        storage_type: Option<StorageType>,
     },
 }
 
@@ -66,8 +67,12 @@ impl fmt::Display for Transfer {
             Transfer::Kill { var_no } => {
                 write!(f, "Kill %{var_no}")
             }
-            Transfer::Store { def, expr } => {
-                write!(f, "Storage: {expr:?} at {def}")
+            Transfer::Store {
+                def,
+                expr,
+                storage_type,
+            } => {
+                write!(f, "Storage: {expr:?} at {def} (type: {storage_type:?})")
             }
         }
     }
@@ -76,7 +81,7 @@ impl fmt::Display for Transfer {
 #[derive(Clone, PartialEq, Eq)]
 struct ReachingDefs {
     vars: HashMap<usize, HashMap<Definition, Option<Expression>>>,
-    stores: Vec<(Definition, Expression)>,
+    stores: Vec<(Definition, Expression, Option<StorageType>)>,
 }
 
 type BlockVars = HashMap<usize, Vec<ReachingDefs>>;
@@ -165,7 +170,11 @@ fn reaching_definitions(cfg: &mut ControlFlowGraph) -> (Vec<Vec<Vec<Transfer>>>,
 
                 // merge storage stores
                 for store in &vars.stores {
-                    if !block_vars[0].stores.iter().any(|(def, _)| *def == store.0) {
+                    if !block_vars[0]
+                        .stores
+                        .iter()
+                        .any(|(def, _, _)| *def == store.0)
+                    {
                         block_vars[0].stores.push(store.clone());
                         changed = true;
                     }
@@ -230,7 +239,11 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
                 // possibly we should check if the function is pure/view and not clear storage references
                 let mut v = set_var(res);
 
-                v.push(Transfer::Store { def, expr: None });
+                v.push(Transfer::Store {
+                    def,
+                    expr: None,
+                    storage_type: None,
+                });
 
                 v
             }
@@ -256,7 +269,11 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
                 // A constructor/external call can call us back and modify storage
                 vec![
                     Transfer::Kill { var_no: *res },
-                    Transfer::Store { def, expr: None },
+                    Transfer::Store {
+                        def,
+                        expr: None,
+                        storage_type: None,
+                    },
                 ]
             }
             Instr::Store { dest, .. } => {
@@ -277,15 +294,29 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
                 vec![
                     Transfer::Kill { var_no: *res },
                     Transfer::Kill { var_no: *success },
-                    Transfer::Store { def, expr: None },
+                    Transfer::Store {
+                        def,
+                        expr: None,
+                        storage_type: None,
+                    },
                 ]
             }
-            Instr::SetStorageBytes { storage, .. }
-            | Instr::ClearStorage { storage, .. }
-            | Instr::SetStorage { storage, .. } => {
+            Instr::SetStorageBytes { storage, .. } | Instr::ClearStorage { storage, .. } => {
                 vec![Transfer::Store {
                     def,
                     expr: Some(storage.clone()),
+                    storage_type: None,
+                }]
+            }
+            Instr::SetStorage {
+                storage,
+                storage_type,
+                ..
+            } => {
+                vec![Transfer::Store {
+                    def,
+                    expr: Some(storage.clone()),
+                    storage_type: storage_type.clone(),
                 }]
             }
             Instr::PopStorage {
@@ -300,11 +331,16 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
                     Transfer::Store {
                         def,
                         expr: Some(storage.clone()),
+                        storage_type: None,
                     },
                 ]
             }
             Instr::Return { .. } => {
-                vec![Transfer::Store { def, expr: None }]
+                vec![Transfer::Store {
+                    def,
+                    expr: None,
+                    storage_type: None,
+                }]
             }
             _ => Vec::new(),
         });
@@ -402,7 +438,11 @@ fn apply_transfers(
                         vars.vars.insert(*var_no, v);
                     }
                 }
-                Transfer::Store { def, expr } => {
+                Transfer::Store {
+                    def,
+                    expr,
+                    storage_type,
+                } => {
                     // store to contract storage. This should kill any equal
                     let mut eliminated_vars = Vec::new();
 
@@ -440,7 +480,9 @@ fn apply_transfers(
                         // all stores should are no longer reaching if they are clobbered by this store
                         let mut eliminated_stores = Vec::new();
 
-                        for (no, (def, storage)) in vars.stores.iter().enumerate() {
+                        for (no, (def, storage, store_storage_type)) in
+                            vars.stores.iter().enumerate()
+                        {
                             let storage_vars = get_vars_at(def, block_vars);
 
                             if expression_compare(
@@ -451,6 +493,7 @@ fn apply_transfers(
                                 cfg,
                                 block_vars,
                             ) == ExpressionCmp::Equal
+                                && storage_type == store_storage_type
                             {
                                 eliminated_stores.push(no);
                             }
@@ -460,7 +503,7 @@ fn apply_transfers(
                             vars.stores.remove(no);
                         }
 
-                        vars.stores.push((*def, expr.clone()));
+                        vars.stores.push((*def, expr.clone(), storage_type.clone()));
                     } else {
                         // flush all reaching stores
                         vars.stores.truncate(0);
@@ -495,7 +538,11 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
 
             match &cfg.blocks[block_no].instr[instr_no] {
                 Instr::LoadStorage {
-                    res, ty, storage, ..
+                    res,
+                    ty,
+                    storage,
+                    storage_type,
+                    ..
                 } => {
                     // is there a definition which has the same storage expression
                     let mut found = None;
@@ -519,6 +566,7 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                                 ) == ExpressionCmp::Equal
                                     && storage_def.var_no != *res
                                     && ty == storage_def.ty
+                                    && storage_type.as_ref() == storage_def.storage_type
                                 {
                                     found = Some(var_no);
                                     break;
@@ -538,11 +586,12 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                             },
                         };
                     } else {
-                        for (def, expr) in &vars.stores {
+                        for (def, expr, store_storage_type) in &vars.stores {
                             let def_vars = get_vars_at(def, &block_vars);
 
                             if expression_compare(storage, vars, expr, &def_vars, cfg, &block_vars)
                                 != ExpressionCmp::NotEqual
+                                && storage_type == store_storage_type
                             {
                                 if let Some(entry) = redundant_stores.get_mut(def) {
                                     *entry = false;
@@ -552,7 +601,7 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                     }
                 }
                 Instr::PushStorage { storage, .. } | Instr::PopStorage { storage, .. } => {
-                    for (def, expr) in &vars.stores {
+                    for (def, expr, _store_storage_type) in &vars.stores {
                         let def_vars = get_vars_at(def, &block_vars);
 
                         if expression_compare(storage, vars, expr, &def_vars, cfg, &block_vars)
@@ -585,7 +634,7 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                 .iter()
                 .any(|t| matches!(t, Transfer::Store { expr: None, .. }))
             {
-                for (def, _) in &vars.stores {
+                for (def, _, _) in &vars.stores {
                     // insert new entry or override existing one
                     redundant_stores.insert(*def, false);
                 }
@@ -613,6 +662,7 @@ struct StorageDef<'a> {
     var_no: usize,
     slot: &'a Expression,
     ty: &'a Type,
+    storage_type: Option<&'a StorageType>,
 }
 
 fn get_storage_definition<'a>(
@@ -625,11 +675,16 @@ fn get_storage_definition<'a>(
     {
         match &cfg.blocks[*block_no].instr[*instr_no] {
             Instr::LoadStorage {
-                storage, res, ty, ..
+                storage,
+                res,
+                ty,
+                storage_type,
+                ..
             } => Some(StorageDef {
                 var_no: *res,
                 slot: storage,
                 ty,
+                storage_type: storage_type.as_ref(),
             }),
             _ => None,
         }

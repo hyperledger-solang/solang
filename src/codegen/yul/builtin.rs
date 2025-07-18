@@ -18,7 +18,7 @@ use crate::{
 };
 use num_bigint::BigInt;
 use num_traits::{FromPrimitive, Zero};
-use solang_parser::pt;
+use solang_parser::pt::{self, StorageType};
 
 impl Expression {
     fn to_number_literal(&self) -> Expression {
@@ -103,9 +103,6 @@ pub(crate) fn process_builtin(
         | YulBuiltInFunction::MStore
         | YulBuiltInFunction::MStore8
         | YulBuiltInFunction::MSize
-        // Storage function: need to think about how to deal with pointer size and the size of chunk to load
-        | YulBuiltInFunction::SStore
-        | YulBuiltInFunction::SLoad
         // Calldata functions: the same problems with other memory functions
         | YulBuiltInFunction::CallDataLoad
         | YulBuiltInFunction::CallDataSize
@@ -135,8 +132,6 @@ pub(crate) fn process_builtin(
         | YulBuiltInFunction::Log2
         | YulBuiltInFunction::Log3
         | YulBuiltInFunction::Log4
-        // origin is the same as tx.origin and is not implemented
-        | YulBuiltInFunction::Origin
         | YulBuiltInFunction::PrevRandao
         => {
             if ns.target != Target::EVM {
@@ -146,6 +141,47 @@ pub(crate) fn process_builtin(
 
             // Sema will only allow this for EVM. This is a placeholder until correct codegen is in place
             cfg.add(vartab, Instr::Unimplemented { reachable: !matches!(builtin_ty, YulBuiltInFunction::Return | YulBuiltInFunction::Revert | YulBuiltInFunction::Stop) });
+            Expression::Poison
+        }
+
+        YulBuiltInFunction::Origin => {
+            Expression::Builtin { loc: *loc, tys: vec![Type::Address(false)], kind: Builtin::Origin, args: vec![] }
+        }
+
+        YulBuiltInFunction::TLoad => {
+            let slot = expression(&args[0], contract_no, ns, vartab, cfg, opt);
+            let res = vartab.temp_anonymous(&Type::Uint(256));
+            cfg.add(vartab, Instr::LoadStorage { res, ty: Type::Uint(256), storage: slot, storage_type: Some(StorageType::Temporary(None)) });
+            Expression::Variable {
+                loc: *loc,
+                ty: Type::Uint(256),
+                var_no: res,
+            }
+        }
+
+        YulBuiltInFunction::TStore => {
+            let slot = expression(&args[0], contract_no, ns, vartab, cfg, opt);
+            let value = expression(&args[1], contract_no, ns, vartab, cfg, opt);
+            cfg.add(vartab, Instr::SetStorage { ty: Type::Uint(256), value, storage: slot, storage_type: Some(StorageType::Temporary(None)) });
+            Expression::Poison
+        }
+
+
+        YulBuiltInFunction::SLoad => {
+            let slot = expression(&args[0], contract_no, ns, vartab, cfg, opt);
+            let res = vartab.temp_anonymous(&Type::Uint(256));
+            cfg.add(vartab, Instr::LoadStorage { res, ty: Type::Uint(256), storage: slot, storage_type: Some(StorageType::Persistent(None)) });
+            Expression::Variable {
+                loc: *loc,
+                ty: Type::Uint(256),
+                var_no: res,
+            }
+        }
+
+        YulBuiltInFunction::SStore => {
+            let slot = expression(&args[0], contract_no, ns, vartab, cfg, opt);
+            let value = expression(&args[1], contract_no, ns, vartab, cfg, opt);
+            cfg.add(vartab, Instr::SetStorage { ty: Type::Uint(256), value, storage: slot, storage_type: Some(StorageType::Persistent(None)) });
             Expression::Poison
         }
 

@@ -277,7 +277,7 @@ where
         }
         Some(1) => Err(Error(
             Severity::Minor,
-            anyhow!("command failed: {command:?}"),
+            anyhow!("command failed: {command:?} {output:?}"),
         )),
         other => Err(Error(
             Severity::Major,

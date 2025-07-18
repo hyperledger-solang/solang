@@ -21,6 +21,35 @@ use inkwell::{AddressSpace, IntPredicate};
 use solang_parser::pt::{Loc, StorageType};
 use std::collections::HashMap;
 
+impl<'a> StylusTarget {
+    pub(crate) fn get_storage_type_int(
+        &self,
+        bin: &Binary<'a>,
+        function: FunctionValue,
+        slot: PointerValue<'a>,
+        ty: IntType<'a>,
+        storage_type: &Option<StorageType>,
+    ) -> IntValue<'a> {
+        emit_context!(bin);
+
+        let value_ptr = bin.builder.build_alloca(ty, "value").unwrap();
+
+        match storage_type {
+            Some(StorageType::Temporary(_)) => {
+                call!("transient_load_bytes32", &[slot.into(), value_ptr.into()]);
+            }
+            _ => {
+                call!("storage_load_bytes32", &[slot.into(), value_ptr.into()]);
+            }
+        }
+
+        bin.builder
+            .build_load(ty, value_ptr, "value")
+            .unwrap()
+            .into_int_value()
+    }
+}
+
 impl<'a> TargetRuntime<'a> for StylusTarget {
     fn get_storage_int(
         &self,
@@ -29,6 +58,9 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
+        // Use get_storage_type_int instead
+        unreachable!();
+        /*
         emit_context!(bin);
 
         let value_ptr = bin.builder.build_alloca(ty, "value").unwrap();
@@ -39,6 +71,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             .build_load(ty, value_ptr, "value")
             .unwrap()
             .into_int_value()
+        */
     }
 
     fn storage_load(
@@ -53,7 +86,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         // to store it
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        let value = self.storage_load_slot(bin, ty, slot, slot_ptr, function);
+        let value = self.storage_load_slot(bin, ty, slot, slot_ptr, function, storage_type);
 
         value
     }
@@ -73,9 +106,14 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         let slot_ptr = bin.builder.build_alloca(slot.get_type(), "slot").unwrap();
 
-        self.storage_store_slot(bin, ty, slot, slot_ptr, value, function);
+        self.storage_store_slot(bin, ty, slot, slot_ptr, value, function, storage_type);
 
-        call!("storage_flush_cache", &[i32_const!(1).into()]);
+        match storage_type {
+            Some(StorageType::Persistent(_)) | None => {
+                call!("storage_flush_cache", &[i32_const!(1).into()]);
+            }
+            _ => {}
+        }
     }
 
     /// Recursively clear storage. The default implementation is for slot-based storage
@@ -646,7 +684,123 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         contract_args: ContractArgs<'b>,
         loc: Loc,
     ) {
-        unimplemented!()
+        emit_context!(bin);
+
+        let revert_data_len = bin
+            .builder
+            .build_alloca(bin.llvm_type(&ast::Type::Uint(32)), "revert_data_len")
+            .unwrap();
+
+        let created_contract = &bin.ns.contracts[contract_no];
+
+        let code = created_contract.emit(bin.ns, bin.options, contract_no);
+
+        let code_ptr =
+            bin.emit_global_string(&format!("binary_{}_code", created_contract.id), &code, true);
+
+        let code_len = bin.context.i32_type().const_int(code.len() as u64, false);
+
+        let value = bin
+            .builder
+            .build_alloca(bin.context.custom_width_int_type(256), "value") // TODO: maybe use bin.value_type() instead of custom width
+            .unwrap();
+        bin.builder
+            .build_store(
+                value,
+                contract_args
+                    .value
+                    .unwrap_or(bin.context.custom_width_int_type(256).const_zero()),
+            )
+            .unwrap();
+
+        if let Some(salt) = contract_args.salt {
+            // create2
+            let salt_buf = bin
+                .builder
+                .build_alloca(bin.context.custom_width_int_type(256), "salt") // TODO: maybe use bin.value_type() instead of custom width
+                .unwrap();
+            bin.builder.build_store(salt_buf, salt).unwrap();
+
+            call!(
+                "create2",
+                &[
+                    code_ptr.into(),
+                    code_len.into(),
+                    value.into(),
+                    salt_buf.into(),
+                    address.into(),
+                    revert_data_len.into()
+                ],
+                "create2"
+            );
+        } else {
+            // create1
+            call!(
+                "create1",
+                &[
+                    code_ptr.into(),
+                    code_len.into(),
+                    value.into(),
+                    address.into(),
+                    revert_data_len.into()
+                ],
+                "create1"
+            );
+        }
+
+        // Set success based on whether the address is zero (contract creation failed)
+        if let Some(success) = success {
+            let zero_address = bin.address_type().const_zero();
+
+            // Use __memcmp to compare the address with zero
+            let zero_ptr = bin.build_alloca(function, bin.address_type(), "zero_ptr");
+
+            bin.builder.build_store(zero_ptr, zero_address).unwrap();
+            let cmp_result = bin
+                .builder
+                .build_call(
+                    bin.module.get_function("__memcmp").unwrap(),
+                    &[
+                        address.into(),
+                        bin.context
+                            .i32_type()
+                            .const_int(bin.ns.address_length as u64, false)
+                            .into(),
+                        zero_ptr.into(),
+                        bin.context
+                            .i32_type()
+                            .const_int(bin.ns.address_length as u64, false)
+                            .into(),
+                    ],
+                    "address_zero_cmp",
+                )
+                .unwrap()
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            // __memcmp returns true (1) if memory regions are equal, false (0) if not equal
+            // We want success to be 0 if address equals zero (creation failed), 1 if address is non-zero (creation succeeded)
+            // So we need to invert the result: if __memcmp returns 1 (equal), we want success to be 0 (failure)
+            let success_value = bin
+                .builder
+                .build_select(
+                    bin.builder
+                        .build_int_compare(
+                            IntPredicate::EQ,
+                            cmp_result,
+                            bin.context.bool_type().const_int(1, false),
+                            "address_is_zero",
+                        )
+                        .unwrap(),
+                    bin.context.i32_type().const_zero(),
+                    bin.context.i32_type().const_int(1, false),
+                    "success_value",
+                )
+                .unwrap();
+            *success = success_value.into();
+        }
     }
 
     /// call external function

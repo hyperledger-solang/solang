@@ -68,6 +68,10 @@ impl Target {
         matches!(self, Target::Polkadot { .. })
     }
 
+    pub fn is_polkadot_stylus(&self) -> bool {
+        matches!(self, Target::Polkadot { .. } | Target::Stylus)
+    }
+
     /// Create the target Polkadot with default parameters
     pub const fn default_polkadot() -> Self {
         Target::Polkadot {
@@ -82,6 +86,7 @@ impl Target {
             "solana" => Some(Target::Solana),
             "polkadot" => Some(Target::default_polkadot()),
             "evm" => Some(Target::EVM),
+            "stylus" => Some(Target::Stylus),
             _ => None,
         }
     }

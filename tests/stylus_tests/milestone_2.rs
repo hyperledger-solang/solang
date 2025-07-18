@@ -19,13 +19,16 @@ fn milestone_2() {
     .unwrap();
     let dir = &tempdir;
 
-    let stdout = call(
+    let mut stdout = call(
         dir,
         &address,
         ["test()(uint64,uint256,address,uint256,uint256,uint256,uint256)"],
     )
     .unwrap();
     println!("{}", label(&stdout));
+
+    stdout = call(dir, &address, ["test2()(uint256,uint256)"]).unwrap();
+    println!("{}", stdout);
 }
 
 fn label(stdout: &str) -> String {

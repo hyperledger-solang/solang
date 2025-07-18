@@ -458,7 +458,7 @@ pub fn expression(
             let address_res = vartab.temp_anonymous(&Type::Contract(*constructor_contract));
             let success = ns
                 .target
-                .is_polkadot()
+                .is_polkadot_stylus()
                 .then(|| vartab.temp_name("success", &Type::Uint(32)));
             call_constructor(
                 loc,
@@ -475,7 +475,7 @@ pub fn expression(
                 cfg,
                 opt,
             );
-            if ns.target.is_polkadot() {
+            if ns.target.is_polkadot_stylus() {
                 polkadot::RetCodeCheckBuilder::default()
                     .loc(*loc)
                     .msg("contract creation failed")
