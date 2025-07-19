@@ -903,7 +903,12 @@ pub(crate) trait AbiEncoding {
             | Type::Enum(_)
             | Type::Value
             | Type::Bytes(_) => {
-                let read_bytes = ty.memory_size_of(ns);
+                let (read_ty, read_bytes) =
+                    if ns.target == Target::Stylus && matches!(ty, Type::Address(_)) {
+                        (Type::Uint(256), BigInt::from(32))
+                    } else {
+                        (ty.clone(), ty.memory_size_of(ns))
+                    };
 
                 let size = Expression::NumberLiteral {
                     loc: Codegen,
@@ -912,12 +917,21 @@ pub(crate) trait AbiEncoding {
                 };
                 validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
 
-                let read_value = Expression::Builtin {
+                let mut read_value = Expression::Builtin {
                     loc: Codegen,
-                    tys: vec![ty.clone()],
+                    tys: vec![read_ty],
                     kind: Builtin::ReadFromBuffer,
                     args: vec![buffer.clone(), offset.clone()],
                 };
+
+                if ns.target == Target::Stylus && matches!(ty, Type::Address(_)) {
+                    read_value = Expression::ByteSwap {
+                        expr: Box::new(read_value),
+                        le_to_be: false,
+                    };
+                    read_value = read_value.cast(&Type::Uint(160), ns);
+                    read_value = read_value.cast(&ty, ns);
+                }
 
                 let read_var = vartab.temp_anonymous(ty);
                 cfg.add(
@@ -1596,7 +1610,7 @@ pub(crate) trait AbiEncoding {
                     Expression::NumberLiteral {
                         loc: Codegen,
                         ty: Uint(32),
-                        value: BigInt::from(256),
+                        value: BigInt::from(32),
                     }
                 } else {
                     Expression::NumberLiteral {
