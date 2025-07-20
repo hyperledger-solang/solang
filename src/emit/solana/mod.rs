@@ -1093,7 +1093,7 @@ impl SolanaTarget {
                 account_info_ty,
                 account_info,
                 gep_no,
-                format!("AccountInfo_member_{}", member).as_str(),
+                format!("AccountInfo_member_{member}").as_str(),
             )
             .unwrap()
             .as_basic_value_enum()

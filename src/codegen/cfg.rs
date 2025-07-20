@@ -1275,7 +1275,7 @@ impl ControlFlowGraph {
                     None => "_".to_string(),
                 },
                 if let Some(no) = constructor_no {
-                    format!("{}", no)
+                    format!("{no}")
                 } else {
                     String::new()
                 },

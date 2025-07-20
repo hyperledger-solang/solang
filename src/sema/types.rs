@@ -1408,7 +1408,7 @@ impl Type {
             Type::Bytes(_) => false,
             Type::Enum(_) => false,
             Type::Struct(_) => true,
-            Type::Array(_, dims) => !dims.iter().any(|d| *d == ArrayLength::Dynamic),
+            Type::Array(_, dims) => !dims.contains(&ArrayLength::Dynamic),
             Type::DynamicBytes => false,
             Type::String => false,
             Type::Mapping(..) => false,
@@ -1552,7 +1552,7 @@ impl Type {
             Type::Int(n) | Type::Uint(n) => BigInt::from(n / 8),
             Type::Rational => unreachable!(),
             Type::Array(ty, dims) => {
-                if dims.iter().any(|d| *d == ArrayLength::Dynamic) {
+                if dims.contains(&ArrayLength::Dynamic) {
                     BigInt::from(ns.target.ptr_size() / 8)
                 } else {
                     ty.struct_elem_alignment(ns)

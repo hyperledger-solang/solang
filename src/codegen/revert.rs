@@ -32,6 +32,7 @@ pub(crate) const PANIC_SELECTOR: [u8; 4] = [0x4e, 0x48, 0x7b, 0x71];
 ///
 /// Marked as non-exhaustive because Solidity may add more variants in the future.
 #[non_exhaustive]
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, PartialEq, Clone)]
 pub enum SolidityError {
     /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
@@ -399,7 +400,7 @@ pub(super) fn revert(
                 let error_ty = error_no
                     .map(|n| ns.errors[n].name.as_str())
                     .unwrap_or("unspecified");
-                let reason = format!("{} revert encountered", error_ty);
+                let reason = format!("{error_ty} revert encountered");
                 log_runtime_error(opt.log_runtime_errors, &reason, *loc, cfg, vartab, ns);
             }
         }

@@ -92,7 +92,7 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
                 memory64: m.memory64,
                 shared: m.shared,
             }),
-            _ => panic!("unexpected WASM import section {:?}", import),
+            _ => panic!("unexpected WASM import section {import:?}"),
         };
         let module_name = import.name.split('.').next().unwrap();
         // parse the import name to all string after the the first dot
