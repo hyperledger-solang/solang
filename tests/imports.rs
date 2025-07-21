@@ -245,7 +245,7 @@ fn found_two_files() {
     let error = String::from_utf8_lossy(&output.stderr);
     println!("{error}");
 
-    assert!(error.contains("error: import paths 'imports', 'meh' specifed more than once"));
+    assert!(error.contains("error: import paths 'imports', 'meh' specified more than once"));
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
     let run = cmd
