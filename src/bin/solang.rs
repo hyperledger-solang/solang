@@ -251,10 +251,7 @@ fn compile(compile_args: &Compile) {
 
         let authors = if let Some(authors) = &compile_args.package.authors {
             if !target.is_polkadot() {
-                eprintln!(
-                    "warning: the `authors` flag will be ignored for {} target",
-                    target
-                )
+                eprintln!("warning: the `authors` flag will be ignored for {target} target")
             }
             authors.clone()
         } else {

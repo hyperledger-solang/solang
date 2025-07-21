@@ -41,8 +41,8 @@ impl<'a> Printer<'a> {
 
     pub fn print_lir(&self, f: &mut dyn Write, cfg: &LIR) {
         let function_no = match cfg.function_no {
-            ASTFunction::SolidityFunction(no) => format!("sol#{}", no),
-            ASTFunction::YulFunction(no) => format!("yul#{}", no),
+            ASTFunction::SolidityFunction(no) => format!("sol#{no}"),
+            ASTFunction::YulFunction(no) => format!("yul#{no}"),
             ASTFunction::None => "none".to_string(),
         };
 

@@ -75,7 +75,7 @@ impl RecurseData<'_> {
 
     fn add_program_id(&mut self, contract_name: &String) {
         self.add_account(
-            format!("{}_programId", contract_name),
+            format!("{contract_name}_programId"),
             &SolanaAccount {
                 loc: Loc::Codegen,
                 is_signer: false,

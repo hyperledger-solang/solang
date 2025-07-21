@@ -148,9 +148,8 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
             .iter()
             .map(|e| expression(e, cfg, contract_no, Some(func), self.ns, vartab, opt))
             .collect::<Vec<_>>();
-        let encoded_data = data
-            .is_empty()
-            .then(|| Expression::AllocDynamicBytes {
+        let encoded_data = if data.is_empty() {
+            Expression::AllocDynamicBytes {
                 loc,
                 ty: Type::DynamicBytes,
                 size: Expression::NumberLiteral {
@@ -160,8 +159,10 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
                 }
                 .into(),
                 initializer: Vec::new().into(),
-            })
-            .unwrap_or_else(|| abi_encode(&loc, data, self.ns, vartab, cfg, false).0);
+            }
+        } else {
+            abi_encode(&loc, data, self.ns, vartab, cfg, false).0
+        };
 
         cfg.add(
             vartab,

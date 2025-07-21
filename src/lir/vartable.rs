@@ -40,7 +40,7 @@ impl Vartable {
         self.vars
             .get(id)
             .map(|var| &var.ty)
-            .ok_or(format!("Variable {} not found.", id))
+            .ok_or(format!("Variable {id} not found."))
             .unwrap()
     }
 
@@ -49,7 +49,7 @@ impl Vartable {
         self.vars
             .get(id)
             .map(|var| var.name.as_str())
-            .ok_or(format!("Variable {} not found.", id))
+            .ok_or(format!("Variable {id} not found."))
             .unwrap()
     }
 
@@ -58,7 +58,7 @@ impl Vartable {
         self.vars
             .get(id)
             .map(|var| Operand::Id { id: var.id, loc })
-            .ok_or(format!("Variable {} not found.", id))
+            .ok_or(format!("Variable {id} not found."))
             .unwrap()
     }
 
@@ -67,7 +67,7 @@ impl Vartable {
         let var = Var {
             id,
             ty,
-            name: format!("{}{}", TEMP_PREFIX, id),
+            name: format!("{TEMP_PREFIX}{id}"),
         };
         self.next_id = self.next_id.max(id + 1);
         self.vars.insert(id, var);

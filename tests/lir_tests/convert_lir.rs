@@ -36,7 +36,7 @@ fn print_lir_str(src: &str, cfg_no: usize, target: Target) {
     let printer = Printer::new(&lir.vartable);
 
     let result = stringfy_lir!(printer, &lir);
-    println!("{}", result);
+    println!("{result}");
 }
 
 fn assert_lir_str_eq_by_name(src: &str, cfg_name: &str, expected: &str, target: Target) {
