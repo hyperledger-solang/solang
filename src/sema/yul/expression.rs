@@ -574,10 +574,7 @@ fn resolve_suffix_access(
             } else if matches!(dims.last(), Some(ArrayLength::Fixed(_))) {
                 ns.diagnostics.push(Diagnostic::error(
                     resolved_expr.loc(),
-                    format!(
-                        "the given expression does not support '.{}' suffixes",
-                        suffix_type
-                    ),
+                    format!("the given expression does not support '.{suffix_type}' suffixes"),
                 ));
             }
         }
@@ -633,10 +630,7 @@ fn resolve_suffix_access(
         | YulExpression::ConstantVariable(_, _, None, _) => {
             ns.diagnostics.push(Diagnostic::error(
                 resolved_expr.loc(),
-                format!(
-                    "the given expression does not support '.{}' suffixes",
-                    suffix_type
-                ),
+                format!("the given expression does not support '.{suffix_type}' suffixes"),
             ));
             return Err(());
         }

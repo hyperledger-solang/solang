@@ -205,7 +205,7 @@ fn write_solidity(idl: &Idl, mut f: File) -> Result<(), std::io::Error> {
     docs(&mut f, 0, &idl.docs)?;
 
     if let Some(program_id) = program_id(idl) {
-        writeln!(f, "@program_id(\"{}\")", program_id)?;
+        writeln!(f, "@program_id(\"{program_id}\")")?;
     }
     writeln!(f, "interface {} {{", idl.name)?;
 

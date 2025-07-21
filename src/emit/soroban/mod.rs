@@ -296,7 +296,7 @@ impl SorobanTarget {
                             ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                             ast::Type::String => ScSpecTypeDef::String,
                             ast::Type::Void => ScSpecTypeDef::Void,
-                            _ => panic!("unsupported return type {:?}", ty),
+                            _ => panic!("unsupported return type {ty:?}"),
                         }
                     }) // TODO: Map type.
                     .collect::<Vec<_>>()

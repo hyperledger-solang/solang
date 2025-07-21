@@ -96,7 +96,7 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
                 memory64: m.memory64,
                 shared: m.shared,
             }),
-            _ => panic!("unexpected WASM import section {:?}", import),
+            _ => panic!("unexpected WASM import section {import:?}"),
         };
         let module_name = match import.name {
             "memory" => import.module,

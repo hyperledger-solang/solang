@@ -413,7 +413,7 @@ fn layout(contract_no: usize, ns: &mut Namespace) {
                 if slot > value {
                     ns.diagnostics.push(Diagnostic::error(
                         exp.loc(),
-                        format!("contract requires at least {} bytes of space", slot),
+                        format!("contract requires at least {slot} bytes of space"),
                     ));
                 } else if value > BigInt::from(MAXIMUM_ACCOUNT_SIZE) {
                     ns.diagnostics.push(Diagnostic::error(
