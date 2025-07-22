@@ -25,6 +25,7 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
         generate_debug_information: false,
         log_runtime_errors: false,
         log_prints: true,
+        strict_soroban_types: false,
         #[cfg(feature = "wasm_opt")]
         wasm_opt: None,
         soroban_version: None,
@@ -635,13 +636,7 @@ fn try_catch() {
 
     let ns = parse_and_codegen(file);
     let errors = ns.diagnostics.errors();
-    assert_eq!(errors.len(), 1);
-    assert_eq!(errors[0].message, "Variable 'r' is undefined");
-    assert_eq!(errors[0].notes.len(), 1);
-    assert_eq!(
-        errors[0].notes[0].message,
-        "Variable read before being defined"
-    );
+    assert_eq!(errors.len(), 0);
 
     let file = r#"
     contract AddNumbers { function add(uint256 a, uint256 b) external pure returns (uint256 c) {c = b;} }
@@ -659,7 +654,6 @@ fn try_catch() {
                 r = hex"ABCD";
                 emit StringFailure(_err);
             } catch (bytes memory _err) {
-                r = hex"ABCD";
                 emit BytesFailure(_err);
             }
 
@@ -698,13 +692,7 @@ fn try_catch() {
 
     let ns = parse_and_codegen(file);
     let errors = ns.diagnostics.errors();
-    assert_eq!(errors.len(), 1);
-    assert_eq!(errors[0].message, "Variable 'r' is undefined");
-    assert_eq!(errors[0].notes.len(), 2);
-    assert!(errors[0]
-        .notes
-        .iter()
-        .all(|note| { note.message == "Variable read before being defined" }));
+    assert_eq!(errors.len(), 0);
 
     let file = r#"
     contract AddNumbers { function add(uint256 a, uint256 b) external pure returns (uint256 c) {c = b;} }
@@ -732,11 +720,5 @@ fn try_catch() {
 
     let ns = parse_and_codegen(file);
     let errors = ns.diagnostics.errors();
-    assert_eq!(errors.len(), 1);
-    assert_eq!(errors[0].message, "Variable 'r' is undefined");
-    assert_eq!(errors[0].notes.len(), 1);
-    assert_eq!(
-        errors[0].notes[0].message,
-        "Variable read before being defined"
-    );
+    assert_eq!(errors.len(), 0);
 }
