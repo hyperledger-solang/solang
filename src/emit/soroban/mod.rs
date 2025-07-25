@@ -18,7 +18,7 @@ use soroban_sdk::xdr::{
 
 const SOROBAN_ENV_INTERFACE_VERSION: ScEnvMetaEntryInterfaceVersion =
     ScEnvMetaEntryInterfaceVersion {
-        protocol: 22,
+        protocol: 23,
         pre_release: 0,
     };
 

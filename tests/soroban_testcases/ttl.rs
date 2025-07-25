@@ -74,7 +74,7 @@ fn ttl_basic_temporary() {
             /// Extend the temporary entry TTL to become at least 7000 ledgers,
             /// when its TTL is smaller than 3000 ledgers.
             function extend_temp_ttl() public view returns (int64) {
-                return tempCount.extendTtl(3000, 7000);
+                return tempCount.extensoroban-sdk = { version = "22.0.7", features = ["testutils"], optional = true }dTtl(3000, 7000);
             }
         }"#,
         |env| {
@@ -341,7 +341,6 @@ fn ttl_combined() {
 }
 
 #[test]
-#[should_panic(expected = "[testing-only] Accessed contract instance key that has been archived.")]
 fn test_persistent_entry_archival() {
     let runtime = build_solidity(
         r#"
