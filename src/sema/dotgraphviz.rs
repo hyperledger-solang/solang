@@ -1399,7 +1399,7 @@ impl Dot {
                     Some(parent),
                     Some(parent_rel),
                 );
-                self.add_expression(array, func, ns, node, format!("member: {}", name));
+                self.add_expression(array, func, ns, node, format!("member: {name}"));
             }
             Expression::EventSelector { loc, event_no, .. } => {
                 let event = &ns.events[*event_no];
