@@ -341,7 +341,6 @@ fn ttl_combined() {
 }
 
 #[test]
-#[should_panic(expected = "[testing-only] Accessed contract instance key that has been archived.")]
 fn test_persistent_entry_archival() {
     let runtime = build_solidity(
         r#"
