@@ -129,10 +129,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         );
         self.assert_failure(
             bin,
-            bin.context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null(),
+            bin.context.ptr_type(AddressSpace::default()).const_null(),
             bin.context.i32_type().const_zero(),
         );
 
@@ -205,10 +202,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         bin.log_runtime_error(self, "storage index out of bounds".to_string(), Some(loc));
         self.assert_failure(
             bin,
-            bin.context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null(),
+            bin.context.ptr_type(AddressSpace::default()).const_null(),
             bin.context.i32_type().const_zero(),
         );
 
@@ -262,11 +256,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             let data = bin
                 .builder
-                .build_load(
-                    bin.context.i8_type().ptr_type(AddressSpace::default()),
-                    data,
-                    "data",
-                )
+                .build_load(bin.context.ptr_type(AddressSpace::default()), data, "data")
                 .unwrap()
                 .into_pointer_value();
 
@@ -471,10 +461,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         bin.log_runtime_error(self, "pop from empty storage array".to_string(), Some(loc));
         self.assert_failure(
             bin,
-            bin.context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null(),
+            bin.context.ptr_type(AddressSpace::default()).const_null(),
             bin.context.i32_type().const_zero(),
         );
 
@@ -1122,7 +1109,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     elem.into()
                 } else {
                     let load_ty = if elem_ty.is_dynamic(bin.ns) {
-                        bin.llvm_type(elem_ty.deref_memory())
+                        bin.context
                             .ptr_type(AddressSpace::default())
                             .as_basic_type_enum()
                     } else {
@@ -1192,7 +1179,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         elem.into()
                     } else {
                         let load_ty = if field.ty.is_dynamic(bin.ns) {
-                            bin.llvm_type(&field.ty)
+                            bin.context
                                 .ptr_type(AddressSpace::default())
                                 .as_basic_type_enum()
                         } else {
@@ -1392,10 +1379,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         if contract_args.accounts.is_none() {
             contract_args.accounts = Some((
-                bin.context
-                    .i64_type()
-                    .ptr_type(AddressSpace::default())
-                    .const_zero(),
+                bin.context.ptr_type(AddressSpace::default()).const_zero(),
                 bin.context.i32_type().const_zero(),
             ))
         };
@@ -1406,11 +1390,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
     /// Get return buffer for external call
     fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b> {
-        let null_u8_ptr = bin
-            .context
-            .i8_type()
-            .ptr_type(AddressSpace::default())
-            .const_zero();
+        let null_u8_ptr = bin.context.ptr_type(AddressSpace::default()).const_zero();
 
         let length_as_64 = bin
             .builder
@@ -1703,10 +1683,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 let parameters = self.sol_parameters(bin);
 
-                let sol_pubkey_type = bin.module.get_struct_type("struct.SolPubkey").unwrap();
                 bin.builder
                     .build_load(
-                        sol_pubkey_type.ptr_type(AddressSpace::default()),
+                        bin.context.ptr_type(AddressSpace::default()),
                         bin.builder
                             .build_struct_gep(
                                 bin.module.get_struct_type("struct.SolParameters").unwrap(),
@@ -1731,7 +1710,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 let input = bin
                     .builder
                     .build_load(
-                        bin.context.i8_type().ptr_type(AddressSpace::default()),
+                        bin.context.ptr_type(AddressSpace::default()),
                         bin.builder
                             .build_struct_gep(
                                 bin.module.get_struct_type("struct.SolParameters").unwrap(),
@@ -1794,7 +1773,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 let input = bin
                     .builder
                     .build_load(
-                        bin.context.i8_type().ptr_type(AddressSpace::default()),
+                        bin.context.ptr_type(AddressSpace::default()),
                         bin.builder
                             .build_struct_gep(
                                 bin.module.get_struct_type("struct.SolParameters").unwrap(),
@@ -1975,7 +1954,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             let sol_bytes = bin.context.struct_type(
                 &[
                     bin.context
-                        .i8_type()
                         .ptr_type(AddressSpace::default())
                         .as_basic_type_enum(),
                     bin.context.i64_type().as_basic_type_enum(),
