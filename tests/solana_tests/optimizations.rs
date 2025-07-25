@@ -56,7 +56,7 @@ fn run_test(path: &Path) {
         return;
     }
 
-    println!("testcase: {:?}", file_stem);
+    println!("testcase: {file_stem:?}");
 
     let file =
         File::open(path).unwrap_or_else(|error| panic!("failed to open {path:?}: {error:?}"));

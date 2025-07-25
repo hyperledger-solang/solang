@@ -149,7 +149,7 @@ fn contract_name_defined_twice() {
     let output = not_ok.get_output();
     let err = String::from_utf8_lossy(&output.stderr);
 
-    println!("{}", err);
+    println!("{err}");
 
     // The error contains the absolute paths, so we cannot assert the whole string
     assert!(err.starts_with("error: contract rel defined at "));
@@ -174,7 +174,7 @@ fn bad_escape() {
     let output = not_ok.get_output();
     let err = String::from_utf8_lossy(&output.stderr);
 
-    println!("{}", err);
+    println!("{err}");
 
     // The error contains the absolute paths, so we cannot assert the whole string
     assert!(err.contains(": \\x escape should be followed by two hex digits"));
@@ -209,7 +209,7 @@ fn backslash_path() {
     let output = not_ok.get_output();
     let err = String::from_utf8_lossy(&output.stderr);
 
-    println!("{}", err);
+    println!("{err}");
 
     #[cfg(windows)]
     assert!(err.is_empty());

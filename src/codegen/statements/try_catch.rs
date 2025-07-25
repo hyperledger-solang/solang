@@ -446,7 +446,7 @@ fn insert_catch_clauses(
         .iter()
         .enumerate()
         .map(|(n, clause)| {
-            let clause_body_block = cfg.new_basic_block(format!("catch_error_{}", n));
+            let clause_body_block = cfg.new_basic_block(format!("catch_error_{n}"));
 
             cfg.set_basic_block(clause_body_block);
             let types = &[Type::Bytes(4), clause.param.as_ref().unwrap().ty.clone()];
