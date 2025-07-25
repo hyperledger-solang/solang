@@ -74,7 +74,7 @@ fn ttl_basic_temporary() {
             /// Extend the temporary entry TTL to become at least 7000 ledgers,
             /// when its TTL is smaller than 3000 ledgers.
             function extend_temp_ttl() public view returns (int64) {
-                return tempCount.extensoroban-sdk = { version = "22.0.7", features = ["testutils"], optional = true }dTtl(3000, 7000);
+                return tempCount.extendTtl(3000, 7000);
             }
         }"#,
         |env| {
