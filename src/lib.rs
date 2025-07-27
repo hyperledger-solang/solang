@@ -179,11 +179,6 @@ pub fn parse_and_resolve_with_options(
     options: Option<&codegen::Options>,
 ) -> sema::ast::Namespace {
     let mut ns = sema::ast::Namespace::new(target);
-    
-    // Set strict mode if options are provided
-    if let Some(opts) = options {
-        ns.strict_soroban_types = opts.strict_soroban_types;
-    }
 
     match resolver.resolve_file(None, filename) {
         Err(message) => {
