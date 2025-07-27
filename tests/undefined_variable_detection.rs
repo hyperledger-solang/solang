@@ -636,7 +636,46 @@ fn try_catch() {
 
     let ns = parse_and_codegen(file);
     let errors = ns.diagnostics.errors();
-    assert_eq!(errors.len(), 0);
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].message, "Variable 'r' is undefined");
+    assert_eq!(errors[0].notes.len(), 1);
+    assert_eq!(
+        errors[0].notes[0].message,
+        "Variable read before being defined"
+    );
+
+    let file = r#"
+    contract AddNumbers { function add(uint256 a, uint256 b) external pure returns (uint256 c) {c = b;} }
+    contract Example {
+        AddNumbers addContract;
+        event StringFailure(string stringFailure);
+        event BytesFailure(bytes bytesFailure);
+
+        function exampleFunction(uint256 _a, uint256 _b) public returns (bytes c) {
+            bytes r;
+            try addContract.add(_a, _b) returns (uint256 _value) {
+                return r;
+            } catch Error(string memory _err) {
+                r = hex"ABCD";
+                emit StringFailure(_err);
+            } catch (bytes memory _err) {
+                emit BytesFailure(_err);
+            }
+
+            return r;
+        }
+    }
+    "#;
+
+    let ns = parse_and_codegen(file);
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].message, "Variable 'r' is undefined");
+    assert_eq!(errors[0].notes.len(), 2);
+    assert_eq!(
+        errors[0].notes[0].message,
+        "Variable read before being defined"
+    );
 
     let file = r#"
     contract AddNumbers { function add(uint256 a, uint256 b) external pure returns (uint256 c) {c = b;} }
@@ -665,34 +704,13 @@ fn try_catch() {
 
     let ns = parse_and_codegen(file);
     let errors = ns.diagnostics.errors();
-    assert_eq!(errors.len(), 0);
-
-    let file = r#"
-    contract AddNumbers { function add(uint256 a, uint256 b) external pure returns (uint256 c) {c = b;} }
-    contract Example {
-        AddNumbers addContract;
-        event StringFailure(string stringFailure);
-        event BytesFailure(bytes bytesFailure);
-
-        function exampleFunction(uint256 _a, uint256 _b) public returns (bytes c) {
-            bytes r;
-            try addContract.add(_a, _b) returns (uint256 _value) {
-                return r;
-            } catch Error(string memory _err) {
-                r = hex"ABCD";
-                emit StringFailure(_err);
-            } catch (bytes memory _err) {
-                emit BytesFailure(_err);
-            }
-
-            return r;
-        }
-    }
-    "#;
-
-    let ns = parse_and_codegen(file);
-    let errors = ns.diagnostics.errors();
-    assert_eq!(errors.len(), 0);
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].message, "Variable 'r' is undefined");
+    assert_eq!(errors[0].notes.len(), 1);
+    assert_eq!(
+        errors[0].notes[0].message,
+        "Variable read before being defined"
+    );
 
     let file = r#"
     contract AddNumbers { function add(uint256 a, uint256 b) external pure returns (uint256 c) {c = b;} }
@@ -720,5 +738,11 @@ fn try_catch() {
 
     let ns = parse_and_codegen(file);
     let errors = ns.diagnostics.errors();
-    assert_eq!(errors.len(), 0);
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].message, "Variable 'r' is undefined");
+    assert_eq!(errors[0].notes.len(), 1);
+    assert_eq!(
+        errors[0].notes[0].message,
+        "Variable read before being defined"
+    );
 }
