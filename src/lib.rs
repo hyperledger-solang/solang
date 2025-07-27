@@ -176,7 +176,7 @@ pub fn parse_and_resolve_with_options(
     filename: &OsStr,
     resolver: &mut FileResolver,
     target: Target,
-    options: Option<&codegen::Options>,
+    _options: Option<&codegen::Options>,
 ) -> sema::ast::Namespace {
     let mut ns = sema::ast::Namespace::new(target);
 
