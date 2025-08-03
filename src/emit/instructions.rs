@@ -431,10 +431,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         Instr::AssertFailure { encoded_args: None } => {
             target.assert_failure(
                 bin,
-                bin.context
-                    .i8_type()
-                    .ptr_type(AddressSpace::default())
-                    .const_null(),
+                bin.context.ptr_type(AddressSpace::default()).const_null(),
                 bin.context.i32_type().const_zero(),
             );
         }
@@ -601,7 +598,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             if !res.is_empty() {
                 for (i, v) in callee.returns.iter().enumerate() {
                     let load_ty = if v.ty.is_reference_type(bin.ns) {
-                        bin.llvm_type(&v.ty)
+                        bin.context
                             .ptr_type(AddressSpace::default())
                             .as_basic_type_enum()
                     } else {
@@ -669,11 +666,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let ptr_ok = bin.context.append_basic_block(function, "fn_ptr_ok");
             let ptr_nil_block = bin.context.append_basic_block(function, "fn_ptr_nil");
-            let nil_ptr = bin
-                .context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null();
+            let nil_ptr = bin.context.ptr_type(AddressSpace::default()).const_null();
             let is_ptr_nil = bin
                 .builder
                 .build_int_compare(IntPredicate::EQ, nil_ptr, callable, "check_nil_ptr")

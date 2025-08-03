@@ -135,9 +135,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 // A constant string, or array, is represented by a struct with two fields: a pointer to the data, and its length.
                 let ty = bin.context.struct_type(
                     &[
-                        bin.llvm_type(&Type::Bytes(bs.len() as u8))
-                            .ptr_type(AddressSpace::default())
-                            .into(),
+                        bin.context.ptr_type(AddressSpace::default()).into(),
                         bin.context.i64_type().into(),
                     ],
                     false,
@@ -1079,7 +1077,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let ptr = expression(target, bin, expr, vartab, function).into_pointer_value();
 
             if ty.is_reference_type(bin.ns) && !ty.is_fixed_reference_type(bin.ns) {
-                let loaded_type = bin.llvm_type(ty).ptr_type(AddressSpace::default());
+                let loaded_type = bin.context.ptr_type(AddressSpace::default());
                 let value = bin.builder.build_load(loaded_type, ptr, "").unwrap();
                 // if the pointer is null, it needs to be allocated
                 let allocation_needed = bin
@@ -1134,7 +1132,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let combined_struct_ptr = bin
                     .builder
                     .build_phi(
-                        llvm_ty.ptr_type(AddressSpace::default()),
+                        bin.context.ptr_type(AddressSpace::default()),
                         &format!("ptr_{}", ty.to_string(bin.ns)),
                     )
                     .unwrap();
@@ -2314,7 +2312,7 @@ fn runtime_cast<'a>(
             .builder
             .build_int_to_ptr(
                 val.into_int_value(),
-                bin.llvm_type(to).ptr_type(AddressSpace::default()),
+                bin.context.ptr_type(AddressSpace::default()),
                 "int_to_ptr",
             )
             .unwrap()
