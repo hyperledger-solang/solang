@@ -3,94 +3,77 @@ import { readFileSync } from 'fs';
 import { expect } from 'chai';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { call_contract_function } from './test_helpers.js';  // Helper to interact with the contract
+import { call_contract_function, toSafeJson } from './test_helpers.js';
+import { Server } from '@stellar/stellar-sdk/rpc';
 
 const __filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(__filename);
 
 describe('StorageTypes', () => {
-  let keypair;
-  const server = new StellarSdk.SorobanRpc.Server(
-    "https://soroban-testnet.stellar.org:443",
-  );
+  let keypair, contract;
+  const server = new Server("https://soroban-testnet.stellar.org");
 
-  let contractAddr;
-  let contract;
   before(async () => {
     console.log('Setting up storage_types contract tests...');
 
-    // Read secret from file
     const secret = readFileSync('alice.txt', 'utf8').trim();
     keypair = StellarSdk.Keypair.fromSecret(secret);
 
-    let contractIdFile = path.join(dirname, '.soroban', 'contract-ids', 'storage_types.txt');
-    // Read contract address from file
-    contractAddr = readFileSync(contractIdFile, 'utf8').trim().toString();
+    const contractIdFile = path.join(dirname, '.stellar', 'contract-ids', 'storage_types.txt');
+    const contractAddr = readFileSync(contractIdFile, 'utf8').trim();
 
-    // Load contract
     contract = new StellarSdk.Contract(contractAddr);
   });
 
   it('check initial values', async () => {
-    // Check initial values of all storage variables
     let res = await call_contract_function("sesa", server, keypair, contract);
-    let sesa = res.returnValue().value();
-    expect(sesa.toString()).eq("1");
+    expect(res.status, `sesa() call failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
+    expect(res.returnValue, `unexpected sesa: ${toSafeJson(res)}`).to.equal(1n);
 
     res = await call_contract_function("sesa1", server, keypair, contract);
-    let sesa1 = res.returnValue().value();
-    expect(sesa1.toString()).eq("1");
+    expect(res.status, `sesa1() call failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
+    expect(res.returnValue, `unexpected sesa1: ${toSafeJson(res)}`).to.equal(1n);
 
     res = await call_contract_function("sesa2", server, keypair, contract);
-    let sesa2 = res.returnValue().value();
-    expect(sesa2.toString()).eq("2");
+    expect(res.status, `sesa2() call failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
+    expect(res.returnValue, `unexpected sesa2: ${toSafeJson(res)}`).to.equal(2n);
 
     res = await call_contract_function("sesa3", server, keypair, contract);
-    let sesa3 = res.returnValue().value();
-    expect(sesa3.toString()).eq("2");
+    expect(res.status, `sesa3() call failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
+    expect(res.returnValue, `unexpected sesa3: ${toSafeJson(res)}`).to.equal(2n);
   });
 
   it('increment values', async () => {
-    // Increment all values by calling the inc function
-    await call_contract_function("inc", server, keypair, contract);
+    let incRes = await call_contract_function("inc", server, keypair, contract);
+    expect(incRes.status, `inc() call failed: ${toSafeJson(incRes)}`).to.equal("SUCCESS");
 
-    // Check the incremented values
     let res = await call_contract_function("sesa", server, keypair, contract);
-    let sesa = res.returnValue().value();
-    expect(sesa.toString()).eq("2");
+    expect(res.returnValue).to.equal(2n);
 
     res = await call_contract_function("sesa1", server, keypair, contract);
-    let sesa1 = res.returnValue().value();
-    expect(sesa1.toString()).eq("2");
+    expect(res.returnValue).to.equal(2n);
 
     res = await call_contract_function("sesa2", server, keypair, contract);
-    let sesa2 = res.returnValue().value();
-    expect(sesa2.toString()).eq("3");
+    expect(res.returnValue).to.equal(3n);
 
     res = await call_contract_function("sesa3", server, keypair, contract);
-    let sesa3 = res.returnValue().value();
-    expect(sesa3.toString()).eq("3");
+    expect(res.returnValue).to.equal(3n);
   });
 
   it('decrement values', async () => {
-    // Decrement all values by calling the dec function
-    await call_contract_function("dec", server, keypair, contract);
+    let decRes = await call_contract_function("dec", server, keypair, contract);
+    expect(decRes.status, `dec() call failed: ${toSafeJson(decRes)}`).to.equal("SUCCESS");
 
-    // Check the decremented values
     let res = await call_contract_function("sesa", server, keypair, contract);
-    let sesa = res.returnValue().value();
-    expect(sesa.toString()).eq("1");
+    expect(res.returnValue).to.equal(1n);
 
     res = await call_contract_function("sesa1", server, keypair, contract);
-    let sesa1 = res.returnValue().value();
-    expect(sesa1.toString()).eq("1");
+    expect(res.returnValue).to.equal(1n);
 
     res = await call_contract_function("sesa2", server, keypair, contract);
-    let sesa2 = res.returnValue().value();
-    expect(sesa2.toString()).eq("2");
+    expect(res.returnValue).to.equal(2n);
 
     res = await call_contract_function("sesa3", server, keypair, contract);
-    let sesa3 = res.returnValue().value();
-    expect(sesa3.toString()).eq("2");
+    expect(res.returnValue).to.equal(2n);
   });
 });

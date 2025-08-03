@@ -3,46 +3,40 @@ import { readFileSync } from 'fs';
 import { expect } from 'chai';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { call_contract_function } from './test_helpers.js';
+import { call_contract_function, toSafeJson } from './test_helpers.js';
+import { Server } from '@stellar/stellar-sdk/rpc';
 
 const __filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(__filename);
 
 describe('Runtime Error', () => {
-  let keypair;
-  const server = new StellarSdk.SorobanRpc.Server(
-    "https://soroban-testnet.stellar.org:443",
-  );
+  let keypair, contract;
+  const server = new Server("https://soroban-testnet.stellar.org");
 
-  let contractAddr;
-  let contract;
   before(async () => {
-
     console.log('Setting up runtime_error.sol contract tests...');
 
     // read secret from file
     const secret = readFileSync('alice.txt', 'utf8').trim();
     keypair = StellarSdk.Keypair.fromSecret(secret);
 
-    let contractIdFile = path.join(dirname, '.soroban', 'contract-ids', 'Error.txt');
-    // read contract address from file
-    contractAddr = readFileSync(contractIdFile, 'utf8').trim().toString();
+    const contractIdFile = path.join(dirname, '.stellar', 'contract-ids', 'Error.txt');
+    const contractAddr = readFileSync(contractIdFile, 'utf8').trim();
 
-    // load contract
     contract = new StellarSdk.Contract(contractAddr);
 
-    // call decrement once. The second call however will result in a runtime error
+    // call decrement once (to reach error state on the next call)
     await call_contract_function("decrement", server, keypair, contract);
   });
 
   it('prints error', async () => {
+    // decrement the counter again, expecting a runtime error
+    const res = await call_contract_function("decrement", server, keypair, contract);
 
-    // decrement the counter again, resulting in a runtime error
-    let res = await call_contract_function("decrement", server, keypair, contract);
-
-    expect(res).to.contain('runtime_error: math overflow in runtime_error.sol:6:9-19');
+    expect(res.status).to.not.equal("SUCCESS");
+    // The error message may be in res.error or a safe string version
+    const errorString = res.error || toSafeJson(res);
+    expect(errorString).to.contain('runtime_error: math overflow in runtime_error.sol:6:9-19');
   });
 
 });
-
-
