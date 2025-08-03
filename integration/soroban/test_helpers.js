@@ -1,82 +1,99 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
 
-export async function call_contract_function(method, server, keypair, contract, ... params) {
-    let res = null;
+// Utility to decode Soroban return value (ScVal) to native JS
+function decodeReturnValue(scval) {
+    if (!scval) return undefined;
+    if (StellarSdk.scValToNative) {
+        return StellarSdk.scValToNative(scval);
+    }
+    if (scval._value) return scval._value;
+    return scval;
+}
+
+export async function call_contract_function(method, server, keypair, contract, ...params) {
+    let result = {
+        status: null,
+        returnValue: null,
+        error: null,
+        raw: null,
+    };
 
     try {
         let builtTransaction = new StellarSdk.TransactionBuilder(await server.getAccount(keypair.publicKey()), {
             fee: StellarSdk.BASE_FEE,
             networkPassphrase: StellarSdk.Networks.TESTNET,
-        }).addOperation(contract.call(method, ...params)).setTimeout(30).build();
+        })
+            .addOperation(contract.call(method, ...params))
+            .setTimeout(30)
+            .build();
 
         let preparedTransaction = await server.prepareTransaction(builtTransaction);
-
-        // Sign the transaction with the source account's keypair.
         preparedTransaction.sign(keypair);
 
         let sendResponse = await server.sendTransaction(preparedTransaction);
 
         if (sendResponse.status === "PENDING") {
             let getResponse = await server.getTransaction(sendResponse.hash);
-            // Poll `getTransaction` until the status is not "NOT_FOUND"
             while (getResponse.status === "NOT_FOUND") {
                 console.log("Waiting for transaction confirmation...");
-                // Wait one second
                 await new Promise((resolve) => setTimeout(resolve, 1000));
-                // See if the transaction is complete
                 getResponse = await server.getTransaction(sendResponse.hash);
             }
 
+            result.raw = getResponse;
+
             if (getResponse.status === "SUCCESS") {
-                // Ensure the transaction's resultMetaXDR is not empty
-                if (!getResponse.resultMetaXdr) {
-                    throw "Empty resultMetaXDR in getTransaction response";
+                result.status = "SUCCESS";
+                if (getResponse.returnValue) {
+                    try {
+                        result.returnValue = decodeReturnValue(getResponse.returnValue);
+                    } catch (e) {
+                        result.error = "Failed to decode returnValue: " + e.toString();
+                    }
                 }
-                // Extract and return the return value from the contract
-                let transactionMeta = getResponse.resultMetaXdr;
-                let returnValue = transactionMeta.v3().sorobanMeta();
-                res = returnValue;
             } else {
-                throw `Transaction failed: ${getResponse.resultXdr}`;
+                result.status = "ERROR";
+                result.error = "Transaction failed: " + (getResponse.resultXdr || JSON.stringify(getResponse));
             }
         } else if (sendResponse.status === "FAILED") {
-            // Handle expected failure and return the error message
+            result.status = "ERROR";
             if (sendResponse.errorResultXdr) {
-                const errorXdr = StellarSdk.xdr.TransactionResult.fromXDR(sendResponse.errorResultXdr, 'base64');
-                const errorRes = errorXdr.result().results()[0].tr().invokeHostFunctionResult().code().value;
-                console.log(`Transaction error: ${errorRes}`);
-                res = errorRes;
+                result.error = "Transaction failed: " + sendResponse.errorResultXdr;
             } else {
-                throw "Transaction failed but no errorResultXdr found";
+                result.error = "Transaction failed, unknown error";
             }
+            result.raw = sendResponse;
         } else {
-            throw sendResponse.errorResultXdr;
+            result.status = "ERROR";
+            result.error = "Unknown sendResponse status: " + sendResponse.status;
+            result.raw = sendResponse;
         }
     } catch (err) {
-        // Return the error as a string instead of failing the test
-        console.log("Transaction processing failed");
-        console.log(err);
-        res = err.toString();
+        result.status = "ERROR";
+        result.error = "Exception: " + err.toString();
     }
 
-    return res;
+    return result;
 }
 
-export function extractLogEvent(diagnosticEvents) {
-    // Convert events into human-readable format
-    const humanReadableEvents = StellarSdk.humanizeEvents(diagnosticEvents);
+// Uses StellarSdk.humanizeEvents to extract log messages from diagnosticEventsXdr
+export function extractLogMessagesFromDiagnosticEvents(raw) {
+  if (!raw.diagnosticEventsXdr || !Array.isArray(raw.diagnosticEventsXdr)) return [];
+  try {
+    // humanizeEvents expects an array of DiagnosticEvent XDRs (base64 or already parsed)
+    const events = StellarSdk.humanizeEvents(raw.diagnosticEventsXdr);
+    // Find log events and collect their messages
+    return events
+      .filter(ev => ev.type === "diagnostic" && ev.topics && ev.topics.includes("log"))
+      .map(ev => (Array.isArray(ev.data) ? ev.data.join(" ") : ev.data));
+  } catch (e) {
+    return [];
+  }
+}
 
-    // Find the log event
-    const logEvent = humanReadableEvents.find(event =>
-        event.type === "diagnostic" && event.topics.includes("log")
-    );
-
-    if (logEvent) {
-        return {
-            contractId: logEvent.contractId || "Unknown Contract",
-            logMessages: Array.isArray(logEvent.data) ? logEvent.data : [logEvent.data]
-        };
-    }
-
-    return null; // No log event found
+// Helper to stringify BigInt values (for assertion error output)
+export function toSafeJson(obj) {
+  return JSON.stringify(obj, (_key, value) =>
+    typeof value === 'bigint' ? value.toString() : value,
+  2);
 }

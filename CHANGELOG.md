@@ -4,15 +4,49 @@ will be documented here.
 
 ## Unreleased
 
-### Added
-- **Soroban** Work on adding support for [Stellar's Soroban](https://soroban.stellar.org/docs) contracts platforms started, by adding a skeleton that supports the Soroban runtime. [Salaheldin Soliman](https://github.com/salaheldinsoliman)
+## v0.3.4 London
 
+### Added
+- **Soroban** Support for [Stellar Asset Contract(SAC)](https://developers.stellar.org/docs/tokens/stellar-asset-contract)
+- **Soroban** Support for [Cross Contract Calls](https://developers.stellar.org/docs/build/smart-contracts/example-contracts/cross-contract-call)
+- **Soroban** Support for [Soroban Authorization Framework](https://developers.stellar.org/docs/learn/fundamentals/contract-development/authorization)
+- **Soroban** Support for different [Soroban Storage types](https://developers.stellar.org/docs/build/guides/storage/choosing-the-right-storage)
+- **Soroban** Work on adding support for [Stellar's Soroban](https://soroban.stellar.org/docs) contracts platforms started, by adding a skeleton that supports the Soroban runtime. [Salaheldin Soliman](https://github.com/salaheldinsoliman)
 - The `string.concat()` and `bytes.concat()` builtin functions are supported. [seanyoung](https://github.com/seanyoung)
+- **Experimental**: Three address code format IR for the CFG has been implemented (disabled by default).
+  [fanyi-zhao](https://github.com/fanyi-zhao).
+- **Polkadot**: Compatibility with ink! v5.0 metadata and substrate-contracts-node v0.39.0
+- Implement event selectors [seanyoung](https://github.com/seanyoung)
+- Add a feature flag for compiling language server [xermicus](https://github.com/xermicus)
+- Parsing the pragma solidity version numbers, making this information available in the downstream 
+  compilation pipeline [seanyoung](https://github.com/seanyoung)
 
 ### Changed
+- **Polkadot/BREAKING**: Event encoding and topics follow [ink! v5.0](https://use.ink/faq/migrating-from-ink-4-to-5#events-20-1)
 - **BREAKING** The non-standard extension of concatenating strings using the `+` operator
   has been removed, use `string.concat()` instead. [seanyoung](https://github.com/seanyoung)
 - Removed the `--no-log-api-return-codes` compile flag as this is now done by the runtime [xermicus](https://github.com/xermicus)
+- **Solana/BREAKING**: Remove balance, transfer, and send builtins from Solana [LucasSte](https://github.com/LucasSte)
+- No longer support numbers in octal notation [seanyoung](https://github.com/seanyoung)
+- Moved to LLVM version 16 [seanyoung](https://github.com/seanyoung)
+- Improve overloaded function call diagnostics: From Solidity 0.6 onwards, overloaded functions or events
+  resolving to multiple candidates are an error. In earlier versions, the first result is used.
+  [seanyoung](https://github.com/seanyoung)
+- **Polkadot**: Implement the caller_is_root runtime API as a builtin [xermicus](https://github.com/xermicus)
+
+### Fixed
+- [Two Infinite loops in codegen](https://github.com/hyperledger-solang/solang/commit/c6db2acc8a3927fae17c437eeeea0d0ae49a67df), thanks to @smoelius.
+- [Handle abi.encode() with infinite empty arguments](https://github.com/hyperledger-solang/solang/commit/12a6d83b91f7f5a4cc48156e1112638e733e143a), thanks to @smoelius.
+- Unreachable code, function types with parameter/return names and unknown assembly flags are warnings
+  instead of errors, matching with solc. [xermicus](https://github.com/xermicus)
+- Fixed a bunch of typos in the documentation [divdeploy](https://github.com/divdeploy)
+- Clean up the LLD linker context after linking each contract, preventing potential issues when compiling
+  multiple contracts at once. [xermicus](https://github.com/xermicus)
+- Expression statement should be followed by a semicolon, fixing a bug where "_;" was incorrectly parsed
+  as a variable. [seanyoung](https://github.com/seanyoung)
+- Represent type(T) correctly in the AST, fixing various related issues [seanyoung](https://github.com/seanyoung)
+- Fix a bug in abi.encodeCall() argument parsing when there is only a single argument [seanyoung](https://github.com/seanyoung)
+- Fixed a codegen bug when the RHS of a shift expression is a struct member [PaddyClark0](https://github.com/PaddyClark0)
 
 ## v0.3.3 Atlantis
 

@@ -416,7 +416,7 @@ named arguments and returns.
   keccak256 calculation.
 
 If you access a non-existing field on a mapping, all the fields will read as zero. It
-is common practise to have a boolean field called ``exists``. Since mappings are not iterable,
+is common practice to have a boolean field called ``exists``. Since mappings are not iterable,
 it is not possible to ``delete`` an entire mapping itself, but individual mapping entries can be deleted.
 
 .. note::

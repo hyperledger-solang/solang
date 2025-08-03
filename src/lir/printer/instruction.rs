@@ -23,7 +23,7 @@ impl Printer<'_> {
                 self.print_rhs_operand(f, data_len);
                 write!(f, ";").unwrap();
             }
-            Instruction::ReturnCode { code, .. } => write!(f, "return_code \"{}\";", code).unwrap(),
+            Instruction::ReturnCode { code, .. } => write!(f, "return_code \"{code}\";").unwrap(),
             Instruction::Set { res, expr, .. } => {
                 let res_op = self.get_var_operand(res);
                 self.print_lhs_operand(f, &res_op);
@@ -81,7 +81,7 @@ impl Printer<'_> {
                         write!(f, ", ").unwrap();
                         self.print_lhs_operand(f, &res_op);
                     }
-                    None => write!(f, "{}, _", res).unwrap(),
+                    None => write!(f, "{res}, _").unwrap(),
                 };
 
                 write!(f, " = ").unwrap();
@@ -90,11 +90,10 @@ impl Printer<'_> {
                 match constructor_no {
                     Some(constructor_no) => write!(
                         f,
-                        "constructor(no: {}, contract_no:{})",
-                        constructor_no, contract_no
+                        "constructor(no: {constructor_no}, contract_no:{contract_no})"
                     )
                     .unwrap(),
-                    None => write!(f, "constructor(no: _, contract_no:{})", contract_no).unwrap(),
+                    None => write!(f, "constructor(no: _, contract_no:{contract_no})").unwrap(),
                 };
 
                 write!(f, " ").unwrap();
@@ -243,14 +242,14 @@ impl Printer<'_> {
 
                 match call {
                     InternalCallTy::Builtin { ast_func_no, .. } => {
-                        write!(f, "builtin#{}", ast_func_no).unwrap();
+                        write!(f, "builtin#{ast_func_no}").unwrap();
                     }
                     InternalCallTy::Static { cfg_no, .. } => {
-                        write!(f, "function#{}", cfg_no).unwrap()
+                        write!(f, "function#{cfg_no}").unwrap()
                     }
                     InternalCallTy::Dynamic(op) => self.print_rhs_operand(f, op),
                     InternalCallTy::HostFunction { name } => {
-                        write!(f, "host_function#{}", name).unwrap()
+                        write!(f, "host_function#{name}").unwrap()
                     }
                 };
 
@@ -303,7 +302,7 @@ impl Printer<'_> {
                     None => write!(f, "_").unwrap(),
                 };
 
-                write!(f, " = call_ext [{}] ", callty).unwrap();
+                write!(f, " = call_ext [{callty}] ").unwrap();
 
                 match address {
                     Some(address) => {
@@ -355,12 +354,7 @@ impl Printer<'_> {
 
                 match contract_function_no {
                     Some((contract_no, function_no)) => {
-                        write!(
-                            f,
-                            "contract_no:{}, function_no:{}",
-                            contract_no, function_no
-                        )
-                        .unwrap();
+                        write!(f, "contract_no:{contract_no}, function_no:{function_no}").unwrap();
                     }
                     None => write!(f, "contract_no:_, function_no:_").unwrap(),
                 };
@@ -407,7 +401,7 @@ impl Printer<'_> {
                 event_no,
                 ..
             } => {
-                write!(f, "emit event#{} to topics[", event_no).unwrap();
+                write!(f, "emit event#{event_no} to topics[").unwrap();
                 for (i, topic) in topics.iter().enumerate() {
                     if i != 0 {
                         write!(f, ", ").unwrap();
@@ -429,7 +423,7 @@ impl Printer<'_> {
                 self.print_rhs_operand(f, value);
                 write!(f, ";").unwrap();
             }
-            Instruction::Branch { block, .. } => write!(f, "br block#{};", block).unwrap(),
+            Instruction::Branch { block, .. } => write!(f, "br block#{block};").unwrap(),
             Instruction::BranchCond {
                 cond,
                 true_block,
@@ -438,7 +432,7 @@ impl Printer<'_> {
             } => {
                 write!(f, "cbr ").unwrap();
                 self.print_rhs_operand(f, cond);
-                write!(f, " block#{} else block#{};", true_block, false_block).unwrap();
+                write!(f, " block#{true_block} else block#{false_block};").unwrap();
             }
             Instruction::Switch {
                 cond,
@@ -455,9 +449,9 @@ impl Printer<'_> {
                     }
                     write!(f, "\n    case:    ").unwrap();
                     self.print_rhs_operand(f, cond);
-                    write!(f, " => block#{}", block).unwrap();
+                    write!(f, " => block#{block}").unwrap();
                 }
-                write!(f, "\n    default: block#{};", default).unwrap();
+                write!(f, "\n    default: block#{default};").unwrap();
             }
             Instruction::Return { value, .. } => {
                 write!(f, "return").unwrap();

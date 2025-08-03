@@ -47,13 +47,20 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     ) -> BasicValueEnum<'a> {
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(bin);
-        let ret = call!(
-            HostFunctions::GetContractData.name(),
+
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                .into_int_value()
+                .const_cast(bin.context.i64_type(), false)
+        } else {
+            *slot
+        };
+
+        // === Call HasContractData ===
+        let has_data_val = call!(
+            HostFunctions::HasContractData.name(),
             &[
-                slot.as_basic_value_enum()
-                    .into_int_value()
-                    .const_cast(bin.context.i64_type(), false)
-                    .into(),
+                slot.into(),
                 bin.context.i64_type().const_int(storage_type, false).into(),
             ]
         )
@@ -62,7 +69,49 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         .unwrap()
         .into_int_value();
 
-        ret.into()
+        // === Use helper to check if it's true ===
+        let condition = is_val_true(bin, has_data_val);
+
+        // === Prepare blocks ===
+        let parent = function;
+        let then_bb = bin.context.append_basic_block(parent, "has_data");
+        let else_bb = bin.context.append_basic_block(parent, "no_data");
+        let merge_bb = bin.context.append_basic_block(parent, "merge");
+
+        bin.builder
+            .build_conditional_branch(condition, then_bb, else_bb)
+            .unwrap();
+
+        // === THEN block: call GetContractData ===
+        bin.builder.position_at_end(then_bb);
+        let value_from_contract = call!(
+            HostFunctions::GetContractData.name(),
+            &[
+                slot.into(),
+                bin.context.i64_type().const_int(storage_type, false).into(),
+            ]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap();
+        bin.builder.build_unconditional_branch(merge_bb).unwrap();
+        let then_value = value_from_contract;
+
+        // === ELSE block: return default ===
+        bin.builder.position_at_end(else_bb);
+        let default_value = type_to_tagged_zero_val(bin, ty);
+
+        bin.builder.build_unconditional_branch(merge_bb).unwrap();
+
+        // === MERGE block with phi node ===
+        bin.builder.position_at_end(merge_bb);
+        let phi = bin
+            .builder
+            .build_phi(bin.context.i64_type(), "storage_result")
+            .unwrap();
+        phi.add_incoming(&[(&then_value, then_bb), (&default_value, else_bb)]);
+
+        phi.as_basic_value()
     }
 
     /// Recursively store a type to storage
@@ -84,16 +133,20 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .module
             .get_function(HostFunctions::PutContractData.name())
             .unwrap();
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                .into_int_value()
+                .const_cast(bin.context.i64_type(), false)
+        } else {
+            *slot
+        };
 
         let value = bin
             .builder
             .build_call(
                 function_value,
                 &[
-                    slot.as_basic_value_enum()
-                        .into_int_value()
-                        .const_cast(bin.context.i64_type(), false)
-                        .into(),
+                    slot.into(),
                     dest.into(),
                     bin.context.i64_type().const_int(storage_type, false).into(),
                 ],
@@ -188,7 +241,61 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
-        unimplemented!()
+        let vec_new = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VectorNew.name())
+                    .unwrap(),
+                &[],
+                "vec_new",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let slot = if slot.is_const() {
+            slot.as_basic_value_enum()
+                .into_int_value()
+                .const_cast(bin.context.i64_type(), false)
+        } else {
+            slot
+        };
+
+        // push the slot to the vector
+        let res = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VecPushBack.name())
+                    .unwrap(),
+                &[vec_new.as_basic_value_enum().into(), slot.into()],
+                "push",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        // push the index to the vector
+        let res = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VecPushBack.name())
+                    .unwrap(),
+                &[res.as_basic_value_enum().into(), index.into()],
+                "push",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+        res
     }
 
     fn storage_push(
@@ -665,4 +772,48 @@ fn encode_value<'a>(value: IntValue<'a>, shift: u64, add: u64, bin: &'a Binary) 
             "encoded",
         )
         .unwrap()
+}
+
+fn is_val_true<'ctx>(bin: &Binary<'ctx>, val: IntValue<'ctx>) -> IntValue<'ctx> {
+    let tag_mask = bin.context.i64_type().const_int(0xff, false);
+    let tag_true = bin.context.i64_type().const_int(1, false);
+
+    let tag = bin
+        .builder
+        .build_and(val, tag_mask, "val_tag")
+        .expect("build_and failed");
+
+    bin.builder
+        .build_int_compare(inkwell::IntPredicate::EQ, tag, tag_true, "is_val_true")
+        .expect("build_int_compare failed")
+}
+
+/// Returns a Val representing a default zero value with the correct Soroban Tag.
+pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<'ctx> {
+    let context = &bin.context;
+    let i64_type = context.i64_type();
+
+    // Tag definitions from CAP-0046
+    let tag = match ty {
+        Type::Bool => 0,        // Tag::False
+        Type::Uint(32) => 4,    // Tag::U32Val
+        Type::Int(32) => 5,     // Tag::I32Val
+        Type::Uint(64) => 6,    // Tag::U64Small
+        Type::Int(64) => 7,     // Tag::I64Small
+        Type::Uint(128) => 10,  // Tag::U128Small
+        Type::Int(128) => 11,   // Tag::I128Small
+        Type::Uint(256) => 12,  // Tag::U256Small
+        Type::Int(256) => 13,   // Tag::I256Small
+        Type::String => 73,     // Tag::StringObject
+        Type::Address(_) => 77, // Tag::AddressObject
+        Type::Void => 2,        // Tag::Void
+        _ => {
+            // Fallback to Void for unsupported types
+            2 // Tag::Void
+        }
+    };
+
+    // All zero body + tag in lower 8 bits
+    let tag_val: u64 = tag;
+    i64_type.const_int(tag_val, false)
 }

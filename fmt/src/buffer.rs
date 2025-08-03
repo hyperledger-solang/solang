@@ -94,8 +94,15 @@ impl<W> FormatBuffer<W> {
             .extend(std::iter::repeat_n(IndentGroup::default(), delta));
     }
 
-    /// Dedent the buffer by delta
+    /// Dedent the buffer by `delta` levels. Panics if `delta` is too large.
     pub fn dedent(&mut self, delta: usize) {
+        if delta > self.indents.len() {
+            panic!(
+                "Cannot dedent by {} levels: only {} levels present",
+                delta,
+                self.indents.len()
+            );
+        }
         self.indents.truncate(self.indents.len() - delta);
     }
 
@@ -336,11 +343,12 @@ impl<W: Write> Write for FormatBuffer<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
 
     const TAB_WIDTH: usize = 4;
 
     #[test]
-    fn test_buffer_indents() -> std::fmt::Result {
+    fn test_buffer_indents() {
         let delta = 1;
 
         let mut buf = FormatBuffer::new(String::new(), TAB_WIDTH);
@@ -366,11 +374,15 @@ mod tests {
         assert_eq!(buf.level(), 0);
         assert_eq!(buf.current_indent_len(), 0);
 
-        // panics on extra dedent
-        let res = std::panic::catch_unwind(|| buf.clone().dedent(delta));
-        assert!(res.is_err());
-
-        Ok(())
+        // should panic on extra dedent
+        let res = catch_unwind(AssertUnwindSafe(|| {
+            let mut buf = buf.clone();
+            buf.dedent(delta);
+        }));
+        assert!(
+            res.is_err(),
+            "Expected panic on extra dedent, but did not get one"
+        );
     }
 
     #[test]

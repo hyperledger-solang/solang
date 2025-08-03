@@ -98,6 +98,7 @@ impl From<inkwell::OptimizationLevel> for OptimizationLevel {
 pub enum HostFunctions {
     PutContractData,
     GetContractData,
+    HasContractData,
     ExtendContractDataTtl,
     ExtendCurrentContractInstanceAndCodeTtl,
     LogFromLinearMemory,
@@ -129,6 +130,7 @@ impl HostFunctions {
         match self {
             HostFunctions::PutContractData => "l._",
             HostFunctions::GetContractData => "l.1",
+            HostFunctions::HasContractData => "l.0",
             HostFunctions::ExtendContractDataTtl => "l.7",
             HostFunctions::ExtendCurrentContractInstanceAndCodeTtl => "l.8",
             HostFunctions::LogFromLinearMemory => "x._",
@@ -411,7 +413,7 @@ fn layout(contract_no: usize, ns: &mut Namespace) {
                 if slot > value {
                     ns.diagnostics.push(Diagnostic::error(
                         exp.loc(),
-                        format!("contract requires at least {} bytes of space", slot),
+                        format!("contract requires at least {slot} bytes of space"),
                     ));
                 } else if value > BigInt::from(MAXIMUM_ACCOUNT_SIZE) {
                     ns.diagnostics.push(Diagnostic::error(
@@ -1837,6 +1839,7 @@ pub enum Builtin {
     AuthAsCurrContract,
     ExtendTtl,
     ExtendInstanceTtl,
+    AccessMapping,
 }
 
 impl From<&ast::Builtin> for Builtin {

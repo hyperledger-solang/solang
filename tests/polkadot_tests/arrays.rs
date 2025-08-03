@@ -1426,11 +1426,10 @@ fn abi_encode_dynamic_array5() {
         "contract Test {{
             function test() external pure returns (uint256[] memory _amounts) {{
                 _amounts = new uint256[](2);
-                _amounts[0] = 0x{};
-                _amounts[1] = 0x{};
+                _amounts[0] = 0x{uint_str_0};
+                _amounts[1] = 0x{uint_str_1};
             }}
-        }}",
-        uint_str_0, uint_str_1
+        }}"
     ));
 
     runtime.function("test", Vec::new());

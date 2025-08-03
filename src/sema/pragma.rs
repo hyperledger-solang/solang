@@ -83,7 +83,7 @@ fn plain_pragma(loc: &pt::Loc, name: &str, value: &str, ns: &mut ast::Namespace)
     } else {
         ns.diagnostics.push(ast::Diagnostic::error(
             *loc,
-            format!("unknown pragma '{}' with value '{}'", name, value),
+            format!("unknown pragma '{name}' with value '{value}'"),
         ));
     }
 }

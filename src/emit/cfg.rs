@@ -55,15 +55,13 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
                 let di_return_type = dibuilder
                     .create_basic_type(&type_name, size as u64, 0x00, di_flags)
                     .unwrap();
-                let param_types = function.get_type().get_param_types();
-                let di_param_types: Vec<DIType<'_>> = param_types
+                let di_param_types: Vec<DIType<'_>> = cfg
+                    .params
                     .iter()
-                    .map(|typ| {
-                        let mut param_tname = "size_".to_owned();
-                        let param_size = typ.size_of().unwrap().get_type().get_bit_width();
-                        param_tname.push_str(&size.to_string());
+                    .map(|param| {
+                        let name = param.ty.to_string(bin.ns);
                         dibuilder
-                            .create_basic_type(&param_tname, param_size as u64, 0x00, di_flags)
+                            .create_basic_type(&name, param.ty.bits(bin.ns).into(), 0x00, di_flags)
                             .unwrap()
                             .as_type()
                     })
@@ -120,7 +118,7 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
             Storage::Local if v.ty.is_reference_type(bin.ns) && !v.ty.is_contract_storage() => {
                 // a null pointer means an empty, zero'ed thing, be it string, struct or array
                 let value = bin
-                    .llvm_type(&v.ty)
+                    .context
                     .ptr_type(AddressSpace::default())
                     .const_null()
                     .into();

@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub(super) mod target;
-use crate::codegen::{
-    cfg::{ASTFunction, ControlFlowGraph},
-    HostFunctions, Options, STORAGE_INITIALIZER,
-};
+use crate::codegen::{cfg::ControlFlowGraph, HostFunctions, Options};
 
 use crate::emit::cfg::emit_cfg;
 use crate::{emit::Binary, sema::ast};
@@ -18,12 +15,10 @@ use soroban_sdk::xdr::{
     Limited, Limits, ScEnvMetaEntry, ScEnvMetaEntryInterfaceVersion, ScSpecEntry,
     ScSpecFunctionInputV0, ScSpecFunctionV0, ScSpecTypeDef, StringM, WriteXdr,
 };
-use std::ffi::CString;
-use std::sync;
 
 const SOROBAN_ENV_INTERFACE_VERSION: ScEnvMetaEntryInterfaceVersion =
     ScEnvMetaEntryInterfaceVersion {
-        protocol: 22,
+        protocol: 23,
         pre_release: 0,
     };
 
@@ -36,6 +31,10 @@ impl HostFunctions {
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into(), ty.into()], false),
             HostFunctions::GetContractData => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::HasContractData => bin
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
@@ -141,7 +140,7 @@ impl SorobanTarget {
         Self::emit_functions_with_spec(contract, &mut bin, context, contract_no, &mut export_list);
         bin.internalize(export_list.as_slice());
 
-        Self::emit_initializer(&mut bin, ns);
+        //Self::emit_initializer(&mut binary, ns, contract.constructors(ns).first());
 
         Self::emit_env_meta_entries(context, &mut bin, opt);
 
@@ -258,7 +257,9 @@ impl SorobanTarget {
 
                             match ty {
                                 ast::Type::Uint(32) => ScSpecTypeDef::U32,
+                                ast::Type::Int(32) => ScSpecTypeDef::I32,
                                 ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                                &ast::Type::Int(64) => ScSpecTypeDef::I64,
                                 ast::Type::Int(128) => ScSpecTypeDef::I128,
                                 ast::Type::Uint(128) => ScSpecTypeDef::U128,
                                 ast::Type::Bool => ScSpecTypeDef::Bool,
@@ -285,6 +286,7 @@ impl SorobanTarget {
                         };
                         match ty {
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
+                            ast::Type::Int(32) => ScSpecTypeDef::I32,
                             ast::Type::Uint(64) => ScSpecTypeDef::U64,
                             ast::Type::Int(128) => ScSpecTypeDef::I128,
                             ast::Type::Uint(128) => ScSpecTypeDef::U128,
@@ -294,7 +296,7 @@ impl SorobanTarget {
                             ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                             ast::Type::String => ScSpecTypeDef::String,
                             ast::Type::Void => ScSpecTypeDef::Void,
-                            _ => panic!("unsupported return type {:?}", ty),
+                            _ => panic!("unsupported return type {ty:?}"),
                         }
                     }) // TODO: Map type.
                     .collect::<Vec<_>>()
@@ -336,6 +338,7 @@ impl SorobanTarget {
         let host_functions = [
             HostFunctions::PutContractData,
             HostFunctions::GetContractData,
+            HostFunctions::HasContractData,
             HostFunctions::ExtendContractDataTtl,
             HostFunctions::ExtendCurrentContractInstanceAndCodeTtl,
             HostFunctions::LogFromLinearMemory,
@@ -370,40 +373,5 @@ impl SorobanTarget {
                 Some(Linkage::External),
             );
         }
-    }
-
-    fn emit_initializer(bin: &mut Binary, _ns: &ast::Namespace) {
-        let mut cfg = ControlFlowGraph::new("__constructor".to_string(), ASTFunction::None);
-
-        cfg.public = true;
-        let void_param = ast::Parameter::new_default(ast::Type::Void);
-        cfg.returns = sync::Arc::new(vec![void_param]);
-
-        Self::emit_function_spec_entry(bin.context, &cfg, "__constructor".to_string(), bin);
-
-        let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
-        let mut storage_initializers = bin
-            .functions
-            .values()
-            .filter(|f: &&inkwell::values::FunctionValue| f.get_name() == function_name.as_c_str());
-        let storage_initializer = *storage_initializers
-            .next()
-            .expect("storage initializer is always present");
-        assert!(storage_initializers.next().is_none());
-
-        let void_type = bin.context.i64_type().fn_type(&[], false);
-        let constructor =
-            bin.module
-                .add_function("__constructor", void_type, Some(Linkage::External));
-        let entry = bin.context.append_basic_block(constructor, "entry");
-
-        bin.builder.position_at_end(entry);
-        bin.builder
-            .build_call(storage_initializer, &[], "storage_initializer")
-            .unwrap();
-
-        // return zero
-        let zero_val = bin.context.i64_type().const_int(2, false);
-        bin.builder.build_return(Some(&zero_val)).unwrap();
     }
 }

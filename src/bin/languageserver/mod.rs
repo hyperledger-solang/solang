@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use forge_fmt::{format_to, parse, FormatterConfig};
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use rust_lapper::{Interval, Lapper};
@@ -18,6 +17,7 @@ use solang::{
     },
     Target,
 };
+use solang_forge_fmt::{format_to, parse, FormatterConfig};
 use solang_parser::pt;
 use std::{
     collections::{HashMap, HashSet},
@@ -2739,7 +2739,7 @@ impl LanguageServer for SolangServer {
         let source = std::fs::read_to_string(source_path).map_err(|err| Error {
             code: ErrorCode::InternalError,
             message: format!("Failed to read file: {uri}").into(),
-            data: Some(Value::String(format!("{:?}", err))),
+            data: Some(Value::String(format!("{err:?}"))),
         })?;
         let source_parsed = parse(&source).map_err(|err| {
             let err = err
@@ -2763,7 +2763,7 @@ impl LanguageServer for SolangServer {
         format_to(&mut source_formatted, source_parsed, config).map_err(|err| Error {
             code: ErrorCode::InternalError,
             message: format!("Failed to format file: {uri}").into(),
-            data: Some(Value::String(format!("{:?}", err))),
+            data: Some(Value::String(format!("{err:?}"))),
         })?;
 
         // create a `TextEdit` instance that replaces the contents of the file with the formatted text
