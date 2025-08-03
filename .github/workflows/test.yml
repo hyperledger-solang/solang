@@ -317,7 +317,8 @@ jobs:
       run: |
         chmod 755 ./bin/solang
         echo "$(pwd)/bin" >> $GITHUB_PATH
-    
+    - name: Install system dependencies for stellar-cli
+      run: apt-get update && apt-get install -y libdbus-1-dev pkg-config
     - name: Install Soroban
       run: cargo install --locked stellar-cli --version 23.0.0
     - name: Add wasm32v1-none target
