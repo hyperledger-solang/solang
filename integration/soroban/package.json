@@ -1,7 +1,7 @@
 {
     "type": "module",
     "dependencies": {
-      "@stellar/stellar-sdk": "^12.0.1",
+      "@stellar/stellar-sdk": "14.0.0-rc.2",
       "chai": "^5.1.1",
       "dotenv": "^16.4.5",
       "mocha": "^10.4.0"

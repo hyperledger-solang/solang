@@ -319,7 +319,9 @@ jobs:
         echo "$(pwd)/bin" >> $GITHUB_PATH
     
     - name: Install Soroban
-      run: cargo install --locked stellar-cli --version 22.0.0
+      run: cargo install --locked stellar-cli --version 23.0.0
+    - name: Add wasm32v1-none target
+      run: rustup target add wasm32v1-none
     - name: Add cargo install location to PATH
       run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
     - run: npm install
