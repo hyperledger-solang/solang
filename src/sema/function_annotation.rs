@@ -428,8 +428,7 @@ fn body_annotation(
                         diagnostics.push(Diagnostic::error(
                             annotation.value.as_ref().unwrap().loc(),
                             format!(
-                                "'@{}' annotation on a constructor only accepts constant values",
-                                name
+                                "'@{name}' annotation on a constructor only accepts constant values"
                             ),
                         ));
                     }
@@ -492,9 +491,9 @@ fn duplicate_annotation(
 ) {
     diagnostics.push(Diagnostic::error_with_note(
         new_loc,
-        format!("duplicate @{} annotation for {}", name, func_ty),
+        format!("duplicate @{name} annotation for {func_ty}"),
         old_loc,
-        format!("previous @{}", name),
+        format!("previous @{name}"),
     ));
 }
 

@@ -1,11 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
-* @seanyoung @xermicus @LucasSte @salaheldinsoliman
-src/emit/polkadot/ @xermicus
-src/emit/solana/ @LucasSte @seanyoung
+* @seanyoung @salaheldinsoliman
+src/emit/solana/ @seanyoung
 src/emit/soroban/ @salaheldinsoliman
-integration/polkadot/ @xermicus
-integration/subxt-tests/ @xermicus
-integration/solana/ @LucasSte @seanyoung
-integration/anchor/ @LucasSte @seanyoung
+integration/solana/ @seanyoung
+integration/anchor/ @seanyoung
 integration/soroban/ @salaheldinsoliman

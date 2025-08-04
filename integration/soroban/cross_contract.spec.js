@@ -3,14 +3,19 @@ import { readFileSync } from 'fs';
 import { expect } from 'chai';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { call_contract_function, extractLogEvent } from './test_helpers.js';
+import {
+  call_contract_function,
+  extractLogMessagesFromDiagnosticEvents,
+  toSafeJson,
+} from './test_helpers.js';
+import { Server } from '@stellar/stellar-sdk/rpc';
 
 const __filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(__filename);
-const server = new StellarSdk.SorobanRpc.Server("https://soroban-testnet.stellar.org:443");
+const server = new Server("https://soroban-testnet.stellar.org");
 
 function readContractAddress(filename) {
-  return readFileSync(path.join(dirname, '.soroban', 'contract-ids', filename), 'utf8').trim();
+  return readFileSync(path.join(dirname, '.stellar', 'contract-ids', filename), 'utf8').trim();
 }
 
 describe('Cross Contract Calls', () => {
@@ -34,13 +39,13 @@ describe('Cross Contract Calls', () => {
     ].map(StellarSdk.xdr.ScVal.scvU64);
 
     let res = await call_contract_function("add", server, keypair, caller, addr, ...values);
-    let returnValue = res.returnValue().value().toString();
 
-    console.log(returnValue);
-    expect(returnValue).to.equal("3");
+    expect(res.status, `Rust contract tx failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
+    // Return value is already decoded (should be 3n for u64 add)
+    expect(res.returnValue, `Unexpected returnValue for Rust contract: ${toSafeJson(res)}`).to.equal(3n);
 
-    let logMessages = extractLogEvent(res.diagnosticEvents()).logMessages;
-    console.log(logMessages);
+    const logMessages = extractLogMessagesFromDiagnosticEvents(res.raw);
+    expect(logMessages.length > 0, "No logMessages found in Rust contract response").to.be.true;
     expect(logMessages[0]).to.contain('Soroban SDK add function called!');
   });
 
@@ -53,13 +58,12 @@ describe('Cross Contract Calls', () => {
     ].map(StellarSdk.xdr.ScVal.scvU64);
 
     let res = await call_contract_function("add", server, keypair, caller, addr, ...values);
-    let returnValue = res.returnValue().value().toString();
 
-    console.log(returnValue);
-    expect(returnValue).to.equal("3");
+    expect(res.status, `Solidity contract tx failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
+    expect(res.returnValue, `Unexpected returnValue for Solidity contract: ${toSafeJson(res)}`).to.equal(3n);
 
-    let logMessages = extractLogEvent(res.diagnosticEvents()).logMessages;
-    console.log(logMessages);
+    const logMessages = extractLogMessagesFromDiagnosticEvents(res.raw);
+    expect(logMessages.length > 0, "No logMessages found in Solidity contract response").to.be.true;
     expect(logMessages[0]).to.contain('add called in Solidity');
   });
 });

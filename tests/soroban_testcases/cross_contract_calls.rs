@@ -39,7 +39,7 @@ fn simple_cross_contract() {
 
     let addr = runtime.contracts.first().unwrap();
     let res = runtime.invoke_contract(addr, "max", vec![arg, arg2]);
-    println!("first res {:?}", res);
+    println!("first res {res:?}");
 
     let expected: Val = 3_u64.into_val(&runtime.env);
     assert!(expected.shallow_eq(&res));
@@ -50,6 +50,6 @@ fn simple_cross_contract() {
         vec![addr.into_val(&runtime.env), arg, arg2],
     );
 
-    println!("second res {:?}", res);
+    println!("second res {res:?}");
     assert!(expected.shallow_eq(&res));
 }

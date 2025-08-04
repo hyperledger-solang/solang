@@ -864,7 +864,7 @@ fn base_function_compatible(
             .iter()
             .map(|(loc, account_name)| Note {
                 loc: *loc,
-                message: format!("corresponding account '{}' is missing", account_name),
+                message: format!("corresponding account '{account_name}' is missing"),
             })
             .collect::<Vec<Note>>();
 
@@ -880,8 +880,7 @@ fn base_function_compatible(
             diagnostics.push(Diagnostic::error_with_note(
                 *loc_1,
                 format!(
-                    "account '{}' must be declared with the same annotation for overriding",
-                    account_name
+                    "account '{account_name}' must be declared with the same annotation for overriding"
                 ),
                 *loc_2,
                 "location of other declaration".to_string(),

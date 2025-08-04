@@ -6,7 +6,7 @@ use crate::sema::ast;
 use std::cmp::Ordering;
 
 use crate::codegen::{cfg::ReturnCode, Options};
-use crate::sema::ast::{StructType, Type};
+use crate::sema::ast::Type;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::BasicType;
 use inkwell::values::{
@@ -90,16 +90,13 @@ impl SolanaTarget {
 
     fn declare_externals(&self, bin: &mut Binary) {
         let void_ty = bin.context.void_type();
-        let u8_ptr = bin.context.i8_type().ptr_type(AddressSpace::default());
+        let u8_ptr = bin.context.ptr_type(AddressSpace::default());
         let u64_ty = bin.context.i64_type();
         let u32_ty = bin.context.i32_type();
-        let address = bin.address_type().ptr_type(AddressSpace::default());
+        let address = bin.context.ptr_type(AddressSpace::default());
         let seeds = bin.llvm_type(&Type::Ref(Box::new(Type::Slice(Box::new(Type::Bytes(1))))));
 
-        let sol_bytes = bin
-            .context
-            .struct_type(&[u8_ptr.into(), u64_ty.into()], false)
-            .ptr_type(AddressSpace::default());
+        let sol_bytes = bin.context.ptr_type(AddressSpace::default());
 
         let function = bin.module.add_function(
             "sol_log_",
@@ -172,7 +169,7 @@ impl SolanaTarget {
             "sol_log_data",
             void_ty.fn_type(
                 &[
-                    fields.ptr_type(AddressSpace::default()).into(),
+                    bin.context.ptr_type(AddressSpace::default()).into(),
                     u64_ty.into(),
                 ],
                 false,
@@ -218,16 +215,9 @@ impl SolanaTarget {
             u64_ty.fn_type(
                 &[
                     u8_ptr.into(),
-                    bin.module
-                        .get_struct_type("struct.SolAccountInfo")
-                        .unwrap()
-                        .ptr_type(AddressSpace::default())
-                        .into(),
+                    bin.context.ptr_type(AddressSpace::default()).into(),
                     bin.context.i32_type().into(),
-                    bin.context
-                        .i8_type()
-                        .ptr_type(AddressSpace::default())
-                        .into(),
+                    bin.context.ptr_type(AddressSpace::default()).into(),
                     bin.context.i32_type().into(),
                 ],
                 false,
@@ -277,7 +267,7 @@ impl SolanaTarget {
 
         bin.builder
             .build_load(
-                bin.context.i8_type().ptr_type(AddressSpace::default()),
+                bin.context.ptr_type(AddressSpace::default()),
                 unsafe {
                     bin.builder
                         .build_gep(
@@ -513,7 +503,7 @@ impl SolanaTarget {
 
         let entry_ty = self.sparse_entry(bin, key_ty, value_ty);
         let value_offset = unsafe {
-            entry_ty
+            bin.context
                 .ptr_type(AddressSpace::default())
                 .const_null()
                 .const_gep(
@@ -603,10 +593,7 @@ impl SolanaTarget {
         // we are walking the bucket list via the offset ptr
         let offset_ptr_phi = bin
             .builder
-            .build_phi(
-                bin.context.i32_type().ptr_type(AddressSpace::default()),
-                "offset_ptr",
-            )
+            .build_phi(bin.context.ptr_type(AddressSpace::default()), "offset_ptr")
             .unwrap();
 
         offset_ptr_phi.add_incoming(&[(&first_offset_ptr, entry)]);
@@ -1050,7 +1037,7 @@ impl SolanaTarget {
                 let data = bin
                     .builder
                     .build_load(
-                        bin.context.i8_type().ptr_type(AddressSpace::default()),
+                        bin.context.ptr_type(AddressSpace::default()),
                         bin.builder
                             .build_struct_gep(account_info_ty, account_info, 3, "data")
                             .unwrap(),
@@ -1093,7 +1080,7 @@ impl SolanaTarget {
                 account_info_ty,
                 account_info,
                 gep_no,
-                format!("AccountInfo_member_{}", member).as_str(),
+                format!("AccountInfo_member_{member}").as_str(),
             )
             .unwrap()
             .as_basic_value_enum()
@@ -1112,17 +1099,14 @@ impl SolanaTarget {
             .context
             .struct_type(
                 &[
-                    bin.module
-                        .get_struct_type("struct.SolPubkey")
-                        .unwrap()
+                    bin.context
                         .ptr_type(AddressSpace::default())
                         .as_basic_type_enum(),
-                    bin.llvm_type(&Type::Struct(StructType::AccountMeta))
+                    bin.context
                         .ptr_type(AddressSpace::default())
                         .as_basic_type_enum(),
                     bin.context.i64_type().as_basic_type_enum(),
                     bin.context
-                        .i8_type()
                         .ptr_type(AddressSpace::default())
                         .as_basic_type_enum(),
                     bin.context.i64_type().as_basic_type_enum(),
@@ -1237,11 +1221,11 @@ impl SolanaTarget {
         } else {
             (
                 external_call.get_type().get_param_types()[3]
-                    .const_zero()
-                    .into_pointer_value(),
+                    .into_pointer_type()
+                    .const_zero(),
                 external_call.get_type().get_param_types()[4]
-                    .const_zero()
-                    .into_int_value(),
+                    .into_int_type()
+                    .const_zero(),
             )
         };
 

@@ -51,6 +51,7 @@ pub enum Type {
 }
 
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum InternalCallTy {
     Static { cfg_no: usize },
     Dynamic(Operand),
@@ -79,12 +80,12 @@ impl From<&ast::StructType> for StructType {
 impl fmt::Display for StructType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StructType::UserDefined(i) => write!(f, "{}", i),
+            StructType::UserDefined(i) => write!(f, "{i}"),
             StructType::SolAccountInfo => write!(f, "SolAccountInfo"),
             StructType::SolAccountMeta => write!(f, "SolAccountMeta"),
             StructType::ExternalFunction => write!(f, "ExternalFunction"),
             StructType::SolParameters => write!(f, "SolParameters"),
-            StructType::Vector(elem_ty) => write!(f, "vector<{}>", elem_ty),
+            StructType::Vector(elem_ty) => write!(f, "vector<{elem_ty}>"),
         }
     }
 }
@@ -99,48 +100,48 @@ impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Type::Bool => write!(f, "bool"),
-            Type::Int(width) => write!(f, "int{}", width),
-            Type::Uint(width) => write!(f, "uint{}", width),
-            Type::Bytes(width) => write!(f, "bytes{}", width),
-            Type::Ptr(ty) => write!(f, "ptr<{}>", ty),
+            Type::Int(width) => write!(f, "int{width}"),
+            Type::Uint(width) => write!(f, "uint{width}"),
+            Type::Bytes(width) => write!(f, "bytes{width}"),
+            Type::Ptr(ty) => write!(f, "ptr<{ty}>"),
             Type::StoragePtr(immutable, ty) => {
                 if *immutable {
-                    write!(f, "const_storage_ptr<{}>", ty)
+                    write!(f, "const_storage_ptr<{ty}>")
                 } else {
-                    write!(f, "storage_ptr<{}>", ty)
+                    write!(f, "storage_ptr<{ty}>")
                 }
             }
             Type::Array(ty, len) => {
-                write!(f, "{}", ty)?;
+                write!(f, "{ty}")?;
                 len.iter().for_each(|len| match len {
-                    ArrayLength::Fixed(len) => write!(f, "[{}]", len).unwrap(),
+                    ArrayLength::Fixed(len) => write!(f, "[{len}]").unwrap(),
                     ArrayLength::Dynamic => write!(f, "[]").unwrap(),
                     ArrayLength::AnyFixed => write!(f, "[?]").unwrap(),
                 });
                 Ok(())
             }
-            Type::Slice(ty) => write!(f, "slice<{}>", ty),
-            Type::Struct(ty) => write!(f, "struct.{}", ty),
+            Type::Slice(ty) => write!(f, "slice<{ty}>"),
+            Type::Struct(ty) => write!(f, "struct.{ty}"),
             Type::Function { params, returns } => {
                 write!(f, "function (")?;
                 for (i, param) in params.iter().enumerate() {
                     if i != 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", param)?;
+                    write!(f, "{param}")?;
                 }
                 write!(f, ") returns (")?;
                 for (i, ret) in returns.iter().enumerate() {
                     if i != 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", ret)?;
+                    write!(f, "{ret}")?;
                 }
                 write!(f, ")")?;
                 Ok(())
             }
             Type::Mapping { key_ty, value_ty } => {
-                write!(f, "mapping({} => {})", key_ty, value_ty)
+                write!(f, "mapping({key_ty} => {value_ty})")
             }
         }
     }

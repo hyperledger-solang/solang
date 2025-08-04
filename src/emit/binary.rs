@@ -50,9 +50,9 @@ static LLVM_INIT: OnceCell<()> = OnceCell::new();
 macro_rules! emit_context {
     ($binary:expr) => {
         #[allow(unused_macros)]
-        macro_rules! byte_ptr {
+        macro_rules! ptr {
             () => {
-                $binary.context.i8_type().ptr_type(AddressSpace::default())
+                $binary.context.ptr_type(AddressSpace::default())
             };
         }
 
@@ -439,10 +439,7 @@ impl<'a> Binary<'a> {
             scratch_len: None,
             parameters: None,
             return_values,
-            vector_init_empty: context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null(),
+            vector_init_empty: context.ptr_type(AddressSpace::default()).const_null(),
             global_constant_strings: RefCell::new(HashMap::new()),
             return_data: RefCell::new(None),
         }
@@ -800,28 +797,13 @@ impl<'a> Binary<'a> {
             }
         }
         // add return values
-        for ty in returns {
-            args.push(
-                if ty.is_reference_type(self.ns) && !ty.is_contract_storage() {
-                    self.llvm_type(ty)
-                        .ptr_type(AddressSpace::default())
-                        .ptr_type(AddressSpace::default())
-                        .into()
-                } else {
-                    self.llvm_type(ty).ptr_type(AddressSpace::default()).into()
-                },
-            );
+        for _ in returns {
+            args.push(self.context.ptr_type(AddressSpace::default()).into());
         }
 
         // On Solana, we need to pass around the accounts
         if self.ns.target == Target::Solana {
-            args.push(
-                self.module
-                    .get_struct_type("struct.SolParameters")
-                    .unwrap()
-                    .ptr_type(AddressSpace::default())
-                    .into(),
-            );
+            args.push(self.context.ptr_type(AddressSpace::default()).into());
         }
 
         // Solana return type should be 64 bit, 32 bit on wasm
@@ -895,7 +877,8 @@ impl<'a> Binary<'a> {
             | Type::Array(..)
             | Type::DynamicBytes
             | Type::String
-            | Type::ExternalFunction { .. } => llvm_ty
+            | Type::ExternalFunction { .. } => self
+                .context
                 .ptr_type(AddressSpace::default())
                 .as_basic_type_enum(),
             _ => llvm_ty,
@@ -906,10 +889,12 @@ impl<'a> Binary<'a> {
     pub(crate) fn llvm_field_ty(&self, ty: &Type) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty);
         match ty.deref_memory() {
-            Type::Array(_, dim) if dim.last() == Some(&ArrayLength::Dynamic) => llvm_ty
+            Type::Array(_, dim) if dim.last() == Some(&ArrayLength::Dynamic) => self
+                .context
                 .ptr_type(AddressSpace::default())
                 .as_basic_type_enum(),
-            Type::DynamicBytes | Type::String => llvm_ty
+            Type::DynamicBytes | Type::String => self
+                .context
                 .ptr_type(AddressSpace::default())
                 .as_basic_type_enum(),
             _ => llvm_ty,
@@ -923,11 +908,11 @@ impl<'a> Binary<'a> {
             self.context
                 .struct_type(
                     &[
-                        byte_ptr!().as_basic_type_enum(),             // SolPubkey *
-                        byte_ptr!().as_basic_type_enum(),             // uint64_t *
+                        ptr!().as_basic_type_enum(),                  // SolPubkey *
+                        ptr!().as_basic_type_enum(),                  // uint64_t *
                         self.context.i64_type().as_basic_type_enum(), // uint64_t
-                        byte_ptr!().as_basic_type_enum(),             // uint8_t *
-                        byte_ptr!().as_basic_type_enum(),             // SolPubkey *
+                        ptr!().as_basic_type_enum(),                  // uint8_t *
+                        ptr!().as_basic_type_enum(),                  // SolPubkey *
                         self.context.i64_type().as_basic_type_enum(), // uint64_t
                         i8_basic_type_enum!(),                        // bool
                         i8_basic_type_enum!(),                        // bool
@@ -993,22 +978,18 @@ impl<'a> Binary<'a> {
                     )
                     .as_basic_type_enum(),
                 Type::Mapping(..) => self.llvm_type(&self.ns.storage_type()),
-                Type::Ref(r) => {
+                Type::Ref(..) => {
                     if self.ns.target == Target::Soroban {
                         return BasicTypeEnum::IntType(self.context.i64_type());
                     }
 
-                    self.llvm_type(r)
+                    self.context
                         .ptr_type(AddressSpace::default())
                         .as_basic_type_enum()
                 }
                 Type::StorageRef(..) => self.llvm_type(&self.ns.storage_type()),
-                Type::InternalFunction {
-                    params, returns, ..
-                } => {
-                    let ftype = self.function_type(params, returns);
-
-                    BasicTypeEnum::PointerType(ftype.ptr_type(AddressSpace::default()))
+                Type::InternalFunction { .. } => {
+                    BasicTypeEnum::PointerType(self.context.ptr_type(AddressSpace::default()))
                 }
                 Type::ExternalFunction { .. } => {
                     let address = self.llvm_type(&Type::Address(false));
@@ -1017,10 +998,10 @@ impl<'a> Binary<'a> {
                         .struct_type(&[selector, address], false)
                         .as_basic_type_enum()
                 }
-                Type::Slice(ty) => BasicTypeEnum::StructType(
+                Type::Slice(_) => BasicTypeEnum::StructType(
                     self.context.struct_type(
                         &[
-                            self.llvm_type(ty).ptr_type(AddressSpace::default()).into(),
+                            self.context.ptr_type(AddressSpace::default()).into(),
                             self.context
                                 .custom_width_int_type(self.ns.target.ptr_size().into())
                                 .into(),
@@ -1031,7 +1012,6 @@ impl<'a> Binary<'a> {
                 Type::UserType(no) => self.llvm_type(&self.ns.user_types[*no].ty),
                 Type::BufferPointer => self
                     .context
-                    .i8_type()
                     .ptr_type(AddressSpace::default())
                     .as_basic_type_enum(),
                 Type::FunctionSelector => {
@@ -1104,9 +1084,7 @@ impl<'a> Binary<'a> {
                 // A constant string, or array, is represented by a struct with two fields: a pointer to the data, and its length.
                 let ty = self.context.struct_type(
                     &[
-                        self.llvm_type(&Type::Bytes(bs.len() as u8))
-                            .ptr_type(AddressSpace::default())
-                            .into(),
+                        self.context.ptr_type(AddressSpace::default()).into(),
                         self.context.i64_type().into(),
                     ],
                     false,
@@ -1126,9 +1104,7 @@ impl<'a> Binary<'a> {
         if let Some(init) = init {
             if init.is_empty() {
                 return self
-                    .module
-                    .get_struct_type("struct.vector")
-                    .unwrap()
+                    .context
                     .ptr_type(AddressSpace::default())
                     .const_null()
                     .as_basic_value_enum();
@@ -1325,10 +1301,7 @@ impl<'a> Binary<'a> {
     pub(super) fn panic_data_const(&self, code: PanicCode) -> (PointerValue<'a>, IntValue<'a>) {
         if self.ns.target == Target::Solana || self.ns.target == Target::Soroban {
             return (
-                self.context
-                    .i8_type()
-                    .ptr_type(AddressSpace::default())
-                    .const_null(),
+                self.context.ptr_type(AddressSpace::default()).const_null(),
                 self.context.i32_type().const_zero(),
             );
         }

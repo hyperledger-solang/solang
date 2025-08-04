@@ -38,7 +38,7 @@ impl PolkadotTarget {
             None,
         );
 
-        let ptr = bin.context.i8_type().ptr_type(AddressSpace::default());
+        let ptr = bin.context.ptr_type(AddressSpace::default());
 
         bin.vector_init_empty = bin
             .context
@@ -181,9 +181,9 @@ impl PolkadotTarget {
 
     fn declare_externals(&self, bin: &Binary) {
         let ctx = bin.context;
-        let u8_ptr = ctx.i8_type().ptr_type(AddressSpace::default()).into();
+        let u8_ptr = ctx.ptr_type(AddressSpace::default()).into();
         let u32_val = ctx.i32_type().into();
-        let u32_ptr = ctx.i32_type().ptr_type(AddressSpace::default()).into();
+        let u32_ptr = ctx.ptr_type(AddressSpace::default()).into();
         let u64_val = ctx.i64_type().into();
 
         macro_rules! external {
