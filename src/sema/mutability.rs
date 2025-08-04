@@ -289,9 +289,12 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
             Statement::Expression(_, _, expr) => {
                 expr.recurse(state, read_expression);
             }
-            Statement::Delete(loc, _, _) => {
-                state.data_account |= DataAccountUsage::WRITE;
-                state.write(loc)
+            Statement::Delete(loc, ty, _) => {
+                // Only treat delete on storage references as write operations
+                if matches!(ty, Type::StorageRef(_, _)) {
+                    state.data_account |= DataAccountUsage::WRITE;
+                    state.write(loc);
+                }
             }
             Statement::Destructure(_, fields, expr) => {
                 // This is either a list or internal/external function call
