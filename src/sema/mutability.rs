@@ -289,15 +289,13 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
             Statement::Expression(_, _, expr) => {
                 expr.recurse(state, read_expression);
             }
-            Statement::Delete(loc, ty, _) => {
+            Statement::Delete(loc, _, _) => {
                 // Always require data account access for delete operations
                 state.data_account |= DataAccountUsage::WRITE;
                 
-                // For mutability analysis, only treat delete on storage references as write operations
-                // Delete operations on literals (like 'delete 102') should not prevent 'pure' functions
-                if matches!(ty, Type::StorageRef(_, _)) || ty.is_contract_storage() {
-                    state.write(loc);
-                }
+                // For mutability analysis, all delete operations are write operations
+                // Delete operations inherently modify state, so they should prevent 'pure'/'view' functions
+                state.write(loc);
             }
             Statement::Destructure(_, fields, expr) => {
                 // This is either a list or internal/external function call
