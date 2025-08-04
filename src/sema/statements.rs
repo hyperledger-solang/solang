@@ -732,6 +732,11 @@ fn statement(
                         // Issue #1785 - match Solc behavior for delete array[index]
                         // The AST should be an accurate representation of the source code
                         // The actual behavior will be handled in codegen
+                        ns.diagnostics.push(Diagnostic::warning(
+                            *loc,
+                            "argument to 'delete' should be storage reference".to_string(),
+                        ));
+                        
                         res.push(Statement::Delete(*loc, expr.ty().clone(), expr));
                         return Ok(true);
                     }
