@@ -289,7 +289,7 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
             Statement::Expression(_, _, expr) => {
                 expr.recurse(state, read_expression);
             }
-            Statement::Delete(loc, _, _) => {
+            Statement::Delete(loc, _, _expr) => {
                 // Always require data account access for delete operations
                 state.data_account |= DataAccountUsage::WRITE;
                 
