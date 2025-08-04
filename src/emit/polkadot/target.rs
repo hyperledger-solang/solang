@@ -221,11 +221,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .build_int_compare(IntPredicate::EQ, exists, i32_zero!(), "storage_exists")
             .unwrap();
 
-        let ty = bin
-            .module
-            .get_struct_type("struct.vector")
-            .unwrap()
-            .ptr_type(AddressSpace::default());
+        let ty = bin.context.ptr_type(AddressSpace::default());
 
         let entry = bin.builder.get_insert_block().unwrap();
 
@@ -264,11 +260,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         res.add_incoming(&[
             (&loaded_string, retrieve_block),
             (
-                &bin.module
-                    .get_struct_type("struct.vector")
-                    .unwrap()
-                    .ptr_type(AddressSpace::default())
-                    .const_null(),
+                &bin.context.ptr_type(AddressSpace::default()).const_null(),
                 entry,
             ),
         ]);
@@ -683,7 +675,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             "seal_return",
             &[
                 i32_zero!().into(),
-                byte_ptr!().const_zero().into(),
+                ptr!().const_zero().into(),
                 i32_zero!().into()
             ]
         );
@@ -695,7 +687,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         emit_context!(bin);
 
         // we can't return specific errors
-        self.assert_failure(bin, byte_ptr!().const_zero(), i32_zero!());
+        self.assert_failure(bin, ptr!().const_zero(), i32_zero!());
     }
 
     /// Call the  keccak256 host function
@@ -1189,7 +1181,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
             topic_buf
         } else {
-            byte_ptr!().const_null()
+            ptr!().const_null()
         };
 
         call!(
@@ -1257,7 +1249,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                         bin.builder
                             .build_int_to_ptr(
                                 bin.context.i32_type().const_all_ones(),
-                                byte_ptr!(),
+                                ptr!(),
                                 "no_initializer",
                             )
                             .unwrap()

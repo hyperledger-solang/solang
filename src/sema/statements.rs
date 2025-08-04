@@ -1001,8 +1001,7 @@ fn revert_pos_arg(
                 ns.diagnostics.push(Diagnostic::error(
                     loc,
                     format!(
-                        "revert takes either no argument or a single reason string argument, {} provided",
-                        count
+                        "revert takes either no argument or a single reason string argument, {count} provided"
                     ),
                 ));
 

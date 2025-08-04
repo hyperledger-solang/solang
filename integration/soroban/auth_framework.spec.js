@@ -3,15 +3,15 @@ import { readFileSync } from 'fs';
 import { expect } from 'chai';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { call_contract_function, extractLogEvent } from './test_helpers.js';
-import { assert } from 'console';
+import { call_contract_function, toSafeJson } from './test_helpers.js';
+import { Server } from '@stellar/stellar-sdk/rpc';
 
 const __filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(__filename);
-const server = new StellarSdk.SorobanRpc.Server("https://soroban-testnet.stellar.org:443");
+const server = new Server("https://soroban-testnet.stellar.org");
 
 function readContractAddress(filename) {
-  return readFileSync(path.join(dirname, '.soroban', 'contract-ids', filename), 'utf8').trim();
+  return readFileSync(path.join(dirname, '.stellar', 'contract-ids', filename), 'utf8').trim();
 }
 
 describe('Auth Framework', () => {
@@ -28,34 +28,28 @@ describe('Auth Framework', () => {
   });
 
   it('calls a', async () => {
-
-    
     let values = [
-        b.address().toScVal(),
-        c.address().toScVal()
+      b.address().toScVal(),
+      c.address().toScVal()
     ];
-
-
     let res = await call_contract_function("call_b", server, keypair, a, ...values);
 
-
-    expect(res.returnValue().value().toString()).to.equal("22");
-    
+    expect(res.status, `Call to 'a' contract failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
+    expect(res.returnValue, `Unexpected return value for 'a': ${toSafeJson(res)}`).to.equal(22n);
   });
 
-  it ('call falis with invalid `a` contract', async () => {
-    
-    
+  it('call fails with invalid `a` contract', async () => {
     let values = [
-        b.address().toScVal(),
-        c.address().toScVal()
+      b.address().toScVal(),
+      c.address().toScVal()
     ];
-
     let res = await call_contract_function("call_b", server, keypair, a_invalid, ...values);
 
-    assert(res.toString().includes("recording authorization only] encountered authorization not tied to the root contract invocation for an address. Use `require_auth()` in the top invocation or enable non-root authorization."));
-
+    expect(res.status).to.not.equal("SUCCESS");
+    expect(
+      res.error || toSafeJson(res),
+      'Missing expected Soroban auth error message'
+    ).to.include("recording authorization only] encountered authorization not tied to the root contract invocation for an address. Use `require_auth()` in the top invocation or enable non-root authorization.");
   });
-
 
 });

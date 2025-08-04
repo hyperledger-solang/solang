@@ -3129,6 +3129,7 @@ fn is_solana_external_call(
 }
 
 /// Data structure to manage the returns of 'preprocess_contract_call'
+#[allow(clippy::large_enum_variant)]
 enum PreProcessedCall {
     Success {
         call_args: CallArgs,
