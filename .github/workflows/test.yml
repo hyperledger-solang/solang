@@ -254,7 +254,7 @@ jobs:
       uses: actions/checkout@v4
     - uses: actions/setup-node@v4
       with:
-        node-version: '16'
+        node-version: '20'
     - uses: dtolnay/rust-toolchain@1.85.0
     - name: Setup yarn
       run: npm install -g yarn
