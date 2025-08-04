@@ -294,7 +294,8 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
                 state.data_account |= DataAccountUsage::WRITE;
                 
                 // For mutability analysis, only treat delete on storage references as write operations
-                if matches!(ty, Type::StorageRef(_, _)) {
+                // Delete operations on literals (like 'delete 102') should not prevent 'pure' functions
+                if matches!(ty, Type::StorageRef(_, _)) || ty.is_contract_storage() {
                     state.write(loc);
                 }
             }
