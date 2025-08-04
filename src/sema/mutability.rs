@@ -290,9 +290,11 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
                 expr.recurse(state, read_expression);
             }
             Statement::Delete(loc, ty, _) => {
-                // Only treat delete on storage references as write operations
+                // Always require data account access for delete operations
+                state.data_account |= DataAccountUsage::WRITE;
+                
+                // For mutability analysis, only treat delete on storage references as write operations
                 if matches!(ty, Type::StorageRef(_, _)) {
-                    state.data_account |= DataAccountUsage::WRITE;
                     state.write(loc);
                 }
             }
