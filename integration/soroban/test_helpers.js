@@ -1,23 +1,7 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
 
-// Utility to decode Soroban return value (ScVal) to native JS
-function decodeReturnValue(scval) {
-    if (!scval) return undefined;
-    if (StellarSdk.scValToNative) {
-        return StellarSdk.scValToNative(scval);
-    }
-    if (scval._value) return scval._value;
-    return scval;
-}
-
 export async function call_contract_function(method, server, keypair, contract, ...params) {
-    let result = {
-        status: null,
-        returnValue: null,
-        error: null,
-        raw: null,
-    };
-
+    let res = null;
     try {
         let builtTransaction = new StellarSdk.TransactionBuilder(await server.getAccount(keypair.publicKey()), {
             fee: StellarSdk.BASE_FEE,
@@ -43,14 +27,9 @@ export async function call_contract_function(method, server, keypair, contract, 
             result.raw = getResponse;
 
             if (getResponse.status === "SUCCESS") {
-                result.status = "SUCCESS";
-                if (getResponse.returnValue) {
-                    try {
-                        result.returnValue = decodeReturnValue(getResponse.returnValue);
-                    } catch (e) {
-                        result.error = "Failed to decode returnValue: " + e.toString();
-                    }
-                }
+-stellar-asset-integration-test
+                // Return the contract call return value (ScVal)
+                res = getResponse.returnValue;
             } else {
                 result.status = "ERROR";
                 result.error = "Transaction failed: " + (getResponse.resultXdr || JSON.stringify(getResponse));
