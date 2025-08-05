@@ -170,6 +170,7 @@ pub struct Options {
     pub opt_level: OptimizationLevel,
     pub log_runtime_errors: bool,
     pub log_prints: bool,
+    pub strict_soroban_types: bool,
     #[cfg(feature = "wasm_opt")]
     pub wasm_opt: Option<OptimizationPasses>,
     pub soroban_version: Option<u64>,
@@ -187,6 +188,7 @@ impl Default for Options {
             opt_level: OptimizationLevel::Default,
             log_runtime_errors: false,
             log_prints: true,
+            strict_soroban_types: false,
             #[cfg(feature = "wasm_opt")]
             wasm_opt: None,
             soroban_version: None,
