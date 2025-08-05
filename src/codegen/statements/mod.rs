@@ -216,13 +216,55 @@ pub(crate) fn statement(
         Statement::Delete(_, ty, expr) => {
             let var_expr = expression(expr, cfg, contract_no, Some(func), ns, vartab, opt);
 
-            cfg.add(
-                vartab,
-                Instr::ClearStorage {
-                    ty: ty.clone(),
-                    storage: var_expr,
-                },
-            );
+            // Check if this is a memory array element by checking if the type is a reference
+            // to a non-storage type (i.e., a memory array element)
+            let is_memory_array_element = match &ty {
+                Type::Ref(_) => {
+                    // This is a reference to memory, likely an array element
+                    true
+                }
+                Type::StorageRef(_, _) => {
+                    // This is a storage reference, use clear storage
+                    false
+                }
+                _ => {
+                    // For other types, use clear storage as fallback
+                    false
+                }
+            };
+
+            if is_memory_array_element {
+                // For memory array elements, we need to set the element to its default value
+                // instead of clearing storage (which would clear the entire array)
+                if let Some(default_value) = ty.default(ns) {
+                    // Create a store instruction to set the element to its default value
+                    cfg.add(
+                        vartab,
+                        Instr::Store {
+                            dest: var_expr,
+                            data: default_value,
+                        },
+                    );
+                } else {
+                    // Fallback to clear storage if no default value is available
+                    cfg.add(
+                        vartab,
+                        Instr::ClearStorage {
+                            ty: ty.clone(),
+                            storage: var_expr,
+                        },
+                    );
+                }
+            } else {
+                // For non-memory array elements, use the original clear storage behavior
+                cfg.add(
+                    vartab,
+                    Instr::ClearStorage {
+                        ty: ty.clone(),
+                        storage: var_expr,
+                    },
+                );
+            }
         }
         Statement::Break(_) => {
             cfg.add(
