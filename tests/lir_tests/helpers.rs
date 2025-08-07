@@ -104,7 +104,7 @@ pub(crate) fn identifier(id: usize) -> Operand {
     }
 }
 
-pub fn new_printer(v: &Vartable) -> Printer {
+pub fn new_printer(v: &Vartable) -> Printer<'_> {
     Printer::new(v)
 }
 
