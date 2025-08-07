@@ -201,7 +201,7 @@ fn signed_ovf_detect<'a, T: TargetRuntime<'a> + ?Sized>(
         .build_or(left_is_zero, right_is_zero, "")
         .unwrap();
 
-    // Will resolve to one if signs are differnet
+    // Will resolve to one if signs are different
     let different_signs = bin
         .builder
         .build_xor(left_sign_bit, right_sign_bit, "")
@@ -327,7 +327,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
         }
         // LLVM-IR can handle multiplication of sizes up to 64 bits. If the size is larger, we need to implement our own multiplication function.
         // We divide the operands into sizes of 32 bits (check __mul32 in stdlib/bigint.c documentation).
-        // If the size is not divisble by 32, we extend it to the next 32 bits. For example, int72 will be extended to int96.
+        // If the size is not divisible by 32, we extend it to the next 32 bits. For example, int72 will be extended to int96.
         // Here, we zext the operands to the nearest 32 bits. zext is called instead of sext because we need to do unsigned multiplication by default.
         // It will not matter in terms of mul without overflow, because we always truncate the result to the bit size of the operands.
         // In mul with overflow however, it is needed so that overflow can be detected if the most significant bits of the result are not zeros.
@@ -352,7 +352,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
 
             // Unsigned overflow detection Approach:
             // If the size is a multiple of 32, we call __mul32_with_builtin_ovf and it returns an overflow flag (check __mul32_with_builtin_ovf in stdlib/bigint.c documentation)
-            // If that is not the case, some extra work has to be done. We have to check the extended bits for any set bits. If there is any, an overflow occured.
+            // If that is not the case, some extra work has to be done. We have to check the extended bits for any set bits. If there is any, an overflow occurred.
             // For example, if we have uint72, it will be extended to uint96. __mul32 with ovf will raise an ovf flag if the result overflows 96 bits, not 72.
             // We account for that by checking the extended leftmost bits. In the example mentioned, they will be 96-72=24 bits.
             let return_val = bin
@@ -405,7 +405,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
             // Until this point, we only checked the extended bits for ovf. But mul ovf can take place any where from bit size to double bit size.
             // For example: If we have uint72, it will be extended to uint96. We only checked the most significant 24 bits for overflow, which can happen up to 72*2=144 bits.
             // bool __mul32_with_builtin_ovf takes care of overflowing bits beyond 96.
-            // What is left now is to or these two ovf flags, and check if any one of them is set. If so, an overflow occured.
+            // What is left now is to or these two ovf flags, and check if any one of them is set. If so, an overflow occurred.
             let lowbit = bin
                 .builder
                 .build_int_truncate(
