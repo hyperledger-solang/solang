@@ -1474,7 +1474,7 @@ impl VirtualMachine {
         res
     }
 
-    fn function(&mut self, name: &str) -> VmFunction {
+    fn function(&mut self, name: &str) -> VmFunction<'_, '_> {
         let idx = if let Some((idx, _)) = self.stack[0]
             .idl
             .as_ref()
