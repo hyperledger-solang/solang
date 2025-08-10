@@ -1,5 +1,8 @@
 name: Build Binaries
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -37,23 +40,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Build tools
-        run: |
+      - run: |
           sudo apt-get update
           sudo apt-get install -y gcc g++ make
       - uses: dtolnay/rust-toolchain@1.85.0
-      - name: Get LLVM
-        run: curl -sSL --output llvm16.0-linux-arm64.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-linux-arm64.tar.xz
-      - name: Extract LLVM
-        run: tar Jxf llvm16.0-linux-arm64.tar.xz
-      - name: Add LLVM to PATH
-        run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
-      - name: Build
-        run: cargo build --verbose --release
-      - name: Test
-        run: cargo test --workspace --verbose --release
-      - name: Package
-        run: |
+      - run: curl -sSL --output llvm16.0-linux-arm64.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-linux-arm64.tar.xz
+      - run: tar Jxf llvm16.0-linux-arm64.tar.xz
+      - run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
+      - run: cargo build --verbose --release
+      - run: cargo test --workspace --verbose --release
+      - run: |
           mkdir -p dist
           cp target/release/solang dist/solang-linux-arm64
       - uses: actions/upload-artifact@v4
@@ -68,21 +64,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Download LLVM
-        run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-win.zip
-      - name: Extract LLVM
-        run: unzip c:\llvm.zip -d c:/
-      - name: Add LLVM to PATH
-        run: echo "c:\llvm16.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+      - run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-win.zip
+      - run: unzip c:\llvm.zip -d c:/
+      - run: echo "c:\llvm16.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
       - uses: dtolnay/rust-toolchain@1.85.0
         with:
           components: clippy
-      - name: Build
-        run: cargo build --release --verbose
-      - name: Test
-        run: cargo test --workspace --release --verbose
-      - name: Package
-        run: |
+      - run: cargo build --release --verbose
+      - run: cargo test --workspace --release --verbose
+      - run: |
           mkdir dist
           copy target\release\solang.exe dist\solang.exe
       - uses: actions/upload-artifact@v4
@@ -98,18 +88,12 @@ jobs:
         with:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@1.85.0
-      - name: Get LLVM
-        run: curl -sSL --output llvm16.0-mac-arm.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-arm.tar.xz
-      - name: Extract LLVM
-        run: tar Jxf llvm16.0-mac-arm.tar.xz
-      - name: Add LLVM to PATH
-        run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
-      - name: Build
-        run: cargo build --release --verbose
-      - name: Test
-        run: cargo test --workspace --release --verbose
-      - name: Package
-        run: |
+      - run: curl -sSL --output llvm16.0-mac-arm.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-arm.tar.xz
+      - run: tar Jxf llvm16.0-mac-arm.tar.xz
+      - run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
+      - run: cargo build --release --verbose
+      - run: cargo test --workspace --release --verbose
+      - run: |
           mkdir -p dist
           cp target/release/solang dist/solang-mac-arm
       - uses: actions/upload-artifact@v4
@@ -125,18 +109,12 @@ jobs:
         with:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@1.85.0
-      - name: Get LLVM
-        run: wget -q -O llvm16.0-mac-intel.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-intel.tar.xz
-      - name: Extract LLVM
-        run: tar Jxf llvm16.0-mac-intel.tar.xz
-      - name: Add LLVM to PATH
-        run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
-      - name: Build
-        run: cargo build --release --verbose
-      - name: Test
-        run: cargo test --workspace --release --verbose
-      - name: Package
-        run: |
+      - run: wget -q -O llvm16.0-mac-intel.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-intel.tar.xz
+      - run: tar Jxf llvm16.0-mac-intel.tar.xz
+      - run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
+      - run: cargo build --release --verbose
+      - run: cargo test --workspace --release --verbose
+      - run: |
           mkdir -p dist
           cp target/release/solang dist/solang-mac-intel
       - uses: actions/upload-artifact@v4
@@ -149,12 +127,10 @@ jobs:
     runs-on: macos-latest
     needs: [mac-arm, mac-intel]
     steps:
-      - name: Download mac artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: ./mac
-      - name: Build universal binary
-        run: |
+      - run: |
           ls -R mac
           lipo -create \
             -output solang-mac \
