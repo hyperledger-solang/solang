@@ -125,9 +125,6 @@ fn contract_constants() {
 
 #[test]
 fn large_contract_variables() {
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct ValBool(u8);
-
     // parse
     let mut runtime = build_solidity("
         contract test {
