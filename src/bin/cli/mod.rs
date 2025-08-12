@@ -527,7 +527,7 @@ pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
 
         if !dups.is_empty() {
             eprintln!(
-                "error: import paths {} specifed more than once",
+                "error: import paths {} specified more than once",
                 dups.iter().map(|p| format!("'{}'", p.display())).join(", ")
             );
             exit(1);
