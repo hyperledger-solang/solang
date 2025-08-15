@@ -1,0 +1,142 @@
+name: Build Binaries
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  linux-x86-64:
+    name: Linux x86-64
+    runs-on: solang-ubuntu-latest
+    container: ghcr.io/hyperledger/solang-llvm:ci-7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - name: Build
+        run: cargo build --verbose --release
+      - name: Test
+        run: cargo test --workspace --verbose --release
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp target/release/solang dist/solang-linux-x86-64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solang-linux-x86-64
+          path: dist/solang-linux-x86-64
+
+  linux-arm64:
+    name: Linux arm64
+    runs-on: solang-arm
+    if: ${{ github.repository_owner == 'hyperledger-solang' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc g++ make
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - run: curl -sSL --output llvm16.0-linux-arm64.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-linux-arm64.tar.xz
+      - run: tar Jxf llvm16.0-linux-arm64.tar.xz
+      - run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
+      - run: cargo build --verbose --release
+      - run: cargo test --workspace --verbose --release
+      - run: |
+          mkdir -p dist
+          cp target/release/solang dist/solang-linux-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solang-linux-arm64
+          path: dist/solang-linux-arm64
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-win.zip
+      - run: unzip c:\llvm.zip -d c:/
+      - run: echo "c:\llvm16.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+      - uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          components: clippy
+      - run: cargo build --release --verbose
+      - run: cargo test --workspace --release --verbose
+      - run: |
+          mkdir dist
+          copy target\release\solang.exe dist\solang.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solang-windows
+          path: dist/solang.exe
+
+  mac-arm:
+    name: macOS arm64
+    runs-on: macos-13-xlarge
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - run: curl -sSL --output llvm16.0-mac-arm.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-arm.tar.xz
+      - run: tar Jxf llvm16.0-mac-arm.tar.xz
+      - run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
+      - run: cargo build --release --verbose
+      - run: cargo test --workspace --release --verbose
+      - run: |
+          mkdir -p dist
+          cp target/release/solang dist/solang-mac-arm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solang-mac-arm
+          path: dist/solang-mac-arm
+
+  mac-intel:
+    name: macOS x86_64
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - run: wget -q -O llvm16.0-mac-intel.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-intel.tar.xz
+      - run: tar Jxf llvm16.0-mac-intel.tar.xz
+      - run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
+      - run: cargo build --release --verbose
+      - run: cargo test --workspace --release --verbose
+      - run: |
+          mkdir -p dist
+          cp target/release/solang dist/solang-mac-intel
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solang-mac-intel
+          path: dist/solang-mac-intel
+
+  mac-universal:
+    name: macOS Universal
+    runs-on: macos-latest
+    needs: [mac-arm, mac-intel]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: ./mac
+      - run: |
+          ls -R mac
+          lipo -create \
+            -output solang-mac \
+            mac/solang-mac-intel/solang-mac-intel \
+            mac/solang-mac-arm/solang-mac-arm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solang-mac-universal
+          path: solang-mac
