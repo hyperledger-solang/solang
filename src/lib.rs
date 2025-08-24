@@ -127,7 +127,7 @@ pub fn compile(
     authors: Vec<String>,
     version: &str,
 ) -> (Vec<(Vec<u8>, String)>, sema::ast::Namespace) {
-    let mut ns = parse_and_resolve(filename, resolver, target);
+    let mut ns = parse_and_resolve_with_options(filename, resolver, target, Some(opts));
 
     if ns.diagnostics.any_errors() {
         return (Vec::new(), ns);
@@ -167,6 +167,16 @@ pub fn parse_and_resolve(
     filename: &OsStr,
     resolver: &mut FileResolver,
     target: Target,
+) -> sema::ast::Namespace {
+    parse_and_resolve_with_options(filename, resolver, target, None)
+}
+
+/// Parse and resolve the Solidity source code with options.
+pub fn parse_and_resolve_with_options(
+    filename: &OsStr,
+    resolver: &mut FileResolver,
+    target: Target,
+    _options: Option<&codegen::Options>,
 ) -> sema::ast::Namespace {
     let mut ns = sema::ast::Namespace::new(target);
 
