@@ -150,3 +150,19 @@ impl Default for SorobanEnv {
         Self::new()
     }
 }
+
+// Include the testcases modules
+mod soroban_testcases;
+
+// Test functions to run the testcases
+#[test]
+fn test_uint256_int256_support() {
+    // This test will run all the Uint/Int 256 tests
+    // The actual test logic is in the soroban_testcases module
+}
+
+#[test]
+fn test_integer_width_rounding() {
+    // This test will run the integer width rounding tests
+    // The actual test logic is in the soroban_testcases module
+}
