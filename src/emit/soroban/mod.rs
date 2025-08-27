@@ -109,6 +109,22 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::ObjToU256LoLo => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToU256LoHi => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToU256HiLo => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToU256HiHi => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjFromU256Pieces => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::ObjToI256LoLo => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToI256LoHi => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToI256HiLo => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToI256HiHi => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjFromI256Pieces => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
         }
     }
 }
@@ -262,6 +278,8 @@ impl SorobanTarget {
                                 &ast::Type::Int(64) => ScSpecTypeDef::I64,
                                 ast::Type::Int(128) => ScSpecTypeDef::I128,
                                 ast::Type::Uint(128) => ScSpecTypeDef::U128,
+                                ast::Type::Int(256) => ScSpecTypeDef::I256,
+                                ast::Type::Uint(256) => ScSpecTypeDef::U256,
                                 ast::Type::Bool => ScSpecTypeDef::Bool,
                                 ast::Type::Address(_) => ScSpecTypeDef::Address,
                                 ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
@@ -288,8 +306,11 @@ impl SorobanTarget {
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
                             ast::Type::Int(32) => ScSpecTypeDef::I32,
                             ast::Type::Uint(64) => ScSpecTypeDef::U64,
+                            ast::Type::Int(64) => ScSpecTypeDef::I64,
                             ast::Type::Int(128) => ScSpecTypeDef::I128,
                             ast::Type::Uint(128) => ScSpecTypeDef::U128,
+                            ast::Type::Int(256) => ScSpecTypeDef::I256,
+                            ast::Type::Uint(256) => ScSpecTypeDef::U256,
                             ast::Type::Int(_) => ScSpecTypeDef::I32,
                             ast::Type::Bool => ScSpecTypeDef::Bool,
                             ast::Type::Address(_) => ScSpecTypeDef::Address,
@@ -355,6 +376,16 @@ impl SorobanTarget {
             HostFunctions::ObjToU128Hi64,
             HostFunctions::ObjFromI128Pieces,
             HostFunctions::ObjFromU128Pieces,
+            HostFunctions::ObjToU256LoLo,
+            HostFunctions::ObjToU256LoHi,
+            HostFunctions::ObjToU256HiLo,
+            HostFunctions::ObjToU256HiHi,
+            HostFunctions::ObjFromU256Pieces,
+            HostFunctions::ObjToI256LoLo,
+            HostFunctions::ObjToI256LoHi,
+            HostFunctions::ObjToI256HiLo,
+            HostFunctions::ObjToI256HiHi,
+            HostFunctions::ObjFromI256Pieces,
             HostFunctions::RequireAuth,
             HostFunctions::AuthAsCurrContract,
             HostFunctions::MapNewFromLinearMemory,
