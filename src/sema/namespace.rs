@@ -66,6 +66,7 @@ impl Namespace {
             next_id: 0,
             var_constants: HashMap::new(),
             hover_overrides: HashMap::new(),
+            strict_soroban_types: false,
         };
 
         match target {
@@ -1191,7 +1192,14 @@ impl Namespace {
                         Type::Address(true)
                     }
                 }
-                _ => Type::from(ty),
+                _ => {
+                    let mut ty = Type::from(ty);
+                    // Apply Soroban integer width rounding if target is Soroban
+                    if self.target == Target::Soroban {
+                        ty = ty.round_soroban_width(self, id.loc());
+                    }
+                    ty
+                }
             };
 
             return if dimensions.is_empty() {
