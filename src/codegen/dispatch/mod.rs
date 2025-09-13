@@ -19,5 +19,6 @@ pub(super) fn function_dispatch(
             polkadot::function_dispatch(contract_no, all_cfg, ns, opt)
         }
         Target::Soroban => soroban::function_dispatch(contract_no, all_cfg, ns, opt),
+        Target::Miden => Vec::new(),
     }
 }

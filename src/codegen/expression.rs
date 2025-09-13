@@ -1327,6 +1327,11 @@ fn post_incdec(
                     if ns.target == Target::Soroban {
                         value = soroban_encode_arg(value, cfg, vartab, ns);
                     }
+                    // Poc(miden): For miden, set storage is "exec.account::set_item" and it expects the value to be
+                    // on the stack top
+                    let slot_miden_expr = dest.clone().to_miden_expr();
+                    cfg.push_to_miden_stack(format!("STORAGE_SLOT_{}", slot_miden_expr));
+                    cfg.push_miden_instr("exec.account::set_item".to_string());
 
                     cfg.add(
                         vartab,
@@ -1455,6 +1460,12 @@ fn pre_incdec(
                     if ns.target == Target::Soroban {
                         value = soroban_encode_arg(value, cfg, vartab, ns)
                     }
+
+                    // Poc(miden): For miden, set storage is "exec.account::set_item" and it expects the value to be
+                    // on the stack top
+                    let slot_miden_expr = dest.clone().to_miden_expr();
+                    cfg.push_to_miden_stack(format!("STORAGE_SLOT_{}", slot_miden_expr));
+                    cfg.push_miden_instr("exec.account::set_item".to_string());
 
                     cfg.add(
                         vartab,
@@ -2920,12 +2931,20 @@ fn add(
     right: &ast::Expression,
     opt: &Options,
 ) -> Expression {
+    let right = Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt));
+    let left = Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt));
+
+    // POC(miden): Add expects the first argument to be on the stack top, and the second argument is provided as immediate
+    let miden_instr = format!("add.{}", right.clone().to_miden_expr());
+    cfg.push_miden_instr(miden_instr);
+    //cfg.miden_instrs.push(miden_instr);
+
     Expression::Add {
         loc: *loc,
         ty: ty.clone(),
         overflowing,
-        left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-        right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        left,
+        right,
     }
 }
 
@@ -3261,6 +3280,11 @@ pub fn assign_single(
                     if ns.target == Target::Soroban {
                         value = soroban_encode_arg(value, cfg, vartab, ns);
                     }
+
+                    // POC(miden): Push the storage slot to the Miden stack before the set_item call
+                    let slot_miden_expr = dest.clone().to_miden_expr();
+                    cfg.push_to_miden_stack(format!("STORAGE_SLOT_{}", slot_miden_expr));
+                    cfg.push_miden_instr("exec.account::set_item".to_string());
 
                     cfg.add(
                         vartab,
@@ -3797,6 +3821,7 @@ fn array_subscript(
                 ty: array_ty.clone(),
                 exprs: vec![array, index],
             },
+            Target::Miden => unimplemented!(),
         };
     }
 
@@ -4191,6 +4216,15 @@ pub fn load_storage(
     ns: &Namespace,
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
+
+    //POC(Miden): storage load in miden is "exec.account::get_item", and expects the key to be on the stack
+    let storage_slot_miden_expr = format!("STORAGE_SLOT_{}", storage.clone().to_miden_expr());
+
+    // push the storage slot expression onto the stack
+    cfg.push_to_miden_stack(storage_slot_miden_expr);
+
+    // add the storage load instruction
+    cfg.push_miden_instr("exec.account::get_item".to_string());
 
     cfg.add(
         vartab,

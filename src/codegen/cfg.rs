@@ -423,6 +423,12 @@ pub struct ControlFlowGraph {
     pub array_lengths_temps: ArrayLengthVars,
     /// Is this a modifier dispatch for which function number?
     pub modifier: Option<usize>,
+
+    // POC(miden): mimic the miden target stack
+    pub miden_stack: Vec<String>,
+
+    // POC(miden): hold the miden instructions
+    pub miden_instrs: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -495,6 +501,8 @@ impl ControlFlowGraph {
             current: 0,
             array_lengths_temps: IndexMap::new(),
             modifier: None,
+            miden_stack: Vec::new(),
+            miden_instrs: Vec::new(),
         };
 
         cfg.new_basic_block("entry".to_string());
@@ -518,6 +526,8 @@ impl ControlFlowGraph {
             current: 0,
             array_lengths_temps: IndexMap::new(),
             modifier: None,
+            miden_stack: Vec::new(),
+            miden_instrs: Vec::new(),
         }
     }
 
@@ -620,6 +630,16 @@ impl ControlFlowGraph {
                 },
             );
         }
+    }
+
+    /// POC(miden): Push value to miden stack
+    pub fn push_to_miden_stack(&mut self, value: String) {
+        self.miden_instrs.push(format!("    push.{}", value));
+    }
+
+    /// POC(miden): Push instr to miden instrs
+    pub fn push_miden_instr(&mut self, instr: String) {
+        self.miden_instrs.push(format!("    {}", instr));
     }
 
     pub fn expr_to_string(&self, contract: &Contract, ns: &Namespace, expr: &Expression) -> String {
@@ -1819,6 +1839,10 @@ fn function_cfg(
             None => pt::Loc::Codegen,
         };
         // add implicit return
+
+        // POC(Miden): for miden, the return instr returns the data on the stack
+        cfg.push_miden_instr("exec.sys::truncate_stack".to_string());
+
         cfg.add(
             &mut vartab,
             Instr::Return {

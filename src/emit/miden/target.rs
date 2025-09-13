@@ -1,84 +1,39 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::Expression;
-use crate::sema::ast::{CallTy, Function, Type};
-use std::collections::HashMap;
-use std::fmt;
-use std::str;
+use crate::codegen::cfg::HashTy;
 
-use crate::Target;
-use inkwell::targets::TargetTriple;
+use crate::codegen::Expression;
+use crate::emit::binary::Binary;
+use crate::emit::miden::Midentarget;
+
+use crate::emit::ContractArgs;
+use crate::emit::{TargetRuntime, Variable};
+
+use crate::sema::ast;
+use crate::sema::ast::CallTy;
+use crate::sema::ast::{Function, Type};
+
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{
-    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+    ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue,
+    PointerValue,
 };
+
 use solang_parser::pt::{Loc, StorageType};
+use std::collections::HashMap;
 
-pub mod binary;
-mod cfg;
-mod expression;
-mod functions;
-mod instructions;
-mod loop_builder;
-mod math;
-pub mod polkadot;
-pub mod solana;
-
-#[cfg(feature = "soroban")]
-pub mod soroban;
-
-pub mod miden;
-mod storage;
-mod strings;
-
-use crate::codegen::{cfg::HashTy, Options};
-use crate::emit::binary::Binary;
-use crate::sema::ast;
-
-#[derive(Clone)]
-pub struct Variable<'a> {
-    value: BasicValueEnum<'a>,
-}
-
-pub struct ContractArgs<'b> {
-    program_id: Option<PointerValue<'b>>,
-    value: Option<IntValue<'b>>,
-    gas: Option<IntValue<'b>>,
-    salt: Option<IntValue<'b>>,
-    seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
-    accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
-    flags: Option<IntValue<'b>>,
-}
-
-#[derive(Clone, Copy)]
-pub enum BinaryOp {
-    Add,
-    Subtract,
-    Multiply,
-}
-
-impl fmt::Display for BinaryOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Add => "add",
-                Self::Subtract => "sub",
-                Self::Multiply => "mul",
-            }
-        )
-    }
-}
-
-pub trait TargetRuntime<'a> {
+// TODO: Implement TargetRuntime for SorobanTarget.
+#[allow(unused_variables)]
+impl<'a> TargetRuntime<'a> for Midentarget {
     fn get_storage_int(
         &self,
         bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
         ty: IntType<'a>,
-    ) -> IntValue<'a>;
+    ) -> IntValue<'a> {
+        todo!()
+    }
 
     fn storage_load(
         &self,
@@ -87,7 +42,14 @@ pub trait TargetRuntime<'a> {
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
-    ) -> BasicValueEnum<'a>;
+    ) -> BasicValueEnum<'a> {
+        //unimplemented!()
+
+        bin.context
+            .i32_type()
+            .const_int(0, false)
+            .as_basic_value_enum()
+    }
 
     /// Recursively store a type to storage
     fn storage_store(
@@ -99,7 +61,12 @@ pub trait TargetRuntime<'a> {
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
-    );
+    ) {
+
+        //unimplemented!()
+
+        //bin.context.i32_type().const_int(0, false).as_basic_value_enum()
+    }
 
     /// Recursively clear storage. The default implementation is for slot-based storage
     fn storage_delete(
@@ -108,7 +75,9 @@ pub trait TargetRuntime<'a> {
         ty: &Type,
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
-    );
+    ) {
+        unimplemented!()
+    }
 
     // Bytes and string have special storage layout
     fn set_storage_string(
@@ -117,14 +86,18 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue<'a>,
         slot: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
-    );
+    ) {
+        unimplemented!()
+    }
 
     fn get_storage_string(
         &self,
         bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
-    ) -> PointerValue<'a>;
+    ) -> PointerValue<'a> {
+        unimplemented!()
+    }
 
     fn set_storage_extfunc(
         &self,
@@ -133,14 +106,18 @@ pub trait TargetRuntime<'a> {
         slot: PointerValue,
         dest: PointerValue,
         dest_ty: BasicTypeEnum,
-    );
+    ) {
+        unimplemented!()
+    }
 
     fn get_storage_extfunc(
         &self,
         bin: &Binary<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
-    ) -> PointerValue<'a>;
+    ) -> PointerValue<'a> {
+        unimplemented!()
+    }
 
     fn get_storage_bytes_subscript(
         &self,
@@ -149,7 +126,9 @@ pub trait TargetRuntime<'a> {
         slot: IntValue<'a>,
         index: IntValue<'a>,
         loc: Loc,
-    ) -> IntValue<'a>;
+    ) -> IntValue<'a> {
+        unimplemented!()
+    }
 
     fn set_storage_bytes_subscript(
         &self,
@@ -159,7 +138,9 @@ pub trait TargetRuntime<'a> {
         index: IntValue<'a>,
         value: IntValue<'a>,
         loc: Loc,
-    );
+    ) {
+        unimplemented!()
+    }
 
     fn storage_subscript(
         &self,
@@ -168,7 +149,9 @@ pub trait TargetRuntime<'a> {
         ty: &Type,
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
-    ) -> IntValue<'a>;
+    ) -> IntValue<'a> {
+        unimplemented!()
+    }
 
     fn storage_push(
         &self,
@@ -177,7 +160,9 @@ pub trait TargetRuntime<'a> {
         ty: &Type,
         slot: IntValue<'a>,
         val: Option<BasicValueEnum<'a>>,
-    ) -> BasicValueEnum<'a>;
+    ) -> BasicValueEnum<'a> {
+        unimplemented!()
+    }
 
     fn storage_pop(
         &self,
@@ -187,7 +172,9 @@ pub trait TargetRuntime<'a> {
         slot: IntValue<'a>,
         load: bool,
         loc: Loc,
-    ) -> Option<BasicValueEnum<'a>>;
+    ) -> Option<BasicValueEnum<'a>> {
+        unimplemented!()
+    }
 
     fn storage_array_length(
         &self,
@@ -195,7 +182,9 @@ pub trait TargetRuntime<'a> {
         _function: FunctionValue,
         _slot: IntValue<'a>,
         _elem_ty: &Type,
-    ) -> IntValue<'a>;
+    ) -> IntValue<'a> {
+        unimplemented!()
+    }
 
     /// keccak256 hash
     fn keccak256_hash(
@@ -204,19 +193,30 @@ pub trait TargetRuntime<'a> {
         src: PointerValue,
         length: IntValue,
         dest: PointerValue,
-    );
+    ) {
+        unimplemented!()
+    }
 
     /// Prints a string
-    fn print(&self, bin: &Binary, string: PointerValue, length: IntValue);
+    /// TODO: Implement this function, with a call to the `log` function in the Soroban runtime.
+    fn print(&self, bin: &Binary, string: PointerValue, length: IntValue) {
+        unimplemented!()
+    }
 
     /// Return success without any result
-    fn return_empty_abi(&self, bin: &Binary);
+    fn return_empty_abi(&self, bin: &Binary) {
+        unimplemented!()
+    }
 
     /// Return failure code
-    fn return_code<'b>(&self, bin: &'b Binary, ret: IntValue<'b>);
+    fn return_code<'b>(&self, bin: &'b Binary, ret: IntValue<'b>) {
+        unimplemented!()
+    }
 
     /// Return failure without any result
-    fn assert_failure(&self, bin: &Binary, data: PointerValue, length: IntValue);
+    fn assert_failure(&self, bin: &Binary, data: PointerValue, length: IntValue) {
+        bin.builder.build_unreachable().unwrap();
+    }
 
     fn builtin_function(
         &self,
@@ -225,7 +225,9 @@ pub trait TargetRuntime<'a> {
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
         first_arg_type: Option<BasicTypeEnum>,
-    ) -> Option<BasicValueEnum<'a>>;
+    ) -> Option<BasicValueEnum<'a>> {
+        unimplemented!()
+    }
 
     /// Calls constructor
     fn create_contract<'b>(
@@ -239,7 +241,9 @@ pub trait TargetRuntime<'a> {
         encoded_args_len: BasicValueEnum<'b>,
         contract_args: ContractArgs<'b>,
         loc: Loc,
-    );
+    ) {
+        unimplemented!()
+    }
 
     /// call external function
     fn external_call<'b>(
@@ -253,7 +257,9 @@ pub trait TargetRuntime<'a> {
         contract_args: ContractArgs<'b>,
         ty: CallTy,
         loc: Loc,
-    );
+    ) {
+        unimplemented!()
+    }
 
     /// send value to address
     fn value_transfer<'b>(
@@ -264,7 +270,9 @@ pub trait TargetRuntime<'a> {
         _address: PointerValue<'b>,
         _value: IntValue<'b>,
         loc: Loc,
-    );
+    ) {
+        unimplemented!()
+    }
 
     /// builtin expressions
     fn builtin<'b>(
@@ -273,16 +281,24 @@ pub trait TargetRuntime<'a> {
         expr: &Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
-    ) -> BasicValueEnum<'b>;
+    ) -> BasicValueEnum<'b> {
+        unimplemented!()
+    }
 
     /// Return the return data from an external call (either revert error or return values)
-    fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b>;
+    fn return_data<'b>(&self, bin: &Binary<'b>, function: FunctionValue<'b>) -> PointerValue<'b> {
+        bin.return_data.borrow().unwrap()
+    }
 
     /// Return the value we received
-    fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b>;
+    fn value_transferred<'b>(&self, bin: &Binary<'b>) -> IntValue<'b> {
+        unimplemented!()
+    }
 
     /// Terminate execution, destroy bin and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>);
+    fn selfdestruct<'b>(&self, bin: &Binary<'b>, addr: ArrayValue<'b>) {
+        unimplemented!()
+    }
 
     /// Crypto Hash
     fn hash<'b>(
@@ -292,7 +308,9 @@ pub trait TargetRuntime<'a> {
         hash: HashTy,
         string: PointerValue<'b>,
         length: IntValue<'b>,
-    ) -> IntValue<'b>;
+    ) -> IntValue<'b> {
+        unimplemented!()
+    }
 
     /// Emit event
     fn emit_event<'b>(
@@ -301,7 +319,9 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue<'b>,
         data: BasicValueEnum<'b>,
         topics: &[BasicValueEnum<'b>],
-    );
+    ) {
+        unimplemented!()
+    }
 
     /// Return ABI encoded data
     fn return_abi_data<'b>(
@@ -309,70 +329,7 @@ pub trait TargetRuntime<'a> {
         bin: &Binary<'b>,
         data: PointerValue<'b>,
         data_len: BasicValueEnum<'b>,
-    );
-}
-
-#[derive(PartialEq, Eq)]
-pub enum Generate {
-    Object,
-    Assembly,
-    Linked,
-}
-
-impl Target {
-    /// LLVM Target name
-    fn llvm_target_name(&self) -> &'static str {
-        if *self == Target::Solana {
-            "sbf"
-        } else {
-            "wasm32"
-        }
-    }
-
-    /// LLVM Target triple
-    fn llvm_target_triple(&self) -> TargetTriple {
-        TargetTriple::create(if *self == Target::Solana {
-            "sbf-unknown-unknown"
-        } else {
-            "wasm32-unknown-unknown-wasm"
-        })
-    }
-
-    /// LLVM Target triple
-    fn llvm_features(&self) -> &'static str {
-        if *self == Target::Solana {
-            "+solana"
-        } else {
-            ""
-        }
-    }
-}
-
-impl ast::Contract {
-    /// Generate the binary. This can be used to generate llvm text, object file
-    /// or final linked binary.
-    pub fn binary<'a>(
-        &'a self,
-        ns: &'a ast::Namespace,
-        context: &'a inkwell::context::Context,
-        opt: &'a Options,
-        contract_no: usize,
-    ) -> binary::Binary<'a> {
-        binary::Binary::build(context, self, ns, opt, contract_no)
-    }
-
-    /// Generate the final program code for the contract
-    pub fn emit(&self, ns: &ast::Namespace, opt: &Options, contract_no: usize) -> Vec<u8> {
-        if ns.target == Target::EVM {
-            return vec![];
-        }
-
-        self.code
-            .get_or_init(move || {
-                let context = inkwell::context::Context::create();
-                let bin = self.binary(ns, &context, opt, contract_no);
-                bin.code(Generate::Linked).expect("llvm build")
-            })
-            .to_vec()
+    ) {
+        unimplemented!()
     }
 }

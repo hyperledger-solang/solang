@@ -851,6 +851,9 @@ fn returns(
         .map(|(left, right)| try_load_and_cast(&right.loc(), &right, &left.ty, ns, cfg, vartab))
         .collect();
 
+    //POC(Miden): for miden, the return instr returns the data on the stack
+    cfg.push_miden_instr("exec.sys::truncate_stack".to_string());
+
     cfg.add(vartab, Instr::Return { value: cast_values });
 }
 

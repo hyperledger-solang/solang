@@ -102,7 +102,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
                         contract.emit(&ns, &Default::default(), contract_no)
                     }
                     Target::EVM => b"beep".to_vec(),
-                    Target::Soroban => {
+                    Target::Soroban | Target::Miden => {
                         todo!()
                     }
                 };
