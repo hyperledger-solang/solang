@@ -8,7 +8,7 @@ license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "solana", "polkadot", "substrate" ]
-rust-version = "1.85.0"
+rust-version = "1.87"
 edition = "2021"
 exclude = [ "/.*", "/docs", "/solana-library", "/tests", "/integration", "/vscode", "/testdata" ]
 
@@ -72,6 +72,7 @@ solang-forge-fmt = { version = "0.2.0", optional = true }
 # build to work.
 ethers-core = { version = "2.0.10", optional = true }
 soroban-sdk = { version = "23.0.0-rc.2.2", features = ["testutils"], optional = true }
+miden-vm = "=0.16.0"
 
 [dev-dependencies]
 num-derive = "0.4"

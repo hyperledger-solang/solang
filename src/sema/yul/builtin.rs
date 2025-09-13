@@ -22,6 +22,7 @@ impl YulBuiltinPrototype {
             Target::EVM => self.availability[0],
             Target::Polkadot { .. } => self.availability[1],
             Target::Solana => self.availability[2],
+            Target::Miden => unimplemented!(),
             Target::Soroban => unimplemented!(),
         }
     }
