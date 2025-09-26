@@ -1469,7 +1469,7 @@ impl Type {
         }
     }
 
-    /// Returns the size a type occupies in memory
+    /// Returns the number of bytes a type occupies in memory
     pub fn memory_size_of(&self, ns: &Namespace) -> BigInt {
         self.memory_size_of_internal(ns, &mut HashSet::new())
     }
