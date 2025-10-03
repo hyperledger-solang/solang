@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(feature = "soroban")]
+pub mod soroban_testcases;
+
 use solang::codegen::Options;
 use solang::file_resolver::FileResolver;
 use solang::sema::ast::Namespace;
