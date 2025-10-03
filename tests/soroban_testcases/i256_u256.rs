@@ -59,19 +59,19 @@ fn u256_basic_ops() {
     );
 
     let addr = runtime.contracts.last().unwrap();
-    
+
     // Test the constants function first
     let res = runtime.invoke_contract(addr, "test_constants", vec![]);
     assert!(!res.is_void());
-    
+
     // Test max value function
     let res = runtime.invoke_contract(addr, "test_max_value", vec![]);
     assert!(!res.is_void());
-    
+
     // Test zero operations
     let res = runtime.invoke_contract(addr, "test_zero_ops", vec![]);
     assert!(!res.is_void());
-    
+
     // Test large numbers
     let res = runtime.invoke_contract(addr, "test_large_numbers", vec![]);
     assert!(!res.is_void());
@@ -225,19 +225,19 @@ fn i256_no_power_test() {
     );
 
     let addr = runtime.contracts.last().unwrap();
-    
+
     // Test simple constant
     let res = runtime.invoke_contract(addr, "test_simple", vec![]);
     assert!(!res.is_void());
-    
+
     // Test large constant
     let res = runtime.invoke_contract(addr, "test_large_constant", vec![]);
     assert!(!res.is_void());
-    
+
     // Test negative constant
     let res = runtime.invoke_contract(addr, "test_negative", vec![]);
     assert!(!res.is_void());
-    
+
     // Test arithmetic
     let res = runtime.invoke_contract(addr, "test_arithmetic", vec![]);
     assert!(!res.is_void());
@@ -272,19 +272,19 @@ fn i256_power_operator_test() {
     );
 
     let addr = runtime.contracts.last().unwrap();
-    
+
     // Test small power
     let res = runtime.invoke_contract(addr, "test_power_small", vec![]);
     assert!(!res.is_void());
-    
+
     // Test medium power
     let res = runtime.invoke_contract(addr, "test_power_medium", vec![]);
     assert!(!res.is_void());
-    
+
     // Test large power
     let res = runtime.invoke_contract(addr, "test_power_large", vec![]);
     assert!(!res.is_void());
-    
+
     // Test max power
     let res = runtime.invoke_contract(addr, "test_power_max", vec![]);
     assert!(!res.is_void());
@@ -496,7 +496,7 @@ fn i256_minimal_test() {
     );
 
     let addr = runtime.contracts.last().unwrap();
-    
+
     // Test the minimal function
     let res = runtime.invoke_contract(addr, "test_minimal", vec![]);
     assert!(!res.is_void());
@@ -541,23 +541,23 @@ fn i256_simple_arithmetic() {
     );
 
     let addr = runtime.contracts.last().unwrap();
-    
+
     // Test addition
     let res = runtime.invoke_contract(addr, "test_add", vec![]);
     assert!(!res.is_void());
-    
+
     // Test subtraction
     let res = runtime.invoke_contract(addr, "test_sub", vec![]);
     assert!(!res.is_void());
-    
+
     // Test multiplication
     let res = runtime.invoke_contract(addr, "test_mul", vec![]);
     assert!(!res.is_void());
-    
+
     // Test division
     let res = runtime.invoke_contract(addr, "test_div", vec![]);
     assert!(!res.is_void());
-    
+
     // Test modulo
     let res = runtime.invoke_contract(addr, "test_mod", vec![]);
     assert!(!res.is_void());
@@ -711,19 +711,19 @@ fn u256_complex_operations() {
     );
 
     let addr = runtime.contracts.last().unwrap();
-    
+
     // Test complex math
     let res = runtime.invoke_contract(addr, "test_complex_math", vec![]);
     assert!(!res.is_void());
-    
+
     // Test bitwise operations
     let res = runtime.invoke_contract(addr, "test_bitwise_ops", vec![]);
     assert!(!res.is_void());
-    
+
     // Test shift operations
     let res = runtime.invoke_contract(addr, "test_shift_ops", vec![]);
     assert!(!res.is_void());
-    
+
     // Test comparisons
     let res = runtime.invoke_contract(addr, "test_comparisons", vec![]);
     assert!(!res.is_void());
@@ -798,19 +798,19 @@ fn i256_complex_operations() {
     );
 
     let addr = runtime.contracts.last().unwrap();
-    
+
     // Test complex math
     let res = runtime.invoke_contract(addr, "test_complex_math", vec![]);
     assert!(!res.is_void());
-    
+
     // Test bitwise operations
     let res = runtime.invoke_contract(addr, "test_bitwise_ops", vec![]);
     assert!(!res.is_void());
-    
+
     // Test shift operations
     let res = runtime.invoke_contract(addr, "test_shift_ops", vec![]);
     assert!(!res.is_void());
-    
+
     // Test comparisons
     let res = runtime.invoke_contract(addr, "test_comparisons", vec![]);
     assert!(!res.is_void());
@@ -868,15 +868,15 @@ fn u256_stress_test() {
     );
 
     let addr = runtime.contracts.last().unwrap();
-    
+
     // Test stress operations
     let res = runtime.invoke_contract(addr, "test_stress_operations", vec![]);
     assert!(!res.is_void());
-    
+
     // Test very large numbers
     let res = runtime.invoke_contract(addr, "test_very_large_numbers", vec![]);
     assert!(!res.is_void());
-    
+
     // Test boundary conditions
     let res = runtime.invoke_contract(addr, "test_boundary_conditions", vec![]);
     assert!(!res.is_void());
@@ -945,15 +945,15 @@ fn i256_stress_test() {
     );
 
     let addr = runtime.contracts.last().unwrap();
-    
+
     // Test stress operations
     let res = runtime.invoke_contract(addr, "test_stress_operations", vec![]);
     assert!(!res.is_void());
-    
+
     // Test very large numbers
     let res = runtime.invoke_contract(addr, "test_very_large_numbers", vec![]);
     assert!(!res.is_void());
-    
+
     // Test boundary conditions
     let res = runtime.invoke_contract(addr, "test_boundary_conditions", vec![]);
     assert!(!res.is_void());
@@ -962,5 +962,3 @@ fn i256_stress_test() {
     let res = runtime.invoke_contract(addr, "test_negative_stress", vec![]);
     assert!(!res.is_void());
 }
-
-

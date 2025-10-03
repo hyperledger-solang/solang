@@ -144,9 +144,9 @@ pub fn soroban_decode_arg(
         Type::Address(_) | Type::String => arg.clone(),
 
         Type::Int(128) | Type::Uint(128) => decode_i128(wrapper_cfg, vartab, arg),
-        
+
         Type::Int(256) | Type::Uint(256) => decode_i256(wrapper_cfg, vartab, arg),
-        
+
         Type::Uint(32) => {
             // get payload out of major bits then truncate to 32‑bit
             Expression::Trunc {
@@ -569,16 +569,16 @@ pub fn soroban_encode_arg(
             // lo_hi: bits 64-127
             // hi_lo: bits 128-191
             // hi_hi: bits 192-255
-            
+
             let is_signed = matches!(item.ty(), Type::Int(256));
-            
+
             // Extract lo_lo (bits 0-63)
             let lo_lo = Expression::Trunc {
                 loc: Loc::Codegen,
                 ty: Type::Int(64),
                 expr: Box::new(item.clone()),
             };
-            
+
             // Extract lo_hi (bits 64-127)
             let lo_hi_shift = Expression::ShiftRight {
                 loc: Loc::Codegen,
@@ -591,13 +591,13 @@ pub fn soroban_encode_arg(
                 }),
                 signed: is_signed,
             };
-            
+
             let lo_hi = Expression::Trunc {
                 loc: Loc::Codegen,
                 ty: Type::Int(64),
                 expr: Box::new(lo_hi_shift),
             };
-            
+
             // Extract hi_lo (bits 128-191)
             let hi_lo_shift = Expression::ShiftRight {
                 loc: Loc::Codegen,
@@ -610,13 +610,13 @@ pub fn soroban_encode_arg(
                 }),
                 signed: is_signed,
             };
-            
+
             let hi_lo = Expression::Trunc {
                 loc: Loc::Codegen,
                 ty: Type::Int(64),
                 expr: Box::new(hi_lo_shift),
             };
-            
+
             // Extract hi_hi (bits 192-255)
             let hi_hi_shift = Expression::ShiftRight {
                 loc: Loc::Codegen,
@@ -629,7 +629,7 @@ pub fn soroban_encode_arg(
                 }),
                 signed: is_signed,
             };
-            
+
             let hi_hi = Expression::Trunc {
                 loc: Loc::Codegen,
                 ty: Type::Int(64),
