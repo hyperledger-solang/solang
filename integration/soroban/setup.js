@@ -1,6 +1,6 @@
 
 import 'dotenv/config';
-import { mkdirSync, readdirSync} from 'fs';
+import { mkdirSync, readdirSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -47,9 +47,10 @@ function deploy_all() {
   console.log(dirname);
   
   let rust_wasm = path.join('rust','target','wasm32v1-none', 'release-with-logs', 'hello_world.wasm');
-
-  // add rust wasm file to the list of wasm files
-  wasmFiles.push(rust_wasm);
+  // add rust wasm file to the list of wasm files if it exists locally
+  if (existsSync(path.join(dirname, rust_wasm))) {
+    wasmFiles.push(rust_wasm);
+  }
 
   wasmFiles.forEach(wasmFile => {
     deploy(path.join(dirname, wasmFile));
