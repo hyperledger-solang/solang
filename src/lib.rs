@@ -180,6 +180,7 @@ pub fn parse_and_resolve_with_options(
 ) -> sema::ast::Namespace {
     let mut ns = sema::ast::Namespace::new(target);
 
+    // Propagate selected options into the namespace prior to sema
     if let Some(opts) = options {
         ns.strict_soroban_types = opts.strict_soroban_types;
     }
