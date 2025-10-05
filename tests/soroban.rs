@@ -9,6 +9,7 @@ use solang::{compile, Target};
 use soroban_sdk::testutils::Logs;
 use soroban_sdk::{vec, Address, ConstructorArgs, Env, Symbol, Val};
 use std::ffi::OsStr;
+pub mod soroban_testcases;
 
 // TODO: register accounts, related balances, events, etc.
 pub struct SorobanEnv {
