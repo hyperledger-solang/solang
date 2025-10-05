@@ -749,9 +749,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         .unwrap()
                         .into_int_value();
 
-                    dest = bin
-                        .vector_new(length, elem_size, None, elem_ty)
-                        .into_pointer_value();
+                    dest = bin.vector_new(length, elem_size, None).into_pointer_value();
                 };
 
                 let elem_size = elem_ty.solana_storage_size(bin.ns).to_u64().unwrap();

@@ -345,33 +345,28 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     /// Prints a string
     /// TODO: Implement this function, with a call to the `log` function in the Soroban runtime.
     fn print(&self, bin: &Binary, string: PointerValue, length: IntValue) {
-        if string.is_const() && length.is_const() {
-            let msg_pos = bin
-                .builder
-                .build_ptr_to_int(string, bin.context.i64_type(), "msg_pos")
-                .unwrap();
-            let length = length.const_cast(bin.context.i64_type(), false);
+        let msg_pos = bin
+            .builder
+            .build_ptr_to_int(string, bin.context.i64_type(), "msg_pos")
+            .unwrap();
 
-            let msg_pos_encoded = encode_value(msg_pos, 32, 4, bin);
-            let length_encoded = encode_value(length, 32, 4, bin);
+        let msg_pos_encoded = encode_value(msg_pos, 32, 4, bin);
+        let length_encoded = encode_value(length, 32, 4, bin);
 
-            bin.builder
-                .build_call(
-                    bin.module
-                        .get_function(HostFunctions::LogFromLinearMemory.name())
-                        .unwrap(),
-                    &[
-                        msg_pos_encoded.into(),
-                        length_encoded.into(),
-                        msg_pos_encoded.into(),
-                        encode_value(bin.context.i64_type().const_zero(), 32, 4, bin).into(),
-                    ],
-                    "log",
-                )
-                .unwrap();
-        } else {
-            todo!("Dynamic String printing is not yet supported")
-        }
+        bin.builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::LogFromLinearMemory.name())
+                    .unwrap(),
+                &[
+                    msg_pos_encoded.into(),
+                    length_encoded.into(),
+                    msg_pos_encoded.into(),
+                    encode_value(bin.context.i64_type().const_zero(), 32, 4, bin).into(),
+                ],
+                "log",
+            )
+            .unwrap();
     }
 
     /// Return success without any result
@@ -452,7 +447,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .builder
             .build_int_unsigned_div(
                 payload_len,
-                bin.context.i64_type().const_int(8, false),
+                payload_len.get_type().const_int(8, false),
                 "args_len",
             )
             .unwrap();
@@ -461,7 +456,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .builder
             .build_int_sub(
                 args_len,
-                bin.context.i64_type().const_int(1, false),
+                args_len.get_type().const_int(1, false),
                 "args_len",
             )
             .unwrap();
@@ -756,7 +751,25 @@ fn storage_type_to_int(storage_type: &Option<StorageType>) -> u64 {
     }
 }
 
-fn encode_value<'a>(value: IntValue<'a>, shift: u64, add: u64, bin: &'a Binary) -> IntValue<'a> {
+fn encode_value<'a>(
+    mut value: IntValue<'a>,
+    shift: u64,
+    add: u64,
+    bin: &'a Binary,
+) -> IntValue<'a> {
+    match value.get_type().get_bit_width() {
+        32 =>
+        // extend to 64 bits
+        {
+            value = bin
+                .builder
+                .build_int_z_extend(value, bin.context.i64_type(), "temp")
+                .unwrap();
+        }
+        64 => (),
+        _ => unreachable!(),
+    }
+
     let shifted = bin
         .builder
         .build_left_shift(
@@ -765,6 +778,7 @@ fn encode_value<'a>(value: IntValue<'a>, shift: u64, add: u64, bin: &'a Binary) 
             "temp",
         )
         .unwrap();
+
     bin.builder
         .build_int_add(
             shifted,
