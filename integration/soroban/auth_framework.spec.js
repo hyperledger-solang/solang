@@ -49,7 +49,7 @@ describe('Auth Framework', () => {
     expect(
       res.error || toSafeJson(res),
       'Missing expected Soroban auth error message'
-    ).to.include("recording authorization only] encountered authorization not tied to the root contract invocation for an address. Use `require_auth()` in the top invocation or enable non-root authorization.");
+    ).to.include("[recording authorization only] encountered unauthorized call for a contract earlier in the call stack, make sure that you have called `authorize_as_current_contract()");
   });
 
 });
