@@ -950,6 +950,18 @@ impl RetrieveType for Expression {
 }
 
 impl Expression {
+    /// POC(miden): Convert expression to miden expression string
+    /// This is a very naive implementation and only handles a few cases.
+    pub fn to_miden_expr(self) -> String {
+        match self {
+            Expression::NumberLiteral { value, .. } => value.to_string(),
+            _ => {
+                // For unsupported expressions, return a placeholder
+                "UNSUPPORTED_EXPR".to_string()
+            }
+        }
+    }
+
     /// Increment an expression by some value.
     pub(crate) fn add_u32(self, other: Expression) -> Self {
         Expression::Add {

@@ -23,6 +23,7 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
             address_length: _,
             value_length: _,
         } => polkadot_wasm::link(input, name),
+        Target::Miden => input.to_vec(),
         _ => panic!("linker not implemented for target {target:?}"),
     }
 }

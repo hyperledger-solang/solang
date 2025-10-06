@@ -51,6 +51,6 @@ pub(super) fn new_event_emitter<'a>(
             event_no,
         }),
 
-        Target::Soroban => todo!(),
+        Target::Soroban | Target::Miden => todo!(),
     }
 }

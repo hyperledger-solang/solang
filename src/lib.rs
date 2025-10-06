@@ -33,6 +33,7 @@ pub enum Target {
     /// Ethereum EVM, see <https://ethereum.org/en/developers/docs/evm/>
     EVM,
     Soroban,
+    Miden,
 }
 
 impl fmt::Display for Target {
@@ -42,6 +43,7 @@ impl fmt::Display for Target {
             Target::Polkadot { .. } => write!(f, "Polkadot"),
             Target::EVM => write!(f, "EVM"),
             Target::Soroban => write!(f, "Soroban"),
+            Target::Miden => write!(f, "Miden"),
         }
     }
 }
@@ -55,6 +57,7 @@ impl PartialEq for Target {
             Target::Polkadot { .. } => matches!(other, Target::Polkadot { .. }),
             Target::EVM => matches!(other, Target::EVM),
             Target::Soroban => matches!(other, Target::Soroban),
+            Target::Miden => matches!(other, Target::Miden),
         }
     }
 }
@@ -88,6 +91,8 @@ impl Target {
         match self {
             // Solana uses ELF dynamic shared object (BPF)
             Target::Solana => "so",
+            // For Miden, file extension is .masm
+            Target::Miden => "masm",
             // Everything else generates webassembly
             _ => "wasm",
         }
