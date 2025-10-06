@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(dead_code)]
+
 mod enums;
 
 #[allow(clippy::unreadable_literal, clippy::naive_bytecount)]
