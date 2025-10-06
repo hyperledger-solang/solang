@@ -36,17 +36,12 @@ impl StylusTarget {
         );
 
         let args = bin.module.add_global(
-            bin.context.i8_type().ptr_type(AddressSpace::default()),
+            bin.context.ptr_type(AddressSpace::default()),
             Some(AddressSpace::default()),
             "args",
         );
         args.set_linkage(Linkage::Internal);
-        args.set_initializer(
-            &bin.context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .get_undef(),
-        );
+        args.set_initializer(&bin.context.ptr_type(AddressSpace::default()).get_undef());
 
         bin.args = Some(args);
 
@@ -160,9 +155,9 @@ impl StylusTarget {
 
     fn declare_externals(&self, bin: &Binary) {
         let ctx = bin.context;
-        let u8_ptr = ctx.i8_type().ptr_type(AddressSpace::default()).into();
+        let u8_ptr = ctx.ptr_type(AddressSpace::default()).into();
         let u16_val = ctx.i16_type().into();
-        let u32_ptr = ctx.i32_type().ptr_type(AddressSpace::default()).into();
+        let u32_ptr = ctx.ptr_type(AddressSpace::default()).into();
         let u32_val = ctx.i32_type().into();
         let u64_val = ctx.i64_type().into();
 

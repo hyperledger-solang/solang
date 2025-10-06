@@ -170,7 +170,7 @@ impl StorageSlot for StylusTarget {
                         .builder
                         .build_int_to_ptr(
                             bin.context.i32_type().const_all_ones(),
-                            bin.context.i8_type().ptr_type(AddressSpace::default()),
+                            bin.context.ptr_type(AddressSpace::default()),
                             "invalid",
                         )
                         .unwrap();
@@ -309,12 +309,7 @@ impl StorageSlot for StylusTarget {
                 let ret = self.get_storage_type_int(bin, function, slot_ptr, ptr_ty, &storage_type);
 
                 bin.builder
-                    .build_int_to_ptr(
-                        ret,
-                        bin.llvm_type(ty.deref_any())
-                            .ptr_type(AddressSpace::default()),
-                        "",
-                    )
+                    .build_int_to_ptr(ret, bin.context.ptr_type(AddressSpace::default()), "")
                     .unwrap()
                     .into()
             }
@@ -400,8 +395,7 @@ impl StorageSlot for StylusTarget {
                             if elem_ty.is_reference_type(bin.ns)
                                 && !elem_ty.deref_memory().is_fixed_reference_type(bin.ns)
                             {
-                                let load_ty =
-                                    bin.llvm_type(elem_ty).ptr_type(AddressSpace::default());
+                                let load_ty = bin.context.ptr_type(AddressSpace::default());
                                 elem = bin
                                     .builder
                                     .build_load(load_ty, elem, "")
@@ -619,7 +613,7 @@ impl StorageSlot for StylusTarget {
                     if field.ty.is_reference_type(bin.ns)
                         && !field.ty.is_fixed_reference_type(bin.ns)
                     {
-                        let load_ty = bin.llvm_type(&field.ty).ptr_type(AddressSpace::default());
+                        let load_ty = bin.context.ptr_type(AddressSpace::default());
                         elem = bin
                             .builder
                             .build_load(load_ty, elem, field.name_as_str())

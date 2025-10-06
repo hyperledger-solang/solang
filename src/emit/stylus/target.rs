@@ -423,7 +423,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             .builder
             .build_pointer_cast(
                 chunk_ptr,
-                bin.context.i8_type().ptr_type(AddressSpace::default()),
+                bin.context.ptr_type(AddressSpace::default()),
                 "chunk_ptr_as_byte_ptr",
             )
             .unwrap();
@@ -545,7 +545,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             .builder
             .build_pointer_cast(
                 chunk_ptr,
-                bin.context.i8_type().ptr_type(AddressSpace::default()),
+                bin.context.ptr_type(AddressSpace::default()),
                 "chunk_ptr_as_byte_ptr",
             )
             .unwrap();
@@ -643,7 +643,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
     fn return_code<'b>(&self, bin: &'b Binary, ret: IntValue<'b>) {
         emit_context!(bin);
 
-        self.assert_failure(bin, byte_ptr!().const_zero(), i32_zero!());
+        self.assert_failure(bin, ptr!().const_zero(), i32_zero!());
     }
 
     /// Return failure without any result
@@ -997,7 +997,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                 let args = bin
                     .builder
                     .build_load(
-                        bin.context.i8_type().ptr_type(AddressSpace::default()),
+                        bin.context.ptr_type(AddressSpace::default()),
                         bin.args.unwrap().as_pointer_value(),
                         "args",
                     )
@@ -1226,7 +1226,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
             topic_buf
         } else {
-            byte_ptr!().const_null()
+            ptr!().const_null()
         };
 
         call!(
