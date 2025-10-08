@@ -389,7 +389,8 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
                 | Builtin::MinimumBalance
                 | Builtin::Balance
                 | Builtin::Accounts
-                | Builtin::ContractCode,
+                | Builtin::ContractCode
+                | Builtin::ContractCodehash,
             ..
         } => state.read(loc),
 

@@ -8,7 +8,7 @@ use crate::codegen::{Builtin, Expression};
 use crate::emit::binary::Binary;
 use crate::emit::storage::StorageSlot;
 use crate::emit::stylus::StylusTarget;
-use crate::emit::{ContractArgs, TargetRuntime, Variable};
+use crate::emit::{expression::expression, ContractArgs, TargetRuntime, Variable};
 use crate::emit_context;
 use crate::sema::ast::{self, CallTy};
 use crate::sema::ast::{Function, Type};
@@ -896,6 +896,47 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         match expr {
             Expression::Builtin {
+                kind: Builtin::Balance,
+                args,
+                ..
+            } => {
+                let address = expression(self, bin, &args[0], vartab, function).into_array_value();
+
+                let address_ptr = bin
+                    .builder
+                    .build_alloca(bin.address_type(), "address")
+                    .unwrap();
+
+                bin.builder.build_store(address_ptr, address).unwrap();
+
+                let balance = bin
+                    .builder
+                    .build_alloca(bin.value_type(), "balance")
+                    .unwrap();
+
+                call!(
+                    "account_balance",
+                    &[address_ptr.into(), balance.into()],
+                    "account_balance"
+                );
+
+                // smoelius: Balance is big-endian and must be byte-swapped.
+                let temp = bin.builder.build_alloca(bin.value_type(), "hash").unwrap();
+
+                call!(
+                    "__beNtoleN",
+                    &[
+                        balance.into(),
+                        temp.into(),
+                        i32_const!(bin.ns.value_length as u64).into()
+                    ]
+                );
+
+                bin.builder
+                    .build_load(bin.value_type(), temp, "balance")
+                    .unwrap()
+            }
+            Expression::Builtin {
                 kind: Builtin::BaseFee,
                 ..
             } => {
@@ -950,6 +991,90 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                     .unwrap();
 
                 chainid.into()
+            }
+            Expression::Builtin {
+                kind: Builtin::ContractCode,
+                args,
+                ..
+            } => {
+                let address = expression(self, bin, &args[0], vartab, function).into_array_value();
+
+                let address_ptr = bin
+                    .builder
+                    .build_alloca(bin.address_type(), "address")
+                    .unwrap();
+
+                bin.builder.build_store(address_ptr, address).unwrap();
+
+                let size = call!(
+                    "account_code_size",
+                    &[address_ptr.into()],
+                    "account_code_size"
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+                let account_code = bin
+                    .builder
+                    .build_array_alloca(bin.context.i8_type(), size, "account_code")
+                    .unwrap();
+
+                call!(
+                    "account_code",
+                    &[
+                        address_ptr.into(),
+                        i32_zero!().into(),
+                        size.into(),
+                        account_code.into(),
+                    ],
+                    "account_code"
+                );
+
+                call!(
+                    "vector_new",
+                    &[size.into(), i32_const!(1).into(), account_code.into()]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+            }
+            Expression::Builtin {
+                kind: Builtin::ContractCodehash,
+                args,
+                ..
+            } => {
+                let address = expression(self, bin, &args[0], vartab, function).into_array_value();
+
+                let address_ptr = bin
+                    .builder
+                    .build_alloca(bin.address_type(), "address")
+                    .unwrap();
+
+                bin.builder.build_store(address_ptr, address).unwrap();
+
+                let ty = bin.context.custom_width_int_type(256);
+
+                let digest_ptr = bin.builder.build_alloca(ty, "digest").unwrap();
+
+                call!(
+                    "account_codehash",
+                    &[address_ptr.into(), digest_ptr.into()],
+                    "account_codehash"
+                );
+
+                call!(
+                    "vector_new",
+                    &[
+                        i32_const!(32).into(),
+                        i32_const!(1).into(),
+                        digest_ptr.into()
+                    ]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
             }
             Expression::Builtin {
                 kind: Builtin::Gasleft,
@@ -1019,6 +1144,33 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                 let dest = bin.vector_bytes(v);
                 call!("__memcpy", &[dest.into(), args.into(), args_len.into()]);
                 v
+            }
+            Expression::Builtin {
+                kind: Builtin::Gasprice,
+                ..
+            } => {
+                let gasprice = bin
+                    .builder
+                    .build_alloca(bin.value_type(), "gasprice")
+                    .unwrap();
+
+                call!("tx_gas_price", &[gasprice.into()], "tx_gas_price");
+
+                // smoelius: `gasprice` is big-endian and must be byte-swapped.
+                let temp = bin.builder.build_alloca(bin.value_type(), "hash").unwrap();
+
+                call!(
+                    "__beNtoleN",
+                    &[
+                        gasprice.into(),
+                        temp.into(),
+                        i32_const!(bin.ns.value_length as u64).into()
+                    ]
+                );
+
+                bin.builder
+                    .build_load(bin.value_type(), temp, "balance")
+                    .unwrap()
             }
             Expression::Builtin {
                 kind: Builtin::Origin,

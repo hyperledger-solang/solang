@@ -1753,6 +1753,7 @@ pub enum StringLocation<T> {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Builtin {
     ContractCode,
+    ContractCodehash,
     GetAddress,
     Balance,
     PayableSend,

@@ -392,7 +392,7 @@ pub(super) fn member_access(
             });
         }
         Type::Address(_) if id.name == "code" => {
-            if ns.target != Target::EVM {
+            if ns.target != Target::EVM && ns.target != Target::Stylus {
                 diagnostics.push(Diagnostic::error(
                     expr.loc(),
                     format!("'address.code' is not supported on {}", ns.target),
@@ -404,6 +404,22 @@ pub(super) fn member_access(
                 loc: *loc,
                 tys: vec![Type::DynamicBytes],
                 kind: Builtin::ContractCode,
+                args: vec![expr],
+            });
+        }
+        Type::Address(_) if id.name == "codehash" => {
+            if ns.target != Target::Stylus {
+                diagnostics.push(Diagnostic::error(
+                    expr.loc(),
+                    format!("'address.codehash' is not supported on {}", ns.target),
+                ));
+                return Err(());
+            }
+            used_variable(ns, &expr, symtable);
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![Type::DynamicBytes],
+                kind: Builtin::ContractCodehash,
                 args: vec![expr],
             });
         }

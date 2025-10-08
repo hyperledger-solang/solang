@@ -86,6 +86,10 @@ impl StylusTarget {
         target.emit_dispatch(&mut bin);
 
         bin.internalize(&[
+            "account_balance",
+            "account_code",
+            "account_code_size",
+            "account_codehash",
             "block_basefee",
             "block_coinbase",
             "block_gas_limit",
@@ -99,6 +103,11 @@ impl StylusTarget {
             "delegate_call_contract",
             "emit_log",
             "evm_gas_left",
+            "math_div",
+            "math_mod",
+            "math_pow",
+            "math_add_mod",
+            "math_mul_mod",
             "log_txt",
             "msg_reentrant",
             "msg_sender",
@@ -114,6 +123,7 @@ impl StylusTarget {
             "storage_load_bytes32",
             "transient_store_bytes32",
             "transient_load_bytes32",
+            "tx_gas_price",
             "tx_origin",
             "write_result",
         ]);
@@ -171,6 +181,10 @@ impl StylusTarget {
             };
         }
 
+        external!("account_balance", void_type, u8_ptr, u8_ptr);
+        external!("account_code", i32_type, u8_ptr, u32_val, u32_val, u8_ptr);
+        external!("account_code_size", i32_type, u8_ptr);
+        external!("account_codehash", void_type, u8_ptr, u8_ptr);
         external!("block_basefee", void_type, u8_ptr);
         external!("block_coinbase", void_type, u8_ptr);
         external!("block_gas_limit", i64_type);
@@ -203,6 +217,11 @@ impl StylusTarget {
         external!("evm_gas_left", i64_type);
         external!("log_txt", void_type, u8_ptr, u32_val);
         external!("msg_reentrant", i32_type);
+        external!("math_add_mod", void_type, u8_ptr, u8_ptr, u8_ptr);
+        external!("math_div", void_type, u8_ptr, u8_ptr);
+        external!("math_mod", void_type, u8_ptr, u8_ptr);
+        external!("math_mul_mod", void_type, u8_ptr, u8_ptr);
+        external!("math_pow", void_type, u8_ptr, u8_ptr);
         external!("msg_sender", void_type, u8_ptr);
         external!("msg_value", void_type, u8_ptr);
         external!("native_keccak256", void_type, u8_ptr, u32_val, u8_ptr);
@@ -224,6 +243,7 @@ impl StylusTarget {
         external!("storage_load_bytes32", void_type, u8_ptr, u8_ptr);
         external!("transient_store_bytes32", void_type, u8_ptr, u8_ptr);
         external!("transient_load_bytes32", void_type, u8_ptr, u8_ptr);
+        external!("tx_gas_price", void_type, u8_ptr);
         external!("tx_origin", void_type, u8_ptr);
         external!("write_result", void_type, u8_ptr, u32_val);
     }
