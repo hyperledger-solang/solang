@@ -306,7 +306,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         call!(
             "vector_new",
-            &[len.into(), i32_const!(1).into(), buffer.into(),]
+            &[len.into(), i32_const!(1).into(), buffer.into()]
         )
         .try_as_basic_value()
         .left()
@@ -1108,7 +1108,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         call!(
             "vector_new",
-            &[size.into(), i32_const!(1).into(), return_data.into(),]
+            &[size.into(), i32_const!(1).into(), return_data.into()]
         )
         .try_as_basic_value()
         .left()
