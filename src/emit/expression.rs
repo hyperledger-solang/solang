@@ -1757,12 +1757,45 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             args,
             ..
         } => {
-            let arith_ty = bin.context.custom_width_int_type(512);
-            let res_ty = bin.context.custom_width_int_type(256);
-
             let x = expression(target, bin, &args[0], vartab, function).into_int_value();
             let y = expression(target, bin, &args[1], vartab, function).into_int_value();
             let k = expression(target, bin, &args[2], vartab, function).into_int_value();
+
+            if bin.ns.target == Target::Stylus {
+                let x_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "x_unswapped_ptr");
+                let y_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "y_unswapped_ptr");
+                let k_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "k_unswapped_ptr");
+                let x_swapped_ptr = bin.build_alloca(function, bin.value_type(), "x_swapped_ptr");
+                let y_swapped_ptr = bin.build_alloca(function, bin.value_type(), "y_swapped_ptr");
+                let k_swapped_ptr = bin.build_alloca(function, bin.value_type(), "k_swapped_ptr");
+                bin.builder.build_store(x_unswapped_ptr, x).unwrap();
+                bin.builder.build_store(y_unswapped_ptr, y).unwrap();
+                bin.builder.build_store(k_unswapped_ptr, k).unwrap();
+                byte_swap_value(bin, &Type::Uint(256), x_unswapped_ptr, x_swapped_ptr, true);
+                byte_swap_value(bin, &Type::Uint(256), y_unswapped_ptr, y_swapped_ptr, true);
+                byte_swap_value(bin, &Type::Uint(256), k_unswapped_ptr, k_swapped_ptr, true);
+                call!(
+                    "math_add_mod",
+                    &[
+                        x_swapped_ptr.into(),
+                        y_swapped_ptr.into(),
+                        k_swapped_ptr.into()
+                    ]
+                );
+                let sum_ptr = bin.build_alloca(function, bin.value_type(), "sum_ptr");
+                byte_swap_value(bin, &Type::Uint(256), x_swapped_ptr, sum_ptr, false);
+                return bin
+                    .builder
+                    .build_load(bin.value_type(), sum_ptr, "sum")
+                    .unwrap();
+            }
+
+            let arith_ty = bin.context.custom_width_int_type(512);
+            let res_ty = bin.context.custom_width_int_type(256);
+
             let dividend = bin
                 .builder
                 .build_int_add(
@@ -1855,11 +1888,45 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             args,
             ..
         } => {
+            let x = expression(target, bin, &args[0], vartab, function).into_int_value();
+            let y = expression(target, bin, &args[1], vartab, function).into_int_value();
+            let k = expression(target, bin, &args[2], vartab, function).into_int_value();
+
+            if bin.ns.target == Target::Stylus {
+                let x_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "x_unswapped_ptr");
+                let y_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "y_unswapped_ptr");
+                let k_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "k_unswapped_ptr");
+                let x_swapped_ptr = bin.build_alloca(function, bin.value_type(), "x_swapped_ptr");
+                let y_swapped_ptr = bin.build_alloca(function, bin.value_type(), "y_swapped_ptr");
+                let k_swapped_ptr = bin.build_alloca(function, bin.value_type(), "k_swapped_ptr");
+                bin.builder.build_store(x_unswapped_ptr, x).unwrap();
+                bin.builder.build_store(y_unswapped_ptr, y).unwrap();
+                bin.builder.build_store(k_unswapped_ptr, k).unwrap();
+                byte_swap_value(bin, &Type::Uint(256), x_unswapped_ptr, x_swapped_ptr, true);
+                byte_swap_value(bin, &Type::Uint(256), y_unswapped_ptr, y_swapped_ptr, true);
+                byte_swap_value(bin, &Type::Uint(256), k_unswapped_ptr, k_swapped_ptr, true);
+                call!(
+                    "math_mul_mod",
+                    &[
+                        x_swapped_ptr.into(),
+                        y_swapped_ptr.into(),
+                        k_swapped_ptr.into()
+                    ]
+                );
+                let product_ptr = bin.build_alloca(function, bin.value_type(), "product_ptr");
+                byte_swap_value(bin, &Type::Uint(256), x_swapped_ptr, product_ptr, false);
+                return bin
+                    .builder
+                    .build_load(bin.value_type(), product_ptr, "product")
+                    .unwrap();
+            }
+
             let arith_ty = bin.context.custom_width_int_type(512);
             let res_ty = bin.context.custom_width_int_type(256);
 
-            let x = expression(target, bin, &args[0], vartab, function).into_int_value();
-            let y = expression(target, bin, &args[1], vartab, function).into_int_value();
             let x_m = bin.build_alloca(function, arith_ty, "x_m");
             let y_m = bin.build_alloca(function, arith_ty, "x_y");
             let x_times_y_m = bin.build_alloca(function, arith_ty, "x_times_y_m");
@@ -1893,7 +1960,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     "",
                 )
                 .unwrap();
-            let k = expression(target, bin, &args[2], vartab, function).into_int_value();
             let dividend = bin
                 .builder
                 .build_load(arith_ty, x_times_y_m, "x_t_y")
@@ -2138,7 +2204,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
         Expression::ByteSwap { expr, le_to_be } => {
             let ty = expr.ty();
-            bytes_swap(target, bin, &ty, expr, *le_to_be, vartab, function)
+            byte_swap_expression(target, bin, &ty, expr, *le_to_be, vartab, function)
         }
 
         Expression::RationalNumberLiteral { .. }
@@ -2696,7 +2762,7 @@ fn basic_value_to_slice<'a>(
 
 // smoelius: I think this type-walking must be done during the emit phase and not during the codegen
 // phase. For example, the bounds on a dynamic array cannot be known. Hence, a loop must be emitted.
-fn bytes_swap<'a, T: TargetRuntime<'a> + ?Sized>(
+fn byte_swap_expression<'a, T: TargetRuntime<'a> + ?Sized>(
     target: &T,
     bin: &Binary<'a>,
     ty: &Type,
@@ -2723,22 +2789,7 @@ fn bytes_swap<'a, T: TargetRuntime<'a> + ?Sized>(
                 "dest",
             );
 
-            let name = if le_to_be { "__leNtobeN" } else { "__beNtoleN" };
-
-            bin.builder
-                .build_call(
-                    bin.module.get_function(name).unwrap(),
-                    &[
-                        src.into(),
-                        dest.into(),
-                        bin.context
-                            .i32_type()
-                            .const_int((ty.get_type_size() / 8) as u64, false)
-                            .into(),
-                    ],
-                    name,
-                )
-                .unwrap();
+            byte_swap_value(bin, ty, src, dest, le_to_be);
 
             bin.builder
                 .build_load(llvm_ty, dest, "swapped bytes")
@@ -2746,8 +2797,33 @@ fn bytes_swap<'a, T: TargetRuntime<'a> + ?Sized>(
         }
         Type::UserType(no) => {
             let ty = &bin.ns.user_types[*no].ty;
-            bytes_swap(target, bin, ty, expr, le_to_be, vartab, function)
+            byte_swap_expression(target, bin, ty, expr, le_to_be, vartab, function)
         }
         _ => unimplemented!("{ty:?}"),
     }
+}
+
+fn byte_swap_value(
+    bin: &Binary<'_>,
+    ty: &Type,
+    from: PointerValue<'_>,
+    to: PointerValue<'_>,
+    le_to_be: bool,
+) {
+    let name = if le_to_be { "__leNtobeN" } else { "__beNtoleN" };
+
+    bin.builder
+        .build_call(
+            bin.module.get_function(name).unwrap(),
+            &[
+                from.into(),
+                to.into(),
+                bin.context
+                    .i32_type()
+                    .const_int((ty.get_type_size() / 8) as u64, false)
+                    .into(),
+            ],
+            name,
+        )
+        .unwrap();
 }

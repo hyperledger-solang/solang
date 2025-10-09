@@ -57,6 +57,10 @@ fn milestone_3() {
         .position(|c| c.is_ascii_whitespace())
         .unwrap_or_else(|| gasprice.len());
     assert_eq!(100000000, u64::from_str_radix(&gasprice[..i], 10).unwrap());
+
+    call(dir, &address, ["test_addmod()"]).unwrap();
+
+    call(dir, &address, ["test_mulmod()"]).unwrap();
 }
 
 fn label(stdout: &str) -> String {

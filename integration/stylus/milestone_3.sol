@@ -20,6 +20,28 @@ contract C {
         return (balance, codehash, manual_codehash, gasprice);
     }
 
+    function test_addmod() public pure {
+        uint256 x = addmod(500, 100, 3);
+        uint256 y = addmod(500, 100, 7);
+
+        print("x = {}".format(x));
+        print("y = {}".format(y));
+
+        assert(x == 0);
+        assert(y == 5);
+    }
+
+    function test_mulmod() public pure {
+        uint256 x = mulmod(500, 100, 3);
+        uint256 y = mulmod(500, 100, 7);
+
+        print("x = {}".format(x));
+        print("y = {}".format(y));
+
+        assert(x == 2);
+        assert(y == 6);
+    }
+
     function getCode() public view returns (bytes) {
         return address(this).code;
     }
