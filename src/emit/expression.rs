@@ -244,6 +244,48 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let left = expression(target, bin, left, vartab, function).into_int_value();
             let right = expression(target, bin, right, vartab, function).into_int_value();
 
+            // smoelius: If the target is Stylus and `left` and `right` are both `uint256`s, we can
+            // use the `math_div` import.
+            if bin.ns.target == Target::Stylus
+                && left.get_type().get_bit_width() == 256
+                && right.get_type().get_bit_width() == 256
+            {
+                let left_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "left_unswapped_ptr");
+                let right_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "right_unswapped_ptr");
+                let left_swapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "left_swapped_ptr");
+                let right_swapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "right_swapped_ptr");
+                bin.builder.build_store(left_unswapped_ptr, left).unwrap();
+                bin.builder.build_store(right_unswapped_ptr, right).unwrap();
+                byte_swap_value(
+                    bin,
+                    &Type::Uint(256),
+                    left_unswapped_ptr,
+                    left_swapped_ptr,
+                    true,
+                );
+                byte_swap_value(
+                    bin,
+                    &Type::Uint(256),
+                    right_unswapped_ptr,
+                    right_swapped_ptr,
+                    true,
+                );
+                call!(
+                    "math_div",
+                    &[left_swapped_ptr.into(), right_swapped_ptr.into(),]
+                );
+                let quotient_ptr = bin.build_alloca(function, bin.value_type(), "quotient_ptr");
+                byte_swap_value(bin, &Type::Uint(256), left_swapped_ptr, quotient_ptr, false);
+                return bin
+                    .builder
+                    .build_load(bin.value_type(), quotient_ptr, "quotient")
+                    .unwrap();
+            }
+
             let bits = left.get_type().get_bit_width();
 
             if bits > 64 {
@@ -513,6 +555,54 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let left = expression(target, bin, left, vartab, function).into_int_value();
             let right = expression(target, bin, right, vartab, function).into_int_value();
 
+            // smoelius: If the target is Stylus and `left` and `right` are both `uint256`s, we can
+            // use the `math_mod` import.
+            if bin.ns.target == Target::Stylus
+                && left.get_type().get_bit_width() == 256
+                && right.get_type().get_bit_width() == 256
+            {
+                let left_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "left_unswapped_ptr");
+                let right_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "right_unswapped_ptr");
+                let left_swapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "left_swapped_ptr");
+                let right_swapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "right_swapped_ptr");
+                bin.builder.build_store(left_unswapped_ptr, left).unwrap();
+                bin.builder.build_store(right_unswapped_ptr, right).unwrap();
+                byte_swap_value(
+                    bin,
+                    &Type::Uint(256),
+                    left_unswapped_ptr,
+                    left_swapped_ptr,
+                    true,
+                );
+                byte_swap_value(
+                    bin,
+                    &Type::Uint(256),
+                    right_unswapped_ptr,
+                    right_swapped_ptr,
+                    true,
+                );
+                call!(
+                    "math_mod",
+                    &[left_swapped_ptr.into(), right_swapped_ptr.into(),]
+                );
+                let remainder_ptr = bin.build_alloca(function, bin.value_type(), "remainder_ptr");
+                byte_swap_value(
+                    bin,
+                    &Type::Uint(256),
+                    left_swapped_ptr,
+                    remainder_ptr,
+                    false,
+                );
+                return bin
+                    .builder
+                    .build_load(bin.value_type(), remainder_ptr, "remainder")
+                    .unwrap();
+            }
+
             let bits = left.get_type().get_bit_width();
 
             if bits > 64 {
@@ -781,6 +871,48 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         } => {
             let left = expression(target, bin, l, vartab, function);
             let right = expression(target, bin, r, vartab, function);
+
+            // smoelius: If the target is Stylus and `left` and `right` are both `uint256`s, we can
+            // use the `math_pow` import.
+            if bin.ns.target == Target::Stylus
+                && left.into_int_value().get_type().get_bit_width() == 256
+                && right.into_int_value().get_type().get_bit_width() == 256
+            {
+                let left_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "left_unswapped_ptr");
+                let right_unswapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "right_unswapped_ptr");
+                let left_swapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "left_swapped_ptr");
+                let right_swapped_ptr =
+                    bin.build_alloca(function, bin.value_type(), "right_swapped_ptr");
+                bin.builder.build_store(left_unswapped_ptr, left).unwrap();
+                bin.builder.build_store(right_unswapped_ptr, right).unwrap();
+                byte_swap_value(
+                    bin,
+                    &Type::Uint(256),
+                    left_unswapped_ptr,
+                    left_swapped_ptr,
+                    true,
+                );
+                byte_swap_value(
+                    bin,
+                    &Type::Uint(256),
+                    right_unswapped_ptr,
+                    right_swapped_ptr,
+                    true,
+                );
+                call!(
+                    "math_pow",
+                    &[left_swapped_ptr.into(), right_swapped_ptr.into(),]
+                );
+                let power_ptr = bin.build_alloca(function, bin.value_type(), "power_ptr");
+                byte_swap_value(bin, &Type::Uint(256), left_swapped_ptr, power_ptr, false);
+                return bin
+                    .builder
+                    .build_load(bin.value_type(), power_ptr, "power")
+                    .unwrap();
+            }
 
             let bits = left.into_int_value().get_type().get_bit_width();
             let o = bin.build_alloca(function, left.get_type(), "");

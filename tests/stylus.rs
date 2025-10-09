@@ -161,6 +161,7 @@ fn deploy(path: impl AsRef<Path>, contract: &str) -> Result<(TempDir, String)> {
             // smoelius: The default LLVM optimization level can cause public functions to be
             // inlined into the dispatch function.
             "-O=less",
+            "--no-constant-folding",
         ],
     )?;
 

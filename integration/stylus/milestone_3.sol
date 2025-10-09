@@ -42,6 +42,36 @@ contract C {
         assert(y == 6);
     }
 
+    function test_div() public pure {
+        uint256 x = 500;
+        uint256 y = 100;
+        uint256 z = x / y;
+
+        print("z = {}".format(z));
+
+        assert(z == 5);
+    }
+
+    function test_mod() public pure {
+        uint256 x = 511;
+        uint256 y = 100;
+        uint256 z = x % y;
+
+        print("z = {}".format(z));
+
+        assert(z == 11);
+    }
+
+    function test_power() public pure {
+        uint256 x = 3;
+        uint256 y = 5;
+        uint256 z = x ** y;
+
+        print("z = {}".format(z));
+
+        assert(z == 243);
+    }
+
     function getCode() public view returns (bytes) {
         return address(this).code;
     }

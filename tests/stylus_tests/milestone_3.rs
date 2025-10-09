@@ -61,6 +61,12 @@ fn milestone_3() {
     call(dir, &address, ["test_addmod()"]).unwrap();
 
     call(dir, &address, ["test_mulmod()"]).unwrap();
+
+    call(dir, &address, ["test_div()"]).unwrap();
+
+    call(dir, &address, ["test_mod()"]).unwrap();
+
+    call(dir, &address, ["test_power()"]).unwrap();
 }
 
 fn label(stdout: &str) -> String {
