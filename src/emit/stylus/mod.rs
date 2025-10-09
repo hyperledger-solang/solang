@@ -220,7 +220,7 @@ impl StylusTarget {
         external!("math_add_mod", void_type, u8_ptr, u8_ptr, u8_ptr);
         external!("math_div", void_type, u8_ptr, u8_ptr);
         external!("math_mod", void_type, u8_ptr, u8_ptr);
-        external!("math_mul_mod", void_type, u8_ptr, u8_ptr);
+        external!("math_mul_mod", void_type, u8_ptr, u8_ptr, u8_ptr);
         external!("math_pow", void_type, u8_ptr, u8_ptr);
         external!("msg_sender", void_type, u8_ptr);
         external!("msg_value", void_type, u8_ptr);
