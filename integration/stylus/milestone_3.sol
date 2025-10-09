@@ -1,6 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.0;
 
+// This contract tests the Stylus imports required for the Solang grant's third milestone:
+//
+// - account_balance
+// - account_code
+// - account_code_size
+// - account_codehash
+// - native_keccak256
+// - math_div
+// - math_mod
+// - math_pow
+// - math_add_mod
+// - math_mul_mod
+// - tx_gas_price
+//
+// All but the `math_...` functions are tested by the first function, `test`. The `math_...`
+// functions are tested individually by their own functions.
+//
+// This contract is deployed and called by `tests/stylus_tests/milestone_3.rs`.
+
 contract C {
     function test() public view returns (uint256, bytes32, bytes32, uint256) {
         bytes memory code = address(this).code;
