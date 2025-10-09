@@ -23,7 +23,7 @@ fn milestone_3() {
     let stdout = send(dir, &address, ["accept_donation()", "--value=1000"]).unwrap();
     println!("{}", &stdout);
 
-    let mut labeled_stdout = call(
+    let stdout = call(
         dir,
         &address,
         [
@@ -32,7 +32,7 @@ fn milestone_3() {
         ],
     )
     .unwrap();
-    labeled_stdout = label(&labeled_stdout);
+    let labeled_stdout = label(&stdout);
     println!("{}", &labeled_stdout);
 
     let balance = get(&labeled_stdout, "balance").unwrap();
