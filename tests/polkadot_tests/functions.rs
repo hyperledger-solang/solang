@@ -333,9 +333,6 @@ fn test_example() {
     struct Val32(i32);
 
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Val64(i64);
-
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct ValBool(bool);
 
     // parse

@@ -27,11 +27,11 @@ impl Diagnostics {
         self.contents.len()
     }
 
-    pub fn iter(&self) -> Iter<Diagnostic> {
+    pub fn iter(&self) -> Iter<'_, Diagnostic> {
         self.contents.iter()
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<Diagnostic> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, Diagnostic> {
         self.contents.iter_mut()
     }
 
