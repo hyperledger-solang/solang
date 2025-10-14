@@ -840,7 +840,17 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             bin.builder
                 .build_store(value, contract_args.value.unwrap())
                 .unwrap();
-            args.push(value.into());
+            // smoelius: Value is little-endian and must be byte-swapped.
+            let temp = bin.builder.build_alloca(bin.value_type(), "value").unwrap();
+            call!(
+                "__leNtobeN",
+                &[
+                    value.into(),
+                    temp.into(),
+                    i32_const!(bin.ns.value_length as u64).into()
+                ]
+            );
+            args.push(temp.into())
         }
 
         let gas = gas_calculation(bin, contract_args.gas.unwrap());
@@ -1221,6 +1231,10 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
                 timestamp.into()
             }
+            Expression::Builtin {
+                kind: Builtin::Value,
+                ..
+            } => self.value_transferred(bin).into(),
             _ => unimplemented!("{expr:?}"),
         }
     }
@@ -1270,7 +1284,28 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
     /// Return the value we received
     fn value_transferred<'b>(&self, bin: &Binary<'b>) -> IntValue<'b> {
-        unimplemented!()
+        emit_context!(bin);
+
+        let value = bin.builder.build_alloca(bin.value_type(), "value").unwrap();
+
+        call!("msg_value", &[value.into()], "value_transferred");
+
+        // smoelius: `value` is big-endian and must be byte-swapped.
+        let temp = bin.builder.build_alloca(bin.value_type(), "value").unwrap();
+
+        call!(
+            "__beNtoleN",
+            &[
+                value.into(),
+                temp.into(),
+                i32_const!(bin.ns.value_length as u64).into()
+            ]
+        );
+
+        bin.builder
+            .build_load(bin.value_type(), temp, "value")
+            .unwrap()
+            .into_int_value()
     }
 
     /// Terminate execution, destroy bin and send remaining funds to addr
