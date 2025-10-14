@@ -42,7 +42,7 @@ impl StorageSlot for StylusTarget {
 
         let slot_ptr = bin
             .builder
-            .build_alloca(bin.context.custom_width_int_type(256), "slot_ptr")
+            .build_alloca(bin.value_type(), "slot_ptr")
             .unwrap();
         if let Some(StorageType::Temporary(_)) = storage_type {
             call!("transient_load_bytes32", &[slot.into(), slot_ptr.into()]);
@@ -795,12 +795,15 @@ impl StorageSlot for StylusTarget {
                     // load length
                     bin.builder.build_store(slot_ptr, *slot).unwrap();
 
-                    let slot_ty = bin.context.custom_width_int_type(256);
+                    let buf = bin.builder.build_alloca(bin.value_type(), "buf").unwrap();
 
-                    let buf = bin.builder.build_alloca(slot_ty, "buf").unwrap();
-
-                    let length =
-                        self.get_storage_type_int(bin, function, slot_ptr, slot_ty, &storage_type);
+                    let length = self.get_storage_type_int(
+                        bin,
+                        function,
+                        slot_ptr,
+                        bin.value_type(),
+                        &storage_type,
+                    );
 
                     // we need to hash the length slot in order to get the slot of the first
                     // entry of the array

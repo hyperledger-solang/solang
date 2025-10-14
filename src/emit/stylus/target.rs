@@ -160,10 +160,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         let mut slot = next_slot(bin, slot, 32);
 
-        let slot_ptr = bin
-            .builder
-            .build_alloca(bin.context.custom_width_int_type(256), "slot")
-            .unwrap();
+        let slot_ptr = bin.builder.build_alloca(bin.value_type(), "slot").unwrap();
 
         bin.emit_loop_cond_first_with_int(
             function,
@@ -173,11 +170,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             |i_chunk: IntValue<'a>, slot: &mut IntValue<'a>| {
                 let i_chunk_as_u256 = bin
                     .builder
-                    .build_int_z_extend(
-                        i_chunk,
-                        bin.context.custom_width_int_type(256),
-                        "i_chunk_as_u256",
-                    )
+                    .build_int_z_extend(i_chunk, bin.value_type(), "i_chunk_as_u256")
                     .unwrap();
                 let slot_plus_i_chunk = bin
                     .builder
@@ -194,7 +187,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                 let chunk = bin
                     .builder
                     .build_load(
-                        bin.context.custom_width_int_type(256),
+                        bin.value_type(),
                         ptr_plus_offset(bin, data, offset),
                         "chunk",
                     )
@@ -202,7 +195,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
                 let chunk_ptr = bin
                     .builder
-                    .build_alloca(bin.context.custom_width_int_type(256), "chunk_ptr")
+                    .build_alloca(bin.value_type(), "chunk_ptr")
                     .unwrap();
                 bin.builder.build_store(chunk_ptr, chunk).unwrap();
                 call!(
@@ -257,10 +250,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         let mut slot = next_slot(bin, slot, 32);
 
-        let slot_ptr = bin
-            .builder
-            .build_alloca(bin.context.custom_width_int_type(256), "slot")
-            .unwrap();
+        let slot_ptr = bin.builder.build_alloca(bin.value_type(), "slot").unwrap();
 
         bin.emit_loop_cond_first_with_int(
             function,
@@ -270,11 +260,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             |i_chunk: IntValue<'a>, slot: &mut IntValue<'a>| {
                 let i_chunk_as_u256 = bin
                     .builder
-                    .build_int_z_extend(
-                        i_chunk,
-                        bin.context.custom_width_int_type(256),
-                        "i_chunk_as_u256",
-                    )
+                    .build_int_z_extend(i_chunk, bin.value_type(), "i_chunk_as_u256")
                     .unwrap();
                 let slot_plus_i_chunk = bin
                     .builder
@@ -286,12 +272,12 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
                 let chunk_ptr = bin
                     .builder
-                    .build_alloca(bin.context.custom_width_int_type(256), "chunk_ptr")
+                    .build_alloca(bin.value_type(), "chunk_ptr")
                     .unwrap();
                 call!("storage_load_bytes32", &[slot_ptr.into(), chunk_ptr.into()]);
                 let chunk = bin
                     .builder
-                    .build_load(bin.context.custom_width_int_type(256), chunk_ptr, "chunk")
+                    .build_load(bin.value_type(), chunk_ptr, "chunk")
                     .unwrap();
 
                 let offset = bin
@@ -390,11 +376,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             .unwrap();
         let i_chunk_as_u256 = bin
             .builder
-            .build_int_z_extend(
-                i_chunk,
-                bin.context.custom_width_int_type(256),
-                "i_chunk_as_u256",
-            )
+            .build_int_z_extend(i_chunk, bin.value_type(), "i_chunk_as_u256")
             .unwrap();
         let slot_plus_i_chunk = bin
             .builder
@@ -405,7 +387,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             .unwrap();
         let chunk_ptr = bin
             .builder
-            .build_alloca(bin.context.custom_width_int_type(256), "chunk_ptr")
+            .build_alloca(bin.value_type(), "chunk_ptr")
             .unwrap();
         call!(
             "storage_load_bytes32",
@@ -527,7 +509,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
         bin.builder.build_store(chunk_slot_ptr, chunk_slot).unwrap();
         let chunk_ptr = bin
             .builder
-            .build_alloca(bin.context.custom_width_int_type(256), "chunk_ptr")
+            .build_alloca(bin.value_type(), "chunk_ptr")
             .unwrap();
         call!(
             "storage_load_bytes32",
@@ -700,25 +682,17 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         let code_len = bin.context.i32_type().const_int(code.len() as u64, false);
 
-        let value = bin
-            .builder
-            .build_alloca(bin.context.custom_width_int_type(256), "value") // TODO: maybe use bin.value_type() instead of custom width
-            .unwrap();
+        let value = bin.builder.build_alloca(bin.value_type(), "value").unwrap();
         bin.builder
             .build_store(
                 value,
-                contract_args
-                    .value
-                    .unwrap_or(bin.context.custom_width_int_type(256).const_zero()),
+                contract_args.value.unwrap_or(bin.value_type().const_zero()),
             )
             .unwrap();
 
         if let Some(salt) = contract_args.salt {
             // create2
-            let salt_buf = bin
-                .builder
-                .build_alloca(bin.context.custom_width_int_type(256), "salt") // TODO: maybe use bin.value_type() instead of custom width
-                .unwrap();
+            let salt_buf = bin.builder.build_alloca(bin.value_type(), "salt").unwrap();
             bin.builder.build_store(salt_buf, salt).unwrap();
 
             call!(
@@ -833,10 +807,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             vec![address.unwrap().into(), payload.into(), payload_len.into()];
 
         if matches!(ty, CallTy::Regular) {
-            let value = bin
-                .builder
-                .build_alloca(bin.context.custom_width_int_type(256), "value")
-                .unwrap();
+            let value = bin.builder.build_alloca(bin.value_type(), "value").unwrap();
             bin.builder
                 .build_store(value, contract_args.value.unwrap())
                 .unwrap();
@@ -958,7 +929,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                 call!("block_basefee", &[basefee.into()], "block_basefee");
 
                 bin.builder
-                    .build_load(bin.context.custom_width_int_type(256), basefee, "basefee")
+                    .build_load(bin.value_type(), basefee, "basefee")
                     .unwrap()
             }
             Expression::Builtin {
@@ -1498,7 +1469,7 @@ mod local {
     ) -> IntValue<'a> {
         emit_context!(bin);
 
-        let ty = bin.context.custom_width_int_type(256);
+        let ty = bin.value_type();
 
         let digest_ptr = bin.builder.build_alloca(ty, "digest").unwrap();
 
