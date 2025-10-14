@@ -386,7 +386,7 @@ macro_rules! debug_value {
             .to_owned();
         let label_expr = crate::codegen::Expression::BytesLiteral {
             loc: solang_parser::pt::Loc::Codegen,
-            ty: Type::String,
+            ty: crate::sema::ast::Type::String,
             value: string_literal.clone(),
         };
         let label_value = crate::emit::expression::expression(
@@ -402,7 +402,7 @@ macro_rules! debug_value {
                 (
                     crate::sema::ast::FormatArg::StringLiteral,
                     Some(&string_literal),
-                    Type::String,
+                    crate::sema::ast::Type::String,
                     label_value.into(),
                 ),
                 (
@@ -415,7 +415,12 @@ macro_rules! debug_value {
             $function,
         );
 
-        $target.print($bin, $bin.vector_bytes(value), $bin.vector_len(value));
+        <_ as crate::emit::TargetRuntime>::print(
+            $target,
+            $bin,
+            $bin.vector_bytes(value),
+            $bin.vector_len(value),
+        );
 
         value
     }};
@@ -428,7 +433,7 @@ macro_rules! debug_str {
         labeled_string.push_str($s);
         let expr = crate::codegen::Expression::BytesLiteral {
             loc: solang_parser::pt::Loc::Codegen,
-            ty: Type::String,
+            ty: crate::sema::ast::Type::String,
             value: labeled_string.as_bytes().to_owned(),
         };
         let value = crate::emit::expression::expression(
@@ -439,7 +444,12 @@ macro_rules! debug_str {
             $function,
         );
 
-        $target.print($bin, $bin.vector_bytes(value), $bin.vector_len(value));
+        <_ as crate::emit::TargetRuntime>::print(
+            $target,
+            $bin,
+            $bin.vector_bytes(value),
+            $bin.vector_len(value),
+        );
 
         value
     }};
