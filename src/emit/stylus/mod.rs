@@ -257,7 +257,7 @@ impl StylusTarget {
         let (args, args_len) = self.public_function_prelude(bin, func);
         self.assign_args_globals(bin, args, args_len);
         // smoelius: FIXME: zero
-        let zero = bin.context.custom_width_int_type(256).const_zero();
+        let zero = bin.value_type().const_zero();
         let args = &[
             BasicMetadataValueEnum::PointerValue(args),
             BasicMetadataValueEnum::IntValue(args_len),
