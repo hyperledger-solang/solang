@@ -110,6 +110,7 @@ fn tests(required_forbidden_pairs: &[(&[&str], &[&str])]) {
         let (tempdir, address) = match deploy(
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(path),
             contract,
+            true,
         ) {
             Ok((tempdir, address)) => (tempdir, address),
             Err(Error(severity, error)) => {
@@ -143,7 +144,7 @@ fn tests(required_forbidden_pairs: &[(&[&str], &[&str])]) {
     assert!(failures.is_empty());
 }
 
-fn deploy(path: impl AsRef<Path>, contract: &str) -> Result<(TempDir, String)> {
+fn deploy(path: impl AsRef<Path>, contract: &str, activate: bool) -> Result<(TempDir, String)> {
     let tempdir = tempdir().unwrap();
     let dir = &tempdir;
 
@@ -151,6 +152,7 @@ fn deploy(path: impl AsRef<Path>, contract: &str) -> Result<(TempDir, String)> {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("integration/stylus/rust-toolchain.toml");
     copy(rust_toolchain_toml, dir.path().join("rust-toolchain.toml")).unwrap();
 
+    // smoelius: Compile.
     command(
         dir,
         [
@@ -165,31 +167,26 @@ fn deploy(path: impl AsRef<Path>, contract: &str) -> Result<(TempDir, String)> {
         ],
     )?;
 
-    command(
-        dir,
-        [
-            "cargo",
-            "stylus",
-            "check",
-            &format!("--wasm-file={contract}.wasm"),
-        ],
-    )
-    .unwrap();
+    let wasm_file = format!("--wasm-file={contract}.wasm");
 
-    let stdout = command(
-        dir,
-        [
-            "cargo",
-            "stylus",
-            "deploy",
-            &format!("--wasm-file={contract}.wasm"),
-            "--endpoint=http://localhost:8547",
-            "--private-key",
-            PRIVATE_KEY,
-            "--no-verify",
-        ],
-    )
-    .unwrap();
+    // smoelius: Check.
+    command(dir, ["cargo", "stylus", "check", &wasm_file]).unwrap();
+
+    // smoelius: Deploy.
+    let mut deploy_args = vec![
+        "cargo",
+        "stylus",
+        "deploy",
+        &wasm_file,
+        "--endpoint=http://localhost:8547",
+        "--private-key",
+        PRIVATE_KEY,
+        "--no-verify",
+    ];
+    if !activate {
+        deploy_args.push("--no-activate");
+    }
+    let stdout = command(dir, deploy_args).unwrap();
 
     let address = stdout
         .lines()

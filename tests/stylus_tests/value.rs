@@ -15,6 +15,7 @@ fn value() {
     let (tempdir, address) = deploy(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("integration/stylus/value.sol"),
         "C",
+        true,
     )
     .unwrap();
     let dir = &tempdir;

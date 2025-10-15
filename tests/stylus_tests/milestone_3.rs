@@ -16,6 +16,7 @@ fn milestone_3() {
     let (tempdir, address) = deploy(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("integration/stylus/milestone_3.sol"),
         "C",
+        true,
     )
     .unwrap();
     let dir = &tempdir;

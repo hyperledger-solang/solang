@@ -19,6 +19,7 @@ fn counter() {
     let (tempdir, address) = deploy(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("integration/stylus/counter.sol"),
         "Counter",
+        true,
     )
     .unwrap();
     let dir = &tempdir;
