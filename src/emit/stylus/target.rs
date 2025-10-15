@@ -1035,9 +1035,10 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
                 bin.builder.build_store(address_ptr, address).unwrap();
 
-                let ty = bin.context.custom_width_int_type(256);
-
-                let digest_ptr = bin.builder.build_alloca(ty, "digest").unwrap();
+                let digest_ptr = bin
+                    .builder
+                    .build_alloca(bin.value_type(), "digest")
+                    .unwrap();
 
                 call!(
                     "account_codehash",
