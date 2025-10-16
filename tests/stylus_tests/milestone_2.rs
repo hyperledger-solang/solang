@@ -30,22 +30,32 @@ fn milestone_2() {
     let mut stdout = call(
         dir,
         &address,
-        ["test()(uint64,uint256,address,uint256,uint256,uint256,uint256)"],
+        ["test_block()(uint64,uint256,address,uint256,uint256,uint256,uint256)"],
     )
     .unwrap();
-    println!("{}", label_test_output(&stdout));
+    println!("{}", label_test_block_output(&stdout));
 
-    stdout = call(dir, &address, ["test2()(uint256,uint256)"]).unwrap();
-    println!("{}", label_test2_output(&stdout));
+    stdout = call(dir, &address, ["test_tstore()(uint256,uint256)"]).unwrap();
+    println!("{}", label_test_tstore_output(&stdout));
 
-    stdout = send(dir, &address, ["test3()", "--value=1000000000000000000"]).unwrap();
+    stdout = send(
+        dir,
+        &address,
+        ["test_create1()", "--value=1000000000000000000"],
+    )
+    .unwrap();
     println!("{}", stdout);
 
-    stdout = send(dir, &address, ["test4()", "--value=1000000000000000000"]).unwrap();
+    stdout = send(
+        dir,
+        &address,
+        ["test_create2()", "--value=1000000000000000000"],
+    )
+    .unwrap();
     println!("{}", stdout);
 }
 
-fn label_test_output(stdout: &str) -> String {
+fn label_test_block_output(stdout: &str) -> String {
     const LABELS: &[&str] = &[
         "gasleft",
         "basefee",
@@ -64,7 +74,7 @@ fn label_test_output(stdout: &str) -> String {
         .collect()
 }
 
-fn label_test2_output(stdout: &str) -> String {
+fn label_test_tstore_output(stdout: &str) -> String {
     const LABELS: &[&str] = &["sload", "tload"];
     let lines = stdout.lines().collect::<Vec<_>>();
     assert_eq!(LABELS.len(), lines.len());

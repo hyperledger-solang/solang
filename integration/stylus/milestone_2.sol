@@ -15,7 +15,7 @@ contract C {
     bytes32 private constant REENTRANCY_GUARD_STORAGE =
         0x9b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00;
 
-    function test()
+    function test_block()
         public
         view
         returns (uint64, uint256, address, uint256, uint256, uint256, uint256)
@@ -39,7 +39,7 @@ contract C {
         );
     }
 
-    function test2() public returns (uint256 a, uint256 b) {
+    function test_tstore() public returns (uint256 a, uint256 b) {
         assembly {
             tstore(REENTRANCY_GUARD_STORAGE, 1)
             sstore(REENTRANCY_GUARD_STORAGE, 134)
@@ -49,7 +49,7 @@ contract C {
         return (a, b);
     }
 
-    function test3() public payable {
+    function test_create1() public payable {
         Greeter greeter = new Greeter();
         print("greeter = {}".format(address(greeter)));
 
@@ -63,7 +63,7 @@ contract C {
         greeter.greet();
     }
 
-    function test4() public payable {
+    function test_create2() public payable {
         print("address = {}".format(address(this)));
 
         Greeter greeter0 = new Greeter{salt: 0}();
