@@ -6,11 +6,18 @@
 //! - <https://book.getfoundry.sh/cast/>
 #![warn(clippy::pedantic)]
 
-use crate::{call, deploy, MUTEX};
-use std::path::PathBuf;
+use crate::{call, deploy, send, MUTEX};
+use std::{io::Write, path::PathBuf};
 
 #[test]
 fn milestone_2() {
+    writeln!(
+        std::io::stderr(),
+        "If you run the `milestone_2` test twice, it will fail the second time because the \
+         contract `Greeter` cannot be activated twice.",
+    )
+    .unwrap();
+
     let _lock = MUTEX.lock();
     let (tempdir, address) = deploy(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("integration/stylus/milestone_2.sol"),
@@ -29,6 +36,9 @@ fn milestone_2() {
     println!("{}", label(&stdout));
 
     stdout = call(dir, &address, ["test2()(uint256,uint256)"]).unwrap();
+    println!("{}", stdout);
+
+    stdout = send(dir, &address, ["test3()", "--value=1000000000000000000"]).unwrap();
     println!("{}", stdout);
 }
 

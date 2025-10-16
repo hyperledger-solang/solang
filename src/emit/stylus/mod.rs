@@ -11,6 +11,7 @@ use inkwell::module::{Linkage, Module};
 use inkwell::values::{BasicMetadataValueEnum, BasicValue, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 
+mod cargo_stylus;
 mod storage;
 mod target;
 

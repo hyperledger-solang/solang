@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.0;
 
-contract T {
-    function test() public view returns (uint256) {
-        return 1;
-    }
+interface ArbWasm {
+    /// @notice Activate a wasm program
+    /// @param program the program to activate
+    /// @return version the stylus version the program was activated against
+    /// @return dataFee the data fee paid to store the activated program
+    function activateProgram(
+        address program
+    ) external payable returns (uint16 version, uint256 dataFee);
 }
 
 contract C {
@@ -43,5 +47,25 @@ contract C {
             b := tload(REENTRANCY_GUARD_STORAGE)
         }
         return (a, b);
+    }
+
+    function test3() public payable {
+        Greeter greeter = new Greeter();
+        print("greeter = {}".format(address(greeter)));
+
+        ArbWasm arbWasm = ArbWasm(address(0x71));
+        (uint16 version, uint256 dataFee) = arbWasm.activateProgram{
+            value: msg.value
+        }(address(greeter));
+        print("version = {}".format(version));
+        print("dataFee = {}".format(dataFee));
+
+        greeter.greet();
+    }
+}
+
+contract Greeter {
+    function greet() public view {
+        print("Hello from 0x{}!".format(this));
     }
 }

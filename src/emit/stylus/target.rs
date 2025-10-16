@@ -675,7 +675,14 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
 
         let created_contract = &bin.ns.contracts[contract_no];
 
-        let code = created_contract.emit(bin.ns, bin.options, contract_no);
+        let code_without_metadata_uncompressed =
+            created_contract.emit(bin.ns, bin.options, contract_no);
+
+        let (_, code_without_metadata) =
+            super::cargo_stylus::compress_wasm(&code_without_metadata_uncompressed)
+                .expect("failed to compress wasm");
+
+        let code = super::cargo_stylus::contract_deployment_calldata(&code_without_metadata);
 
         let code_ptr =
             bin.emit_global_string(&format!("binary_{}_code", created_contract.id), &code, true);
@@ -730,7 +737,7 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
             let zero_ptr = bin.build_alloca(function, bin.address_type(), "zero_ptr");
 
             bin.builder.build_store(zero_ptr, zero_address).unwrap();
-            let cmp_result = bin
+            let is_zero = bin
                 .builder
                 .build_call(
                     bin.module.get_function("__memcmp").unwrap(),
@@ -755,25 +762,10 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                 .into_int_value();
 
             // __memcmp returns true (1) if memory regions are equal, false (0) if not equal
-            // We want success to be 0 if address equals zero (creation failed), 1 if address is non-zero (creation succeeded)
-            // So we need to invert the result: if __memcmp returns 1 (equal), we want success to be 0 (failure)
-            let success_value = bin
-                .builder
-                .build_select(
-                    bin.builder
-                        .build_int_compare(
-                            IntPredicate::EQ,
-                            cmp_result,
-                            bin.context.bool_type().const_int(1, false),
-                            "address_is_zero",
-                        )
-                        .unwrap(),
-                    bin.context.i32_type().const_zero(),
-                    bin.context.i32_type().const_int(1, false),
-                    "success_value",
-                )
-                .unwrap();
-            *success = success_value.into();
+            // We want success to be 1 if address equals zero (creation failed), 0 if address is non-zero (creation succeeded)
+            // So we can use the __memcmp result directly.
+
+            *success = is_zero.into();
         }
     }
 

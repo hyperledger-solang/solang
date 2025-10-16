@@ -72,6 +72,8 @@ solang-forge-fmt = { version = "0.2.0", optional = true }
 # build to work.
 ethers-core = { version = "2.0.10", optional = true }
 soroban-sdk = { version = "23.0.0-rc.2.2", features = ["testutils"], optional = true }
+anyhow = "1.0"
+brotli2 = "0.3"
 
 [dev-dependencies]
 num-derive = "0.4"
@@ -93,7 +95,6 @@ ink_primitives = "5.0.0"
 wasm_host_attr = { path = "tests/wasm_host_attr" }
 num-bigint = { version = "0.4", features = ["rand", "serde"]}
 strip-ansi-escapes = "0.2"
-anyhow = "1.0"
 
 
 [package.metadata.docs.rs]
