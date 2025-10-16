@@ -12,6 +12,7 @@ use crate::emit::{expression::expression, ContractArgs, TargetRuntime, Variable}
 use crate::emit_context;
 use crate::sema::ast::{self, CallTy};
 use crate::sema::ast::{Function, Type};
+use ethers_core::utils::keccak256;
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue,
@@ -683,6 +684,11 @@ impl<'a> TargetRuntime<'a> for StylusTarget {
                 .expect("failed to compress wasm");
 
         let code = super::cargo_stylus::contract_deployment_calldata(&code_without_metadata);
+
+        if std::env::var_os("DEBUG_CREATE2").is_some() {
+            let digest = keccak256(&code);
+            eprintln!("keccak256(initCode) = {}", hex::encode(digest));
+        }
 
         let code_ptr =
             bin.emit_global_string(&format!("binary_{}_code", created_contract.id), &code, true);

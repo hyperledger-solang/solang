@@ -40,6 +40,9 @@ fn milestone_2() {
 
     stdout = send(dir, &address, ["test3()", "--value=1000000000000000000"]).unwrap();
     println!("{}", stdout);
+
+    stdout = send(dir, &address, ["test4()", "--value=1000000000000000000"]).unwrap();
+    println!("{}", stdout);
 }
 
 fn label_test_output(stdout: &str) -> String {

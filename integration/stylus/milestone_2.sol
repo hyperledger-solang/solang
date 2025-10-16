@@ -62,6 +62,18 @@ contract C {
 
         greeter.greet();
     }
+
+    function test4() public payable {
+        print("address = {}".format(address(this)));
+
+        Greeter greeter0 = new Greeter{salt: 0}();
+        print("greeter0 = {}".format(address(greeter0)));
+        greeter0.greet();
+
+        Greeter greeter1 = new Greeter{salt: bytes32(uint256(1))}();
+        print("greeter1 = {}".format(address(greeter1)));
+        greeter1.greet();
+    }
 }
 
 contract Greeter {
