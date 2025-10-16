@@ -7,8 +7,8 @@
 #![warn(clippy::pedantic)]
 
 use crate::{call, deploy, send, MUTEX};
+use ethers_core::utils::keccak256;
 use std::path::PathBuf;
-use tiny_keccak::{Hasher, Keccak};
 
 #[test]
 fn milestone_3() {
@@ -84,12 +84,4 @@ fn label(stdout: &str) -> String {
 fn get<'a>(stdout: &'a str, label: &str) -> Option<&'a str> {
     let prefix = format!("{label} = ");
     stdout.lines().find_map(|line| line.strip_prefix(&prefix))
-}
-
-fn keccak256(input: &[u8]) -> [u8; 32] {
-    let mut output = [0u8; 32];
-    let mut hasher = Keccak::v256();
-    hasher.update(&input);
-    hasher.finalize(&mut output);
-    output
 }
