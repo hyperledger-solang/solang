@@ -33,16 +33,16 @@ fn milestone_2() {
         ["test()(uint64,uint256,address,uint256,uint256,uint256,uint256)"],
     )
     .unwrap();
-    println!("{}", label(&stdout));
+    println!("{}", label_test_output(&stdout));
 
     stdout = call(dir, &address, ["test2()(uint256,uint256)"]).unwrap();
-    println!("{}", stdout);
+    println!("{}", label_test2_output(&stdout));
 
     stdout = send(dir, &address, ["test3()", "--value=1000000000000000000"]).unwrap();
     println!("{}", stdout);
 }
 
-fn label(stdout: &str) -> String {
+fn label_test_output(stdout: &str) -> String {
     const LABELS: &[&str] = &[
         "gasleft",
         "basefee",
@@ -52,6 +52,17 @@ fn label(stdout: &str) -> String {
         "timestamp",
         "chainid",
     ];
+    let lines = stdout.lines().collect::<Vec<_>>();
+    assert_eq!(LABELS.len(), lines.len());
+    LABELS
+        .iter()
+        .zip(lines)
+        .map(|(label, line)| format!("{label} = {line}\n"))
+        .collect()
+}
+
+fn label_test2_output(stdout: &str) -> String {
+    const LABELS: &[&str] = &["sload", "tload"];
     let lines = stdout.lines().collect::<Vec<_>>();
     assert_eq!(LABELS.len(), lines.len());
     LABELS
