@@ -74,6 +74,19 @@ contract C {
         print("greeter1 = {}".format(address(greeter1)));
         greeter1.greet();
     }
+
+    function test_value_sender() public payable returns (uint256) {
+        return this.test_value_receiver{value: msg.value}();
+    }
+
+    event Received(uint256 value);
+
+    function test_value_receiver() public payable returns (uint256) {
+        uint256 value = msg.value;
+        emit Received(value);
+        assert(value == 1000000000000000000);
+        return value;
+    }
 }
 
 contract Greeter {

@@ -53,6 +53,22 @@ fn milestone_2() {
     )
     .unwrap();
     println!("{}", stdout);
+
+    stdout = send(
+        dir,
+        &address,
+        ["test_value_sender()", "--value=1000000000000000000"],
+    )
+    .unwrap();
+    println!("{}", stdout);
+
+    let line = stdout
+        .lines()
+        .find(|line| line.starts_with("logs"))
+        .unwrap();
+    // smoelius: keccak256("Reason(uint256)") = 0xa8142743f8f70a4c26f3691cf4ed59718381fb2f18070ec52be1f1022d855557
+    // 0x0de0b6b3a7640000 = 1000000000000000000
+    assert!(line.contains(r#""topics":["0xa8142743f8f70a4c26f3691cf4ed59718381fb2f18070ec52be1f1022d855557"],"data":"0x0000000000000000000000000000000000000000000000000de0b6b3a7640000""#));
 }
 
 fn label_test_block_output(stdout: &str) -> String {
