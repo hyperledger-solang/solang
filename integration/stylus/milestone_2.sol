@@ -1,6 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.0;
 
+// This contract tests the Stylus imports required for the Solang grant's second milestone.
+//
+// The following are contract's functions and the imports they test:
+// - test_block:          evm_gas_left, block_basefee, block_coinbase, block_gas_limit,
+//                        block_number, block_timestamp, chainid
+// - test_tstore:         transient_load_bytes32, transient_store_bytes32
+// - test_create1:        create1
+// - test_create2:        create2, contract_address
+// - test_value_sender:   msg_value
+// - test_value_receiver: emit_log
+//
+// This contract is deployed and called by `tests/stylus_tests/milestone_2.rs`.
+
 interface ArbWasm {
     /// @notice Activate a wasm program
     /// @param program the program to activate
