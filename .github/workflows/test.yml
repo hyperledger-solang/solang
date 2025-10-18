@@ -299,51 +299,71 @@ jobs:
     name: Soroban Integration test
     runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci-7
+    env:
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt   # helps Node/Axios find the bundle
     needs: linux-x86-64
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: '16'
-    - uses: dtolnay/rust-toolchain@1.85.0
-      with:
-        target: wasm32-unknown-unknown
-    - uses: actions/download-artifact@v4.1.8
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - name: Solang Compiler
-      run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    - name: Install system dependencies for stellar-cli
-      run: apt-get update && apt-get install -y libdbus-1-dev pkg-config
-    - name: Install Soroban
-      run: cargo install --locked stellar-cli --version 23.0.0
-    - name: Add wasm32v1-none target
-      run: rustup target add wasm32v1-none
-    - name: Add cargo install location to PATH
-      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-    - run: npm install
-      working-directory: ./integration/soroban
-    - name: Build Solang contracts
-      run: npm run build
-      working-directory: ./integration/soroban
-    - name: Build rust contracts
-      run: stellar contract build --profile release-with-logs
-      working-directory: ./integration/soroban/rust/contracts
-    - name: Setup Soroban enivronment
-      run: npm run setup
-      working-directory: ./integration/soroban
-    - name: Deploy and test contracts
-      run: npm run test
-      working-directory: ./integration/soroban
-    - name: Upload test coverage files
-      uses: actions/upload-artifact@v4.4.0
-      with:
-        name: soroban-tests
-        path: ./target/*.profraw
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'   # strongly recommended; 16 is EOL (works too, but less robust)
+
+      - uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          target: wasm32-unknown-unknown
+
+      - uses: actions/download-artifact@v4.1.8
+        with:
+          name: solang-linux-x86-64
+          path: bin
+
+      - name: Solang Compiler
+        run: |
+          chmod 755 ./bin/solang
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+
+      - name: Install system dependencies (+ CA bundle)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl openssl libdbus-1-dev pkg-config
+          update-ca-certificates
+
+      - name: Install Soroban
+        run: cargo install --locked stellar-cli --version 23.0.0
+
+      - name: Add wasm32v1-none target
+        run: rustup target add wasm32v1-none
+
+      - name: Add cargo install location to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - run: npm install
+        working-directory: ./integration/soroban
+
+      - name: Build Solang contracts
+        run: npm run build
+        working-directory: ./integration/soroban
+
+      - name: Build rust contracts
+        run: stellar contract build --profile release-with-logs
+        working-directory: ./integration/soroban/rust/contracts
+
+      - name: Setup Soroban environment
+        run: npm run setup
+        working-directory: ./integration/soroban
+
+      - name: Deploy and test contracts
+        run: npm run test
+        working-directory: ./integration/soroban
+
+      - name: Upload test coverage files
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: soroban-tests
+          path: ./target/*.profraw
 
   solana:
     name: Solana Integration test
