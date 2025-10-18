@@ -42,7 +42,7 @@ impl<'a> AnticipatedExpressions<'a> {
         dag: &Vec<Vec<usize>>,
         reverse_dag: Vec<Vec<usize>>,
         traversing_order: Vec<(usize, bool)>,
-    ) -> AnticipatedExpressions {
+    ) -> AnticipatedExpressions<'_> {
         let mut depth: Vec<u16> = vec![u16::MAX; dag.len()];
         AnticipatedExpressions::blocks_depth(dag, 0, 0, &mut depth);
         AnticipatedExpressions {
