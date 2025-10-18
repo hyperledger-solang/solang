@@ -220,7 +220,7 @@ struct TypeManager<'a> {
 }
 
 impl TypeManager<'_> {
-    fn new(ns: &Namespace, contract_no: usize) -> TypeManager {
+    fn new(ns: &Namespace, contract_no: usize) -> TypeManager<'_> {
         TypeManager {
             namespace: ns,
             added_types: HashSet::new(),
