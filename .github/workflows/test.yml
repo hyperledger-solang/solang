@@ -13,12 +13,11 @@ jobs:
   docs:
     name: Docs
     runs-on: solang-ubuntu-latest
-    container: ubuntu:22.04
     steps:
       - name: Install Python and git
         run: |
-          apt-get update
-          apt-get install -y python3-pip git pkg-config libcairo-dev latexmk
+          sudo apt-get update
+          sudo apt-get install -y python3-pip git pkg-config libcairo-dev latexmk meson
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
