@@ -82,9 +82,9 @@ fn get_fields_via_dot() {
 
     // Create a new lock for user1
     let create_args = vec![
-        release_time.clone(),
+        release_time,
         user1.clone().into_val(&runtime.env),
-        amount.clone(),
+        amount,
     ];
     let res = runtime.invoke_contract(addr, "create_lock", create_args);
     assert!(amount.shallow_eq(&res));
@@ -103,7 +103,7 @@ fn get_fields_via_dot() {
 
     // Increase amount and verify new total
     let delta: Val = 250_u64.into_val(&runtime.env);
-    let inc_args = vec![user1.clone().into_val(&runtime.env), delta.clone()];
+    let inc_args = vec![user1.clone().into_val(&runtime.env), delta];
     let new_total = runtime.invoke_contract(addr, "increase_lock_amount", inc_args);
     let expected_total: Val = 750_u64.into_val(&runtime.env);
     assert!(expected_total.shallow_eq(&new_total));
@@ -209,9 +209,9 @@ fn get_whole_struct() {
         addr,
         "create_lock",
         vec![
-            release_time.clone(),
+            release_time,
             user.clone().into_val(&runtime.env),
-            amount.clone(),
+            amount,
         ],
     );
 
