@@ -790,11 +790,7 @@ fn encode_value<'a>(
     mut value: IntValue<'a>,
     shift: u64,
     add: u64,
-<<<<<<< HEAD
     bin: &Binary<'a>,
-=======
-    bin: &'a Binary,
->>>>>>> 858952288164aeca78aef0c7b59ca971b76c3e63
 ) -> IntValue<'a> {
     match value.get_type().get_bit_width() {
         32 =>
