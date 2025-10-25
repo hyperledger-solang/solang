@@ -151,8 +151,7 @@ impl Type {
                 let rounded_width = Self::get_soroban_int_width(*width);
                 if rounded_width != *width {
                     let message = format!(
-                        "int{} is not supported by the Soroban runtime and will be rounded up to int{}",
-                        width, rounded_width
+                        "int{width} is not supported by the Soroban runtime and will be rounded up to int{rounded_width}"
                     );
                     if ns.strict_soroban_types {
                         ns.diagnostics.push(Diagnostic::error(loc, message));
@@ -168,8 +167,7 @@ impl Type {
                 let rounded_width = Self::get_soroban_int_width(*width);
                 if rounded_width != *width {
                     let message = format!(
-                        "uint{} is not supported by the Soroban runtime and will be rounded up to uint{}",
-                        width, rounded_width
+                        "uint{width} is not supported by the Soroban runtime and will be rounded up to uint{rounded_width}"
                     );
                     if ns.strict_soroban_types {
                         ns.diagnostics.push(Diagnostic::error(loc, message));

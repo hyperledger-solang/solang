@@ -333,8 +333,6 @@ pub fn soroban_encode_arg(
                     _ => unreachable!(),
                 };
 
-                println!("encoded: {:?}, len: {:?}", encoded, len);
-
                 Instr::Call {
                     res: vec![obj],
                     return_tys: vec![Type::Uint(64)],

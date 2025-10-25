@@ -1073,7 +1073,6 @@ impl<'a> Binary<'a> {
             Some(s) => self.emit_global_string("const_string", s, true),
         };
 
-        println!("calling soroban alloc : {:?}", size);
         let allocator = if self.ns.target == Target::Soroban {
             self.builder.build_call(
                 self.module.get_function("soroban_alloc_init").unwrap(),

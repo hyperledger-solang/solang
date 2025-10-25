@@ -81,11 +81,7 @@ fn get_fields_via_dot() {
     let amount: Val = 500_u64.into_val(&runtime.env);
 
     // Create a new lock for user1
-    let create_args = vec![
-        release_time,
-        user1.clone().into_val(&runtime.env),
-        amount,
-    ];
+    let create_args = vec![release_time, user1.clone().into_val(&runtime.env), amount];
     let res = runtime.invoke_contract(addr, "create_lock", create_args);
     assert!(amount.shallow_eq(&res));
 
@@ -208,11 +204,7 @@ fn get_whole_struct() {
     let _ = runtime.invoke_contract(
         addr,
         "create_lock",
-        vec![
-            release_time,
-            user.clone().into_val(&runtime.env),
-            amount,
-        ],
+        vec![release_time, user.clone().into_val(&runtime.env), amount],
     );
 
     // Retrieve each field via accessors (no multiple returns)

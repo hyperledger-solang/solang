@@ -58,7 +58,7 @@ fn arrays_basic_ops_test() {
     // push_pop(): [5,10] -> pop -> [5]; len(=1) + mylist[0](=5) = 6
     let expected: Val = 6_u64.into_val(&runtime.env);
     let res = runtime.invoke_contract(addr, "push_pop", vec![]);
-    println!("Result of push_pop: {:?}", res);
+    println!("Result of push_pop: {res:?}");
     assert!(expected.shallow_eq(&res));
 
     // loop(): 5 + 10 + 15 = 30
