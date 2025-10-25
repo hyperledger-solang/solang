@@ -470,8 +470,6 @@ fn base_contract_on_constructor() {
 #[test]
 fn call_base_function_via_basename() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Val(i32);
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val64(u64);
 
     let mut runtime = build_solidity(

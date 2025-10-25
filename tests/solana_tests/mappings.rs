@@ -3,6 +3,7 @@
 use crate::{account_new, build_solidity, BorshToken};
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
+use std::slice;
 
 #[test]
 fn simple_mapping() {
@@ -328,7 +329,7 @@ fn contract_mapping() {
 
     let returns = vm
         .function("get")
-        .arguments(&[index.clone()])
+        .arguments(slice::from_ref(&index))
         .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
@@ -339,13 +340,13 @@ fn contract_mapping() {
     );
 
     vm.function("rm")
-        .arguments(&[index.clone()])
+        .arguments(slice::from_ref(&index))
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
     let returns = vm
         .function("get")
-        .arguments(&[index])
+        .arguments(slice::from_ref(&index))
         .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();

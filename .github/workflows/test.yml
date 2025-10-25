@@ -13,12 +13,11 @@ jobs:
   docs:
     name: Docs
     runs-on: solang-ubuntu-latest
-    container: ubuntu:22.04
     steps:
       - name: Install Python and git
         run: |
-          apt-get update
-          apt-get install -y python3-pip git pkg-config libcairo-dev latexmk
+          sudo apt-get update
+          sudo apt-get install -y python3-pip git pkg-config libcairo-dev latexmk meson
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
@@ -51,7 +50,7 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
-        toolchain: 1.85.0
+        toolchain: 1.87.0
         components: |
           llvm-tools
           clippy
@@ -108,7 +107,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc g++ make
-    - uses: dtolnay/rust-toolchain@1.85.0
+    - uses: dtolnay/rust-toolchain@1.87.0
     - name: Get LLVM
       run: curl -sSL --output llvm16.0-linux-arm64.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-linux-arm64.tar.xz
     - name: Extract LLVM
@@ -141,7 +140,7 @@ jobs:
     # Use C:\ as D:\ might run out of space
     - name: "Use C: for rust temporary files"
       run: echo "CARGO_TARGET_DIR=C:\target" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-    - uses: dtolnay/rust-toolchain@1.85.0
+    - uses: dtolnay/rust-toolchain@1.87.0
       with:
         components: clippy
     # We run clippy on Linux in the lint job above, but this does not check #[cfg(windows)] items
@@ -167,7 +166,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    - uses: dtolnay/rust-toolchain@1.85.0
+    - uses: dtolnay/rust-toolchain@1.87.0
     - name: Get LLVM
       run: curl -sSL --output llvm16.0-mac-arm.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-arm.tar.xz
     - name: Extract LLVM
@@ -193,7 +192,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    - uses: dtolnay/rust-toolchain@1.85.0
+    - uses: dtolnay/rust-toolchain@1.87.0
     - name: Get LLVM
       run: wget -q -O llvm16.0-mac-intel.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-intel.tar.xz
     - name: Extract LLVM
@@ -255,7 +254,7 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: '16'
-    - uses: dtolnay/rust-toolchain@1.85.0
+    - uses: dtolnay/rust-toolchain@1.87.0
     - name: Setup yarn
       run: npm install -g yarn
     - uses: actions/download-artifact@v4.1.8
@@ -299,51 +298,71 @@ jobs:
     name: Soroban Integration test
     runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci-7
+    env:
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt   # helps Node/Axios find the bundle
     needs: linux-x86-64
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: '16'
-    - uses: dtolnay/rust-toolchain@1.85.0
-      with:
-        target: wasm32-unknown-unknown
-    - uses: actions/download-artifact@v4.1.8
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - name: Solang Compiler
-      run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    - name: Install system dependencies for stellar-cli
-      run: apt-get update && apt-get install -y libdbus-1-dev pkg-config
-    - name: Install Soroban
-      run: cargo install --locked stellar-cli --version 23.0.0
-    - name: Add wasm32v1-none target
-      run: rustup target add wasm32v1-none
-    - name: Add cargo install location to PATH
-      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-    - run: npm install
-      working-directory: ./integration/soroban
-    - name: Build Solang contracts
-      run: npm run build
-      working-directory: ./integration/soroban
-    - name: Build rust contracts
-      run: stellar contract build --profile release-with-logs
-      working-directory: ./integration/soroban/rust/contracts
-    - name: Setup Soroban enivronment
-      run: npm run setup
-      working-directory: ./integration/soroban
-    - name: Deploy and test contracts
-      run: npm run test
-      working-directory: ./integration/soroban
-    - name: Upload test coverage files
-      uses: actions/upload-artifact@v4.4.0
-      with:
-        name: soroban-tests
-        path: ./target/*.profraw
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'   # strongly recommended; 16 is EOL (works too, but less robust)
+
+      - uses: dtolnay/rust-toolchain@1.87.0
+        with:
+          target: wasm32-unknown-unknown
+
+      - uses: actions/download-artifact@v4.1.8
+        with:
+          name: solang-linux-x86-64
+          path: bin
+
+      - name: Solang Compiler
+        run: |
+          chmod 755 ./bin/solang
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+
+      - name: Install system dependencies (+ CA bundle)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl openssl libdbus-1-dev pkg-config
+          update-ca-certificates
+
+      - name: Install Soroban
+        run: cargo install --locked stellar-cli --version 23.0.0
+
+      - name: Add wasm32v1-none target
+        run: rustup target add wasm32v1-none
+
+      - name: Add cargo install location to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - run: npm install
+        working-directory: ./integration/soroban
+
+      - name: Build Solang contracts
+        run: npm run build
+        working-directory: ./integration/soroban
+
+      - name: Build rust contracts
+        run: stellar contract build --profile release-with-logs
+        working-directory: ./integration/soroban/rust/contracts
+
+      - name: Setup Soroban environment
+        run: npm run setup
+        working-directory: ./integration/soroban
+
+      - name: Deploy and test contracts
+        run: npm run test
+        working-directory: ./integration/soroban
+
+      - name: Upload test coverage files
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: soroban-tests
+          path: ./target/*.profraw
 
   solana:
     name: Solana Integration test
@@ -356,7 +375,7 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: '16'
-    - uses: dtolnay/rust-toolchain@1.85.0
+    - uses: dtolnay/rust-toolchain@1.87.0
     - uses: actions/download-artifact@v4.1.8
       with:
         name: solang-linux-x86-64
@@ -533,7 +552,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.85.0
+          toolchain: 1.87.0
           components: llvm-tools
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
