@@ -117,11 +117,13 @@ static void *alloc_impl(uint32_t bytes, uint32_t align)
 }
 
 // -------------------- exported API --------------------
+// Forward declare so soroban_alloc can delegate to it
+struct vector *soroban_alloc_init(uint32_t members, const void *init_ptr);
 
-__attribute__((export_name("soroban_alloc"))) void *soroban_alloc(uint32_t size)
+__attribute__((export_name("soroban_alloc"))) struct vector *soroban_alloc(uint32_t members)
 {
-    // default alignment 8
-    return alloc_impl(size, 8);
+    // Delegate to soroban_alloc_init with empty initializer
+    return soroban_alloc_init(members, (const void *)0);
 }
 
 __attribute__((export_name("soroban_alloc_init"))) struct vector *soroban_alloc_init(uint32_t members,

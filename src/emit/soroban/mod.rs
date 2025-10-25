@@ -109,6 +109,15 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::BytesNewFromLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::BytesLen => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::BytesCopyToLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
         }
     }
 }
@@ -296,6 +305,7 @@ impl SorobanTarget {
                             ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                             ast::Type::String => ScSpecTypeDef::String,
                             ast::Type::Void => ScSpecTypeDef::Void,
+                            ast::Type::Struct(_) => ScSpecTypeDef::Void, // TODO: Map struct types.
                             _ => panic!("unsupported return type {ty:?}"),
                         }
                     }) // TODO: Map type.
@@ -364,6 +374,8 @@ impl SorobanTarget {
             HostFunctions::StringNewFromLinearMemory,
             HostFunctions::StrKeyToAddr,
             HostFunctions::GetCurrentContractAddress,
+            HostFunctions::BytesNewFromLinearMemory,
+            HostFunctions::BytesCopyToLinearMemory,
         ];
 
         for func in &host_functions {

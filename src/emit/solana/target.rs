@@ -1235,7 +1235,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .unwrap();
     }
 
-    fn print(&self, bin: &Binary, string_ptr: PointerValue, string_len: IntValue) {
+    fn print<'b>(&self, bin: &Binary<'b>, string_ptr: PointerValue<'b>, string_len: IntValue<'b>) {
         let string_len64 = bin
             .builder
             .build_int_z_extend(string_len, bin.context.i64_type(), "")
