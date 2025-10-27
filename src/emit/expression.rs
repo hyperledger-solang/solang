@@ -128,6 +128,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             s.into()
         }
         Expression::BytesLiteral { value: bs, ty, .. } => {
+            println!("BytesLiteral: {:?} and ty {:?}", bs, ty);
             // If the type of a BytesLiteral is a String, embedd the bytes in the binary.
             if ty == &Type::String || ty == &Type::Address(true) {
                 let data = bin.emit_global_string("const_string", bs, true);
@@ -1580,7 +1581,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .unwrap()
                     .const_cast(bin.context.i32_type(), false);
 
-                bin.vector_new(size, elem_size, initializer.as_ref(), ty)
+                bin.vector_new(size, elem_size, initializer.as_ref())
             }
         }
         Expression::Builtin {

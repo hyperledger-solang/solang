@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+mod alloc;
 mod auth;
 mod constructor;
 mod cross_contract_calls;

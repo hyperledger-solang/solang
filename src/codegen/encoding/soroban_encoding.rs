@@ -31,7 +31,7 @@ pub fn soroban_encode(
 
     let size_expr = Expression::NumberLiteral {
         loc: *loc,
-        ty: Uint(64),
+        ty: Uint(32),
         value: size.into(),
     };
     let encoded_bytes = vartab.temp_name("abi_encoded", &Type::Bytes(size as u8));
@@ -40,7 +40,7 @@ pub fn soroban_encode(
         loc: *loc,
         ty: Type::Bytes(size as u8),
         size: size_expr.clone().into(),
-        initializer: Some(vec![]),
+        initializer: None,
     };
 
     cfg.add(
@@ -325,6 +325,8 @@ pub fn soroban_encode_arg(
                     }
                     _ => unreachable!(),
                 };
+
+                println!("encoded: {:?}, len: {:?}", encoded, len);
 
                 Instr::Call {
                     res: vec![obj],
