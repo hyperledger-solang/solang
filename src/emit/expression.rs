@@ -79,10 +79,16 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         } => {
             let struct_ty = bin.llvm_type(ty);
 
+            let allocator = if bin.ns.target == Target::Soroban {
+                "soroban_malloc"
+            } else {
+                "__malloc"
+            };
+
             let s = bin
                 .builder
                 .build_call(
-                    bin.module.get_function("__malloc").unwrap(),
+                    bin.module.get_function(allocator).unwrap(),
                     &[struct_ty
                         .size_of()
                         .unwrap()
@@ -128,7 +134,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             s.into()
         }
         Expression::BytesLiteral { value: bs, ty, .. } => {
-            println!("BytesLiteral: {:?} and ty {:?}", bs, ty);
             // If the type of a BytesLiteral is a String, embedd the bytes in the binary.
             if ty == &Type::String || ty == &Type::Address(true) {
                 let data = bin.emit_global_string("const_string", bs, true);

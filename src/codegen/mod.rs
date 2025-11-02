@@ -123,6 +123,9 @@ pub enum HostFunctions {
     StringNewFromLinearMemory,
     StrKeyToAddr,
     GetCurrentContractAddress,
+    BytesNewFromLinearMemory,
+    BytesLen,
+    BytesCopyToLinearMemory,
 }
 
 impl HostFunctions {
@@ -155,6 +158,9 @@ impl HostFunctions {
             HostFunctions::StringNewFromLinearMemory => "b.i",
             HostFunctions::StrKeyToAddr => "a.1",
             HostFunctions::GetCurrentContractAddress => "x.7",
+            HostFunctions::BytesNewFromLinearMemory => "b.3",
+            HostFunctions::BytesLen => "b.8",
+            HostFunctions::BytesCopyToLinearMemory => "b.1",
         }
     }
 }

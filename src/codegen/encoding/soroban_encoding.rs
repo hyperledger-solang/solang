@@ -6,7 +6,7 @@ use crate::codegen::encoding::create_encoder;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Expression;
 use crate::codegen::HostFunctions;
-use crate::sema::ast::{Namespace, RetrieveType, Type, Type::Uint};
+use crate::sema::ast::{Namespace, RetrieveType, StructType, Type, Type::Uint};
 use num_bigint::BigInt;
 use num_traits::Zero;
 use solang_parser::helpers::CodeLocation;
@@ -88,7 +88,7 @@ pub fn soroban_decode(
     _loc: &Loc,
     buffer: &Expression,
     _types: &[Type],
-    _ns: &Namespace,
+    ns: &Namespace,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     _buffer_size_expr: Option<Expression>,
@@ -101,7 +101,7 @@ pub fn soroban_decode(
         expr: Box::new(buffer.clone()),
     };
 
-    let decoded_val = soroban_decode_arg(loaded_val, cfg, vartab);
+    let decoded_val = soroban_decode_arg(loaded_val, cfg, vartab, ns, None);
 
     returns.push(decoded_val);
 
@@ -112,11 +112,18 @@ pub fn soroban_decode_arg(
     arg: Expression,
     wrapper_cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
+    ns: &Namespace,
+    decode_as: Option<Type>,
 ) -> Expression {
-    let ty = if let Type::Ref(inner_ty) = arg.ty() {
-        *inner_ty
-    } else {
-        arg.ty()
+    let ty = match decode_as {
+        Some(ty) => ty,
+        None => {
+            if let Type::Ref(inner_ty) = arg.ty() {
+                *inner_ty
+            } else {
+                arg.ty()
+            }
+        }
     };
 
     match ty {
@@ -189,6 +196,9 @@ pub fn soroban_decode_arg(
             }),
             signed: true,
         },
+        Type::Struct(StructType::UserDefined(n)) => {
+            decode_struct(arg, wrapper_cfg, vartab, n, ns, ty)
+        }
 
         _ => unimplemented!(),
     }
@@ -322,8 +332,6 @@ pub fn soroban_encode_arg(
                     }
                     _ => unreachable!(),
                 };
-
-                println!("encoded: {:?}, len: {:?}", encoded, len);
 
                 Instr::Call {
                     res: vec![obj],
@@ -562,7 +570,16 @@ pub fn soroban_encode_arg(
                 expr: encoded,
             }
         }
-        _ => todo!("Type not yet supported"),
+        Type::Struct(StructType::UserDefined(n)) => {
+            let buf = encode_struct(item.clone(), cfg, vartab, ns, n);
+
+            Instr::Set {
+                loc: Loc::Codegen,
+                res: obj,
+                expr: buf,
+            }
+        }
+        _ => todo!("Type not yet supported in soroban encoder: {:?}", item.ty()),
     };
 
     cfg.add(vartab, ret);
@@ -917,5 +934,84 @@ fn extract_tag(arg: Expression) -> Expression {
         ty: Type::Uint(64),
         left: arg.clone().into(),
         right: bit_mask.into(),
+    }
+}
+
+/// encode a struct into a buffer where each field is 64 bits long soroban Val.
+fn encode_struct(
+    item: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+    struct_no: usize,
+) -> Expression {
+    let fields = &ns.structs[struct_no].fields;
+    let mut fields_vars = Vec::new();
+
+    for (index, field) in fields.iter().enumerate() {
+        let field = Expression::StructMember {
+            loc: item.loc(),
+            ty: field.ty.clone(),
+            expr: Box::new(item.clone()),
+            member: index,
+        };
+
+        let actual_loaded_field = Expression::Load {
+            loc: Loc::Codegen,
+            ty: field.ty(),
+            expr: field.into(),
+        };
+
+        fields_vars.push(actual_loaded_field);
+    }
+
+    // now call soroban_encode for all fields
+    let ret = soroban_encode(&item.loc(), fields_vars, ns, vartab, cfg, false);
+
+    ret.0
+}
+
+/// Decode a struct from soroban encoding. Struct fields are laid out sequentially in a buffer, where each field is 64 bits long.
+fn decode_struct(
+    mut item: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    struct_no: usize,
+    ns: &Namespace,
+    struct_ty: Type,
+) -> Expression {
+    let tys = &ns.structs[struct_no]
+        .fields
+        .iter()
+        .map(|f| f.ty.clone())
+        .collect::<Vec<_>>();
+
+    let mut members = Vec::new();
+
+    for ty in tys {
+        let loaded_val = Expression::Load {
+            loc: Loc::Codegen,
+            ty: Uint(64),
+            expr: Box::new(item.clone()),
+        };
+
+        let decode_val = soroban_decode_arg(loaded_val, cfg, vartab, ns, Some(ty.clone()));
+
+        members.push(decode_val);
+
+        item = Expression::AdvancePointer {
+            pointer: Box::new(item),
+            bytes_offset: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Uint(32),
+                value: BigInt::from(8),
+            }),
+        };
+    }
+
+    Expression::StructLiteral {
+        loc: Loc::Codegen,
+        ty: struct_ty,
+        values: members,
     }
 }

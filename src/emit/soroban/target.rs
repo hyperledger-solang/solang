@@ -56,6 +56,18 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             *slot
         };
 
+        // If we are loading a struct, we need to load each field separately and put it in a buffer of this format: [ field1, field2, ... ] where each field is a Soroban tagged value of type i64
+        // We loop over each field, call GetContractData for each field and put it in the buffer
+        if let Type::Struct(ast::StructType::UserDefined(n)) = ty {
+            let field_count = &bin.ns.structs[*n].fields.len();
+
+            // call soroban_get_fields to get a buffer with all fields
+            let struct_buffer =
+                soroban_get_fields_to_val_buffer(bin, function, slot, *field_count, storage_type);
+
+            return struct_buffer.as_basic_value_enum();
+        }
+
         // === Call HasContractData ===
         let has_data_val = call!(
             HostFunctions::HasContractData.name(),
@@ -140,6 +152,25 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         } else {
             *slot
         };
+
+        // In case of struct, we receive a buffer in that format: [ field1, field2, ... ] where each field is a Soroban tagged value of type i64
+        // therefore, for each field, we need to extract it from the buffer and call PutContractData for each field separately
+        if let Type::Struct(ast::StructType::UserDefined(n)) = ty {
+            let field_count = &bin.ns.structs[*n].fields.len();
+
+            let data_ptr = bin.vector_bytes(dest);
+
+            // call soroban_put_fields for each field
+            soroban_put_fields_from_val_buffer(
+                bin,
+                function,
+                slot,
+                data_ptr,
+                *field_count,
+                storage_type,
+            );
+            return;
+        }
 
         let value = bin
             .builder
@@ -256,22 +287,26 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .unwrap()
             .into_int_value();
 
-        let slot = if slot.is_const() {
-            slot.as_basic_value_enum()
-                .into_int_value()
-                .const_cast(bin.context.i64_type(), false)
-        } else {
-            slot
-        };
-
-        // push the slot to the vector
+        // push the slot to the vector as U32Val
+        let slot_encoded = encode_value(
+            if slot.get_type().get_bit_width() == 64 {
+                slot
+            } else {
+                bin.builder
+                    .build_int_z_extend(slot, bin.context.i64_type(), "slot64")
+                    .unwrap()
+            },
+            32,
+            4,
+            bin,
+        );
         let res = bin
             .builder
             .build_call(
                 bin.module
                     .get_function(HostFunctions::VecPushBack.name())
                     .unwrap(),
-                &[vec_new.as_basic_value_enum().into(), slot.into()],
+                &[vec_new.as_basic_value_enum().into(), slot_encoded.into()],
                 "push",
             )
             .unwrap()
@@ -344,7 +379,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     /// Prints a string
     /// TODO: Implement this function, with a call to the `log` function in the Soroban runtime.
-    fn print(&self, bin: &Binary, string: PointerValue, length: IntValue) {
+    fn print<'b>(&self, bin: &Binary<'b>, string: PointerValue<'b>, length: IntValue<'b>) {
         let msg_pos = bin
             .builder
             .build_ptr_to_int(string, bin.context.i64_type(), "msg_pos")
@@ -755,7 +790,7 @@ fn encode_value<'a>(
     mut value: IntValue<'a>,
     shift: u64,
     add: u64,
-    bin: &'a Binary,
+    bin: &Binary<'a>,
 ) -> IntValue<'a> {
     match value.get_type().get_bit_width() {
         32 =>
@@ -830,4 +865,193 @@ pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<
     // All zero body + tag in lower 8 bits
     let tag_val: u64 = tag;
     i64_type.const_int(tag_val, false)
+}
+
+/// Given a linear-memory buffer of consecutive Soroban Val-encoded i64 fields
+/// [field0, field1, ...], push a field index onto `base_key_vec` and call
+/// PutContractData for each field separately.
+///
+/// - `base_key_vec`: i64 Val for a Soroban Vector key (e.g., [slot, mapping_index])
+/// - `buffer_ptr`: pointer to the first byte of the buffer (i8*)
+/// - `field_count`: number of 64-bit Val entries in the buffer
+/// - `storage_type`: Soroban storage type tag (Temporary/Persistent/Instance)
+pub fn soroban_put_fields_from_val_buffer<'a>(
+    bin: &Binary<'a>,
+    _function: FunctionValue<'a>,
+    base_key_vec: IntValue<'a>,
+    buffer_ptr: PointerValue<'a>,
+    field_count: usize,
+    storage_type: u64,
+) {
+    emit_context!(bin);
+
+    let i64_t = bin.context.i64_type();
+
+    for i in 0..field_count {
+        // Compute pointer to field i: buffer_ptr + i * 8
+        let byte_offset = i64_t.const_int(i as u64, false);
+        let field_byte_ptr = unsafe {
+            bin.builder
+                .build_gep(i64_t, buffer_ptr, &[byte_offset], "field_byte_ptr")
+                .unwrap()
+        };
+
+        // Cast to i64* and load the Val-encoded i64
+        let field_val_i64 = bin
+            .builder
+            .build_load(i64_t, field_byte_ptr, "field_val_i64")
+            .unwrap()
+            .into_int_value();
+
+        // Extend key with field index: push U32Val(i)
+        let idx_u32 = bin.context.i32_type().const_int(i as u64, false);
+        let idx_val = encode_value(idx_u32, 32, 4, bin);
+        let field_key_vec = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VecPushBack.name())
+                    .unwrap(),
+                &[base_key_vec.into(), idx_val.into()],
+                "key_push_field",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        // Store this field value under the extended key
+        // storage_type is a plain u64 here
+        let storage_ty_val = bin.context.i64_type().const_int(storage_type, false);
+        let _ = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::PutContractData.name())
+                    .unwrap(),
+                &[
+                    field_key_vec.into(),
+                    field_val_i64.into(),
+                    storage_ty_val.into(),
+                ],
+                "put_field_from_buffer",
+            )
+            .unwrap();
+    }
+}
+
+/// Fetch each field value from storage using `base_key_vec` extended with the field index,
+/// and write them into a freshly allocated linear buffer as consecutive i64 Soroban Vals.
+/// Returns a pointer to `struct.vector` whose payload size is `field_count * 8` bytes.
+pub fn soroban_get_fields_to_val_buffer<'a>(
+    bin: &Binary<'a>,
+    function: FunctionValue<'a>,
+    base_key_vec: IntValue<'a>,
+    field_count: usize,
+    storage_type: u64,
+) -> PointerValue<'a> {
+    emit_context!(bin);
+
+    // Allocate zero-initialized buffer
+    let size_bytes = bin
+        .context
+        .i32_type()
+        .const_int((field_count as u64) * 8, false);
+
+    let vec_ptr = bin
+        .builder
+        .build_call(
+            bin.module.get_function("soroban_malloc").unwrap(),
+            &[size_bytes.into()],
+            "soroban_malloc",
+        )
+        .unwrap()
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_pointer_value();
+
+    let storage_ty_i64 = bin.context.i64_type().const_int(storage_type, false);
+
+    for i in 0..field_count {
+        // key = base_key_vec ++ U32Val(i)
+        let idx_u32 = bin.context.i32_type().const_int(i as u64, false);
+        let idx_val = encode_value(idx_u32, 32, 4, bin);
+        let field_key_vec = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::VecPushBack.name())
+                    .unwrap(),
+                &[base_key_vec.into(), idx_val.into()],
+                "key_push_field",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        // has = HasContractData(key, storage_type)
+        let has_val = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::HasContractData.name())
+                    .unwrap(),
+                &[field_key_vec.into(), storage_ty_i64.into()],
+                "has_field",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+        let cond = is_val_true(bin, has_val);
+
+        // Blocks
+        let then_bb = bin.context.append_basic_block(function, "load_field");
+        let else_bb = bin.context.append_basic_block(function, "skip_field");
+        let cont_bb = bin.context.append_basic_block(function, "cont_field");
+
+        bin.builder
+            .build_conditional_branch(cond, then_bb, else_bb)
+            .unwrap();
+
+        // THEN: fetch and store val into buffer[i]
+        bin.builder.position_at_end(then_bb);
+        let val_i64 = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::GetContractData.name())
+                    .unwrap(),
+                &[field_key_vec.into(), storage_ty_i64.into()],
+                "get_field",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+        let idx64 = bin.context.i64_type().const_int((i) as u64, false);
+        let elem_ptr = unsafe {
+            bin.builder
+                .build_gep(bin.context.i64_type(), vec_ptr, &[idx64], "elem_ptr")
+                .unwrap()
+        };
+        bin.builder.build_store(elem_ptr, val_i64).unwrap();
+        bin.builder.build_unconditional_branch(cont_bb).unwrap();
+
+        // ELSE: leave zero (already zero-initialized)
+        bin.builder.position_at_end(else_bb);
+        bin.builder.build_unconditional_branch(cont_bb).unwrap();
+
+        // CONT
+        bin.builder.position_at_end(cont_bb);
+    }
+
+    //bin.vector_bytes(  vec_ptr.as_basic_value_enum())
+    vec_ptr
 }

@@ -9,5 +9,6 @@ mod mappings;
 mod math;
 mod print;
 mod storage;
+mod structs;
 mod token;
 mod ttl;
