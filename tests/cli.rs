@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use assert_cmd::Command;
+use assert_cmd::cargo_bin_cmd;
 use std::fs::File;
 use tempfile::TempDir;
 
 #[test]
 fn create_output_dir() {
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
 
     let tmp = TempDir::new_in("tests").unwrap();
 
@@ -26,7 +26,7 @@ fn create_output_dir() {
     File::open(test1.join("flipper.json")).expect("should exist");
     File::open(test1.join("flipper.so")).expect("should exist");
 
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
 
     let test2 = tmp.path().join("test2");
     let test2_meta = tmp.path().join("test2_meta");
@@ -59,7 +59,7 @@ fn create_output_dir() {
         "warning: the `authors` flag will be ignored for Solana target\n"
     );
 
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
 
     cmd.args([
         "compile",
@@ -72,7 +72,7 @@ fn create_output_dir() {
     .assert()
     .failure();
 
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
 
     let test3 = tmp.path().join("test3");
 
@@ -95,7 +95,7 @@ fn create_output_dir() {
 
 #[test]
 fn basic_compilation_from_toml() {
-    let mut new_cmd = Command::cargo_bin("solang").unwrap();
+    let mut new_cmd = cargo_bin_cmd!("solang");
     let tmp = TempDir::new_in("tests").unwrap();
 
     let solana_test = tmp.path().join("solana_test");
@@ -111,7 +111,7 @@ fn basic_compilation_from_toml() {
     File::open(solana_test.join("solang.toml")).expect("should exist");
 
     // compile flipper using config file
-    let mut compile_cmd = Command::cargo_bin("solang").unwrap();
+    let mut compile_cmd = cargo_bin_cmd!("solang");
 
     compile_cmd
         .args(["compile"])
@@ -120,8 +120,7 @@ fn basic_compilation_from_toml() {
         .success();
 
     let polkadot_test = tmp.path().join("polkadot_test");
-    let _new_cmd = Command::cargo_bin("solang")
-        .unwrap()
+    let _new_cmd = cargo_bin_cmd!("solang")
         .arg("new")
         .arg(polkadot_test.clone())
         .args(["--target", "solana"])
