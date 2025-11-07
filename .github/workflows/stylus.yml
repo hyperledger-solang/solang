@@ -61,5 +61,5 @@ jobs:
 
       - name: Test
         run: |
-          nitro-devnode/run-dev-node.sh &
+          pushd nitro-devnode && (./run-dev-node.sh &) && popd
           cargo test --test stylus -- --nocapture
