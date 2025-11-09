@@ -198,7 +198,23 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
     ) {
-        unimplemented!()
+        let storage_type = storage_type_to_int(&None);
+
+        let type_int = bin.context.i64_type().const_int(storage_type, false);
+
+        let function_value = bin
+            .module
+            .get_function(HostFunctions::DeleteContractData.name())
+            .unwrap();
+
+        let call = bin
+            .builder
+            .build_call(
+                function_value,
+                &[slot.as_basic_value_enum().into(), type_int.into()],
+                "del_contract_data",
+            )
+            .unwrap();
     }
 
     // Bytes and string have special storage layout
