@@ -148,3 +148,62 @@ fn storage_array_ops_test() {
     let res = runtime.invoke_contract(&addr6, "storage_to_mem", vec![]);
     assert!(expected.shallow_eq(&res));
 }
+
+#[test]
+fn storage_array_of_structs_test() {
+    let contract_src = r#"
+        contract storage_struct_vec {
+            struct Pair {
+                uint64 a;
+                uint64 b;
+            }
+
+            Pair[] items;
+
+            function push_pair_len() public returns (uint64) {
+                Pair memory p1 = Pair({a: 1, b: 2});
+                Pair memory p2 = Pair({a: 3, b: 4});
+                items.push(p1);
+                items.push(p2);
+                return items.length; // 2
+            }
+
+            function write_then_read() public returns (uint64) {
+                items.push(); // append empty slot
+                items[0] = Pair({a: 9, b: 11});
+                return items[0].a + items[0].b; // 20
+            }
+
+            function iter_sum() public returns (uint64) {
+                items.push(Pair({a: 1, b: 2}));
+                items.push(Pair({a: 3, b: 4}));
+                items.push(Pair({a: 5, b: 6}));
+                uint64 s = 0;
+                for (uint64 i = 0; i < items.length; i++) {
+                    s += items[i].a + items[i].b;
+                }
+                return s; // (1+2)+(3+4)+(5+6) = 21
+            }
+        }
+    "#;
+
+    let mut runtime = build_solidity(contract_src, |_| {});
+
+    // 1) push_pair_len => 2
+    let addr1 = runtime.contracts.last().unwrap();
+    let expected: Val = 2_u64.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr1, "push_pair_len", vec![]);
+    assert!(expected.shallow_eq(&res));
+
+    // 2) write_then_read => 20
+    let addr2 = runtime.deploy_contract(contract_src);
+    let expected: Val = 20_u64.into_val(&runtime.env);
+    let res = runtime.invoke_contract(&addr2, "write_then_read", vec![]);
+    assert!(expected.shallow_eq(&res));
+
+    // 3) iter_sum => 21
+    let addr3 = runtime.deploy_contract(contract_src);
+    let expected: Val = 21_u64.into_val(&runtime.env);
+    let res = runtime.invoke_contract(&addr3, "iter_sum", vec![]);
+    assert!(expected.shallow_eq(&res));
+}
