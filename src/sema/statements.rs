@@ -4,7 +4,7 @@ use super::ast::*;
 use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
 use super::expression::{
-    function_call::{available_functions, call_expr, named_call_expr},
+    function_call::{available_functions, call_expr},
     ExprContext, ResolveTo,
 };
 use super::symtable::Symtable;
@@ -12,7 +12,7 @@ use crate::sema::expression::constructor::{
     constructor_named_args, match_constructor_to_args, new,
 };
 use crate::sema::expression::function_call::{
-    function_call_expr, function_call_pos_args, named_function_call_expr,
+    function_call_expr, function_call_pos_args, named_call_expr,
 };
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::function_annotation::function_body_annotations;
@@ -713,7 +713,8 @@ fn statement(
                     let expr =
                         expression(expr, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
                     used_variable(ns, &expr, symtable);
-                    return if let Type::StorageRef(_, ty) = expr.ty() {
+                    
+                    if let Type::StorageRef(_, ty) = expr.ty() {
                         if expr.ty().is_mapping() {
                             ns.diagnostics.push(Diagnostic::error(
                                 *loc,
@@ -724,15 +725,16 @@ fn statement(
 
                         res.push(Statement::Delete(*loc, ty.as_ref().clone(), expr));
 
-                        Ok(true)
+                        return Ok(true);
                     } else {
-                        ns.diagnostics.push(Diagnostic::warning(
-                            *loc,
-                            "argument to 'delete' should be storage reference".to_string(),
-                        ));
-
-                        Err(())
-                    };
+                        // For memory arrays and other types, we should only delete the element
+                        // by assigning the default value, not delete the entire array
+                        // Issue #1785 - match Solc behavior for delete array[index]
+                        // The AST should be an accurate representation of the source code
+                        // The actual behavior will be handled in codegen
+                        res.push(Statement::Delete(*loc, expr.ty().clone(), expr));
+                        return Ok(true);
+                    }
                 }
                 // is it an underscore modifier statement
                 pt::Expression::Variable(id)
@@ -1795,10 +1797,11 @@ fn destructure_values(
             res
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let res = named_function_call_expr(
+            let res = named_call_expr(
                 loc,
                 ty,
                 args,
+                true,
                 context,
                 ns,
                 symtable,
@@ -2309,10 +2312,11 @@ fn try_catch(
             res
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            let res = named_function_call_expr(
+            let res = named_call_expr(
                 loc,
                 ty,
                 args,
+                true,
                 context,
                 ns,
                 symtable,
