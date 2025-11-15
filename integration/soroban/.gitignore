@@ -6,6 +6,7 @@
 node_modules
 package-lock.json
 *.txt
+!*.txt.example
 *.toml
 *.wasm
 *.abi

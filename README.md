@@ -83,7 +83,39 @@ stellar contract invoke --network testnet --id CDGUMUXA6IRRVMMKIVQJWLZZONDXBJ4AI
 ℹ️  Signing transaction: e0d68ae85bfbe0fceed8bcadd6613e12b3159f27dbf7c18e35e94de2b4a11ee2
 ```
 
+## Stellar Asset Contract Integration Test Setup
 
+To run the integration test for the Stellar Asset Contract, you need to provide testnet secret keys for two accounts: Alice and Bob, and the contract ID for the deployed Stellar Asset Contract.
+
+### 1. Prepare Secret Files
+
+- Copy the example files and fill in your own testnet secrets:
+  ```sh
+  cp alice.txt.example alice.txt
+  cp bob.txt.example bob.txt
+  ```
+- Edit `alice.txt` and `bob.txt` to contain your testnet secret keys (one per file, no extra spaces or newlines).
+
+### 2. Prepare the Contract ID File
+
+- Copy the example contract ID file and fill in your deployed contract ID:
+  ```sh
+  cp stellar_asset_contract_id.txt.example stellar_asset_contract_id.txt
+  ```
+- Edit `stellar_asset_contract_id.txt` to contain your deployed contract ID (one line, no spaces).
+
+**Warning:**
+- Never use mainnet or real-fund accounts for testing.
+- The secrets in these files should be for testnet only and have no value.
+- Do NOT commit your real `alice.txt`, `bob.txt`, or `stellar_asset_contract_id.txt` files to the repository. Only commit the `.example` files.
+
+### 3. Run the Test
+
+```sh
+npx mocha stellar_asset.spec.js
+```
+
+This will execute the integration test using the accounts and contract ID you provided.
 
 ## Tentative roadmap
 
