@@ -155,7 +155,15 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
         // In case of struct, we receive a buffer in that format: [ field1, field2, ... ] where each field is a Soroban tagged value of type i64
         // therefore, for each field, we need to extract it from the buffer and call PutContractData for each field separately
-        if let Type::Struct(ast::StructType::UserDefined(n)) = ty {
+
+        // This check is added to handle the case we are stroing a struct in storage
+        let inner_ty = if let Type::StorageRef(mutable, inner) = ty {
+            inner
+        } else {
+            ty
+        };
+
+        if let Type::Struct(ast::StructType::UserDefined(n)) = inner_ty {
             let field_count = &bin.ns.structs[*n].fields.len();
 
             let data_ptr = bin.vector_bytes(dest);
@@ -198,7 +206,23 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
     ) {
-        unimplemented!()
+        let storage_type = storage_type_to_int(&None);
+
+        let type_int = bin.context.i64_type().const_int(storage_type, false);
+
+        let function_value = bin
+            .module
+            .get_function(HostFunctions::DeleteContractData.name())
+            .unwrap();
+
+        let call = bin
+            .builder
+            .build_call(
+                function_value,
+                &[slot.as_basic_value_enum().into(), type_int.into()],
+                "del_contract_data",
+            )
+            .unwrap();
     }
 
     // Bytes and string have special storage layout
