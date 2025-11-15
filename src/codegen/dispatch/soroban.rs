@@ -92,7 +92,7 @@ pub fn function_dispatch(
             call_returns.push(new);
         }
 
-        let decoded = decode_args(&mut wrapper_cfg, &mut vartab);
+        let decoded = decode_args(&mut wrapper_cfg, &mut vartab, ns);
 
         // call storage initializer if needed
         if wrapper_cfg.name == "__constructor" {
@@ -145,7 +145,11 @@ pub fn function_dispatch(
     wrapper_cfgs
 }
 
-fn decode_args(wrapper_cfg: &mut ControlFlowGraph, vartab: &mut Vartable) -> Vec<Expression> {
+fn decode_args(
+    wrapper_cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) -> Vec<Expression> {
     let mut args = Vec::new();
 
     let params = wrapper_cfg.params.clone();
@@ -157,7 +161,7 @@ fn decode_args(wrapper_cfg: &mut ControlFlowGraph, vartab: &mut Vartable) -> Vec
             arg_no: i,
         };
 
-        let decoded = soroban_decode_arg(arg.clone(), wrapper_cfg, vartab);
+        let decoded = soroban_decode_arg(arg.clone(), wrapper_cfg, vartab, ns, None);
 
         args.push(decoded);
     }

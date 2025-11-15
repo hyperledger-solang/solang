@@ -25,7 +25,7 @@ pub(crate) struct BufferValidator<'a> {
 }
 
 impl BufferValidator<'_> {
-    pub fn new(buffer_size_var: usize, types: &[Type]) -> BufferValidator {
+    pub fn new(buffer_size_var: usize, types: &[Type]) -> BufferValidator<'_> {
         BufferValidator {
             buffer_length: Expression::Variable {
                 loc: Loc::Codegen,

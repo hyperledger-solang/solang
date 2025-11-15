@@ -735,7 +735,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         bin.builder.build_unreachable().unwrap();
     }
 
-    fn print(&self, bin: &Binary, string_ptr: PointerValue, string_len: IntValue) {
+    fn print<'b>(&self, bin: &Binary<'b>, string_ptr: PointerValue<'b>, string_len: IntValue<'b>) {
         emit_context!(bin);
 
         call!("debug_message", &[string_ptr.into(), string_len.into()])

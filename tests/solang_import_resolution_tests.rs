@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use assert_cmd::Command;
+use assert_cmd::{cargo_bin_cmd, Command};
 use std::path::PathBuf;
 
 fn solang_import_resolution_tests() -> PathBuf {
@@ -11,7 +11,7 @@ fn solang_import_resolution_tests() -> PathBuf {
 
 fn make_run(dir: &str) -> Command {
     let current_dir = solang_import_resolution_tests().join(dir);
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
     cmd.current_dir(current_dir)
         .args(["compile", "--target", "solana"]);
     cmd
