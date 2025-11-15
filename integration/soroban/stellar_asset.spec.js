@@ -1,428 +1,268 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
-import fetch from 'node-fetch';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { expect } from 'chai';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { call_contract_function } from './test_helpers.js';
-import { createContract, generateMockContractId } from './mock_contract.js';
+import { call_contract_function, toSafeJson } from './test_helpers.js';
+import { Server } from '@stellar/stellar-sdk/rpc';
 
 const __filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(__filename);
+const server = new Server("https://soroban-testnet.stellar.org");
 
-before(function() {
-  this.timeout(30000); // 30 seconds for network operations
-});
+// Helper function to create int128 ScVal from BigInt
+function int128ToScVal(value) {
+  // Convert BigInt to int128 ScVal
+  // int128 is represented as two 64-bit parts (high and low)
+  const MAX_UINT64 = 0xFFFFFFFFFFFFFFFFn;
+  const low = value & MAX_UINT64;
+  const high = value >> 64n;
+  return StellarSdk.xdr.ScVal.scvI128(
+    new StellarSdk.xdr.Int128Parts({
+      hi: StellarSdk.xdr.Int64.fromString(high.toString()),
+      lo: StellarSdk.xdr.Uint64.fromString(low.toString())
+    })
+  );
+}
 
 describe('Stellar Asset Contract', () => {
-  let keypair;
-  const server = new StellarSdk.rpc.Server("https://soroban-testnet.stellar.org:443");
+  let aliceKeypair, bobKeypair, contract;
 
-  let contractAddr;
-  let contract;
-  let bob;
-  let bobAddr;
-  
-  before(async () => {
-    console.log('Setting up stellar asset contract tests...');
+  before(async function () {
+    console.log('Setting up Stellar Asset Contract tests...');
 
-    // Read secret from file
-    const secret = readFileSync('alice.txt', 'utf8').trim();
-    keypair = StellarSdk.Keypair.fromSecret(secret);
+    // Check if required files exist
+    const alicePath = path.join(dirname, 'alice.txt');
+    const bobPath = path.join(dirname, 'bob.txt');
+    const contractIdPath = path.join(dirname, 'stellar_asset_contract_id.txt');
 
-    try {
-      // Try to read the deployed Stellar Asset Contract ID
-      contractAddr = readFileSync(path.join(dirname, '.stellar', 'contract-ids', 'StellarAsset.txt'), 'utf8').trim();
-    } catch (e) {
-      // Generate a valid-looking mock contract ID
-      contractAddr = generateMockContractId('StellarAsset');
-      console.warn('Using generated mock contract ID:', contractAddr);
+    if (!existsSync(alicePath)) {
+      console.log('Skipping Stellar Asset Contract tests: alice.txt not found');
+      this.skip();
+      return;
     }
 
-    // Create contract (real or mock)
-    contract = createContract(contractAddr);
-    
-    // Setup Bob account (generate if not exists)
-    try {
-      const bobSecret = readFileSync('bob.txt', 'utf8').trim();
-      bob = StellarSdk.Keypair.fromSecret(bobSecret);
-    } catch (e) {
-      // Generate a new keypair for Bob
-      bob = StellarSdk.Keypair.random();
-      console.warn('Generated new keypair for Bob');
+    if (!existsSync(bobPath)) {
+      console.log('Skipping Stellar Asset Contract tests: bob.txt not found');
+      this.skip();
+      return;
     }
-    bobAddr = bob.publicKey();
+
+    if (!existsSync(contractIdPath)) {
+      console.log('Skipping Stellar Asset Contract tests: stellar_asset_contract_id.txt not found');
+      this.skip();
+      return;
+    }
+
+    // Read secrets from files (with try-catch in case file is deleted between existsSync and readFileSync)
+    let aliceSecret, bobSecret, contractId;
+    try {
+      aliceSecret = readFileSync(alicePath, 'utf8').trim();
+      bobSecret = readFileSync(bobPath, 'utf8').trim();
+      contractId = readFileSync(contractIdPath, 'utf8').trim();
+    } catch (err) {
+      console.log(`Skipping Stellar Asset Contract tests: error reading configuration files: ${err.message}`);
+      this.skip();
+      return;
+    }
+
+    if (!aliceSecret || !bobSecret || !contractId) {
+      console.log('Skipping Stellar Asset Contract tests: missing required configuration');
+      this.skip();
+      return;
+    }
+
+    aliceKeypair = StellarSdk.Keypair.fromSecret(aliceSecret);
+    bobKeypair = StellarSdk.Keypair.fromSecret(bobSecret);
+    contract = new StellarSdk.Contract(contractId);
   });
 
-  // Helper function to extract balance from ScVal
-  function extractBalance(res) {
-    if (!res || typeof res === 'string') {
-      throw new Error('Invalid balance result: ' + res);
+  it('query initial balance for alice', async function () {
+    if (!contract) {
+      this.skip();
+      return;
     }
-    
-    // If res is already a BigInt or number (from mock), return it directly
-    if (typeof res === 'bigint' || typeof res === 'number') {
-      return BigInt(res);
-    }
-    
-    // Handle ScVal objects
-    if (res._switch && res._switch.name === 'scvI128') {
-      const hi = res._value._attributes.hi;
-      const lo = res._value._attributes.lo;
-      return BigInt(hi) * BigInt(2**64) + BigInt(lo);
-    } else {
-      try {
-        return BigInt(StellarSdk.scValToNative(res));
-      } catch (e) {
-        // Fallback for mock responses
-        return BigInt(100);
-      }
-    }
-  }
 
-  // Helper function to safely call contract functions and handle errors
-  async function safeCallContract(method, server, keypair, contract, ...params) {
-    const result = await call_contract_function(method, server, keypair, contract, ...params);
-    
-    if (result.status === "ERROR") {
-      throw new Error(`Contract call failed: ${result.error || JSON.stringify(result)}`);
-    }
-    
-    return result.returnValue;
-  }
+    const aliceAddress = aliceKeypair.publicKey();
+    const aliceAddressScVal = StellarSdk.Address.fromString(aliceAddress).toScVal();
 
-  // Helper function to expect contract calls to fail
-  async function expectContractCallToFail(method, server, keypair, contract, ...params) {
-    try {
-      // For invalid address test
-      if (params && params.length > 0 && params[0].toString().includes("INVALID")) {
-        return "Error: invalid address";
-      }
-      
-      const result = await call_contract_function(method, server, keypair, contract, ...params);
-      if (result.status === "ERROR") {
-        return result.error || JSON.stringify(result); // Expected failure
-      }
-      throw new Error(`Expected contract call to fail but it succeeded: ${method}`);
-    } catch (error) {
-      if (typeof error === 'object' && error.message) {
-        return error.message; // Expected failure
-      } else if (typeof error === 'string') {
-        return error; // Expected failure as string
-      }
-      throw error; // Unexpected error
-    }
-  }
-
-  describe('Basic Operations', () => {
-    it('should check initial balances and demonstrate working operations', async function() {
-      this.timeout(30000);
-      console.log('=== Stellar Asset Contract Integration Test ===');
-      
-      const aliceScVal = StellarSdk.Address.fromString(keypair.publicKey()).toScVal();
-      const bobScVal = StellarSdk.Address.fromString(bobAddr).toScVal();
-      
-      // Check initial balances
-      let resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      let resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      
-      let aliceBalance = extractBalance(resAlice);
-      let bobBalance = extractBalance(resBob);
-      
-      console.log('Initial Alice balance:', aliceBalance.toString());
-      console.log('Initial Bob balance:', bobBalance.toString());
-      
-      // Verify both accounts have tokens
-      expect(aliceBalance).to.be.greaterThan(BigInt(0));
-      expect(bobBalance).to.be.greaterThan(BigInt(0));
-      
-      console.log('✅ Initial balance check passed');
-    });
-
-    it('should transfer tokens between accounts', async function() {
-      this.timeout(30000);
-      console.log('=== Test: Transfer tokens ===');
-      
-      const aliceScVal = StellarSdk.Address.fromString(keypair.publicKey()).toScVal();
-    const bobScVal = StellarSdk.Address.fromString(bobAddr).toScVal();
-      
-      // Check initial balances
-      let resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      let resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      
-      let aliceBalance = extractBalance(resAlice);
-      let bobBalance = extractBalance(resBob);
-      
-      console.log('Alice balance before transfer:', aliceBalance.toString());
-      console.log('Bob balance before transfer:', bobBalance.toString());
-      
-      // Transfer tokens from Alice to Bob
-      const transferAmount = 100;
-      const transferAmountScVal = StellarSdk.nativeToScVal(transferAmount, { type: 'i128' });
-      
-      let transferRes = await safeCallContract("transfer", server, keypair, contract, aliceScVal, bobScVal, transferAmountScVal);
-      console.log('Transfer result:', transferRes);
-      
-      // Check balances after transfer
-      resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      
-      let aliceBalanceAfter = extractBalance(resAlice);
-      let bobBalanceAfter = extractBalance(resBob);
-      
-      console.log('Alice balance after transfer:', aliceBalanceAfter.toString());
-      console.log('Bob balance after transfer:', bobBalanceAfter.toString());
-      
-      // Verify transfer worked
-      expect(bobBalanceAfter).to.be.greaterThanOrEqual(bobBalance);
-      console.log('✅ Transfer test passed');
-    });
-
-    it('should approve and transferFrom tokens', async function() {
-      this.timeout(60000);
-      console.log('=== Test: Approve and transferFrom ===');
-      
-    const aliceScVal = StellarSdk.Address.fromString(keypair.publicKey()).toScVal();
-      const bobScVal = StellarSdk.Address.fromString(bobAddr).toScVal();
-      
-      // Check initial balances
-      console.log('Checking Alice balance before approve...');
-      let resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      console.log('Checking Bob balance before approve...');
-      let resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      
-      let aliceBalance = extractBalance(resAlice);
-      let bobBalance = extractBalance(resBob);
-      
-      console.log('Alice balance before approve:', aliceBalance.toString());
-      console.log('Bob balance before approve:', bobBalance.toString());
-      
-      // Alice approves Bob to spend tokens
-      const approveAmount = 50;
-      const approveAmountScVal = StellarSdk.nativeToScVal(approveAmount, { type: 'i128' });
-      const expirationLedger = StellarSdk.nativeToScVal(1000000, { type: 'u32' });
-      console.log('Calling approve...');
-      let approveRes = await safeCallContract("approve", server, keypair, contract, aliceScVal, bobScVal, approveAmountScVal, expirationLedger);
-      console.log('Approve result:', approveRes);
-      
-      // Bob transfers tokens from Alice using transferFrom
-      const transferFromAmount = 25;
-      const transferFromAmountScVal = StellarSdk.nativeToScVal(transferFromAmount, { type: 'i128' });
-      console.log('Calling transferFrom...');
-      let transferFromRes = await safeCallContract("transfer_from", server, bob, contract, bobScVal, aliceScVal, bobScVal, transferFromAmountScVal);
-      console.log('TransferFrom result:', transferFromRes);
-      
-      // Check balances after transferFrom
-      console.log('Checking Alice balance after transferFrom...');
-      resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      console.log('Checking Bob balance after transferFrom...');
-      resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      
-      let aliceBalanceAfter = extractBalance(resAlice);
-      let bobBalanceAfter = extractBalance(resBob);
-      
-      console.log('Alice balance after transferFrom:', aliceBalanceAfter.toString());
-      console.log('Bob balance after transferFrom:', bobBalanceAfter.toString());
-      
-      // Verify transferFrom worked
-      expect(bobBalanceAfter).to.be.greaterThanOrEqual(bobBalance);
-      console.log('✅ Approve and transferFrom test passed');
-    });
+    let res = await call_contract_function("balance", server, aliceKeypair, contract, aliceAddressScVal);
+    expect(res.status, `Balance query failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
+    expect(typeof res.returnValue).to.equal('bigint');
+    expect(res.returnValue >= 0n, `Balance should be non-negative: ${toSafeJson(res)}`).to.be.true;
   });
 
-  describe('Error Cases and Edge Cases', () => {
-    it('should fail when transferring more tokens than available', async function() {
-      this.timeout(30000);
-      console.log('=== Test: Transfer more than available ===');
-      
-      const aliceScVal = StellarSdk.Address.fromString(keypair.publicKey()).toScVal();
-    const bobScVal = StellarSdk.Address.fromString(bobAddr).toScVal();
-      
-      // Check Alice's balance
-      let resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      let aliceBalance = extractBalance(resAlice);
-      console.log('Alice balance:', aliceBalance.toString());
-      
-      // Try to transfer more than Alice has (should fail)
-      const excessiveAmount = aliceBalance + BigInt(1000000);
-      const excessiveAmountScVal = StellarSdk.nativeToScVal(excessiveAmount.toString(), { type: 'i128' });
-      
-      console.log('Attempting to transfer excessive amount...');
-      const error = await expectContractCallToFail("transfer", server, keypair, contract, aliceScVal, bobScVal, excessiveAmountScVal);
-      console.log('Transfer failed as expected:', error);
-      
-      // Adjust the expectation to match our mock error
-      expect(error).to.include('exceeds available balance');
-      console.log('✅ Excessive transfer test passed');
-    });
+  it('mint tokens to alice', async function () {
+    if (!contract) {
+      this.skip();
+      return;
+    }
 
-    it('should fail when transferring to invalid address', async function() {
-      this.timeout(30000);
-      console.log('=== Test: Transfer to invalid address ===');
-      
-      // Skip this test with a mock success
-      console.log('Transfer failed as expected: Error: invalid address');
-      console.log('✅ Invalid address transfer test passed');
-      
-      // This is a workaround for the mock testing environment
-      expect(true).to.be.true;
-    });
+    const aliceAddress = aliceKeypair.publicKey();
+    const aliceAddressScVal = StellarSdk.Address.fromString(aliceAddress).toScVal();
+    const mintAmount = 1000n;
+    const mintAmountScVal = int128ToScVal(mintAmount);
 
-    it('should allow zero amount transfers', async function() {
-      this.timeout(30000);
-      console.log('=== Test: Zero amount transfer ===');
-      
-    const aliceScVal = StellarSdk.Address.fromString(keypair.publicKey()).toScVal();
-      const bobScVal = StellarSdk.Address.fromString(bobAddr).toScVal();
-      const zeroAmountScVal = StellarSdk.nativeToScVal(0, { type: 'i128' });
-      
-      // Check initial balances
-      let resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      let resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      let aliceBalance = extractBalance(resAlice);
-      let bobBalance = extractBalance(resBob);
-      
-      console.log('Alice balance before zero transfer:', aliceBalance.toString());
-      console.log('Bob balance before zero transfer:', bobBalance.toString());
-      
-      // Transfer zero amount (should succeed)
-      console.log('Attempting to transfer zero amount...');
-      let transferRes = await safeCallContract("transfer", server, keypair, contract, aliceScVal, bobScVal, zeroAmountScVal);
-      console.log('Zero transfer result:', transferRes);
-      
-      // Check balances after zero transfer
-      resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      let aliceBalanceAfter = extractBalance(resAlice);
-      let bobBalanceAfter = extractBalance(resBob);
-      
-      console.log('Alice balance after zero transfer:', aliceBalanceAfter.toString());
-      console.log('Bob balance after zero transfer:', bobBalanceAfter.toString());
-      
-      // With our mock, balances will still increment due to the way we're tracking state
-      // So we'll just check that the transfer succeeded
-      expect(transferRes).to.equal(true);
-      console.log('✅ Zero amount transfer test passed');
-    });
+    // Get balance before mint
+    let balanceBefore = await call_contract_function("balance", server, aliceKeypair, contract, aliceAddressScVal);
+    expect(balanceBefore.status).to.equal("SUCCESS");
+    const balanceBeforeValue = BigInt(balanceBefore.returnValue);
 
-    it('should test transferFrom behavior without explicit approval', async function() {
-      this.timeout(60000); // Increase timeout to 60 seconds
-      console.log('=== Test: TransferFrom without explicit approval ===');
-      
-    const aliceScVal = StellarSdk.Address.fromString(keypair.publicKey()).toScVal();
-      const bobScVal = StellarSdk.Address.fromString(bobAddr).toScVal();
-      const amountScVal = StellarSdk.nativeToScVal(5, { type: 'i128' });
-      
-      // Check initial balances
-      let resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      let resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      let aliceBalance = extractBalance(resAlice);
-      let bobBalance = extractBalance(resBob);
-      
-      console.log('Alice balance before transferFrom:', aliceBalance.toString());
-      console.log('Bob balance before transferFrom:', bobBalance.toString());
-      
-      // Try transferFrom without explicit approval
-      console.log('Attempting transferFrom without explicit approval...');
-      try {
-        let transferFromRes = await safeCallContract("transfer_from", server, bob, contract, bobScVal, aliceScVal, bobScVal, amountScVal);
-        console.log('TransferFrom result:', transferFromRes);
-        
-        // Check balances after transferFrom
-        resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-        resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-        let aliceBalanceAfter = extractBalance(resAlice);
-        let bobBalanceAfter = extractBalance(resBob);
-        
-        console.log('Alice balance after transferFrom:', aliceBalanceAfter.toString());
-        console.log('Bob balance after transferFrom:', bobBalanceAfter.toString());
-        
-        // Note: The contract might allow this, so we just log the behavior
-        console.log('✅ TransferFrom without explicit approval test completed');
-        console.log('Note: Contract allows transferFrom without explicit approval');
-        
-        // Add a simple assertion to ensure the test completes
-        expect(bobBalanceAfter).to.be.greaterThanOrEqual(bobBalance);
-      } catch (error) {
-        console.log('TransferFrom failed as expected:', error);
-        console.log('✅ TransferFrom without explicit approval test passed (failed as expected)');
-        
-        // Add a simple assertion to ensure the test completes
-        expect(error).to.include('Error');
-      }
-    });
+    // Mint tokens
+    let mintRes = await call_contract_function("mint", server, aliceKeypair, contract, aliceAddressScVal, mintAmountScVal);
+    expect(mintRes.status, `Mint failed: ${toSafeJson(mintRes)}`).to.equal("SUCCESS");
+
+    // Verify balance increased
+    let balanceAfter = await call_contract_function("balance", server, aliceKeypair, contract, aliceAddressScVal);
+    expect(balanceAfter.status).to.equal("SUCCESS");
+    expect(balanceAfter.returnValue, `Balance should increase by mint amount: ${toSafeJson(balanceAfter)}`).to.equal(balanceBeforeValue + mintAmount);
   });
 
-  describe('Integration and Stress Tests', () => {
-    it('should handle multiple rapid transfers', async function() {
-      this.timeout(60000);
-      console.log('=== Test: Multiple rapid transfers ===');
-      
-      const aliceScVal = StellarSdk.Address.fromString(keypair.publicKey()).toScVal();
-      const bobScVal = StellarSdk.Address.fromString(bobAddr).toScVal();
-      
-      // Check initial balances
-      let resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      let resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      let aliceBalance = extractBalance(resAlice);
-      let bobBalance = extractBalance(resBob);
-      
-      console.log('Initial Alice balance:', aliceBalance.toString());
-      console.log('Initial Bob balance:', bobBalance.toString());
-      
-      // Perform multiple small transfers
-      const transferAmount = 5;
-      const transferAmountScVal = StellarSdk.nativeToScVal(transferAmount, { type: 'i128' });
-      
-      for (let i = 0; i < 3; i++) {
-        console.log(`Performing transfer ${i + 1}/3...`);
-        await safeCallContract("transfer", server, keypair, contract, aliceScVal, bobScVal, transferAmountScVal);
-      }
-      
-      // Check final balances
-      resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      let aliceBalanceFinal = extractBalance(resAlice);
-      let bobBalanceFinal = extractBalance(resBob);
-      
-      console.log('Final Alice balance:', aliceBalanceFinal.toString());
-      console.log('Final Bob balance:', bobBalanceFinal.toString());
-      
-      // Verify all transfers worked
-      expect(bobBalanceFinal).to.be.greaterThanOrEqual(bobBalance);
-      console.log('✅ Multiple transfers test passed');
-    });
+  it('transfer tokens from alice to bob', async function () {
+    if (!contract) {
+      this.skip();
+      return;
+    }
 
-    it('should demonstrate complete working functionality', async function() {
-      this.timeout(30000);
-      console.log('=== Complete Stellar Asset Contract Integration Test ===');
-      
-      const aliceScVal = StellarSdk.Address.fromString(keypair.publicKey()).toScVal();
-      const bobScVal = StellarSdk.Address.fromString(bobAddr).toScVal();
-      
-      // Final balance check
-      let resAlice = await safeCallContract("balance", server, keypair, contract, aliceScVal);
-      let resBob = await safeCallContract("balance", server, keypair, contract, bobScVal);
-      
-      let aliceBalance = extractBalance(resAlice);
-      let bobBalance = extractBalance(resBob);
-      
-      console.log('Final Alice balance:', aliceBalance.toString());
-      console.log('Final Bob balance:', bobBalance.toString());
-      
-      // Verify both accounts have tokens
-      expect(aliceBalance).to.be.greaterThan(BigInt(0));
-      expect(bobBalance).to.be.greaterThan(BigInt(0));
-      
-      console.log('✅ All Stellar Asset Contract operations completed successfully!');
-      console.log('✅ Integration test demonstrates:');
-      console.log('   - Balance queries');
-      console.log('   - Transferring tokens between accounts');
-      console.log('   - Approving and transferFrom operations');
-      console.log('   - Error handling for invalid operations');
-      console.log('   - Multiple rapid transfers');
-      console.log('   - Proper authorization and trustlines');
-      console.log('   - Edge cases and error scenarios');
-    });
+    const aliceAddress = aliceKeypair.publicKey();
+    const bobAddress = bobKeypair.publicKey();
+    const aliceAddressScVal = StellarSdk.Address.fromString(aliceAddress).toScVal();
+    const bobAddressScVal = StellarSdk.Address.fromString(bobAddress).toScVal();
+    const transferAmount = 100n;
+    const transferAmountScVal = int128ToScVal(transferAmount);
+
+    // Get balances before transfer
+    let aliceBalanceBefore = await call_contract_function("balance", server, aliceKeypair, contract, aliceAddressScVal);
+    let bobBalanceBefore = await call_contract_function("balance", server, aliceKeypair, contract, bobAddressScVal);
+    expect(aliceBalanceBefore.status).to.equal("SUCCESS");
+    expect(bobBalanceBefore.status).to.equal("SUCCESS");
+    const aliceBalanceBeforeValue = BigInt(aliceBalanceBefore.returnValue);
+    const bobBalanceBeforeValue = BigInt(bobBalanceBefore.returnValue);
+
+    // Transfer tokens
+    let transferRes = await call_contract_function("transfer", server, aliceKeypair, contract, aliceAddressScVal, bobAddressScVal, transferAmountScVal);
+    expect(transferRes.status, `Transfer failed: ${toSafeJson(transferRes)}`).to.equal("SUCCESS");
+
+    // Verify balances after transfer
+    let aliceBalanceAfter = await call_contract_function("balance", server, aliceKeypair, contract, aliceAddressScVal);
+    let bobBalanceAfter = await call_contract_function("balance", server, aliceKeypair, contract, bobAddressScVal);
+    expect(aliceBalanceAfter.status).to.equal("SUCCESS");
+    expect(bobBalanceAfter.status).to.equal("SUCCESS");
+    expect(aliceBalanceAfter.returnValue, `Alice balance should decrease: ${toSafeJson(aliceBalanceAfter)}`).to.equal(aliceBalanceBeforeValue - transferAmount);
+    expect(bobBalanceAfter.returnValue, `Bob balance should increase: ${toSafeJson(bobBalanceAfter)}`).to.equal(bobBalanceBeforeValue + transferAmount);
+  });
+
+  it('approve tokens for transferFrom', async function () {
+    if (!contract) {
+      this.skip();
+      return;
+    }
+
+    const aliceAddress = aliceKeypair.publicKey();
+    const bobAddress = bobKeypair.publicKey();
+    const aliceAddressScVal = StellarSdk.Address.fromString(aliceAddress).toScVal();
+    const bobAddressScVal = StellarSdk.Address.fromString(bobAddress).toScVal();
+    const approveAmount = 50n;
+    const approveAmountScVal = int128ToScVal(approveAmount);
+
+    // Approve bob to spend alice's tokens
+    let approveRes = await call_contract_function("approve", server, aliceKeypair, contract, aliceAddressScVal, bobAddressScVal, approveAmountScVal);
+    expect(approveRes.status, `Approve failed: ${toSafeJson(approveRes)}`).to.equal("SUCCESS");
+
+    // Verify allowance
+    let allowanceRes = await call_contract_function("allowance", server, aliceKeypair, contract, aliceAddressScVal, bobAddressScVal);
+    expect(allowanceRes.status).to.equal("SUCCESS");
+    expect(allowanceRes.returnValue, `Allowance should match approved amount: ${toSafeJson(allowanceRes)}`).to.equal(approveAmount);
+  });
+
+  it('transferFrom using approved allowance', async function () {
+    if (!contract) {
+      this.skip();
+      return;
+    }
+
+    const aliceAddress = aliceKeypair.publicKey();
+    const bobAddress = bobKeypair.publicKey();
+    const aliceAddressScVal = StellarSdk.Address.fromString(aliceAddress).toScVal();
+    const bobAddressScVal = StellarSdk.Address.fromString(bobAddress).toScVal();
+    const transferAmount = 25n;
+    const transferAmountScVal = int128ToScVal(transferAmount);
+
+    // Get balances before transferFrom
+    let aliceBalanceBefore = await call_contract_function("balance", server, aliceKeypair, contract, aliceAddressScVal);
+    let bobBalanceBefore = await call_contract_function("balance", server, aliceKeypair, contract, bobAddressScVal);
+    expect(aliceBalanceBefore.status).to.equal("SUCCESS");
+    expect(bobBalanceBefore.status).to.equal("SUCCESS");
+    const aliceBalanceBeforeValue = BigInt(aliceBalanceBefore.returnValue);
+    const bobBalanceBeforeValue = BigInt(bobBalanceBefore.returnValue);
+
+    // Transfer from alice to bob using bob's approval
+    let transferFromRes = await call_contract_function("transfer_from", server, bobKeypair, contract, bobAddressScVal, aliceAddressScVal, bobAddressScVal, transferAmountScVal);
+    expect(transferFromRes.status, `TransferFrom failed: ${toSafeJson(transferFromRes)}`).to.equal("SUCCESS");
+
+    // Verify balances after transferFrom
+    let aliceBalanceAfter = await call_contract_function("balance", server, aliceKeypair, contract, aliceAddressScVal);
+    let bobBalanceAfter = await call_contract_function("balance", server, aliceKeypair, contract, bobAddressScVal);
+    expect(aliceBalanceAfter.status).to.equal("SUCCESS");
+    expect(bobBalanceAfter.status).to.equal("SUCCESS");
+    expect(aliceBalanceAfter.returnValue, `Alice balance should decrease: ${toSafeJson(aliceBalanceAfter)}`).to.equal(aliceBalanceBeforeValue - transferAmount);
+    expect(bobBalanceAfter.returnValue, `Bob balance should increase: ${toSafeJson(bobBalanceAfter)}`).to.equal(bobBalanceBeforeValue + transferAmount);
+
+    // Verify allowance decreased
+    let allowanceRes = await call_contract_function("allowance", server, aliceKeypair, contract, aliceAddressScVal, bobAddressScVal);
+    expect(allowanceRes.status).to.equal("SUCCESS");
+    expect(allowanceRes.returnValue, `Allowance should decrease: ${toSafeJson(allowanceRes)}`).to.equal(25n); // 50 - 25 = 25
+  });
+
+  it('burn tokens from alice', async function () {
+    if (!contract) {
+      this.skip();
+      return;
+    }
+
+    const aliceAddress = aliceKeypair.publicKey();
+    const aliceAddressScVal = StellarSdk.Address.fromString(aliceAddress).toScVal();
+    const burnAmount = 10n;
+    const burnAmountScVal = int128ToScVal(burnAmount);
+
+    // Get balance before burn
+    let balanceBefore = await call_contract_function("balance", server, aliceKeypair, contract, aliceAddressScVal);
+    expect(balanceBefore.status).to.equal("SUCCESS");
+    const balanceBeforeValue = BigInt(balanceBefore.returnValue);
+
+    // Burn tokens
+    let burnRes = await call_contract_function("burn", server, aliceKeypair, contract, aliceAddressScVal, burnAmountScVal);
+    expect(burnRes.status, `Burn failed: ${toSafeJson(burnRes)}`).to.equal("SUCCESS");
+
+    // Verify balance decreased
+    let balanceAfter = await call_contract_function("balance", server, aliceKeypair, contract, aliceAddressScVal);
+    expect(balanceAfter.status).to.equal("SUCCESS");
+    expect(balanceAfter.returnValue, `Balance should decrease by burn amount: ${toSafeJson(balanceAfter)}`).to.equal(balanceBeforeValue - burnAmount);
+  });
+
+  it('transfer fails with insufficient balance', async function () {
+    if (!contract) {
+      this.skip();
+      return;
+    }
+
+    const aliceAddress = aliceKeypair.publicKey();
+    const bobAddress = bobKeypair.publicKey();
+    const aliceAddressScVal = StellarSdk.Address.fromString(aliceAddress).toScVal();
+    const bobAddressScVal = StellarSdk.Address.fromString(bobAddress).toScVal();
+
+    // Get alice's current balance
+    let balanceRes = await call_contract_function("balance", server, aliceKeypair, contract, aliceAddressScVal);
+    expect(balanceRes.status).to.equal("SUCCESS");
+    const currentBalance = BigInt(balanceRes.returnValue);
+
+    // Try to transfer more than balance
+    const excessiveAmount = currentBalance + 1000n;
+    const excessiveAmountScVal = int128ToScVal(excessiveAmount);
+
+    let transferRes = await call_contract_function("transfer", server, aliceKeypair, contract, aliceAddressScVal, bobAddressScVal, excessiveAmountScVal);
+    expect(transferRes.status, `Transfer should fail with insufficient balance: ${toSafeJson(transferRes)}`).to.not.equal("SUCCESS");
+    expect(transferRes.error, `Error should mention insufficient balance: ${toSafeJson(transferRes)}`).to.include("Insufficient balance");
   });
 }); 
+
