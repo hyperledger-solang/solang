@@ -12,10 +12,6 @@ fn storage_array_ops_test() {
 
             function push_pop() public returns (uint64) {
                 mylist.push(5);
-                //mylist.push(10);
-                //mylist.pop();
-
-                //uint64 len = uint64(mylist.length);
 
                 mylist[0] = 15;
 

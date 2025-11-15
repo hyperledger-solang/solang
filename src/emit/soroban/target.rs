@@ -157,7 +157,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         // therefore, for each field, we need to extract it from the buffer and call PutContractData for each field separately
 
         // This check is added to handle the case we are stroing a struct in storage
-        let inner_ty = if let Type::StorageRef(mutable,inner ) = ty {
+        let inner_ty = if let Type::StorageRef(mutable, inner) = ty {
             inner
         } else {
             ty
