@@ -79,10 +79,16 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         } => {
             let struct_ty = bin.llvm_type(ty);
 
+            let allocator = if bin.ns.target == Target::Soroban {
+                "soroban_malloc"
+            } else {
+                "__malloc"
+            };
+
             let s = bin
                 .builder
                 .build_call(
-                    bin.module.get_function("__malloc").unwrap(),
+                    bin.module.get_function(allocator).unwrap(),
                     &[struct_ty
                         .size_of()
                         .unwrap()
@@ -1580,7 +1586,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .unwrap()
                     .const_cast(bin.context.i32_type(), false);
 
-                bin.vector_new(size, elem_size, initializer.as_ref(), ty)
+                bin.vector_new(size, elem_size, initializer.as_ref())
             }
         }
         Expression::Builtin {

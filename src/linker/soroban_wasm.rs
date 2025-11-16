@@ -24,13 +24,13 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
         .write_all(input)
         .expect("failed to write object file to temp file");
 
+    // Assemble wasm-ld command line
     let mut command_line = vec![
         CString::new("--no-entry").unwrap(),
         CString::new("--allow-undefined").unwrap(),
         CString::new("--gc-sections").unwrap(),
         CString::new("--global-base=0").unwrap(),
         CString::new("--initial-memory=1048576").unwrap(), // 1 MiB initial memory
-        CString::new("--max-memory=1048576").unwrap(),
     ];
     command_line.push(CString::new("--export-dynamic").unwrap());
 
@@ -94,11 +94,17 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
             }),
             _ => panic!("unexpected WASM import section {import:?}"),
         };
-        let module_name = import.name.split('.').next().unwrap();
-        // parse the import name to all string after the the first dot
-        let import_name = import.name.split('.').nth(1).unwrap();
-        imports.import(module_name, import_name, import_type);
+
+        // Handle both "module.func" and plain "name" (with module in import.module)
+        if let Some((mod_name, func_name)) = import.name.split_once('.') {
+            // Soroban-native shape: modulename.funcname
+            imports.import(mod_name, func_name, import_type);
+        } else {
+            //imports.import(import.module, &import.name, import_type);
+            unreachable!()
+        }
     }
+
     module.section(&imports);
 }
 

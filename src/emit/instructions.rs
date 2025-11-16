@@ -211,11 +211,16 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let size = bin.builder.build_int_mul(elem_size, new_len, "").unwrap();
             let size = bin.builder.build_int_add(size, vec_size, "").unwrap();
 
+            let allocator = if bin.ns.target == Target::Soroban {
+                "soroban_realloc"
+            } else {
+                "__realloc"
+            };
             // Reallocate and reassign the array pointer
             let new = bin
                 .builder
                 .build_call(
-                    bin.module.get_function("__realloc").unwrap(),
+                    bin.module.get_function(allocator).unwrap(),
                     &[arr.into(), size.into()],
                     "",
                 )
@@ -382,11 +387,16 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 w.vars.get_mut(res).unwrap().value = ret_val;
             }
 
+            let allocator = if bin.ns.target == Target::Soroban {
+                "soroban_realloc"
+            } else {
+                "__realloc"
+            };
             // Reallocate and reassign the array pointer
             let new = bin
                 .builder
                 .build_call(
-                    bin.module.get_function("__realloc").unwrap(),
+                    bin.module.get_function(allocator).unwrap(),
                     &[a.into(), size.into()],
                     "",
                 )

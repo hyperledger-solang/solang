@@ -6,7 +6,7 @@ use crate::codegen::encoding::create_encoder;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Expression;
 use crate::codegen::HostFunctions;
-use crate::sema::ast::{Namespace, RetrieveType, Type, Type::Uint};
+use crate::sema::ast::{Namespace, RetrieveType, StructType, Type, Type::Uint};
 use num_bigint::BigInt;
 use num_traits::Zero;
 use solang_parser::helpers::CodeLocation;
@@ -31,7 +31,7 @@ pub fn soroban_encode(
 
     let size_expr = Expression::NumberLiteral {
         loc: *loc,
-        ty: Uint(64),
+        ty: Uint(32),
         value: size.into(),
     };
     let encoded_bytes = vartab.temp_name("abi_encoded", &Type::Bytes(size as u8));
@@ -40,7 +40,7 @@ pub fn soroban_encode(
         loc: *loc,
         ty: Type::Bytes(size as u8),
         size: size_expr.clone().into(),
-        initializer: Some(vec![]),
+        initializer: None,
     };
 
     cfg.add(
@@ -88,7 +88,7 @@ pub fn soroban_decode(
     _loc: &Loc,
     buffer: &Expression,
     _types: &[Type],
-    _ns: &Namespace,
+    ns: &Namespace,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     _buffer_size_expr: Option<Expression>,
@@ -101,7 +101,7 @@ pub fn soroban_decode(
         expr: Box::new(buffer.clone()),
     };
 
-    let decoded_val = soroban_decode_arg(loaded_val, cfg, vartab);
+    let decoded_val = soroban_decode_arg(loaded_val, cfg, vartab, ns, None);
 
     returns.push(decoded_val);
 
@@ -112,11 +112,18 @@ pub fn soroban_decode_arg(
     arg: Expression,
     wrapper_cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
+    ns: &Namespace,
+    decode_as: Option<Type>,
 ) -> Expression {
-    let ty = if let Type::Ref(inner_ty) = arg.ty() {
-        *inner_ty
-    } else {
-        arg.ty()
+    let ty = match decode_as {
+        Some(ty) => ty,
+        None => {
+            if let Type::Ref(inner_ty) = arg.ty() {
+                *inner_ty
+            } else {
+                arg.ty()
+            }
+        }
     };
 
     match ty {
@@ -144,6 +151,9 @@ pub fn soroban_decode_arg(
         Type::Address(_) | Type::String => arg.clone(),
 
         Type::Int(128) | Type::Uint(128) => decode_i128(wrapper_cfg, vartab, arg),
+
+        Type::Int(256) | Type::Uint(256) => decode_i256(wrapper_cfg, vartab, arg),
+
         Type::Uint(32) => {
             // get payload out of major bits then truncate to 32‑bit
             Expression::Trunc {
@@ -189,6 +199,9 @@ pub fn soroban_decode_arg(
             }),
             signed: true,
         },
+        Type::Struct(StructType::UserDefined(n)) => {
+            decode_struct(arg, wrapper_cfg, vartab, n, ns, ty)
+        }
 
         _ => unimplemented!(),
     }
@@ -560,7 +573,96 @@ pub fn soroban_encode_arg(
                 expr: encoded,
             }
         }
-        _ => todo!("Type not yet supported"),
+        Type::Int(256) | Type::Uint(256) => {
+            // For 256-bit integers, we need to split into four 64-bit pieces
+            // lo_lo: bits 0-63
+            // lo_hi: bits 64-127
+            // hi_lo: bits 128-191
+            // hi_hi: bits 192-255
+
+            let is_signed = matches!(item.ty(), Type::Int(256));
+
+            // Extract lo_lo (bits 0-63)
+            let lo_lo = Expression::Trunc {
+                loc: Loc::Codegen,
+                ty: Type::Int(64),
+                expr: Box::new(item.clone()),
+            };
+
+            // Extract lo_hi (bits 64-127)
+            let lo_hi_shift = Expression::ShiftRight {
+                loc: Loc::Codegen,
+                ty: Type::Int(256),
+                left: Box::new(item.clone()),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Int(256),
+                    value: BigInt::from(64),
+                }),
+                signed: is_signed,
+            };
+
+            let lo_hi = Expression::Trunc {
+                loc: Loc::Codegen,
+                ty: Type::Int(64),
+                expr: Box::new(lo_hi_shift),
+            };
+
+            // Extract hi_lo (bits 128-191)
+            let hi_lo_shift = Expression::ShiftRight {
+                loc: Loc::Codegen,
+                ty: Type::Int(256),
+                left: Box::new(item.clone()),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Int(256),
+                    value: BigInt::from(128),
+                }),
+                signed: is_signed,
+            };
+
+            let hi_lo = Expression::Trunc {
+                loc: Loc::Codegen,
+                ty: Type::Int(64),
+                expr: Box::new(hi_lo_shift),
+            };
+
+            // Extract hi_hi (bits 192-255)
+            let hi_hi_shift = Expression::ShiftRight {
+                loc: Loc::Codegen,
+                ty: Type::Int(256),
+                left: Box::new(item.clone()),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Int(256),
+                    value: BigInt::from(192),
+                }),
+                signed: is_signed,
+            };
+
+            let hi_hi = Expression::Trunc {
+                loc: Loc::Codegen,
+                ty: Type::Int(64),
+                expr: Box::new(hi_hi_shift),
+            };
+
+            let encoded = encode_i256(cfg, vartab, lo_lo, lo_hi, hi_lo, hi_hi, item.ty());
+            Instr::Set {
+                loc: item.loc(),
+                res: obj,
+                expr: encoded,
+            }
+        }
+        Type::Struct(StructType::UserDefined(n)) => {
+            let buf = encode_struct(item.clone(), cfg, vartab, ns, n);
+
+            Instr::Set {
+                loc: Loc::Codegen,
+                res: obj,
+                expr: buf,
+            }
+        }
+        _ => todo!("Type not yet supported in soroban encoder: {:?}", item.ty()),
     };
 
     cfg.add(vartab, ret);
@@ -703,6 +805,52 @@ fn encode_i128(
 
     cfg.set_basic_block(return_block);
     cfg.set_phis(return_block, vartab.pop_dirty_tracker());
+
+    ret
+}
+
+/// Encodes a 256-bit integer (signed or unsigned) into a Soroban ScVal.
+/// This function handles both Int256 and Uint256 types by splitting them into
+/// four 64-bit pieces and using the appropriate host functions.
+fn encode_i256(
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    lo_lo: Expression,
+    lo_hi: Expression,
+    hi_lo: Expression,
+    hi_hi: Expression,
+    int256_ty: Type,
+) -> Expression {
+    let ret_var = vartab.temp_anonymous(&lo_lo.ty());
+
+    let ret = Expression::Variable {
+        loc: pt::Loc::Codegen,
+        ty: lo_lo.ty().clone(),
+        var_no: ret_var,
+    };
+
+    // For 256-bit integers, we always use the host functions since they can't fit in a 64-bit ScVal
+    let instr = match int256_ty {
+        Type::Int(256) => Instr::Call {
+            res: vec![ret_var],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjFromI256Pieces.name().to_string(),
+            },
+            args: vec![hi_hi, hi_lo, lo_hi, lo_lo],
+        },
+        Type::Uint(256) => Instr::Call {
+            res: vec![ret_var],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjFromU256Pieces.name().to_string(),
+            },
+            args: vec![hi_hi, hi_lo, lo_hi, lo_lo],
+        },
+        _ => unreachable!(),
+    };
+
+    cfg.add(vartab, instr);
 
     ret
 }
@@ -903,6 +1051,248 @@ fn decode_i128(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expressio
     ret
 }
 
+/// Decodes a 256-bit integer (signed or unsigned) from a Soroban ScVal.
+/// This function handles both Int256 and Uint256 types by retrieving
+/// the four 64-bit pieces from the host object.
+fn decode_i256(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expression) -> Expression {
+    let ty = if let Type::Ref(inner_ty) = arg.ty() {
+        *inner_ty.clone()
+    } else {
+        arg.ty()
+    };
+
+    let ret_var = vartab.temp_anonymous(&ty);
+
+    let ret = Expression::Variable {
+        loc: pt::Loc::Codegen,
+        ty: ty.clone(),
+        var_no: ret_var,
+    };
+
+    // For 256-bit integers, we need to extract all four 64-bit pieces
+    // lo_lo: bits 0-63
+    // lo_hi: bits 64-127
+    // hi_lo: bits 128-191
+    // hi_hi: bits 192-255
+
+    // Extract lo_lo (bits 0-63)
+    let lo_lo_var_no = vartab.temp_anonymous(&Type::Uint(64));
+    let lo_lo_var = Expression::Variable {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
+        var_no: lo_lo_var_no,
+    };
+
+    let get_lo_lo_instr = match ty {
+        Type::Int(256) => Instr::Call {
+            res: vec![lo_lo_var_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjToI256LoLo.name().to_string(),
+            },
+            args: vec![arg.clone()],
+        },
+        Type::Uint(256) => Instr::Call {
+            res: vec![lo_lo_var_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjToU256LoLo.name().to_string(),
+            },
+            args: vec![arg.clone()],
+        },
+        _ => unreachable!(),
+    };
+
+    cfg.add(vartab, get_lo_lo_instr);
+
+    // Extract lo_hi (bits 64-127)
+    let lo_hi_var_no = vartab.temp_anonymous(&Type::Uint(64));
+    let lo_hi_var = Expression::Variable {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
+        var_no: lo_hi_var_no,
+    };
+
+    let get_lo_hi_instr = match ty {
+        Type::Int(256) => Instr::Call {
+            res: vec![lo_hi_var_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjToI256LoHi.name().to_string(),
+            },
+            args: vec![arg.clone()],
+        },
+        Type::Uint(256) => Instr::Call {
+            res: vec![lo_hi_var_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjToU256LoHi.name().to_string(),
+            },
+            args: vec![arg.clone()],
+        },
+        _ => unreachable!(),
+    };
+
+    cfg.add(vartab, get_lo_hi_instr);
+
+    // Extract hi_lo (bits 128-191)
+    let hi_lo_var_no = vartab.temp_anonymous(&Type::Uint(64));
+    let hi_lo_var = Expression::Variable {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
+        var_no: hi_lo_var_no,
+    };
+
+    let get_hi_lo_instr = match ty {
+        Type::Int(256) => Instr::Call {
+            res: vec![hi_lo_var_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjToI256HiLo.name().to_string(),
+            },
+            args: vec![arg.clone()],
+        },
+        Type::Uint(256) => Instr::Call {
+            res: vec![hi_lo_var_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjToU256HiLo.name().to_string(),
+            },
+            args: vec![arg.clone()],
+        },
+        _ => unreachable!(),
+    };
+
+    cfg.add(vartab, get_hi_lo_instr);
+
+    // Extract hi_hi (bits 192-255)
+    let hi_hi_var_no = vartab.temp_anonymous(&Type::Uint(64));
+    let hi_hi_var = Expression::Variable {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
+        var_no: hi_hi_var_no,
+    };
+
+    let get_hi_hi_instr = match ty {
+        Type::Int(256) => Instr::Call {
+            res: vec![hi_hi_var_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjToI256HiHi.name().to_string(),
+            },
+            args: vec![arg.clone()],
+        },
+        Type::Uint(256) => Instr::Call {
+            res: vec![hi_hi_var_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjToU256HiHi.name().to_string(),
+            },
+            args: vec![arg.clone()],
+        },
+        _ => unreachable!(),
+    };
+
+    cfg.add(vartab, get_hi_hi_instr);
+
+    // Now combine all pieces to form the 256-bit value
+    // Start with hi_hi (bits 192-255)
+    let mut combined = Expression::ZeroExt {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        expr: Box::new(hi_hi_var),
+    };
+
+    // Shift left by 64 and add hi_lo (bits 128-191)
+    combined = Expression::ShiftLeft {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        left: Box::new(combined),
+        right: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            value: BigInt::from(64),
+        }),
+    };
+
+    let hi_lo_extended = Expression::ZeroExt {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        expr: Box::new(hi_lo_var),
+    };
+
+    combined = Expression::Add {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        overflowing: false,
+        left: Box::new(combined),
+        right: Box::new(hi_lo_extended),
+    };
+
+    // Shift left by 64 and add lo_hi (bits 64-127)
+    combined = Expression::ShiftLeft {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        left: Box::new(combined),
+        right: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            value: BigInt::from(64),
+        }),
+    };
+
+    let lo_hi_extended = Expression::ZeroExt {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        expr: Box::new(lo_hi_var),
+    };
+
+    combined = Expression::Add {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        overflowing: false,
+        left: Box::new(combined),
+        right: Box::new(lo_hi_extended),
+    };
+
+    // Shift left by 64 and add lo_lo (bits 0-63)
+    combined = Expression::ShiftLeft {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        left: Box::new(combined),
+        right: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            value: BigInt::from(64),
+        }),
+    };
+
+    let lo_lo_extended = Expression::ZeroExt {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        expr: Box::new(lo_lo_var),
+    };
+
+    combined = Expression::Add {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        overflowing: false,
+        left: Box::new(combined),
+        right: Box::new(lo_lo_extended),
+    };
+
+    // Set the final combined value
+    let set_instr = Instr::Set {
+        loc: pt::Loc::Codegen,
+        res: ret_var,
+        expr: combined,
+    };
+
+    cfg.add(vartab, set_instr);
+
+    ret
+}
+
 fn extract_tag(arg: Expression) -> Expression {
     let bit_mask = Expression::NumberLiteral {
         loc: pt::Loc::Codegen,
@@ -915,5 +1305,84 @@ fn extract_tag(arg: Expression) -> Expression {
         ty: Type::Uint(64),
         left: arg.clone().into(),
         right: bit_mask.into(),
+    }
+}
+
+/// encode a struct into a buffer where each field is 64 bits long soroban Val.
+fn encode_struct(
+    item: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+    struct_no: usize,
+) -> Expression {
+    let fields = &ns.structs[struct_no].fields;
+    let mut fields_vars = Vec::new();
+
+    for (index, field) in fields.iter().enumerate() {
+        let field = Expression::StructMember {
+            loc: item.loc(),
+            ty: field.ty.clone(),
+            expr: Box::new(item.clone()),
+            member: index,
+        };
+
+        let actual_loaded_field = Expression::Load {
+            loc: Loc::Codegen,
+            ty: field.ty(),
+            expr: field.into(),
+        };
+
+        fields_vars.push(actual_loaded_field);
+    }
+
+    // now call soroban_encode for all fields
+    let ret = soroban_encode(&item.loc(), fields_vars, ns, vartab, cfg, false);
+
+    ret.0
+}
+
+/// Decode a struct from soroban encoding. Struct fields are laid out sequentially in a buffer, where each field is 64 bits long.
+fn decode_struct(
+    mut item: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    struct_no: usize,
+    ns: &Namespace,
+    struct_ty: Type,
+) -> Expression {
+    let tys = &ns.structs[struct_no]
+        .fields
+        .iter()
+        .map(|f| f.ty.clone())
+        .collect::<Vec<_>>();
+
+    let mut members = Vec::new();
+
+    for ty in tys {
+        let loaded_val = Expression::Load {
+            loc: Loc::Codegen,
+            ty: Uint(64),
+            expr: Box::new(item.clone()),
+        };
+
+        let decode_val = soroban_decode_arg(loaded_val, cfg, vartab, ns, Some(ty.clone()));
+
+        members.push(decode_val);
+
+        item = Expression::AdvancePointer {
+            pointer: Box::new(item),
+            bytes_offset: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Uint(32),
+                value: BigInt::from(8),
+            }),
+        };
+    }
+
+    Expression::StructLiteral {
+        loc: Loc::Codegen,
+        ty: struct_ty,
+        values: members,
     }
 }

@@ -360,9 +360,6 @@ fn string_storage() {
 #[test]
 fn bytes_storage() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Val(Vec<u8>);
-
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u8);
 
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]

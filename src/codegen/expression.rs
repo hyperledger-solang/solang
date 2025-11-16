@@ -679,16 +679,51 @@ pub fn expression(
                         .sum()
                 };
 
-                Expression::Add {
-                    loc: *loc,
-                    ty: ns.storage_type(),
-                    overflowing: true,
-                    left: Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
-                    right: Box::new(Expression::NumberLiteral {
+                if ns.target == Target::Soroban {
+                    // In Soroban, storage struct members are accessed via a key whose representation is a Soroban Vec.
+                    // Therefore instead of adding the offset we insert it as a separate argument.
+
+                    let soroban_key = expression(var, cfg, contract_no, func, ns, vartab, opt);
+
+                    let offset = Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Uint(32),
+                        value: offset,
+                    };
+
+                    let offset_encoded = soroban_encode_arg(offset, cfg, vartab, ns);
+
+                    let res = vartab.temp_name("vec_push_codegen", &Type::Uint(64));
+                    let var = Expression::Variable {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(64),
+                        var_no: res,
+                    };
+
+                    let enum_vec_put = Instr::Call {
+                        res: vec![res],
+                        return_tys: vec![Type::Uint(64)],
+                        call: InternalCallTy::HostFunction {
+                            name: HostFunctions::VecPushBack.name().to_string(),
+                        },
+                        args: vec![soroban_key, offset_encoded],
+                    };
+
+                    cfg.add(vartab, enum_vec_put);
+
+                    var
+                } else {
+                    Expression::Add {
                         loc: *loc,
                         ty: ns.storage_type(),
-                        value: offset,
-                    }),
+                        overflowing: true,
+                        left: Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
+                        right: Box::new(Expression::NumberLiteral {
+                            loc: *loc,
+                            ty: ns.storage_type(),
+                            value: offset,
+                        }),
+                    }
                 }
             } else {
                 unreachable!();
@@ -4209,7 +4244,7 @@ pub fn load_storage(
     };
 
     if ns.target == Target::Soroban {
-        soroban_decode_arg(var, cfg, vartab)
+        soroban_decode_arg(var, cfg, vartab, ns, None)
     } else {
         var
     }

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(feature = "soroban")]
-pub mod soroban_testcases;
-
 use solang::codegen::Options;
 use solang::file_resolver::FileResolver;
 use solang::sema::ast::Namespace;
@@ -11,6 +9,7 @@ use solang::{compile, Target};
 use soroban_sdk::testutils::Logs;
 use soroban_sdk::{vec, Address, ConstructorArgs, Env, Symbol, Val};
 use std::ffi::OsStr;
+pub mod soroban_testcases;
 
 // TODO: register accounts, related balances, events, etc.
 pub struct SorobanEnv {

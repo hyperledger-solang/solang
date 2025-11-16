@@ -31,7 +31,7 @@ describe('Deploy balances contract and test', () => {
         let { data: { free: contractQueryBalBefore } } = await conn.query.system.account(String(deploy_contract.address));
 
         // The "Existential Deposit" (aka. minimum balance) is part of the free balance;
-        // to get the actual free balance from a contracts point of view we substract it.
+        // to get the actual free balance from a contracts point of view we subtract it.
         const ED = 1000000000n;
         expect(contractRpcBal?.toString()).toBe((contractQueryBalBefore.toBigInt() - ED).toString());
 

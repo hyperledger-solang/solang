@@ -205,7 +205,7 @@ pub trait TargetRuntime<'a> {
     );
 
     /// Prints a string
-    fn print(&self, bin: &Binary, string: PointerValue, length: IntValue);
+    fn print<'b>(&self, bin: &Binary<'b>, string: PointerValue<'b>, length: IntValue<'b>);
 
     /// Return success without any result
     fn return_empty_abi(&self, bin: &Binary);

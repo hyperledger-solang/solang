@@ -115,6 +115,16 @@ pub enum HostFunctions {
     ObjToU128Hi64,
     ObjFromI128Pieces,
     ObjFromU128Pieces,
+    ObjToU256LoLo,
+    ObjToU256LoHi,
+    ObjToU256HiLo,
+    ObjToU256HiHi,
+    ObjFromU256Pieces,
+    ObjToI256LoLo,
+    ObjToI256LoHi,
+    ObjToI256HiLo,
+    ObjToI256HiHi,
+    ObjFromI256Pieces,
     RequireAuth,
     AuthAsCurrContract,
     MapNew,
@@ -123,6 +133,9 @@ pub enum HostFunctions {
     StringNewFromLinearMemory,
     StrKeyToAddr,
     GetCurrentContractAddress,
+    BytesNewFromLinearMemory,
+    BytesLen,
+    BytesCopyToLinearMemory,
 }
 
 impl HostFunctions {
@@ -146,6 +159,16 @@ impl HostFunctions {
             HostFunctions::ObjToU128Hi64 => "i.5",
             HostFunctions::ObjFromI128Pieces => "i.6",
             HostFunctions::ObjFromU128Pieces => "i.3",
+            HostFunctions::ObjToU256LoLo => "i.f",
+            HostFunctions::ObjToU256LoHi => "i.e",
+            HostFunctions::ObjToU256HiLo => "i.d",
+            HostFunctions::ObjToU256HiHi => "i.c",
+            HostFunctions::ObjFromU256Pieces => "i.9",
+            HostFunctions::ObjToI256LoLo => "i.m",
+            HostFunctions::ObjToI256LoHi => "i.l",
+            HostFunctions::ObjToI256HiLo => "i.k",
+            HostFunctions::ObjToI256HiHi => "i.j",
+            HostFunctions::ObjFromI256Pieces => "i.g",
             HostFunctions::RequireAuth => "a.0",
             HostFunctions::AuthAsCurrContract => "a.3",
             HostFunctions::MapNewFromLinearMemory => "m.9",
@@ -155,6 +178,9 @@ impl HostFunctions {
             HostFunctions::StringNewFromLinearMemory => "b.i",
             HostFunctions::StrKeyToAddr => "a.1",
             HostFunctions::GetCurrentContractAddress => "x.7",
+            HostFunctions::BytesNewFromLinearMemory => "b.3",
+            HostFunctions::BytesLen => "b.8",
+            HostFunctions::BytesCopyToLinearMemory => "b.1",
         }
     }
 }
@@ -170,6 +196,7 @@ pub struct Options {
     pub opt_level: OptimizationLevel,
     pub log_runtime_errors: bool,
     pub log_prints: bool,
+    pub strict_soroban_types: bool,
     #[cfg(feature = "wasm_opt")]
     pub wasm_opt: Option<OptimizationPasses>,
     pub soroban_version: Option<u64>,
@@ -187,6 +214,7 @@ impl Default for Options {
             opt_level: OptimizationLevel::Default,
             log_runtime_errors: false,
             log_prints: true,
+            strict_soroban_types: false,
             #[cfg(feature = "wasm_opt")]
             wasm_opt: None,
             soroban_version: None,

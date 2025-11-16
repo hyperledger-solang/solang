@@ -23,6 +23,8 @@ fn log_runtime_error() {
 
     let logs = src.invoke_contract_expect_error(addr, "decrement", vec![]);
 
+    println!("logs {logs:?}");
+
     assert!(logs[0].contains("runtime_error: math overflow in test.sol:5:17-27"));
 }
 

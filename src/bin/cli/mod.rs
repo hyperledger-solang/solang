@@ -349,6 +349,10 @@ pub struct DebugFeatures {
     #[arg(name = "RELEASE", help = "Disable all debugging features such as prints, logging runtime errors, and logging api return codes", long = "release", action = ArgAction::SetTrue)]
     #[serde(default)]
     pub release: bool,
+
+    #[arg(name = "STRICTSOROBANTYPES", help = "Turn Soroban integer width warnings into errors for stricter type safety", long = "strict-soroban-types", action = ArgAction::SetTrue)]
+    #[serde(default)]
+    pub strict_soroban_types: bool,
 }
 
 impl Default for DebugFeatures {
@@ -358,6 +362,7 @@ impl Default for DebugFeatures {
             log_prints: true,
             generate_debug_info: false,
             release: false,
+            strict_soroban_types: false,
         }
     }
 }
@@ -522,7 +527,7 @@ pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
 
         if !dups.is_empty() {
             eprintln!(
-                "error: import paths {} specifed more than once",
+                "error: import paths {} specified more than once",
                 dups.iter().map(|p| format!("'{}'", p.display())).join(", ")
             );
             exit(1);
@@ -581,6 +586,7 @@ pub fn options_arg(
         opt_level,
         log_runtime_errors: debug.log_runtime_errors && !debug.release,
         log_prints: debug.log_prints && !debug.release,
+        strict_soroban_types: debug.strict_soroban_types,
         #[cfg(feature = "wasm_opt")]
         wasm_opt: optimizations.wasm_opt_passes.or(if debug.release {
             Some(OptimizationPasses::Z)
