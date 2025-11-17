@@ -1,6 +1,6 @@
 
 import 'dotenv/config';
-import { mkdirSync, readdirSync, existsSync } from 'fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
