@@ -128,4 +128,3 @@ describe('StorageTypes', () => {
     expect(res.returnValue, `sesa3 should decrease by 1 (or stay at 0): ${toSafeJson(res)}`).to.equal(expectedSesa3);
   });
 });
-
