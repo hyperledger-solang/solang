@@ -5,12 +5,6 @@ use serde_derive::Deserialize;
 
 use crate::build_solidity;
 
-#[derive(Debug, PartialEq, Eq, Encode, Decode)]
-struct Val32(u32);
-
-#[derive(Debug, PartialEq, Eq, Encode, Decode)]
-struct Val8(u8);
-
 #[test]
 fn struct_members() {
     let mut runtime = build_solidity(
@@ -477,21 +471,6 @@ fn return_from_struct_storage() {
 
 #[test]
 fn struct_in_init_return() {
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Card {
-        value: u8,
-        suit: u8,
-    }
-
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Hand {
-        card1: Card,
-        card2: Card,
-        card3: Card,
-        card4: Card,
-        card5: Card,
-    }
-
     let mut runtime = build_solidity(
         r#"
         enum suit { club, diamonds, hearts, spades }
@@ -529,21 +508,6 @@ fn struct_in_init_return() {
 
 #[test]
 fn struct_struct_in_init_and_return() {
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Card {
-        v: u8,
-        s: u8,
-    }
-
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Hand {
-        card1: Card,
-        card2: Card,
-        card3: Card,
-        card4: Card,
-        card5: Card,
-    }
-
     let mut runtime = build_solidity(
         r#"
         contract structs {

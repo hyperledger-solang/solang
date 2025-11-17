@@ -88,8 +88,6 @@ fn digits() {
 #[test]
 fn large_loops() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Val32(u32);
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val64(u64);
 
     // parse

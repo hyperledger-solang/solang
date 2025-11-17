@@ -9,7 +9,7 @@ CFLAGS=$(TARGET_FLAGS) -emit-llvm -O3 -ffreestanding -fno-builtin -Wall -Wno-unu
 	$(CC) -c $(CFLAGS) $< -o $@
 
 SOLANA=$(addprefix ../target/bpf/,solana.bc bigint.bc format.bc stdlib.bc ripemd160.bc heap.bc)
-WASM=$(addprefix ../target/wasm/,ripemd160.bc stdlib.bc bigint.bc format.bc heap.bc)
+WASM=$(addprefix ../target/wasm/,ripemd160.bc stdlib.bc bigint.bc format.bc heap.bc soroban.bc)
 
 all: $(SOLANA) $(WASM)
 

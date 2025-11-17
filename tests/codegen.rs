@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use assert_cmd::Command;
+use assert_cmd::cargo_bin_cmd;
 use rayon::prelude::*;
 use std::ffi::OsString;
 use std::fs::File;
@@ -89,7 +89,7 @@ fn testcase(path: PathBuf) {
     let args = command_line.expect("cannot find RUN: line");
     assert_ne!(checks.len() + fails.len(), 0);
 
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
     let assert = cmd
         .arg("compile")
         .args(args.split_whitespace())

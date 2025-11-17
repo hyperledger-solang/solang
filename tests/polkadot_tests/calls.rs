@@ -9,9 +9,6 @@ use solang::{
     Target,
 };
 
-#[derive(Debug, PartialEq, Eq, Encode, Decode)]
-struct RevertReturn(u32, String);
-
 #[test]
 fn revert() {
     let mut runtime = build_solidity(
@@ -282,9 +279,6 @@ fn try_catch_external_calls() {
 
     runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
-
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Ret(u32);
 
     let mut runtime = build_solidity(
         r#"

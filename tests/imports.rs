@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use assert_cmd::Command;
+use assert_cmd::cargo_bin_cmd;
 
 #[test]
 fn import_map_dup() {
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
     let run = cmd
         .args([
             "compile",
@@ -29,7 +29,7 @@ fn import_map_dup() {
 
 #[test]
 fn import_map_badpath() {
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
     let run = cmd
         .args([
             "compile",
@@ -50,7 +50,7 @@ fn import_map_badpath() {
 
 #[test]
 fn import_map() {
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
     let assert = cmd
         .args([
             "compile",
@@ -68,7 +68,7 @@ fn import_map() {
 
     assert_eq!(String::from_utf8_lossy(&output.stderr), "");
 
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
     let badpath = cmd
         .args(["compile", "import_map.sol", "--target", "solana"])
         .current_dir("tests/imports_testcases")
@@ -85,7 +85,7 @@ fn import_map() {
 
 #[test]
 fn import() {
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
     let assert = cmd
         .args([
             "compile",
@@ -103,7 +103,7 @@ fn import() {
 
     assert_eq!(String::from_utf8_lossy(&output.stderr), "");
 
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
     let badpath = cmd
         .args(["compile", "--target", "solana", "import.sol"])
         .current_dir("tests/imports_testcases")
@@ -120,7 +120,7 @@ fn import() {
 
 #[test]
 fn contract_name_defined_twice() {
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
 
     let ok = cmd
         .args(["compile", "--target", "solana", "bar.sol", "rel.sol"])
@@ -132,7 +132,7 @@ fn contract_name_defined_twice() {
 
     assert_eq!(String::from_utf8_lossy(&output.stderr), "");
 
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
 
     let not_ok = cmd
         .args([
@@ -159,7 +159,7 @@ fn contract_name_defined_twice() {
 
 #[test]
 fn bad_escape() {
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
 
     let not_ok = cmd
         .args([
@@ -188,7 +188,7 @@ fn bad_escape() {
 // Note Windows allows these as relative paths, but we do not.
 #[test]
 fn backslash_path() {
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
 
     let not_ok = cmd
         .args([
@@ -222,7 +222,7 @@ fn backslash_path() {
 
 #[test]
 fn found_two_files() {
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
     let run = cmd
         .args([
             "compile",
@@ -247,7 +247,7 @@ fn found_two_files() {
 
     assert!(error.contains("error: import paths 'imports', 'meh' specified more than once"));
 
-    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let mut cmd = cargo_bin_cmd!("solang");
     let run = cmd
         .args([
             "compile",
