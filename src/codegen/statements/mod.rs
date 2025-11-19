@@ -218,53 +218,41 @@ pub(crate) fn statement(
 
             // Check if this is a memory array element by checking if the type is a reference
             // to a non-storage type (i.e., a memory array element)
-            let is_memory_array_element = match &ty {
-                Type::Ref(_) => {
+            match &ty {
+                Type::Ref(inner_ty) => {
                     // This is a reference to memory, likely an array element
-                    true
+                    // For delete operations, we need to set the element to its default value
+                    // Get the default value of the dereferenced type
+                    if let Some(default_value) = inner_ty.default(ns) {
+                        // Create a store instruction to set the element to its default value
+                        cfg.add(
+                            vartab,
+                            Instr::Store {
+                                dest: var_expr,
+                                data: default_value,
+                            },
+                        );
+                        return;
+                    }
+                    // If no default value available, this shouldn't happen for valid types
+                    // but we'll fall through to clear storage as a fallback
                 }
                 Type::StorageRef(_, _) => {
                     // This is a storage reference, use clear storage
-                    false
                 }
                 _ => {
                     // For other types, use clear storage as fallback
-                    false
                 }
-            };
-
-            if is_memory_array_element {
-                // For memory array elements, we need to set the element to its default value
-                // instead of clearing storage (which would clear the entire array)
-                if let Some(default_value) = ty.default(ns) {
-                    // Create a store instruction to set the element to its default value
-                    cfg.add(
-                        vartab,
-                        Instr::Store {
-                            dest: var_expr,
-                            data: default_value,
-                        },
-                    );
-                } else {
-                    // Fallback to clear storage if no default value is available
-                    cfg.add(
-                        vartab,
-                        Instr::ClearStorage {
-                            ty: ty.clone(),
-                            storage: var_expr,
-                        },
-                    );
-                }
-            } else {
-                // For non-memory array elements, use the original clear storage behavior
-                cfg.add(
-                    vartab,
-                    Instr::ClearStorage {
-                        ty: ty.clone(),
-                        storage: var_expr,
-                    },
-                );
             }
+
+            // For non-memory array elements (storage references and other types), use clear storage
+            cfg.add(
+                vartab,
+                Instr::ClearStorage {
+                    ty: ty.clone(),
+                    storage: var_expr,
+                },
+            );
         }
         Statement::Break(_) => {
             cfg.add(

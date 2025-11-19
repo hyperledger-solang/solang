@@ -733,8 +733,12 @@ fn statement(
                         // The AST should be an accurate representation of the source code
                         // The actual behavior will be handled in codegen
                         
+                        // Check if this is an array element access (subscript) or an array type
+                        let is_array_element = matches!(expr, Expression::Subscript { .. })
+                            || matches!(expr.ty(), Type::Array(_, _));
+                        
                         // Only generate warning for non-array elements that are not storage references
-                        if !expr.ty().is_mapping() && !matches!(expr.ty(), Type::Array(_, _)) {
+                        if !expr.ty().is_mapping() && !is_array_element {
                             ns.diagnostics.push(Diagnostic::warning(
                                 *loc,
                                 "argument to 'delete' should be storage reference".to_string(),
