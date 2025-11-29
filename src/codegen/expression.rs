@@ -3866,22 +3866,22 @@ fn array_subscript(
                             elem_ty: array_ty.storage_array_elem().deref_into(),
                         }
                     } else {
-                        // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
-                        let array_length = load_storage(
-                            loc,
-                            &Type::Uint(256),
-                            array.clone(),
-                            cfg,
-                            vartab,
-                            None,
-                            ns,
-                        );
-
-                        array = Expression::Keccak256 {
-                            loc: *loc,
-                            ty: Type::Uint(256),
-                            exprs: vec![array],
+                        let ty = if ns.target == Target::Soroban {
+                            Type::Uint(64)
+                        } else {
+                            Type::Uint(256)
                         };
+                        // TODO(Soroban): Storage type here is None, it should be the same type as the array
+                        let array_length =
+                            load_storage(loc, &ty, array.clone(), cfg, vartab, None, ns);
+
+                        if ns.target != Target::Soroban {
+                            array = Expression::Keccak256 {
+                                loc: *loc,
+                                ty: Type::Uint(256),
+                                exprs: vec![array],
+                            };
+                        }
 
                         array_length
                     }
@@ -4061,6 +4061,20 @@ fn array_subscript(
     if let Type::StorageRef(_, ty) = &array_ty {
         let elem_ty = ty.storage_array_elem();
         let slot_ty = ns.storage_type();
+
+        if ns.target == Target::Soroban {
+            let index = index.cast(&Type::Uint(64), ns);
+
+            let index_encoded = soroban_encode_arg(index, cfg, vartab, ns);
+
+            return Expression::Subscript {
+                loc: *loc,
+                ty: elem_ty,
+                array_ty: array_ty.clone(),
+                expr: Box::new(array),
+                index: Box::new(index_encoded),
+            };
+        }
 
         if ns.target == Target::Solana {
             if ty.array_length().is_some() && ty.is_sparse_solana(ns) {
