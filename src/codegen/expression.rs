@@ -16,7 +16,6 @@ use super::{polkadot, Options};
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::events::new_event_emitter;
-use crate::codegen::storage::soroban_storage_push;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression, HostFunctions};
 use crate::sema::ast::ExternalCallAccounts;
@@ -544,7 +543,7 @@ pub fn expression(
                 },
                 Type::Array(_, dim) => match dim.last().unwrap() {
                     ArrayLength::Dynamic => {
-                        if ns.target == Target::Solana || (ns.target == Target::Soroban&& !elem_ty.is_reference_type(ns)) {
+                        if ns.target == Target::Solana || ns.target == Target::Soroban {
                             Expression::StorageArrayLength {
                                 loc: *loc,
                                 ty: ty.clone(),
@@ -3865,7 +3864,7 @@ fn array_subscript(
         Type::Array(..) => match array_ty.array_length() {
             None => {
                 if let Type::StorageRef(..) = array_ty {
-                    if ns.target == Target::Solana || (ns.target == Target::Soroban&& !elem_ty.is_reference_type(ns)) {
+                    if ns.target == Target::Solana || ns.target == Target::Soroban {
                         println!("elem ty in storage array length: {:?}", elem_ty);
                         Expression::StorageArrayLength {
                             loc: *loc,

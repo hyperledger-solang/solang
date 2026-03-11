@@ -623,24 +623,69 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         bin: &Binary<'a>,
         _function: FunctionValue,
         slot: IntValue<'a>,
-        _elem_ty: &Type,
+        elem_ty: &Type,
     ) -> IntValue<'a> {
-        println!("[VecObject][emit] storage_array_length: using VecLen on VecObject");
+        if !is_reference_type(elem_ty) {
+            println!("[VecObject][emit] storage_array_length: native array using VecLen on VecObject");
 
+            // Native arrays use VecObject layout: load vec object then call VecLen.
+            let load_storage = bin
+                .builder
+                .build_call(
+                    bin.module
+                        .get_function(HostFunctions::GetContractData.name())
+                        .unwrap(),
+                    &[
+                        slot.into(),
+                        bin.context.i64_type().const_int(1, false).into(), // persistent storage
+                    ],
+                    "load_storage",
+                )
+                .unwrap()
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
 
-        // we should first load the array object from storage, then call VecLen on it
+            let u32_val = bin
+                .builder
+                .build_call(
+                    bin.module
+                        .get_function(HostFunctions::VecLen.name())
+                        .unwrap(),
+                    &[load_storage.into()],
+                    "vec_len",
+                )
+                .unwrap()
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
 
-        let load_storage = bin
+            // VecLen returns U32Val => payload in top 32 bits.
+            return bin
+                .builder
+                .build_right_shift(
+                    u32_val,
+                    bin.context.i64_type().const_int(32, false),
+                    false,
+                    "length",
+                )
+                .unwrap();
+        }
+
+        println!("[VecObject][emit] storage_array_length: reference array using slot length");
+
+        // Reference arrays keep old layout: length encoded in slot as U64Small.
+        let storage_ty = bin.context.i64_type().const_int(1, false);
+        let loaded_len = bin
             .builder
             .build_call(
                 bin.module
                     .get_function(HostFunctions::GetContractData.name())
                     .unwrap(),
-                &[
-                    slot.into(),
-                    bin.context.i64_type().const_int(1, false).into(), // persistent storage
-                ],
-                "load_storage",
+                &[slot.into(), storage_ty.into()],
+                "get_len",
             )
             .unwrap()
             .try_as_basic_value()
@@ -648,37 +693,15 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .unwrap()
             .into_int_value();
 
-
-
-       let u32_val = bin
-            .builder
-            .build_call(
-                bin.module
-                    .get_function(HostFunctions::VecLen.name())
-                    .unwrap(),
-                &[load_storage.into()],
-                "vec_len",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
-        // decode U32Val to get the actual length, shift right by 32
-        let length = bin
-            .builder
+        // U64Small payload is shifted by 8 bits.
+        bin.builder
             .build_right_shift(
-                u32_val,
-                bin.context.i64_type().const_int(32, false),
+                loaded_len,
+                bin.context.i64_type().const_int(8, false),
                 false,
                 "length",
             )
-            .unwrap();
-        length
-
-
-        
+            .unwrap()
     }
 
     /// keccak256 hash

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::HostFunctions;
-use crate::codegen::cfg::InternalCallTy;
 use crate::codegen::encoding::soroban_encoding::soroban_encode_arg;
 use crate::codegen::Expression;
 use crate::sema::ast;
@@ -17,6 +15,7 @@ use super::revert::SolidityError;
 use super::Options;
 use super::{
     cfg::{ControlFlowGraph, Instr},
+    soroban::{soroban_storage_pop, soroban_storage_push},
     vartable::Vartable,
 };
 use crate::codegen::revert::{assert_failure, log_runtime_error};
@@ -242,140 +241,6 @@ pub fn storage_slots_array_push(
     } else {
         Expression::Poison
     }
-}
-
-
-pub fn soroban_storage_push ( 
-    loc: &pt::Loc,
-    args: &[ast::Expression],
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-) -> Expression {
-    println!("[VecObject][codegen] soroban_storage_push: entered");
-
-
-    // in soroban, we can use the VecPush host function directly
-    // we need to load the vec object from storage first, then call VecPush on it
-
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
-    let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
-
-    println!("to insert value: {:?}", value);
-
-    //let entry_pos = vartab.temp_anonymous(&ns.storage_type());
-
-    let value_encoded = soroban_encode_arg(value, cfg, vartab, ns);
-
-    println!("var expr: {:?}", var_expr);
-    println!("args[1] ty: {:?}", args[1].ty());
-
-    // load the vec object from storage
-    let old_vec_obj = load_storage(loc, &args[0].ty(), var_expr.clone(), cfg, vartab, None, ns);
-
-    
-    let new_vec_no = vartab.temp_name("soroban_vec_push", &args[0].ty());
-
-    let new_vec_var = Expression::Variable {
-        loc: *loc,
-        ty: args[0].ty().clone(),
-        var_no: new_vec_no,
-    };
-
-    println!("value encoded: {:?}", value_encoded);
-    // call the soroban VecPush host function
-    let intsr = Instr::Call { res: vec![new_vec_no]
-        , return_tys: vec![args[0].ty().clone()], call: InternalCallTy::HostFunction { name: HostFunctions::VecPushBack.name().to_string() }, args: vec![old_vec_obj, value_encoded] };
-
-    cfg.add(vartab, intsr);
-
-
-    
-
-    // store the updated vec object back to storage
-    let store_instr = Instr::SetStorage {
-        ty: args[0].ty().clone(),
-        value: new_vec_var.clone(),
-        storage: var_expr.clone(),
-        storage_type: None,
-    };
-
-    cfg.add(vartab, store_instr);
-
-
-
-    var_expr
-
-
-    //unimplemented!()
-}
-
-
-fn soroban_storage_pop ( 
-    loc: &pt::Loc,
-    args: &[ast::Expression],
-    return_ty: &Type,
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-) -> Expression { 
-    println!("[VecObject][codegen] soroban_storage_pop: entered");
-
-    // in soroban, we can use the VecPop host function directly
-    // we need to load the vec object from storage first, then call VecPush on it
-
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
-    
-
-    // load the vec object from storage
-    let old_vec_obj = load_storage(loc, &args[0].ty(), var_expr.clone(), cfg, vartab, None, ns);
-
-    
-    let new_vec_no = vartab.temp_name("soroban_vec_push", &args[0].ty());
-
-    let new_vec_var = Expression::Variable {
-        loc: *loc,
-        ty: args[0].ty().clone(),
-        var_no: new_vec_no,
-    };
-
-
-    // call the soroban VecPush host function
-    let intsr = Instr::Call { res: vec![new_vec_no]
-        , return_tys: vec![args[0].ty().clone()], call: InternalCallTy::HostFunction { name: HostFunctions::VecPopBack.name().to_string() }, args: vec![old_vec_obj] };
-
-    cfg.add(vartab, intsr);
-
-
-
-    // store the updated vec object back to storage
-    let store_instr = Instr::SetStorage {
-        ty: args[0].ty().clone(),
-        value: new_vec_var.clone(),
-        storage: var_expr.clone(),
-        storage_type: None,
-    };
-
-    cfg.add(vartab, store_instr);
-
-
-
-    //var_expr
-
-    Expression::Variable {
-        loc: *loc,
-        ty: return_ty.clone(),
-        var_no: new_vec_no,
-    }
-
-
-
 }
 
 /// Pop() method on dynamic array in storage

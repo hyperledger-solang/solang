@@ -15,6 +15,7 @@ pub mod revert;
 mod solana_accounts;
 mod solana_deploy;
 mod statements;
+mod soroban;
 mod storage;
 mod strength_reduce;
 pub(crate) mod subexpression_elimination;
@@ -383,26 +384,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
                 );
                 // on soroban we must initialize all storage variables
 
-                let empty_vec_no = vartab.temp_name("soroban_vac", &var.ty);
-
-                let empty_vec_var = Expression::Variable {
-                    loc: var.loc,
-                    ty: var.ty.clone(),
-                    var_no: empty_vec_no,
-                };
-
-                let init_instr = Instr::Call {
-                    call: cfg::InternalCallTy::HostFunction {
-                        name: HostFunctions::VectorNew.name().to_string(),
-                    },
-                    args: vec![],
-                    return_tys: vec![var.ty.clone()],
-                    res: vec![empty_vec_no],
-                };
-
-                cfg.add(&mut vartab, init_instr);
-
-                empty_vec_var
+                soroban::soroban_vec_new(&var.loc, &var.ty, &mut cfg, &mut vartab)
             } else {
                 continue;
             }
