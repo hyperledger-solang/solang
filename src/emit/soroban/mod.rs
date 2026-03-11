@@ -13,7 +13,7 @@ use inkwell::{
 };
 use soroban_sdk::xdr::{
     Limited, Limits, ScEnvMetaEntry, ScEnvMetaEntryInterfaceVersion, ScSpecEntry,
-    ScSpecFunctionInputV0, ScSpecFunctionV0, ScSpecTypeDef, StringM, WriteXdr,
+    ScSpecFunctionInputV0, ScSpecFunctionV0, ScSpecTypeDef, StringM, WriteXdr, ScSpecTypeVec
 };
 
 const SOROBAN_ENV_INTERFACE_VERSION: ScEnvMetaEntryInterfaceVersion =
@@ -35,6 +35,11 @@ impl HostFunctions {
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
             HostFunctions::HasContractData => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+
+            HostFunctions::DeleteContractData => bin
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
@@ -60,6 +65,16 @@ impl HostFunctions {
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
             HostFunctions::VectorNew => bin.context.i64_type().fn_type(&[], false),
+            HostFunctions::VecPopBack => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::VecGet => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+
+            HostFunctions::VecPut=> bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
             HostFunctions::Call => bin
                 .context
                 .i64_type()
@@ -90,6 +105,11 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
+
+            HostFunctions::VecLen => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into()], false),
 
             HostFunctions::StringNewFromLinearMemory => bin
                 .context
@@ -141,6 +161,29 @@ impl HostFunctions {
 pub struct SorobanTarget;
 
 impl SorobanTarget {
+    fn vec_spec_type(ty: &ast::Type) -> ScSpecTypeDef {
+        match ty {
+            ast::Type::Array(nested, _) => {
+                let nested = Self::vec_spec_type(nested.as_ref());
+                ScSpecTypeDef::Vec(Box::new(ScSpecTypeVec {
+                    element_type: Box::new(nested),
+                }))
+            }
+            ast::Type::Uint(32) => ScSpecTypeDef::U32,
+            ast::Type::Int(32) => ScSpecTypeDef::I32,
+            ast::Type::Uint(64) => ScSpecTypeDef::U64,
+            ast::Type::Int(64) => ScSpecTypeDef::I64,
+            ast::Type::Int(128) => ScSpecTypeDef::I128,
+            ast::Type::Uint(128) => ScSpecTypeDef::U128,
+            ast::Type::Bool => ScSpecTypeDef::Bool,
+            ast::Type::Address(_) => ScSpecTypeDef::Address,
+            ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
+            ast::Type::String => ScSpecTypeDef::String,
+            ast::Type::Ref(inner) => Self::vec_spec_type(inner.as_ref()),
+            _ => panic!("unsupported array element type {:?}", ty),
+        }
+    }
+
     pub fn build<'a>(
         context: &'a Context,
         std_lib: &Module<'a>,
@@ -293,6 +336,14 @@ impl SorobanTarget {
                                 ast::Type::Address(_) => ScSpecTypeDef::Address,
                                 ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                                 ast::Type::String => ScSpecTypeDef::String,
+                                ast::Type::Array(ty, _) => {
+                                    println!("emitting array type spec for input {:?}", ty);
+                                    let element = Self::vec_spec_type(ty.as_ref());
+
+                                    ScSpecTypeDef::Vec(Box::new(ScSpecTypeVec {
+                                        element_type: Box::new(element),
+                                    }))
+                                }
                                 _ => panic!("unsupported input type {:?}", p.ty),
                             }
                         }, // TODO: Map type.
@@ -370,6 +421,7 @@ impl SorobanTarget {
             HostFunctions::PutContractData,
             HostFunctions::GetContractData,
             HostFunctions::HasContractData,
+            HostFunctions::DeleteContractData,
             HostFunctions::ExtendContractDataTtl,
             HostFunctions::ExtendCurrentContractInstanceAndCodeTtl,
             HostFunctions::LogFromLinearMemory,
@@ -402,12 +454,15 @@ impl SorobanTarget {
             HostFunctions::MapNew,
             HostFunctions::MapPut,
             HostFunctions::VecPushBack,
+            HostFunctions::VecGet,
+            HostFunctions::VecPut,
             HostFunctions::StringNewFromLinearMemory,
             HostFunctions::StrKeyToAddr,
             HostFunctions::GetCurrentContractAddress,
             HostFunctions::BytesNewFromLinearMemory,
-            HostFunctions::BytesLen,
             HostFunctions::BytesCopyToLinearMemory,
+            HostFunctions::VecLen,
+            HostFunctions::VecPopBack,
         ];
 
         for func in &host_functions {

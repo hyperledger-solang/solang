@@ -1353,6 +1353,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             expr: a,
             index,
         } => {
+            println!("Subscript expression called with ty {:?}", ty);
             if ty.is_storage_bytes() {
                 let index = expression(target, bin, index, vartab, function).into_int_value();
                 let slot = expression(target, bin, a, vartab, function).into_int_value();
@@ -1363,6 +1364,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let array = expression(target, bin, a, vartab, function).into_int_value();
                 let index = expression(target, bin, index, vartab, function);
 
+                println!("ty in emit is {:?}", ty);
+                println!("elem)ty in emit is {:?}", elem_ty);
+            
                 target
                     .storage_subscript(bin, function, ty, array, index)
                     .as_basic_value_enum()
@@ -2138,6 +2142,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let res = bin
                 .builder
                 .build_ptr_to_int(data, bin.context.i32_type(), "ptr_as_int32");
+
+            println!("VectorData pointer: {ptr:?}, data: {data:?}, res: {res:?}");
 
             res.unwrap().into()
         }

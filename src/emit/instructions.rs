@@ -114,10 +114,18 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             storage,
             storage_type,
         } => {
+            println!("the storage load instruction called with slot ty {:?}", storage);
             let mut slot = expression(target, bin, storage, &w.vars, function).into_int_value();
 
+                        let slot_ty = if let Expression::Subscript { loc, ty, array_ty, expr, index } = storage {
+                Some(array_ty)
+            } else {
+                None
+            };
+ 
+
             w.vars.get_mut(res).unwrap().value =
-                target.storage_load(bin, ty, &mut slot, function, storage_type);
+                target.storage_load(bin, ty, &mut slot, slot_ty, function, storage_type);
         }
         Instr::ClearStorage { ty, storage } => {
             let mut slot = expression(target, bin, storage, &w.vars, function).into_int_value();
@@ -130,11 +138,17 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             storage,
             storage_type,
         } => {
+            println!("the storage set instruction called with expr {:?}", storage);
             let value = expression(target, bin, value, &w.vars, function);
 
             let mut slot = expression(target, bin, storage, &w.vars, function).into_int_value();
-
-            target.storage_store(bin, ty, true, &mut slot, value, function, storage_type);
+            let slot_ty = if let Expression::Subscript { loc, ty, array_ty, expr, index } = storage {
+                Some(array_ty)
+            } else {
+                None
+            };
+ 
+            target.storage_store(bin, ty, true, &mut slot, slot_ty,  value, function, storage_type);
         }
         Instr::SetStorageBytes {
             storage,

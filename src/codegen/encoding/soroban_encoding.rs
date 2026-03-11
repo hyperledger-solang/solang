@@ -120,6 +120,10 @@ pub fn soroban_decode_arg(
         None => {
             if let Type::Ref(inner_ty) = arg.ty() {
                 *inner_ty
+            } else if let Type::StorageRef(_, inner) = arg.ty() {
+                *inner
+
+
             } else {
                 arg.ty()
             }
@@ -201,9 +205,10 @@ pub fn soroban_decode_arg(
         },
         Type::Struct(StructType::UserDefined(n)) => {
             decode_struct(arg, wrapper_cfg, vartab, n, ns, ty)
-        }
+        },
+        Type::Array(_, _) => arg.clone(),
 
-        _ => unimplemented!(),
+        _ => unimplemented!("ty is {:?} in soroban decoder", ty),
     }
 }
 
@@ -661,7 +666,15 @@ pub fn soroban_encode_arg(
                 res: obj,
                 expr: buf,
             }
+        },
+        Type::Array(_,_ ) => {
+            Instr::Set {
+                    loc: Loc::Codegen,
+                    res: obj,
+                    expr: item.clone(),
+                }
         }
+
         _ => todo!("Type not yet supported in soroban encoder: {:?}", item.ty()),
     };
 
@@ -1318,6 +1331,8 @@ fn encode_struct(
 ) -> Expression {
     let fields = &ns.structs[struct_no].fields;
     let mut fields_vars = Vec::new();
+    //let mut key_vars = Vec::new();
+
 
     for (index, field) in fields.iter().enumerate() {
         let field = Expression::StructMember {
@@ -1334,12 +1349,64 @@ fn encode_struct(
         };
 
         fields_vars.push(actual_loaded_field);
+
+        /*let key_var = Expression::NumberLiteral {
+            loc: item.loc(),
+            ty: Type::Uint(64),
+            value: BigInt::from(index as u64),
+        };
+        key_vars.push(key_var);*/
     }
+
+    
 
     // now call soroban_encode for all fields
     let ret = soroban_encode(&item.loc(), fields_vars, ns, vartab, cfg, false);
 
     ret.0
+
+    /*let values = soroban_encode(&item.loc(), fields_vars, ns, vartab, cfg, false);
+    let keys  = soroban_encode(&item.loc(), key_vars, ns, vartab, cfg, false);
+    let len = Expression::NumberLiteral {
+        loc: item.loc(),
+        ty: Type::Uint(32),
+        value: BigInt::from(fields.len() as u64),
+    };
+
+    let keys_pos = Expression::VectorData { pointer: Box::new(keys.0) };
+    let values_pos = Expression::VectorData { pointer: Box::new(values.0) };
+
+    let encoded_len = soroban_encode_arg(len, cfg, vartab, ns);
+    let encoded_keys_pos = zext_shift_add(item.loc(), keys_pos, 32, 4);
+    let encoded_values_pos = zext_shift_add(item.loc(), values_pos, 32, 4);
+    //let encoded_values_pos = soroban_encode_arg(values.0, cfg, vartab, ns);
+
+    // now, encode the struct as MapObject
+    let obj = vartab.temp_anonymous(&Type::Uint(64));
+    let ret = Instr::Call {
+        res: vec![obj],
+        return_tys: vec![Type::Uint(64)],
+        call: crate::codegen::cfg::InternalCallTy::HostFunction {
+            name: HostFunctions::MapNewFromLinearMemory.name().to_string(),
+        },
+        args: vec![encoded_keys_pos, encoded_values_pos, encoded_len],
+    };
+
+    cfg.add(vartab, ret);
+
+    Expression::Variable {
+        loc: item.loc(),
+        ty: Type::Uint(64),
+        var_no: obj,
+    }
+
+
+    //ret.0
+    //Expression::NumberLiteral { loc: Loc::Codegen, ty: Type::Uint(64), value: BigInt::from(0) }
+    //values.0
+    //encoded_keys_pos
+    //println!("encoded len is: {:?}", encoded_len);
+    //encoded_len*/
 }
 
 /// Decode a struct from soroban encoding. Struct fields are laid out sequentially in a buffer, where each field is 64 bits long.
@@ -1384,5 +1451,39 @@ fn decode_struct(
         loc: Loc::Codegen,
         ty: struct_ty,
         values: members,
+    }
+}
+
+fn zext_shift_add(
+    loc: pt::Loc,
+    value: Expression,
+    shift: u64,
+    tag: u64,
+) -> Expression {
+    let shifted = Expression::ShiftLeft {
+        loc,
+        ty: Type::Uint(64),
+        left: Box::new(Expression::ZeroExt {
+            loc,
+            ty: Type::Uint(64),
+            expr: Box::new(value),
+        }),
+        right: Box::new(Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(shift),
+        }),
+    };
+
+    Expression::Add {
+        loc,
+        ty: Type::Uint(64),
+        left: Box::new(shifted),
+        right: Box::new(Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(tag),
+        }),
+        overflowing: false,
     }
 }
