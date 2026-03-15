@@ -83,6 +83,10 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::VecUnpackToLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
             HostFunctions::ObjToU64 => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::ObjFromU64 => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::RequireAuth => bin.context.i64_type().fn_type(&[ty.into()], false),
@@ -180,6 +184,7 @@ impl SorobanTarget {
             ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
             ast::Type::String => ScSpecTypeDef::String,
             ast::Type::Ref(inner) => Self::vec_spec_type(inner.as_ref()),
+            ast::Type::SorobanHandle(inner) => Self::vec_spec_type(inner.as_ref()),
             _ => panic!("unsupported array element type {:?}", ty),
         }
     }
@@ -317,10 +322,9 @@ impl SorobanTarget {
                             .try_into()
                             .expect("function input name exceeds limit"),
                         type_: {
-                            let ty = if let ast::Type::Ref(ty) = &p.ty {
-                                ty.as_ref()
-                            } else {
-                                &p.ty
+                            let ty = match &p.ty {
+                                ast::Type::Ref(ty) | ast::Type::SorobanHandle(ty) => ty.as_ref(),
+                                _ => &p.ty,
                             };
 
                             match ty {
@@ -357,10 +361,9 @@ impl SorobanTarget {
                     .iter()
                     .map(|return_type| {
                         let ret_type = return_type.ty.clone();
-                        let ty = if let ast::Type::Ref(ty) = ret_type {
-                            *ty
-                        } else {
-                            ret_type
+                        let ty = match ret_type {
+                            ast::Type::Ref(ty) | ast::Type::SorobanHandle(ty) => *ty,
+                            _ => ret_type,
                         };
                         match ty {
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
@@ -429,6 +432,7 @@ impl SorobanTarget {
             HostFunctions::VectorNew,
             HostFunctions::Call,
             HostFunctions::VectorNewFromLinearMemory,
+            HostFunctions::VecUnpackToLinearMemory,
             HostFunctions::ObjToU64,
             HostFunctions::ObjFromU64,
             HostFunctions::PutContractData,

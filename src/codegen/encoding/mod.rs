@@ -287,6 +287,7 @@ pub(crate) trait AbiEncoding {
             Type::InternalFunction { .. }
             | Type::Void
             | Type::BufferPointer
+            | Type::SorobanHandle(_)
             | Type::Mapping(..) => unreachable!("This type cannot be encoded"),
         }
     }
@@ -901,6 +902,7 @@ pub(crate) trait AbiEncoding {
             | Type::Unreachable
             | Type::Void
             | Type::FunctionSelector
+            | Type::SorobanHandle(_)
             | Type::Mapping(..) => unreachable!("Type should not appear on an encoded buffer"),
         }
     }
@@ -1447,6 +1449,7 @@ pub(crate) trait AbiEncoding {
             | Type::Void
             | Type::Unreachable
             | Type::BufferPointer
+            | Type::SorobanHandle(_)
             | Type::Mapping(..) => unreachable!("This type cannot be encoded"),
             Type::UserType(_) | Type::Unresolved | Type::Rational => {
                 unreachable!("Type should not exist in codegen")

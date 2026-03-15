@@ -85,6 +85,7 @@ impl Converter<'_> {
                 self.wrap_ptr_by_depth(Type::Slice(Box::new(ty)), depth)
             }
             ast::Type::FunctionSelector => Type::Uint(self.fn_selector_length() as u16 * 8),
+            ast::Type::SorobanHandle(_) => Type::Uint(64),
             ast::Type::Rational => unreachable!(),
             ast::Type::Void => unreachable!(),
             ast::Type::Unreachable => unreachable!(),

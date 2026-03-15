@@ -10,17 +10,28 @@ use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
 use solang_parser::pt;
 
+fn soroban_vec_handle_ty(vec_ty: &Type) -> Type {
+    let inner_ty = if let Type::StorageRef(_, inner) = vec_ty {
+        inner.as_ref().clone()
+    } else {
+        vec_ty.clone()
+    };
+
+    Type::SorobanHandle(Box::new(inner_ty))
+}
+
 pub(super) fn soroban_vec_new(
     loc: &pt::Loc,
     vec_ty: &Type,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) -> Expression {
-    let empty_vec_no = vartab.temp_name("soroban_vec_new", vec_ty);
+    let handle_ty = soroban_vec_handle_ty(vec_ty);
+    let empty_vec_no = vartab.temp_name("soroban_vec_new", &handle_ty);
 
     let empty_vec_var = Expression::Variable {
         loc: *loc,
-        ty: vec_ty.clone(),
+        ty: handle_ty.clone(),
         var_no: empty_vec_no,
     };
 
@@ -31,7 +42,7 @@ pub(super) fn soroban_vec_new(
                 name: HostFunctions::VectorNew.name().to_string(),
             },
             args: vec![],
-            return_tys: vec![vec_ty.clone()],
+            return_tys: vec![handle_ty],
             res: vec![empty_vec_no],
         },
     );
@@ -49,18 +60,19 @@ fn soroban_vec_push_back(
     vartab: &mut Vartable,
 ) -> Expression {
     let value_encoded = soroban_encode_arg(value, cfg, vartab, ns);
+    let handle_ty = soroban_vec_handle_ty(vec_ty);
 
-    let new_vec_no = vartab.temp_name("soroban_vec_push", vec_ty);
+    let new_vec_no = vartab.temp_name("soroban_vec_push", &handle_ty);
 
     let new_vec_var = Expression::Variable {
         loc: *loc,
-        ty: vec_ty.clone(),
+        ty: handle_ty.clone(),
         var_no: new_vec_no,
     };
 
     let instr = Instr::Call {
         res: vec![new_vec_no],
-        return_tys: vec![vec_ty.clone()],
+        return_tys: vec![handle_ty],
         call: InternalCallTy::HostFunction {
             name: HostFunctions::VecPushBack.name().to_string(),
         },
@@ -79,17 +91,18 @@ fn soroban_vec_pop_back(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) -> Expression {
-    let new_vec_no = vartab.temp_name("soroban_vec_pop", vec_ty);
+    let handle_ty = soroban_vec_handle_ty(vec_ty);
+    let new_vec_no = vartab.temp_name("soroban_vec_pop", &handle_ty);
 
     let new_vec_var = Expression::Variable {
         loc: *loc,
-        ty: vec_ty.clone(),
+        ty: handle_ty.clone(),
         var_no: new_vec_no,
     };
 
     let instr = Instr::Call {
         res: vec![new_vec_no],
-        return_tys: vec![vec_ty.clone()],
+        return_tys: vec![handle_ty],
         call: InternalCallTy::HostFunction {
             name: HostFunctions::VecPopBack.name().to_string(),
         },
