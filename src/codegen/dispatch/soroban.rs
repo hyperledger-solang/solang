@@ -52,23 +52,24 @@ pub fn function_dispatch(
 
         let mut params = Vec::new();
         for p in cfg.params.as_ref() {
-            let type_ref = Type::Ref(Box::new(p.ty.clone()));
-            let mut param = ast::Parameter::new_default(type_ref);
+            let mut param =
+                ast::Parameter::new_default(Type::SorobanHandle(Box::new(p.ty.clone())));
             param.id = p.id.clone();
             params.push(param);
         }
 
         let mut returns = Vec::new();
         for ret in cfg.returns.as_ref() {
-            let type_ref = Type::Ref(Box::new(ret.ty.clone()));
-            let ret = ast::Parameter::new_default(type_ref);
+            let ret = ast::Parameter::new_default(Type::SorobanHandle(Box::new(ret.ty.clone())));
             returns.push(ret);
         }
 
         wrapper_cfg.params = Arc::new(params);
 
         if returns.is_empty() {
-            returns.push(ast::Parameter::new_default(Type::Ref(Box::new(Type::Void))));
+            returns.push(ast::Parameter::new_default(Type::SorobanHandle(Box::new(
+                Type::Void,
+            ))));
         }
         wrapper_cfg.returns = Arc::new(returns);
 

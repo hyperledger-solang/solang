@@ -390,7 +390,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .unwrap();
 
         if let Some(val) = val {
-            self.storage_store(bin, ty, false, &mut new_offset, val, function, &None);
+            self.storage_store(bin, ty, false, &mut new_offset, None, val, function, &None);
         }
 
         if ty.is_reference_type(bin.ns) {
@@ -480,7 +480,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let mut old_elem_offset = bin.builder.build_int_add(offset, new_length, "").unwrap();
 
         let val = if load {
-            Some(self.storage_load(bin, ty, &mut old_elem_offset, function, &None))
+            Some(self.storage_load(bin, ty, &mut old_elem_offset, None, function, &None))
         } else {
             None
         };
@@ -568,6 +568,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         bin: &Binary<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
+        _slot_ty: Option<&ast::Type>,
         function: FunctionValue<'a>,
         _storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
@@ -661,7 +662,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         )
                         .unwrap();
 
-                    let val = self.storage_load(bin, &field.ty, &mut offset, function, &None);
+                    let val = self.storage_load(bin, &field.ty, &mut offset, None, function, &None);
 
                     let elem = unsafe {
                         bin.builder
@@ -772,6 +773,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     bin,
                     elem_ty.deref_memory(),
                     &mut offset_val,
+                    None,
                     function,
                     &None,
                 );
@@ -817,6 +819,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ty: &ast::Type,
         existing: bool,
         offset: &mut IntValue<'a>,
+        _slot_ty: Option<&ast::Type>,
         val: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
         _: &Option<StorageType>,
@@ -1103,6 +1106,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 elem_ty.deref_any(),
                 false, // storage already freed with storage_free
                 &mut offset_val,
+                None,
                 if elem_ty.deref_memory().is_fixed_reference_type(bin.ns) {
                     elem.into()
                 } else {
@@ -1173,6 +1177,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     &field.ty,
                     existing,
                     &mut offset,
+                    None,
                     if field.ty.is_fixed_reference_type(bin.ns) {
                         elem.into()
                     } else {

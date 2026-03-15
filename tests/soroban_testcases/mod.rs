@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 mod alloc;
+mod array_args;
 mod auth;
 mod constructor;
 mod cross_contract_calls;
@@ -10,6 +11,7 @@ mod mappings;
 mod math;
 mod print;
 mod storage;
+mod storage_array;
 mod structs;
 mod token;
 mod ttl;

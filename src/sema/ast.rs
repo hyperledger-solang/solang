@@ -74,6 +74,8 @@ pub enum Type {
     BufferPointer,
     /// The function selector (or discriminator) type is 4 bytes on Polkadot and 8 bytes on Solana
     FunctionSelector,
+    /// Soroban wrapper ABI handle around a concrete Solidity type.
+    SorobanHandle(Box<Type>),
 }
 
 #[derive(Eq, Clone, Debug)]

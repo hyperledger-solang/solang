@@ -886,23 +886,25 @@ impl<'a> Binary<'a> {
             .add_function(&name, ret_ty.fn_type(&[ty.into(), ty.into()], false), None)
     }
 
-    /// Return the llvm type for a variable holding the type, not the type itself
-    pub(crate) fn llvm_var_ty(&self, ty: &Type) -> BasicTypeEnum<'a> {
-        if self.ns.target == Target::Soroban {
-            return self.llvm_type(ty);
-        }
-
-        let llvm_ty = self.llvm_type(ty);
+    fn var_ty_uses_pointer_storage(&self, ty: &Type) -> bool {
         match ty.deref_memory() {
             Type::Struct(_)
             | Type::Array(..)
             | Type::DynamicBytes
-            | Type::String
-            | Type::ExternalFunction { .. } => self
-                .context
+            | Type::ExternalFunction { .. } => true,
+            Type::String => self.ns.target != Target::Soroban,
+            _ => false,
+        }
+    }
+
+    /// Return the llvm type for a variable holding the type, not the type itself
+    pub(crate) fn llvm_var_ty(&self, ty: &Type) -> BasicTypeEnum<'a> {
+        if self.var_ty_uses_pointer_storage(ty) {
+            self.context
                 .ptr_type(AddressSpace::default())
-                .as_basic_type_enum(),
-            _ => llvm_ty,
+                .as_basic_type_enum()
+        } else {
+            self.llvm_type(ty)
         }
     }
 
@@ -999,15 +1001,10 @@ impl<'a> Binary<'a> {
                     )
                     .as_basic_type_enum(),
                 Type::Mapping(..) => self.llvm_type(&self.ns.storage_type()),
-                Type::Ref(..) => {
-                    if self.ns.target == Target::Soroban {
-                        return BasicTypeEnum::IntType(self.context.i64_type());
-                    }
-
-                    self.context
-                        .ptr_type(AddressSpace::default())
-                        .as_basic_type_enum()
-                }
+                Type::Ref(..) => self
+                    .context
+                    .ptr_type(AddressSpace::default())
+                    .as_basic_type_enum(),
                 Type::StorageRef(..) => self.llvm_type(&self.ns.storage_type()),
                 Type::InternalFunction { .. } => {
                     BasicTypeEnum::PointerType(self.context.ptr_type(AddressSpace::default()))
@@ -1038,6 +1035,7 @@ impl<'a> Binary<'a> {
                 Type::FunctionSelector => {
                     self.llvm_type(&Type::Bytes(self.ns.target.selector_length()))
                 }
+                Type::SorobanHandle(_) => BasicTypeEnum::IntType(self.context.i64_type()),
                 // Soroban functions always return a 64 bit value.
                 Type::Void => {
                     if self.ns.target == Target::Soroban {
