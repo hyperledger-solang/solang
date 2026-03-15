@@ -338,7 +338,6 @@ impl SorobanTarget {
                                 ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                                 ast::Type::String => ScSpecTypeDef::String,
                                 ast::Type::Array(ty, _) => {
-                                    println!("emitting array type spec for input {ty:?}");
                                     let element = Self::vec_spec_type(ty.as_ref());
 
                                     ScSpecTypeDef::Vec(Box::new(ScSpecTypeVec {

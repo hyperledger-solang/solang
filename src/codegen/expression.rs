@@ -3895,7 +3895,6 @@ fn array_subscript(
             None => {
                 if let Type::StorageRef(..) = array_ty {
                     if ns.target == Target::Solana || ns.target == Target::Soroban {
-                        println!("elem ty in storage array length: {elem_ty:?}");
                         Expression::StorageArrayLength {
                             loc: *loc,
                             ty: ns.storage_type(),

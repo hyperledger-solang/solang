@@ -124,16 +124,11 @@ pub(super) fn soroban_storage_push(
     vartab: &mut Vartable,
     opt: &Options,
 ) -> Expression {
-    println!("soroban storage push called");
 
     // Storage wrapper: evaluate storage key/value and load vec object from storage.
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
     let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
     let vec_ty = args[0].ty();
-
-    println!("to insert value: {value:?}");
-    println!("var expr: {var_expr:?}");
-    println!("args[1] ty: {:?}", args[1].ty());
 
     let old_vec_obj = load_storage(loc, &vec_ty, var_expr.clone(), cfg, vartab, None, ns);
     let new_vec_var = soroban_vec_push_back(loc, old_vec_obj, &vec_ty, value, cfg, ns, vartab);

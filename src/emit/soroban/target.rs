@@ -313,15 +313,10 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
-        println!("storage_subscript called with type: {ty:?}");
 
         if let Type::StorageRef(_, ty) = ty {
             if let Type::Array(inner, _) = *ty.clone() {
                 if !is_reference_type(&inner) {
-                    //panic!("Only arrays of reference types are supported in storage");
-                    println!(
-                    "[VecObject][emit] storage_subscript: native array key path (slot/index pair)"
-                );
 
                     // here, we return a memory array with the following format: [ slot, index ]
 
