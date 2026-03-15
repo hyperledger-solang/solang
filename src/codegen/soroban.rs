@@ -124,7 +124,6 @@ pub(super) fn soroban_storage_push(
     vartab: &mut Vartable,
     opt: &Options,
 ) -> Expression {
-
     // Storage wrapper: evaluate storage key/value and load vec object from storage.
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
     let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);

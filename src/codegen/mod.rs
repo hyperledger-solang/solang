@@ -373,7 +373,6 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
     for layout in &ns.contracts[contract_no].layout {
         let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
-
         let mut value = if let Some(init) = &var.initializer {
             expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt)
         } else if ns.target == Target::Soroban && var.ty.is_dynamic_memory() {

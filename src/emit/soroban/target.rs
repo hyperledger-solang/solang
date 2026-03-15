@@ -313,11 +313,9 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
-
         if let Type::StorageRef(_, ty) = ty {
             if let Type::Array(inner, _) = *ty.clone() {
                 if !is_reference_type(&inner) {
-
                     // here, we return a memory array with the following format: [ slot, index ]
 
                     let arr = bin
