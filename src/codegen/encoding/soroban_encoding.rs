@@ -4,8 +4,8 @@ use crate::codegen::cfg::InternalCallTy;
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::create_encoder;
 use crate::codegen::vartable::Vartable;
-use crate::codegen::{Builtin, Expression};
 use crate::codegen::HostFunctions;
+use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type, Type::Uint};
 use num_bigint::BigInt;
 use num_traits::Zero;
@@ -205,7 +205,7 @@ pub fn soroban_decode_arg(
         },
         Type::Struct(StructType::UserDefined(n)) => {
             decode_struct(arg, wrapper_cfg, vartab, n, ns, ty)
-        },
+        }
         Type::Array(elem_ty, _) => {
             if let Type::StorageRef(_, _) = arg.ty() {
                 arg.clone()
@@ -214,10 +214,9 @@ pub fn soroban_decode_arg(
             }
         }
 
-        _ => unimplemented!("ty is {:?} in soroban decoder", ty),
+        _ => unimplemented!("unimplemented ty {:#?} in soroban decoder", ty),
     }
 }
-
 
 pub fn soroban_encode_arg(
     item: Expression,
@@ -673,7 +672,7 @@ pub fn soroban_encode_arg(
                 res: obj,
                 expr: buf,
             }
-        },
+        }
         Type::SorobanHandle(_) => Instr::Set {
             loc: Loc::Codegen,
             res: obj,
@@ -1341,8 +1340,6 @@ fn encode_struct(
 ) -> Expression {
     let fields = &ns.structs[struct_no].fields;
     let mut fields_vars = Vec::new();
-    //let mut key_vars = Vec::new();
-
 
     for (index, field) in fields.iter().enumerate() {
         let field = Expression::StructMember {
@@ -1359,64 +1356,12 @@ fn encode_struct(
         };
 
         fields_vars.push(actual_loaded_field);
-
-        /*let key_var = Expression::NumberLiteral {
-            loc: item.loc(),
-            ty: Type::Uint(64),
-            value: BigInt::from(index as u64),
-        };
-        key_vars.push(key_var);*/
     }
-
-    
 
     // now call soroban_encode for all fields
     let ret = soroban_encode(&item.loc(), fields_vars, ns, vartab, cfg, false);
 
     ret.0
-
-    /*let values = soroban_encode(&item.loc(), fields_vars, ns, vartab, cfg, false);
-    let keys  = soroban_encode(&item.loc(), key_vars, ns, vartab, cfg, false);
-    let len = Expression::NumberLiteral {
-        loc: item.loc(),
-        ty: Type::Uint(32),
-        value: BigInt::from(fields.len() as u64),
-    };
-
-    let keys_pos = Expression::VectorData { pointer: Box::new(keys.0) };
-    let values_pos = Expression::VectorData { pointer: Box::new(values.0) };
-
-    let encoded_len = soroban_encode_arg(len, cfg, vartab, ns);
-    let encoded_keys_pos = zext_shift_add(item.loc(), keys_pos, 32, 4);
-    let encoded_values_pos = zext_shift_add(item.loc(), values_pos, 32, 4);
-    //let encoded_values_pos = soroban_encode_arg(values.0, cfg, vartab, ns);
-
-    // now, encode the struct as MapObject
-    let obj = vartab.temp_anonymous(&Type::Uint(64));
-    let ret = Instr::Call {
-        res: vec![obj],
-        return_tys: vec![Type::Uint(64)],
-        call: crate::codegen::cfg::InternalCallTy::HostFunction {
-            name: HostFunctions::MapNewFromLinearMemory.name().to_string(),
-        },
-        args: vec![encoded_keys_pos, encoded_values_pos, encoded_len],
-    };
-
-    cfg.add(vartab, ret);
-
-    Expression::Variable {
-        loc: item.loc(),
-        ty: Type::Uint(64),
-        var_no: obj,
-    }
-
-
-    //ret.0
-    //Expression::NumberLiteral { loc: Loc::Codegen, ty: Type::Uint(64), value: BigInt::from(0) }
-    //values.0
-    //encoded_keys_pos
-    //println!("encoded len is: {:?}", encoded_len);
-    //encoded_len*/
 }
 
 /// Encode a linear-memory array into a Soroban VecObject using `VectorNewFromLinearMemory`.
@@ -1505,12 +1450,7 @@ fn decode_struct(
     }
 }
 
-fn zext_shift_add(
-    loc: pt::Loc,
-    value: Expression,
-    shift: u64,
-    tag: u64,
-) -> Expression {
+fn zext_shift_add(loc: pt::Loc, value: Expression, shift: u64, tag: u64) -> Expression {
     let shifted = Expression::ShiftLeft {
         loc,
         ty: Type::Uint(64),
@@ -1584,7 +1524,10 @@ fn decode_vector(
         expr: Box::new(decoded_len_u64.clone()),
     };
 
-    let decoded_array_ty = Type::Array(Box::new(Type::SorobanHandle(Box::new(elem_ty.clone()))), vec![ArrayLength::Dynamic]);
+    let decoded_array_ty = Type::Array(
+        Box::new(Type::SorobanHandle(Box::new(elem_ty.clone()))),
+        vec![ArrayLength::Dynamic],
+    );
     let decoded_buffer_var = vartab.temp_name("vector_data_decoded", &decoded_array_ty);
     cfg.add(
         vartab,
@@ -1619,209 +1562,10 @@ fn decode_vector(
         call: crate::codegen::cfg::InternalCallTy::HostFunction {
             name: HostFunctions::VecUnpackToLinearMemory.name().to_string(),
         },
-        args: vec![vec_object.clone(), data_location, len_var.into()],
+        args: vec![vec_object.clone(), data_location, len_var],
     };
 
     cfg.add(vartab, unpack_instr);
-
-    // NOTE: Temporarily disable the eager decode loop and keep unpacked host values
-    // in linear memory. Decoding can then be done lazily on load paths.
-    // decode_unpacked_buffer_runtime_loop(
-    //     unpacked_buffer,
-    //     decoded_buffer,
-    //     decoded_len_u32,
-    //     elem_ty,
-    //     ns,
-    //     cfg,
-    //     vartab,
-    // )
-    decoded_buffer
-}
-
-fn decode_unpacked_buffer_runtime_loop(
-    unpacked_buffer: Expression,
-    decoded_buffer: Expression,
-    decoded_len_u32: Expression,
-    elem_ty: &Type,
-    ns: &Namespace,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-) -> Expression {
-    let mut encoder = create_encoder(ns, false);
-
-    let index_var = vartab.temp_name("decode_vec_i", &Type::Uint(32));
-    let raw_offset_var = vartab.temp_name("decode_vec_raw_off", &Type::Uint(64));
-    let decoded_offset_var = vartab.temp_name("decode_vec_dec_off", &Type::Uint(64));
-
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: Loc::Codegen,
-            res: index_var,
-            expr: Expression::NumberLiteral {
-                loc: Loc::Codegen,
-                ty: Type::Uint(32),
-                value: BigInt::from(0),
-            },
-        },
-    );
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: Loc::Codegen,
-            res: raw_offset_var,
-            expr: Expression::NumberLiteral {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                value: BigInt::from(0),
-            },
-        },
-    );
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: Loc::Codegen,
-            res: decoded_offset_var,
-            expr: Expression::NumberLiteral {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                value: BigInt::from(0),
-            },
-        },
-    );
-
-    // Same cond/body/next/end loop shape used in encoding/mod.rs array loops.
-    let cond_block = cfg.new_basic_block("decode_vec_cond".to_string());
-    let next_block = cfg.new_basic_block("decode_vec_next".to_string());
-    let body_block = cfg.new_basic_block("decode_vec_body".to_string());
-    let end_block = cfg.new_basic_block("decode_vec_end".to_string());
-
-    vartab.new_dirty_tracker();
-    cfg.add(vartab, Instr::Branch { block: cond_block });
-    cfg.set_basic_block(cond_block);
-
-    cfg.add(
-        vartab,
-        Instr::BranchCond {
-            cond: Expression::Less {
-                loc: Loc::Codegen,
-                signed: false,
-                left: Box::new(Expression::Variable {
-                    loc: Loc::Codegen,
-                    ty: Type::Uint(32),
-                    var_no: index_var,
-                }),
-                right: Box::new(decoded_len_u32.clone()),
-            },
-            true_block: body_block,
-            false_block: end_block,
-        },
-    );
-
-    cfg.set_basic_block(body_block);
-
-    let loaded_val = Expression::Builtin {
-        loc: Loc::Codegen,
-        tys: vec![Type::Uint(64)],
-        kind: Builtin::ReadFromBuffer,
-        args: vec![
-            unpacked_buffer.clone(),
-            Expression::Variable {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                var_no: raw_offset_var,
-            },
-        ],
-    };
-
-    let decoded_val = soroban_decode_arg(loaded_val, cfg, vartab, ns, Some(elem_ty.clone()));
-    let advance = encoder.encode(
-        &decoded_val,
-        &decoded_buffer,
-        &Expression::Variable {
-            loc: Loc::Codegen,
-            ty: Type::Uint(64),
-            var_no: decoded_offset_var,
-        },
-        0,
-        ns,
-        vartab,
-        cfg,
-    );
-    let advance = advance.cast(&Type::Uint(64), ns);
-
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: Loc::Codegen,
-            res: decoded_offset_var,
-            expr: Expression::Add {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                overflowing: false,
-                left: Box::new(Expression::Variable {
-                    loc: Loc::Codegen,
-                    ty: Type::Uint(64),
-                    var_no: decoded_offset_var,
-                }),
-                right: Box::new(advance),
-            },
-        },
-    );
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: Loc::Codegen,
-            res: raw_offset_var,
-            expr: Expression::Add {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                overflowing: false,
-                left: Box::new(Expression::Variable {
-                    loc: Loc::Codegen,
-                    ty: Type::Uint(64),
-                    var_no: raw_offset_var,
-                }),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: Loc::Codegen,
-                    ty: Type::Uint(64),
-                    value: BigInt::from(8),
-                }),
-            },
-        },
-    );
-    cfg.add(vartab, Instr::Branch { block: next_block });
-
-    cfg.set_basic_block(next_block);
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: Loc::Codegen,
-            res: index_var,
-            expr: Expression::Add {
-                loc: Loc::Codegen,
-                ty: Type::Uint(32),
-                overflowing: false,
-                left: Box::new(Expression::Variable {
-                    loc: Loc::Codegen,
-                    ty: Type::Uint(32),
-                    var_no: index_var,
-                }),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: Loc::Codegen,
-                    ty: Type::Uint(32),
-                    value: BigInt::from(1),
-                }),
-            },
-        },
-    );
-    cfg.add(vartab, Instr::Branch { block: cond_block });
-
-    cfg.set_basic_block(end_block);
-    let phis = vartab.pop_dirty_tracker();
-    cfg.set_phis(next_block, phis.clone());
-    cfg.set_phis(end_block, phis.clone());
-    cfg.set_phis(cond_block, phis);
 
     decoded_buffer
 }

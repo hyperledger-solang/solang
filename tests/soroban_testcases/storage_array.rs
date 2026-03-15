@@ -103,8 +103,8 @@ fn storage_array_ops_test() {
     let addr = runtime.contracts.last().unwrap();
     let expected: Val = 20_u64.into_val(&runtime.env);
     let res = runtime.invoke_contract(addr, "push_pop", vec![]);
-    println!("res: {:?}", res);
-    println!("expected: {:?}", expected);
+    println!("res: {res:?}");
+    println!("expected: {expected:?}");
     assert!(expected.shallow_eq(&res));
 
     // 2) loop(): new instance, pushes 5,10,15 and sums => 30
@@ -203,6 +203,6 @@ fn storage_array_of_structs_test() {
     let addr3 = runtime.deploy_contract(contract_src);
     let expected: Val = 21_u64.into_val(&runtime.env);
     let res = runtime.invoke_contract(&addr3, "iter_sum", vec![]);
-    println!("res: {:?}", res);
+    println!("res: {res:?}");
     assert!(expected.shallow_eq(&res));
 }

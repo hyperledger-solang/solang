@@ -40,7 +40,7 @@ fn array_argument_ops() {
     // sum_len([1,2,3]) => 1 + 2 + 3 + len(3) = 9
     let expected: Val = 9_u64.into_val(&runtime.env);
     let res = runtime.invoke_contract(addr, "sum_len", vec![arr.clone().into_val(&runtime.env)]);
-    println!("sum_len result: {:?}", res);
+    println!("sum_len result: {res:?}");
     assert!(expected.shallow_eq(&res));
 
     // mutate_and_read([1,2,3]) => (1+10) + (2*2) + 3 = 18

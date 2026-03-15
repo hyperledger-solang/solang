@@ -12,7 +12,6 @@ use crate::sema::ast;
 use crate::sema::ast::CallTy;
 use crate::sema::ast::{Function, Type};
 
-use bitvec::index;
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue,
@@ -47,27 +46,13 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
-
-        println!("storage_load called for value type: {:?} and with slot type {:?}", ty, slot_ty);
-
-        if let Some(ty) = slot_ty {
-            println!("the storage_load detected a type: {:?}", ty);
-            if let Type::StorageRef(_, inner) = ty {
-                if let Type::Array(inner_ty, _) = *inner.clone() {
-                    println!("the storage_load detected an array type");
-                    if !is_reference_type(&inner_ty) {
-                    println!(
-                        "[VecObject][emit] storage_load: native array slot detected, using VecObject subscript load"
-                    );
-                    return get_storage_vec_subscript(bin, function, slot.clone());
-                    }
+        if let Some(Type::StorageRef(_, inner)) = slot_ty {
+            if let Type::Array(inner_ty, _) = inner.as_ref() {
+                if !is_reference_type(inner_ty) {
+                    return get_storage_vec_subscript(bin, function, *slot);
                 }
-            } 
+            }
         }
-
-        println!("storage_load called for slot: {:?}", slot);
-        print!("storage_load called for type: {:?}\n", ty);
-
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(bin);
 
@@ -146,8 +131,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .unwrap();
         phi.add_incoming(&[(&then_value, then_bb), (&default_value, else_bb)]);
 
-        println!("storage_load ended with phi node: {:?}", phi);
-
         phi.as_basic_value()
     }
 
@@ -163,25 +146,13 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) {
-        println!("storage_store called for value type: {:?} and with slot type {:?}", ty, slot_ty);
-        if let Some(ty) = slot_ty {
-            println!("the storage_load detected a type: {:?}", ty);
-            if let Type::StorageRef(_, inner) = ty {
-                if let Type::Array(inner_ty, _) = *inner.clone() {
-                    println!("the storage_store detected an array type");
-                    if !is_reference_type(&inner_ty) {
-                    println!(
-                        "[VecObject][emit] storage_store: native array slot detected, using VecObject subscript store"
-                    );
-                    return set_storage_vec_subscript(bin, function, slot.clone(), dest.into_int_value());
-                    }
+        if let Some(Type::StorageRef(_, inner)) = slot_ty {
+            if let Type::Array(inner_ty, _) = inner.as_ref() {
+                if !is_reference_type(inner_ty) {
+                    return set_storage_vec_subscript(bin, function, *slot, dest.into_int_value());
                 }
-                println!("the storage_load detected type {:?}", ty);
-            } 
+            }
         }
-
-        
-        println!("storage_store called for dest: {:?}", dest);
 
         emit_context!(bin);
 
@@ -198,7 +169,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         } else {
             *slot
         };
-
 
         // In case of struct, we receive a buffer in that format: [ field1, field2, ... ] where each field is a Soroban tagged value of type i64
         // therefore, for each field, we need to extract it from the buffer and call PutContractData for each field separately
@@ -320,67 +290,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         index: IntValue<'a>,
         loc: Loc,
     ) -> IntValue<'a> {
-
-
-        println!("get_storage_bytes_subscript called");
-        println!("slot: {:?}", slot);
-        println!("index: {:?}", index);
-        println!("loc: {:?}", loc);
-
-
-        // load the array object from storage
-
-        let load_storage = bin
-            .builder
-            .build_call(
-                bin.module
-                    .get_function(HostFunctions::GetContractData.name())
-                    .unwrap(),
-                &[
-                    slot.into(),
-                    bin.context.i64_type().const_int(1, false).into(), // persistent storage
-                ],
-                "load_storage",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
-
-        let index_encoded = encode_value(
-            if index.get_type().get_bit_width() == 64 {
-                index
-            } else {
-                bin.builder
-                    .build_int_z_extend(index, bin.context.i64_type(), "index64")
-                    .unwrap()
-            },
-            32,
-            4,
-            bin,
-        );
-
-        let res = bin
-            .builder
-            .build_call(
-                bin.module
-                    .get_function(HostFunctions::VecGet.name())
-                    .unwrap(),
-                &[
-                    load_storage.into(),
-                    index_encoded.into(),
-                ],
-                "vec_get",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
-        res
+        unimplemented!()
     }
 
     fn set_storage_bytes_subscript(
@@ -392,86 +302,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         value: IntValue<'a>,
         loc: Loc,
     ) {
-
-        println!("set_storage_bytes_subscript called");
-
-
-        // load the array object from storage
-        let load_storage = bin
-            .builder
-            .build_call(
-                bin.module
-                    .get_function(HostFunctions::GetContractData.name())
-                    .unwrap(),
-                &[
-                    slot.into(),
-                    bin.context.i64_type().const_int(1, false).into(), // persistent storage
-                ],
-                "load_storage",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
-
-        // encode the index as u32 val
-        let index_encoded = encode_value(
-            if index.get_type().get_bit_width() == 64 {
-                index
-            } else {
-                bin.builder
-                    .build_int_z_extend(index, bin.context.i64_type(), "index64")
-                    .unwrap()
-            },
-            32,
-            4,
-            bin,
-        );
-
-        // the value is already encoded as u32 val, so we can use it directly.
-        // call VecPut
-        let res = bin
-            .builder
-            .build_call(
-                bin.module
-                    .get_function(HostFunctions::VecPut.name())
-                    .unwrap(),
-                &[
-                    load_storage.into(),
-                    index_encoded.into(),
-                    value.into(),
-                ],
-                "vec_put",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
-
-        // store the array object back to storage
-        let _store_storage = bin
-            .builder
-            .build_call(
-                bin.module
-                    .get_function(HostFunctions::PutContractData.name())
-                    .unwrap(),
-                &[
-                    slot.into(),
-                    res.into(),
-                    bin.context.i64_type().const_int(1, false).into(), // persistent storage
-                ],
-                "store_storage",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
+        unimplemented!()
     }
 
     fn storage_subscript(
@@ -482,57 +313,56 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
+        println!("storage_subscript called with type: {ty:?}");
 
-        println!("storage_subscript called with type: {:?}", ty);
-
-         if let Type::StorageRef( _, ty ) = ty {
-            if let Type::Array( inner, _) = *ty.clone() {
+        if let Type::StorageRef(_, ty) = ty {
+            if let Type::Array(inner, _) = *ty.clone() {
                 if !is_reference_type(&inner) {
                     //panic!("Only arrays of reference types are supported in storage");
-                println!(
+                    println!(
                     "[VecObject][emit] storage_subscript: native array key path (slot/index pair)"
                 );
-                
-                // here, we return a memory array with the following format: [ slot, index ]
 
-                let arr = bin
-                    .builder
-                    .build_array_alloca(bin.context.i64_type(), bin.context.i64_type().const_int(2, false), "array_subscript")
-                    .unwrap();
+                    // here, we return a memory array with the following format: [ slot, index ]
 
-                bin.builder.build_store(arr, slot).unwrap();
-
-                // advance pointer to index
-
-                let index_ptr = unsafe {
-                    bin.builder
-                        .build_gep(
-                            bin.context.i64_type().array_type(1),
-                            arr,
-                            &[
-                                bin.context.i64_type().const_zero(),
-                                bin.context.i64_type().const_int(1, false),
-                            ],
-                            "index_ptr",
+                    let arr = bin
+                        .builder
+                        .build_array_alloca(
+                            bin.context.i64_type(),
+                            bin.context.i64_type().const_int(2, false),
+                            "array_subscript",
                         )
-                        .unwrap()
-                };
+                        .unwrap();
 
-                bin.builder.build_store(index_ptr, index).unwrap();
+                    bin.builder.build_store(arr, slot).unwrap();
 
-                // now return the pointer as int value
-                let arr_ptr_as_int = bin
-                    .builder
-                    .build_ptr_to_int(arr, bin.context.i64_type(), "array_ptr_as_int")
-                    .unwrap();
-                return arr_ptr_as_int;
-                
+                    // advance pointer to index
+
+                    let index_ptr = unsafe {
+                        bin.builder
+                            .build_gep(
+                                bin.context.i64_type().array_type(1),
+                                arr,
+                                &[
+                                    bin.context.i64_type().const_zero(),
+                                    bin.context.i64_type().const_int(1, false),
+                                ],
+                                "index_ptr",
+                            )
+                            .unwrap()
+                    };
+
+                    bin.builder.build_store(index_ptr, index).unwrap();
+
+                    // now return the pointer as int value
+                    let arr_ptr_as_int = bin
+                        .builder
+                        .build_ptr_to_int(arr, bin.context.i64_type(), "array_ptr_as_int")
+                        .unwrap();
+                    return arr_ptr_as_int;
+                }
             }
         }
-        }
-        
-       
-
 
         let vec_new = bin
             .builder
@@ -626,8 +456,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         elem_ty: &Type,
     ) -> IntValue<'a> {
         if !is_reference_type(elem_ty) {
-            println!("[VecObject][emit] storage_array_length: native array using VecLen on VecObject");
-
             // Native arrays use VecObject layout: load vec object then call VecLen.
             let load_storage = bin
                 .builder
@@ -673,9 +501,6 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 )
                 .unwrap();
         }
-
-        println!("[VecObject][emit] storage_array_length: reference array using slot length");
-
         // Reference arrays keep old layout: length encoded in slot as U64Small.
         let storage_ty = bin.context.i64_type().const_int(1, false);
         let loaded_len = bin
@@ -1193,14 +1018,9 @@ fn get_storage_vec_subscript<'a>(
     _function: FunctionValue<'a>,
     key_vec: IntValue<'a>,
 ) -> BasicValueEnum<'a> {
-    println!("[VecObject][emit] get_storage_vec_subscript: entered");
     let key_ptr = bin
         .builder
-        .build_int_to_ptr(
-            key_vec,
-            bin.context.i64_type().ptr_type(Default::default()),
-            "key_ptr",
-        )
+        .build_int_to_ptr(key_vec, bin.context.ptr_type(Default::default()), "key_ptr")
         .unwrap(); // pointer to key array
     let (slot_val, index_val) = load_slot_index_from_key_ptr(bin, key_ptr); // slot/index from key array
 
@@ -1221,8 +1041,7 @@ fn get_storage_vec_subscript<'a>(
         .left()
         .unwrap()
         .into_int_value(); // vec object from storage
-    let index_val = 
-        encode_value(index_val, 32, 4, bin); // index encoded as u32 val
+    let index_val = encode_value(index_val, 32, 4, bin); // index encoded as u32 val
     let elem_val = bin
         .builder
         .build_call(
@@ -1246,20 +1065,14 @@ fn set_storage_vec_subscript<'a>(
     key_vec: IntValue<'a>,
     value: IntValue<'a>,
 ) {
-    println!("[VecObject][emit] set_storage_vec_subscript: entered");
     let key_ptr = bin
         .builder
-        .build_int_to_ptr(
-            key_vec,
-            bin.context.i64_type().ptr_type(Default::default()),
-            "key_ptr",
-        )
+        .build_int_to_ptr(key_vec, bin.context.ptr_type(Default::default()), "key_ptr")
         .unwrap(); // pointer to key array
     let (slot_val, index_val) = load_slot_index_from_key_ptr(bin, key_ptr); // slot/index from key array
 
     // encode index as u32 val
-    let index_val = 
-        encode_value(index_val, 32, 4, bin); // index encoded as u32 val
+    let index_val = encode_value(index_val, 32, 4, bin); // index encoded as u32 val
 
     let vec_obj = bin
         .builder
@@ -1545,22 +1358,22 @@ pub fn soroban_get_fields_to_val_buffer<'a>(
     vec_ptr
 }
 
-    fn is_reference_type(ty: &Type) -> bool {
-        match ty {
-            Type::Bool => false,
-            Type::Address(_) => false,
-            Type::Int(_) => false,
-            Type::Uint(_) => false,
-            Type::Rational => false,
-            Type::Bytes(_) => false,
-            Type::Enum(_) => false,
-            Type::Struct(_) => true,
-            Type::Array(..) => true,
-            Type::DynamicBytes => true,
-            Type::String => true,
-            Type::Mapping(..) => true,
-            Type::Contract(_) => false,
-            Type::InternalFunction { .. } => false,
-            _ => false,
-        }
+fn is_reference_type(ty: &Type) -> bool {
+    match ty {
+        Type::Bool => false,
+        Type::Address(_) => false,
+        Type::Int(_) => false,
+        Type::Uint(_) => false,
+        Type::Rational => false,
+        Type::Bytes(_) => false,
+        Type::Enum(_) => false,
+        Type::Struct(_) => true,
+        Type::Array(..) => true,
+        Type::DynamicBytes => true,
+        Type::String => true,
+        Type::Mapping(..) => true,
+        Type::Contract(_) => false,
+        Type::InternalFunction { .. } => false,
+        _ => false,
     }
+}

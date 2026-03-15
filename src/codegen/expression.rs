@@ -61,12 +61,7 @@ pub fn expression(
         }
         ast::Expression::StorageLoad { loc, ty, expr } => {
             let storage_type = storage_type(expr, ns);
-            println!("storage load with storage expr: {:?}", expr);
             let storage = expression(expr, cfg, contract_no, func, ns, vartab, opt);
-
-            
-
-        
 
             load_storage(loc, ty, storage, cfg, vartab, storage_type, ns)
         }
@@ -868,7 +863,6 @@ pub fn expression(
             // Soroban lazy decode path: if memory contains encoded handles, decode on demand.
             if ns.target == Target::Soroban {
                 if let Type::Ref(inner) = expr.ty() {
-                    println!("print {:?}", inner);
                     if matches!(inner.as_ref(), Type::SorobanHandle(_)) {
                         let load_handle = Expression::Load {
                             loc: *loc,
@@ -3360,13 +3354,7 @@ pub fn assign_single(
                         }
                     };
 
-                    cfg.add(
-                        vartab,
-                        Instr::Store {
-                            dest,
-                            data,
-                        },
-                    );
+                    cfg.add(vartab, Instr::Store { dest, data });
                 }
                 _ => unreachable!(),
             }
@@ -3853,7 +3841,6 @@ fn array_subscript(
     vartab: &mut Vartable,
     opt: &Options,
 ) -> Expression {
-    println!("array ty in array_subscript: {:?}", array_ty);
     if array_ty.is_storage_bytes() {
         return Expression::Subscript {
             loc: *loc,
@@ -3908,7 +3895,7 @@ fn array_subscript(
             None => {
                 if let Type::StorageRef(..) = array_ty {
                     if ns.target == Target::Solana || ns.target == Target::Soroban {
-                        println!("elem ty in storage array length: {:?}", elem_ty);
+                        println!("elem ty in storage array length: {elem_ty:?}");
                         Expression::StorageArrayLength {
                             loc: *loc,
                             ty: ns.storage_type(),
@@ -3916,29 +3903,21 @@ fn array_subscript(
                             elem_ty: array_ty.storage_array_elem().deref_into(),
                         }
                     } else {
-
                         let ty = if ns.target == Target::Soroban {
                             Type::Uint(64)
                         } else {
                             ns.storage_type()
                         };
                         // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
-                        let array_length = load_storage(
-                            loc,
-                            &ty,
-                            array.clone(),
-                            cfg,
-                            vartab,
-                            None,
-                            ns,
-                        );
-                        if ns.target != Target::Soroban{
-                        array = Expression::Keccak256 {
-                            loc: *loc,
-                            ty: Type::Uint(256),
-                            exprs: vec![array],
-                        };
-                    }
+                        let array_length =
+                            load_storage(loc, &ty, array.clone(), cfg, vartab, None, ns);
+                        if ns.target != Target::Soroban {
+                            array = Expression::Keccak256 {
+                                loc: *loc,
+                                ty: Type::Uint(256),
+                                exprs: vec![array],
+                            };
+                        }
 
                         array_length
                     }
@@ -4120,34 +4099,22 @@ fn array_subscript(
         let slot_ty = ns.storage_type();
 
         if ns.target == Target::Soroban {
-
-            println!("soroban array subscript");
-
-            println!("array ty is {:?}", array_ty);
-
             let index = index.cast(&Type::Uint(64), ns);
 
-            // Reference-typed storage arrays (e.g. struct[]) use encoded index in the key path.
-            // Native arrays follow the VecObject path where index encoding happens in emit.
             let index = if elem_ty.is_reference_type(ns) {
                 soroban_encode_arg(index, cfg, vartab, ns)
             } else {
                 index
             };
 
-            let val = 
-             Expression::Subscript {
+            let val = Expression::Subscript {
                 loc: *loc,
                 ty: elem_ty.clone(),
                 array_ty: array_ty.clone(),
                 expr: Box::new(array),
                 index: Box::new(index),
             };
-
-            println!("elem ty is {:?}", elem_ty);
-
             return val;
-            //return soroban_decode_arg(val, cfg, vartab, ns, None);
         }
 
         if ns.target == Target::Solana {
@@ -4267,10 +4234,8 @@ fn array_subscript(
 
         if ns.target == Target::Soroban {
             if let Type::Array(runtime_elem_ty, runtime_dims) = array.ty().deref_any() {
-                println!("specific arr ty {:?}", runtime_elem_ty);
                 if matches!(runtime_elem_ty.as_ref(), Type::SorobanHandle(_)) {
-                    effective_array_ty =
-                        Type::Array(runtime_elem_ty.clone(), runtime_dims.clone());
+                    effective_array_ty = Type::Array(runtime_elem_ty.clone(), runtime_dims.clone());
                     effective_elem_ty = if matches!(elem_ty, Type::Ref(_)) {
                         Type::Ref(runtime_elem_ty.clone())
                     } else {
@@ -4334,9 +4299,6 @@ pub fn load_storage(
     ns: &Namespace,
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
-
-    println!("load_storage ty: {:?}", ty);
-    println!("load_storage storage expr: {:?}", storage);
 
     cfg.add(
         vartab,

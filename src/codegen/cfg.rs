@@ -1880,7 +1880,7 @@ pub(crate) fn populate_arguments<T: FunctionAttributes>(
 fn soroban_runtime_arg_ty(ty: &Type) -> Type {
     match ty {
         Type::Array(elem_ty, dims) if dims.last() == Some(&ast::ArrayLength::Dynamic) => {
-            println!("cought type {:?}", elem_ty);
+            println!("cought type {elem_ty:?}");
             Type::Array(
                 Box::new(Type::SorobanHandle(Box::new(elem_ty.as_ref().clone()))),
                 dims.clone(),

@@ -14,8 +14,8 @@ mod reaching_definitions;
 pub mod revert;
 mod solana_accounts;
 mod solana_deploy;
-mod statements;
 mod soroban;
+mod statements;
 mod storage;
 mod strength_reduce;
 pub(crate) mod subexpression_elimination;
@@ -194,7 +194,6 @@ impl HostFunctions {
             HostFunctions::VecPopBack => "v.7",
             HostFunctions::VecGet => "v.1",
             HostFunctions::VecPut => "v.0",
-
         }
     }
 }
@@ -374,47 +373,39 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
     for layout in &ns.contracts[contract_no].layout {
         let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
-        println!("Initializing storage variable {:?}", var);
+        println!("Initializing storage variable {var:?}");
 
         let mut value = if let Some(init) = &var.initializer {
             expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt)
+        } else if ns.target == Target::Soroban && var.ty.is_dynamic_memory() {
+            soroban::soroban_vec_new(&var.loc, &var.ty, &mut cfg, &mut vartab)
         } else {
-            if ns.target == Target::Soroban && var.ty.is_dynamic_memory() {
-                println!(
-                    "Initializing storage variable {:?} to empty vector",
-                    var
-                );
-                // on soroban we must initialize all storage variables
-
-                soroban::soroban_vec_new(&var.loc, &var.ty, &mut cfg, &mut vartab)
-            } else {
-                continue;
-            }
+            continue;
         };
 
-            let storage = ns.contracts[contract_no].get_storage_slot(
-                pt::Loc::Codegen,
-                layout.contract_no,
-                layout.var_no,
-                ns,
-                None,
-            );
+        let storage = ns.contracts[contract_no].get_storage_slot(
+            pt::Loc::Codegen,
+            layout.contract_no,
+            layout.var_no,
+            ns,
+            None,
+        );
 
         //let mut value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
 
-            if ns.target == Target::Soroban {
-                value = soroban_encode_arg(value, &mut cfg, &mut vartab, ns);
-            }
+        if ns.target == Target::Soroban {
+            value = soroban_encode_arg(value, &mut cfg, &mut vartab, ns);
+        }
 
-            cfg.add(
-                &mut vartab,
-                Instr::SetStorage {
-                    value,
-                    ty: var.ty.clone(),
-                    storage,
-                    storage_type: var.storage_type.clone(),
-                },
-            );
+        cfg.add(
+            &mut vartab,
+            Instr::SetStorage {
+                value,
+                ty: var.ty.clone(),
+                storage,
+                storage_type: var.storage_type.clone(),
+            },
+        );
     }
 
     cfg.add(&mut vartab, Instr::Return { value: Vec::new() });

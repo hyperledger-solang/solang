@@ -819,7 +819,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ty: &ast::Type,
         existing: bool,
         offset: &mut IntValue<'a>,
-        slot_ty: Option<&ast::Type>,
+        _slot_ty: Option<&ast::Type>,
         val: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
         _: &Option<StorageType>,

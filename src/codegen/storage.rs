@@ -95,9 +95,7 @@ pub fn storage_slots_array_push(
     vartab: &mut Vartable,
     opt: &Options,
 ) -> Expression {
-
     let inner_ty = if let Type::StorageRef(_, inner) = args[0].ty() {
-        
         if let Type::Array(elem_ty, _) = inner.deref_any() {
             elem_ty.clone()
         } else {
@@ -108,9 +106,6 @@ pub fn storage_slots_array_push(
     };
 
     if ns.target == Target::Soroban && !inner_ty.is_reference_type(ns) {
-        println!(
-            "[VecObject][codegen] storage_slots_array_push: entering Soroban VecObject path"
-        );
         return soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt);
     }
 
@@ -255,15 +250,19 @@ pub fn storage_slots_array_pop(
     vartab: &mut Vartable,
     opt: &Options,
 ) -> Expression {
-
-
     if ns.target == Target::Soroban {
-        println!(
-            "[VecObject][codegen] storage_slots_array_pop: entering Soroban VecObject path"
+        return soroban_storage_pop(
+            loc,
+            args,
+            return_ty,
+            cfg,
+            contract_no,
+            func,
+            ns,
+            vartab,
+            opt,
         );
-        return soroban_storage_pop(loc, args, return_ty, cfg, contract_no, func, ns, vartab, opt);
     }
-
 
     // set array+length to val_expr
     let slot_ty = ns.storage_type();
@@ -477,9 +476,7 @@ pub fn array_push(
     vartab: &mut Vartable,
     opt: &Options,
 ) -> Expression {
-
     if ns.target == Target::Soroban {
-        println!("[VecObject][codegen] array_push: entering Soroban VecObject path");
         return soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt);
     }
 

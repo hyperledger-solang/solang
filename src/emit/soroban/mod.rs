@@ -13,7 +13,7 @@ use inkwell::{
 };
 use soroban_sdk::xdr::{
     Limited, Limits, ScEnvMetaEntry, ScEnvMetaEntryInterfaceVersion, ScSpecEntry,
-    ScSpecFunctionInputV0, ScSpecFunctionV0, ScSpecTypeDef, StringM, WriteXdr, ScSpecTypeVec
+    ScSpecFunctionInputV0, ScSpecFunctionV0, ScSpecTypeDef, ScSpecTypeVec, StringM, WriteXdr,
 };
 
 const SOROBAN_ENV_INTERFACE_VERSION: ScEnvMetaEntryInterfaceVersion =
@@ -71,7 +71,7 @@ impl HostFunctions {
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
 
-            HostFunctions::VecPut=> bin
+            HostFunctions::VecPut => bin
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into(), ty.into()], false),
@@ -110,10 +110,7 @@ impl HostFunctions {
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
 
-            HostFunctions::VecLen => bin
-                .context
-                .i64_type()
-                .fn_type(&[ty.into()], false),
+            HostFunctions::VecLen => bin.context.i64_type().fn_type(&[ty.into()], false),
 
             HostFunctions::StringNewFromLinearMemory => bin
                 .context
@@ -185,7 +182,7 @@ impl SorobanTarget {
             ast::Type::String => ScSpecTypeDef::String,
             ast::Type::Ref(inner) => Self::vec_spec_type(inner.as_ref()),
             ast::Type::SorobanHandle(inner) => Self::vec_spec_type(inner.as_ref()),
-            _ => panic!("unsupported array element type {:?}", ty),
+            _ => panic!("unsupported array element type {ty:?}"),
         }
     }
 
@@ -341,7 +338,7 @@ impl SorobanTarget {
                                 ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
                                 ast::Type::String => ScSpecTypeDef::String,
                                 ast::Type::Array(ty, _) => {
-                                    println!("emitting array type spec for input {:?}", ty);
+                                    println!("emitting array type spec for input {ty:?}");
                                     let element = Self::vec_spec_type(ty.as_ref());
 
                                     ScSpecTypeDef::Vec(Box::new(ScSpecTypeVec {
