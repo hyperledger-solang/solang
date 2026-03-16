@@ -538,7 +538,7 @@ pub fn expression(
                 },
                 Type::Array(_, dim) => match dim.last().unwrap() {
                     ArrayLength::Dynamic => {
-                        if ns.target == Target::Solana {
+                        if ns.target == Target::Solana || ns.target == Target::Soroban {
                             Expression::StorageArrayLength {
                                 loc: *loc,
                                 ty: ty.clone(),
@@ -857,11 +857,30 @@ pub fn expression(
             from: from.clone(),
             expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         },
-        ast::Expression::Load { loc, ty, expr: e } => Expression::Load {
-            loc: *loc,
-            ty: ty.clone(),
-            expr: Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
-        },
+        ast::Expression::Load { loc, ty, expr: e } => {
+            let expr = Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt));
+
+            // Soroban lazy decode path: if memory contains encoded handles, decode on demand.
+            if ns.target == Target::Soroban {
+                if let Type::Ref(inner) = expr.ty() {
+                    if matches!(inner.as_ref(), Type::SorobanHandle(_)) {
+                        let load_handle = Expression::Load {
+                            loc: *loc,
+                            ty: inner.as_ref().clone(),
+                            expr: expr.clone(),
+                        };
+
+                        return soroban_decode_arg(load_handle, cfg, vartab, ns, None);
+                    }
+                }
+            }
+
+            Expression::Load {
+                loc: *loc,
+                ty: ty.clone(),
+                expr,
+            }
+        }
         // for some built-ins, we have to inline special case code
         ast::Expression::Builtin {
             kind: ast::Builtin::UserTypeWrap,
@@ -1143,7 +1162,11 @@ pub fn expression(
         }
         ast::Expression::Variable { loc, ty, var_no } => Expression::Variable {
             loc: *loc,
-            ty: ty.clone(),
+            ty: vartab
+                .vars
+                .get(var_no)
+                .map(|v| v.ty.clone())
+                .unwrap_or_else(|| ty.clone()),
             var_no: *var_no,
         },
         ast::Expression::GetRef { loc, ty, expr: exp } => Expression::GetRef {
@@ -2464,7 +2487,7 @@ fn expr_builtin(
         //  };
         //  let auth_context = auth::InvokerContractAuthEntry::Contract(x);
         // Most of the logic done here is just to encode the above struct as the host expects it.
-        // FIXME: This uses a series of MapNewFromLinearMemory, and multiple inserts to create the struct.
+        // FIXME: This uses a series of MapNew, and multiple inserts to create the struct.
         // This is not efficient and should be optimized.
         // Instead, we should use MapNewFromLinearMemory to create the struct in one go.
         ast::Builtin::AuthAsCurrContract => {
@@ -3308,17 +3331,30 @@ pub fn assign_single(
                     );
                 }
                 Type::Ref(_) => {
-                    cfg.add(
-                        vartab,
-                        Instr::Store {
-                            dest,
-                            data: Expression::Variable {
+                    let data = if ns.target == Target::Soroban
+                        && matches!(
+                            dest.ty(),
+                            Type::Ref(inner) if matches!(inner.as_ref(), Type::SorobanHandle(_))
+                        ) {
+                        soroban_encode_arg(
+                            Expression::Variable {
                                 loc: Loc::Codegen,
                                 ty: ty.clone(),
                                 var_no: pos,
                             },
-                        },
-                    );
+                            cfg,
+                            vartab,
+                            ns,
+                        )
+                    } else {
+                        Expression::Variable {
+                            loc: Loc::Codegen,
+                            ty: ty.clone(),
+                            var_no: pos,
+                        }
+                    };
+
+                    cfg.add(vartab, Instr::Store { dest, data });
                 }
                 _ => unreachable!(),
             }
@@ -3858,7 +3894,7 @@ fn array_subscript(
         Type::Array(..) => match array_ty.array_length() {
             None => {
                 if let Type::StorageRef(..) = array_ty {
-                    if ns.target == Target::Solana {
+                    if ns.target == Target::Solana || ns.target == Target::Soroban {
                         Expression::StorageArrayLength {
                             loc: *loc,
                             ty: ns.storage_type(),
@@ -3866,22 +3902,21 @@ fn array_subscript(
                             elem_ty: array_ty.storage_array_elem().deref_into(),
                         }
                     } else {
-                        // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
-                        let array_length = load_storage(
-                            loc,
-                            &Type::Uint(256),
-                            array.clone(),
-                            cfg,
-                            vartab,
-                            None,
-                            ns,
-                        );
-
-                        array = Expression::Keccak256 {
-                            loc: *loc,
-                            ty: Type::Uint(256),
-                            exprs: vec![array],
+                        let ty = if ns.target == Target::Soroban {
+                            Type::Uint(64)
+                        } else {
+                            ns.storage_type()
                         };
+                        // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
+                        let array_length =
+                            load_storage(loc, &ty, array.clone(), cfg, vartab, None, ns);
+                        if ns.target != Target::Soroban {
+                            array = Expression::Keccak256 {
+                                loc: *loc,
+                                ty: Type::Uint(256),
+                                exprs: vec![array],
+                            };
+                        }
 
                         array_length
                     }
@@ -4062,6 +4097,25 @@ fn array_subscript(
         let elem_ty = ty.storage_array_elem();
         let slot_ty = ns.storage_type();
 
+        if ns.target == Target::Soroban {
+            let index = index.cast(&Type::Uint(64), ns);
+
+            let index = if elem_ty.is_reference_type(ns) {
+                soroban_encode_arg(index, cfg, vartab, ns)
+            } else {
+                index
+            };
+
+            let val = Expression::Subscript {
+                loc: *loc,
+                ty: elem_ty.clone(),
+                array_ty: array_ty.clone(),
+                expr: Box::new(array),
+                index: Box::new(index),
+            };
+            return val;
+        }
+
         if ns.target == Target::Solana {
             if ty.array_length().is_some() && ty.is_sparse_solana(ns) {
                 let index = Expression::Variable {
@@ -4172,11 +4226,29 @@ fn array_subscript(
             )
         }
     } else {
-        match array_ty.deref_memory() {
+        // Use runtime array type on Soroban so lowered wrapper args can carry
+        // Array(SorobanHandle(_), ..) representation.
+        let mut effective_array_ty = array_ty.clone();
+        let mut effective_elem_ty = elem_ty.clone();
+
+        if ns.target == Target::Soroban {
+            if let Type::Array(runtime_elem_ty, runtime_dims) = array.ty().deref_any() {
+                if matches!(runtime_elem_ty.as_ref(), Type::SorobanHandle(_)) {
+                    effective_array_ty = Type::Array(runtime_elem_ty.clone(), runtime_dims.clone());
+                    effective_elem_ty = if matches!(elem_ty, Type::Ref(_)) {
+                        Type::Ref(runtime_elem_ty.clone())
+                    } else {
+                        runtime_elem_ty.as_ref().clone()
+                    };
+                }
+            }
+        }
+
+        match effective_array_ty.deref_memory() {
             Type::DynamicBytes | Type::Array(..) | Type::Slice(_) => Expression::Subscript {
                 loc: *loc,
-                ty: elem_ty.clone(),
-                array_ty: array_ty.clone(),
+                ty: effective_elem_ty,
+                array_ty: effective_array_ty,
                 expr: Box::new(array),
                 index: Box::new(Expression::Variable {
                     loc: index_loc,
