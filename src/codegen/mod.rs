@@ -34,7 +34,7 @@ use self::{
     vartable::Vartable,
 };
 use crate::sema::ast::{
-    FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
+    ArrayLength, FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
 };
 use crate::{sema::ast, Target};
 use std::cmp::Ordering;
@@ -139,6 +139,7 @@ pub enum HostFunctions {
     VecPut,
     StringNewFromLinearMemory,
     StrKeyToAddr,
+    GetLedgerTimestamp,
     GetCurrentContractAddress,
     BytesNewFromLinearMemory,
     BytesLen,
@@ -186,6 +187,7 @@ impl HostFunctions {
             HostFunctions::VecPushBack => "v.6",
             HostFunctions::StringNewFromLinearMemory => "b.i",
             HostFunctions::StrKeyToAddr => "a.1",
+            HostFunctions::GetLedgerTimestamp => "x.4",
             HostFunctions::GetCurrentContractAddress => "x.7",
             HostFunctions::BytesNewFromLinearMemory => "b.3",
             HostFunctions::BytesLen => "b.8",
@@ -373,9 +375,18 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
     for layout in &ns.contracts[contract_no].layout {
         let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
+        let soroban_init_with_vec = ns.target == Target::Soroban
+            && match &var.ty {
+                Type::String | Type::DynamicBytes | Type::Slice(_) => true,
+                Type::Array(elem_ty, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                    !elem_ty.is_reference_type(ns)
+                }
+                _ => false,
+            };
+
         let mut value = if let Some(init) = &var.initializer {
             expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt)
-        } else if ns.target == Target::Soroban && var.ty.is_dynamic_memory() {
+        } else if soroban_init_with_vec {
             soroban::soroban_vec_new(&var.loc, &var.ty, &mut cfg, &mut vartab)
         } else {
             continue;

@@ -736,6 +736,111 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
         match expr {
             Expression::Builtin {
+                kind: Builtin::Timestamp,
+                args,
+                ..
+            } => {
+                assert_eq!(args.len(), 0, "timestamp expects no arguments");
+
+                let function_name = HostFunctions::GetLedgerTimestamp.name();
+                let function_value = bin.module.get_function(function_name).unwrap();
+                let timestamp_val = bin
+                    .builder
+                    .build_call(function_value, &[], function_name)
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                // Decode U64Val: U64Small values are immediate, otherwise decode U64Object via ObjToU64.
+                let tag = bin
+                    .builder
+                    .build_and(
+                        timestamp_val,
+                        bin.context.i64_type().const_int(0xff, false),
+                        "timestamp_tag",
+                    )
+                    .unwrap();
+                let is_u64_small = bin
+                    .builder
+                    .build_int_compare(
+                        inkwell::IntPredicate::EQ,
+                        tag,
+                        bin.context.i64_type().const_int(6, false), // Tag::U64Small
+                        "is_u64_small",
+                    )
+                    .unwrap();
+
+                let value_is_small = bin
+                    .context
+                    .append_basic_block(function, "timestamp_value_is_small");
+                let value_is_object = bin
+                    .context
+                    .append_basic_block(function, "timestamp_value_is_object");
+                let value_decoded = bin
+                    .context
+                    .append_basic_block(function, "timestamp_value_decoded");
+
+                bin.builder
+                    .build_conditional_branch(is_u64_small, value_is_small, value_is_object)
+                    .unwrap();
+
+                bin.builder.position_at_end(value_is_small);
+
+                let small_value = bin
+                    .builder
+                    .build_right_shift(
+                        timestamp_val,
+                        bin.context.i64_type().const_int(8, false),
+                        false,
+                        "timestamp_small_value",
+                    )
+                    .unwrap();
+
+                bin.builder
+                    .build_unconditional_branch(value_decoded)
+                    .unwrap();
+
+                let small_value_block = bin.builder.get_insert_block().unwrap();
+
+                bin.builder.position_at_end(value_is_object);
+
+                let decode_function_name = HostFunctions::ObjToU64.name();
+                let decode_function_value = bin.module.get_function(decode_function_name).unwrap();
+                let object_value = bin
+                    .builder
+                    .build_call(
+                        decode_function_value,
+                        &[timestamp_val.into()],
+                        decode_function_name,
+                    )
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                bin.builder
+                    .build_unconditional_branch(value_decoded)
+                    .unwrap();
+
+                let object_value_block = bin.builder.get_insert_block().unwrap();
+
+                bin.builder.position_at_end(value_decoded);
+
+                let timestamp = bin
+                    .builder
+                    .build_phi(bin.context.i64_type(), "timestamp")
+                    .unwrap();
+                timestamp.add_incoming(&[
+                    (&small_value, small_value_block),
+                    (&object_value, object_value_block),
+                ]);
+
+                timestamp.as_basic_value()
+            }
+            Expression::Builtin {
                 kind: Builtin::ExtendTtl,
                 args,
                 ..
@@ -1142,6 +1247,7 @@ pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<
         Type::Bool => 0,        // Tag::False
         Type::Uint(32) => 4,    // Tag::U32Val
         Type::Int(32) => 5,     // Tag::I32Val
+        Type::Enum(_) => 4,     // Tag::U32Val
         Type::Uint(64) => 6,    // Tag::U64Small
         Type::Int(64) => 7,     // Tag::I64Small
         Type::Uint(128) => 10,  // Tag::U128Small

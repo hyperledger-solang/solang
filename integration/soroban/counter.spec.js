@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { expect } from 'chai';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { call_contract_function, toSafeJson } from './test_helpers.js';
+import { call_contract_function, call_contract_view, toSafeJson } from './test_helpers.js';
 import { Server } from '@stellar/stellar-sdk/rpc';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,7 +28,7 @@ describe('Counter', () => {
   });
 
   it('get correct initial counter', async () => {
-    let res = await call_contract_function("count", server, keypair, contract);
+    let res = await call_contract_view("count", server, keypair, contract);
 
     expect(res.status, `Counter 'count' call failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
     expect(res.returnValue, `Unexpected counter value: ${toSafeJson(res)}`).to.equal(10n);
@@ -40,7 +40,7 @@ describe('Counter', () => {
     expect(incRes.status, `Counter 'increment' call failed: ${toSafeJson(incRes)}`).to.equal("SUCCESS");
 
     // get the count again
-    let res = await call_contract_function("count", server, keypair, contract);
+    let res = await call_contract_view("count", server, keypair, contract);
     expect(res.status, `Counter 'count' after increment failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
     expect(res.returnValue, `Unexpected counter value after increment: ${toSafeJson(res)}`).to.equal(11n);
   });

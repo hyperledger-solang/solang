@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { expect } from 'chai';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { call_contract_function, toSafeJson } from './test_helpers.js';
+import { call_contract_function, call_contract_view, toSafeJson } from './test_helpers.js';
 import { Server } from '@stellar/stellar-sdk/rpc';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,19 +26,19 @@ describe('StorageTypes', () => {
   });
 
   it('check initial values', async () => {
-    let res = await call_contract_function("sesa", server, keypair, contract);
+    let res = await call_contract_view("sesa", server, keypair, contract);
     expect(res.status, `sesa() call failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
     expect(res.returnValue, `unexpected sesa: ${toSafeJson(res)}`).to.equal(1n);
 
-    res = await call_contract_function("sesa1", server, keypair, contract);
+    res = await call_contract_view("sesa1", server, keypair, contract);
     expect(res.status, `sesa1() call failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
     expect(res.returnValue, `unexpected sesa1: ${toSafeJson(res)}`).to.equal(1n);
 
-    res = await call_contract_function("sesa2", server, keypair, contract);
+    res = await call_contract_view("sesa2", server, keypair, contract);
     expect(res.status, `sesa2() call failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
     expect(res.returnValue, `unexpected sesa2: ${toSafeJson(res)}`).to.equal(2n);
 
-    res = await call_contract_function("sesa3", server, keypair, contract);
+    res = await call_contract_view("sesa3", server, keypair, contract);
     expect(res.status, `sesa3() call failed: ${toSafeJson(res)}`).to.equal("SUCCESS");
     expect(res.returnValue, `unexpected sesa3: ${toSafeJson(res)}`).to.equal(2n);
   });
@@ -47,16 +47,16 @@ describe('StorageTypes', () => {
     let incRes = await call_contract_function("inc", server, keypair, contract);
     expect(incRes.status, `inc() call failed: ${toSafeJson(incRes)}`).to.equal("SUCCESS");
 
-    let res = await call_contract_function("sesa", server, keypair, contract);
+    let res = await call_contract_view("sesa", server, keypair, contract);
     expect(res.returnValue).to.equal(2n);
 
-    res = await call_contract_function("sesa1", server, keypair, contract);
+    res = await call_contract_view("sesa1", server, keypair, contract);
     expect(res.returnValue).to.equal(2n);
 
-    res = await call_contract_function("sesa2", server, keypair, contract);
+    res = await call_contract_view("sesa2", server, keypair, contract);
     expect(res.returnValue).to.equal(3n);
 
-    res = await call_contract_function("sesa3", server, keypair, contract);
+    res = await call_contract_view("sesa3", server, keypair, contract);
     expect(res.returnValue).to.equal(3n);
   });
 
@@ -64,16 +64,16 @@ describe('StorageTypes', () => {
     let decRes = await call_contract_function("dec", server, keypair, contract);
     expect(decRes.status, `dec() call failed: ${toSafeJson(decRes)}`).to.equal("SUCCESS");
 
-    let res = await call_contract_function("sesa", server, keypair, contract);
+    let res = await call_contract_view("sesa", server, keypair, contract);
     expect(res.returnValue).to.equal(1n);
 
-    res = await call_contract_function("sesa1", server, keypair, contract);
+    res = await call_contract_view("sesa1", server, keypair, contract);
     expect(res.returnValue).to.equal(1n);
 
-    res = await call_contract_function("sesa2", server, keypair, contract);
+    res = await call_contract_view("sesa2", server, keypair, contract);
     expect(res.returnValue).to.equal(2n);
 
-    res = await call_contract_function("sesa3", server, keypair, contract);
+    res = await call_contract_view("sesa3", server, keypair, contract);
     expect(res.returnValue).to.equal(2n);
   });
 });

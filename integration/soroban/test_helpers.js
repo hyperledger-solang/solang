@@ -10,8 +10,30 @@ function decodeReturnValue(scval) {
     return scval;
 }
 
-export async function call_contract_function(method, server, keypair, contract, ...params) {
-    let result = {
+async function buildContractCallTransaction(server, keypair, contract, method, params) {
+    return new StellarSdk.TransactionBuilder(await server.getAccount(keypair.publicKey()), {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: StellarSdk.Networks.TESTNET,
+    })
+        .addOperation(contract.call(method, ...params))
+        .setTimeout(30)
+        .build();
+}
+
+function extractSimulationRetval(simulation) {
+    const candidate = simulation?.result?.retval ?? simulation?.results?.[0]?.retval;
+    if (!candidate) return null;
+
+    if (candidate && typeof candidate.switch === 'function') return candidate;
+    if (typeof candidate === 'string') {
+        return StellarSdk.xdr.ScVal.fromXDR(candidate, 'base64');
+    }
+    if (candidate && typeof candidate.toXDR === 'function') return candidate;
+    return null;
+}
+
+export async function call_contract_view(method, server, keypair, contract, ...params) {
+    const result = {
         status: null,
         returnValue: null,
         error: null,
@@ -19,41 +41,77 @@ export async function call_contract_function(method, server, keypair, contract, 
     };
 
     try {
-        let builtTransaction = new StellarSdk.TransactionBuilder(await server.getAccount(keypair.publicKey()), {
-            fee: StellarSdk.BASE_FEE,
-            networkPassphrase: StellarSdk.Networks.TESTNET,
-        })
-            .addOperation(contract.call(method, ...params))
-            .setTimeout(30)
-            .build();
+        const builtTransaction = await buildContractCallTransaction(
+            server,
+            keypair,
+            contract,
+            method,
+            params
+        );
+        const simulation = await server.simulateTransaction(builtTransaction);
+        result.raw = simulation;
 
-        let preparedTransaction = await server.prepareTransaction(builtTransaction);
+        const simulationError =
+            simulation?.error ??
+            simulation?.result?.error ??
+            simulation?.results?.[0]?.error;
+
+        if (simulationError) {
+            result.status = 'ERROR';
+            result.error = `Simulation failed: ${JSON.stringify(simulationError)}`;
+            return result;
+        }
+
+        const retval = extractSimulationRetval(simulation);
+        result.status = 'SUCCESS';
+        if (retval) {
+            result.returnValue = decodeReturnValue(retval);
+        }
+    } catch (err) {
+        result.status = 'ERROR';
+        result.error = `Exception: ${err.toString()}`;
+    }
+
+    return result;
+}
+
+export async function call_contract_function(method, server, keypair, contract, ...params) {
+    const result = {
+        status: null,
+        returnValue: null,
+        error: null,
+        raw: null,
+    };
+
+    try {
+        const builtTransaction = await buildContractCallTransaction(
+            server,
+            keypair,
+            contract,
+            method,
+            params
+        );
+        const preparedTransaction = await server.prepareTransaction(builtTransaction);
         preparedTransaction.sign(keypair);
 
-        let sendResponse = await server.sendTransaction(preparedTransaction);
+        const sendResponse = await server.sendTransaction(preparedTransaction);
 
         if (sendResponse.status === "PENDING") {
-            let getResponse = await server.getTransaction(sendResponse.hash);
-            while (getResponse.status === "NOT_FOUND") {
-                console.log("Waiting for transaction confirmation...");
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-                getResponse = await server.getTransaction(sendResponse.hash);
-            }
+            const finalResponse = await server.pollTransaction(sendResponse.hash);
+            result.raw = finalResponse;
 
-            result.raw = getResponse;
-
-            if (getResponse.status === "SUCCESS") {
+            if (finalResponse.status === "SUCCESS") {
                 result.status = "SUCCESS";
-                if (getResponse.returnValue) {
+                if (finalResponse.returnValue) {
                     try {
-                        result.returnValue = decodeReturnValue(getResponse.returnValue);
+                        result.returnValue = decodeReturnValue(finalResponse.returnValue);
                     } catch (e) {
                         result.error = "Failed to decode returnValue: " + e.toString();
                     }
                 }
             } else {
                 result.status = "ERROR";
-                result.error = "Transaction failed: " + (getResponse.resultXdr || JSON.stringify(getResponse));
+                result.error = "Transaction failed: " + (finalResponse.resultXdr || JSON.stringify(finalResponse));
             }
         } else if (sendResponse.status === "FAILED") {
             result.status = "ERROR";
