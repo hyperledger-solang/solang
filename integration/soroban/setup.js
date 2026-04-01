@@ -1,6 +1,7 @@
 
 import 'dotenv/config';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from 'fs';
+import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
@@ -132,11 +133,14 @@ function extractSimRetval(sim) {
   // Parsed object (xdr.ScVal): has a .switch() function (and often .toXDR())
   if (candidate && typeof candidate.switch === 'function') return candidate;
 
-  // Base64-encoded XDR string (older shapes)
-  if (typeof candidate === 'string') return xdr.ScVal.fromXDR(candidate, 'base64');
-
-  // xdr object with toXDR method (rare edge)
-  if (candidate && typeof candidate.toXDR === 'function') return candidate;
+  let wasmFiles = readdirSync(`${dirname}`).filter(file => file.endsWith('.wasm'));
+  console.log(dirname);
+  
+  let rust_wasm = path.join('rust','target','wasm32v1-none', 'release-with-logs', 'hello_world.wasm');
+  // add rust wasm file to the list of wasm files if it exists locally
+  if (existsSync(path.join(dirname, rust_wasm))) {
+    wasmFiles.push(rust_wasm);
+  }
 
   return null;
 }

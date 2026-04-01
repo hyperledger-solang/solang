@@ -35,7 +35,6 @@ export async function call_contract_function(method, server, keypair, contract, 
         if (sendResponse.status === "PENDING") {
             let getResponse = await server.getTransaction(sendResponse.hash);
             while (getResponse.status === "NOT_FOUND") {
-                console.log("Waiting for transaction confirmation...");
                 await new Promise((resolve) => setTimeout(resolve, 1000));
                 getResponse = await server.getTransaction(sendResponse.hash);
             }

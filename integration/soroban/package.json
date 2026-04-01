@@ -7,7 +7,7 @@
       "mocha": "^10.4.0"
     },
     "scripts": {
-      "build": "solang compile *.sol --target soroban && solang compile storage_types.sol --target soroban --release",
+      "build": "cargo run -q --features soroban --bin solang -- compile *.sol --target soroban && cargo run -q --features soroban --bin solang -- compile storage_types.sol --target soroban --release",
       "setup": "node setup.js",
       "test": "mocha *.spec.js --timeout 100000"
     },
