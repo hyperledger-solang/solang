@@ -140,19 +140,14 @@ pub fn soroban_decode_arg(
                 value: 0u64.into(),
             }),
         },
-        Type::Uint(64) => Expression::ShiftRight {
-            loc: Loc::Codegen,
-            ty: Type::Uint(64),
-            left: arg.into(),
-            right: Box::new(Expression::NumberLiteral {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                value: BigInt::from(8_u64),
-            }),
-            signed: false,
-        },
+        Type::Uint(64) => decode_u64(wrapper_cfg, vartab, arg),
 
         Type::Address(_) | Type::String => arg.clone(),
+
+        Type::Enum(enum_no) => {
+            let decoded = soroban_decode_arg(arg, wrapper_cfg, vartab, ns, Some(Type::Uint(32)));
+            decoded.cast(&Type::Enum(enum_no), ns)
+        }
 
         Type::Int(128) | Type::Uint(128) => decode_i128(wrapper_cfg, vartab, arg),
 
@@ -406,7 +401,49 @@ pub fn soroban_encode_arg(
                 },
             }
         }
-        Type::Uint(64) | Type::Int(64) => {
+        Type::Enum(_) => {
+            let widened = Expression::ZeroExt {
+                loc: item.loc(),
+                ty: Type::Uint(64),
+                expr: Box::new(item.cast(&Type::Uint(32), ns)),
+            };
+
+            let shifted = Expression::ShiftLeft {
+                loc: item.loc(),
+                ty: Type::Uint(64),
+                left: Box::new(widened),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    value: 32u64.into(),
+                }),
+            };
+
+            Instr::Set {
+                loc: item.loc(),
+                res: obj,
+                expr: Expression::Add {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    left: Box::new(shifted),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: item.loc(),
+                        ty: Type::Uint(64),
+                        value: 4u64.into(),
+                    }),
+                    overflowing: false,
+                },
+            }
+        }
+        Type::Uint(64) => {
+            let encoded = encode_u64(cfg, vartab, item.clone());
+            Instr::Set {
+                loc: item.loc(),
+                res: obj,
+                expr: encoded,
+            }
+        }
+        Type::Int(64) => {
             let shift_left = Expression::ShiftLeft {
                 loc: item.loc(),
                 ty: Type::Uint(64),
@@ -418,11 +455,7 @@ pub fn soroban_encode_arg(
                 }),
             };
 
-            let tag = match item.ty() {
-                Type::Uint(64) => 6,
-                Type::Int(64) => 7,
-                _ => unreachable!(),
-            };
+            let tag = 7;
 
             let added = Expression::Add {
                 loc: item.loc(),
@@ -443,45 +476,48 @@ pub fn soroban_encode_arg(
             }
         }
         Type::Address(_) => {
-            let instr = if let Expression::Cast { loc, ty: _, expr } = item {
-                let address_literal = expr;
+            let instr = if let Expression::Cast {
+                loc: _,
+                ty: _,
+                expr,
+            } = item.clone()
+            {
+                if let Expression::BytesLiteral { loc, ty: _, value } = *expr.clone() {
+                    let address_literal = expr;
 
-                let pointer = Expression::VectorData {
-                    pointer: address_literal.clone(),
-                };
+                    let pointer = Expression::VectorData {
+                        pointer: address_literal.clone(),
+                    };
 
-                let pointer_extend = Expression::ZeroExt {
-                    loc,
-                    ty: Type::Uint(64),
-                    expr: Box::new(pointer),
-                };
-
-                let encoded = Expression::ShiftLeft {
-                    loc,
-                    ty: Uint(64),
-                    left: Box::new(pointer_extend),
-                    right: Box::new(Expression::NumberLiteral {
+                    let pointer_extend = Expression::ZeroExt {
                         loc,
                         ty: Type::Uint(64),
-                        value: BigInt::from(32),
-                    }),
-                };
+                        expr: Box::new(pointer),
+                    };
 
-                let encoded = Expression::Add {
-                    loc,
-                    ty: Type::Uint(64),
-                    overflowing: true,
-                    left: Box::new(encoded),
-                    right: Box::new(Expression::NumberLiteral {
+                    let encoded = Expression::ShiftLeft {
+                        loc,
+                        ty: Uint(64),
+                        left: Box::new(pointer_extend),
+                        right: Box::new(Expression::NumberLiteral {
+                            loc,
+                            ty: Type::Uint(64),
+                            value: BigInt::from(32),
+                        }),
+                    };
+
+                    let encoded = Expression::Add {
                         loc,
                         ty: Type::Uint(64),
-                        value: BigInt::from(4),
-                    }),
-                };
+                        overflowing: true,
+                        left: Box::new(encoded),
+                        right: Box::new(Expression::NumberLiteral {
+                            loc,
+                            ty: Type::Uint(64),
+                            value: BigInt::from(4),
+                        }),
+                    };
 
-                let len = if let Expression::BytesLiteral { loc, ty: _, value } =
-                    *address_literal.clone()
-                {
                     let len = Expression::NumberLiteral {
                         loc,
                         ty: Type::Uint(64),
@@ -499,7 +535,7 @@ pub fn soroban_encode_arg(
                         }),
                     };
 
-                    Expression::Add {
+                    let len = Expression::Add {
                         loc,
                         ty: Type::Uint(64),
                         left: Box::new(len),
@@ -509,39 +545,41 @@ pub fn soroban_encode_arg(
                             value: BigInt::from(4),
                         }),
                         overflowing: false,
+                    };
+
+                    let str_key_temp = vartab.temp_name("str_key", &Type::Uint(64));
+                    let str_key_var = Expression::Variable {
+                        loc,
+                        ty: Type::Uint(64),
+                        var_no: str_key_temp,
+                    };
+
+                    let soroban_str_key = Instr::Call {
+                        res: vec![str_key_temp],
+                        return_tys: vec![Type::Uint(64)],
+                        call: crate::codegen::cfg::InternalCallTy::HostFunction {
+                            name: HostFunctions::StringNewFromLinearMemory.name().to_string(),
+                        },
+                        args: vec![encoded.clone(), len.clone()],
+                    };
+
+                    cfg.add(vartab, soroban_str_key);
+
+                    Instr::Call {
+                        res: vec![obj],
+                        return_tys: vec![Type::Uint(64)],
+                        call: crate::codegen::cfg::InternalCallTy::HostFunction {
+                            name: HostFunctions::StrKeyToAddr.name().to_string(),
+                        },
+                        args: vec![str_key_var],
                     }
                 } else {
-                    todo!()
-                };
-
-                let str_key_temp = vartab.temp_name("str_key", &Type::Uint(64));
-                let str_key_var = Expression::Variable {
-                    loc,
-                    ty: Type::Uint(64),
-                    var_no: str_key_temp,
-                };
-
-                let soroban_str_key = Instr::Call {
-                    res: vec![str_key_temp],
-                    return_tys: vec![Type::Uint(64)],
-                    call: crate::codegen::cfg::InternalCallTy::HostFunction {
-                        name: HostFunctions::StringNewFromLinearMemory.name().to_string(),
-                    },
-                    args: vec![encoded.clone(), len.clone()],
-                };
-
-                cfg.add(vartab, soroban_str_key);
-
-                let address_object = Instr::Call {
-                    res: vec![obj],
-                    return_tys: vec![Type::Uint(64)],
-                    call: crate::codegen::cfg::InternalCallTy::HostFunction {
-                        name: HostFunctions::StrKeyToAddr.name().to_string(),
-                    },
-                    args: vec![str_key_var],
-                };
-
-                address_object
+                    Instr::Set {
+                        loc: Loc::Codegen,
+                        res: obj,
+                        expr: item.clone(),
+                    }
+                }
             } else {
                 Instr::Set {
                     loc: Loc::Codegen,
@@ -817,6 +855,123 @@ fn encode_i128(
     };
 
     cfg.add(vartab, instr);
+
+    cfg.add(
+        vartab,
+        Instr::Branch {
+            block: return_block,
+        },
+    );
+
+    cfg.set_basic_block(return_block);
+    cfg.set_phis(return_block, vartab.pop_dirty_tracker());
+
+    ret
+}
+
+fn encode_u64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, value: Expression) -> Expression {
+    let ret_var = vartab.temp_anonymous(&Type::Uint(64));
+
+    let ret = Expression::Variable {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
+        var_no: ret_var,
+    };
+
+    vartab.new_dirty_tracker();
+
+    let fits_in_56_bits = cfg.new_basic_block("u64_fits_in_56_bits".to_string());
+    let should_be_in_host = cfg.new_basic_block("u64_should_be_in_host".to_string());
+    let return_block = cfg.new_basic_block("u64_finish".to_string());
+
+    let high_8_bits = Expression::ShiftRight {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
+        left: value.clone().into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(56_u64),
+        }
+        .into(),
+        signed: false,
+    };
+
+    let cond = Expression::Equal {
+        loc: pt::Loc::Codegen,
+        left: high_8_bits.into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(0_u64),
+        }
+        .into(),
+    };
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond,
+            true_block: fits_in_56_bits,
+            false_block: should_be_in_host,
+        },
+    );
+
+    cfg.set_basic_block(fits_in_56_bits);
+
+    let small_value = Expression::ShiftLeft {
+        loc: Loc::Codegen,
+        ty: Type::Uint(64),
+        left: Box::new(value.clone()),
+        right: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(8_u64),
+        }),
+    };
+
+    let small_value = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Uint(64),
+        left: small_value.into(),
+        right: Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(6_u64),
+        }
+        .into(),
+        overflowing: false,
+    };
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: pt::Loc::Codegen,
+            res: ret_var,
+            expr: small_value,
+        },
+    );
+
+    cfg.add(
+        vartab,
+        Instr::Branch {
+            block: return_block,
+        },
+    );
+
+    cfg.set_basic_block(should_be_in_host);
+
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![ret_var],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjFromU64.name().to_string(),
+            },
+            args: vec![value],
+        },
+    );
 
     cfg.add(
         vartab,
@@ -1311,6 +1466,164 @@ fn decode_i256(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expressio
     };
 
     cfg.add(vartab, set_instr);
+
+    ret
+}
+
+fn decode_u64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expression) -> Expression {
+    let ty = match arg.ty() {
+        Type::Ref(inner_ty) => *inner_ty.clone(),
+        Type::SorobanHandle(inner_ty) => *inner_ty.clone(),
+        _ => arg.ty(),
+    };
+
+    let ret_var = vartab.temp_anonymous(&ty);
+
+    let ret = Expression::Variable {
+        loc: pt::Loc::Codegen,
+        ty: ty.clone(),
+        var_no: ret_var,
+    };
+
+    vartab.new_dirty_tracker();
+
+    let tag = extract_tag(arg.clone());
+
+    let val_is_u64_small = cfg.new_basic_block("u64_val_is_u64_small".to_string());
+    let val_is_u32_small = cfg.new_basic_block("u64_val_is_u32_small".to_string());
+    let val_in_host = cfg.new_basic_block("u64_val_is_host".to_string());
+    let val_not_u64_small = cfg.new_basic_block("u64_val_not_u64_small".to_string());
+    let return_block = cfg.new_basic_block("u64_finish".to_string());
+
+    let is_u64_small = Expression::Equal {
+        loc: pt::Loc::Codegen,
+        left: tag.clone().into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(6_u64),
+        }
+        .into(),
+    };
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: is_u64_small,
+            true_block: val_is_u64_small,
+            false_block: val_not_u64_small,
+        },
+    );
+
+    cfg.set_basic_block(val_is_u64_small);
+
+    let u64_small_value = Expression::ShiftRight {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
+        left: arg.clone().into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(8_u64),
+        }
+        .into(),
+        signed: false,
+    };
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: pt::Loc::Codegen,
+            res: ret_var,
+            expr: u64_small_value,
+        },
+    );
+
+    cfg.add(
+        vartab,
+        Instr::Branch {
+            block: return_block,
+        },
+    );
+
+    cfg.set_basic_block(val_not_u64_small);
+
+    // Some host paths (for example VecLen) produce U32Val. Allow widening it
+    // when decoding to uint64.
+    let is_u32_small = Expression::Equal {
+        loc: pt::Loc::Codegen,
+        left: tag.into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(4_u64),
+        }
+        .into(),
+    };
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: is_u32_small,
+            true_block: val_is_u32_small,
+            false_block: val_in_host,
+        },
+    );
+
+    cfg.set_basic_block(val_is_u32_small);
+
+    let u32_small_value = Expression::ShiftRight {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
+        left: arg.clone().into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(32_u64),
+        }
+        .into(),
+        signed: false,
+    };
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: pt::Loc::Codegen,
+            res: ret_var,
+            expr: u32_small_value,
+        },
+    );
+
+    cfg.add(
+        vartab,
+        Instr::Branch {
+            block: return_block,
+        },
+    );
+
+    cfg.set_basic_block(val_in_host);
+
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![ret_var],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjToU64.name().to_string(),
+            },
+            args: vec![arg],
+        },
+    );
+
+    cfg.add(
+        vartab,
+        Instr::Branch {
+            block: return_block,
+        },
+    );
+
+    cfg.set_basic_block(return_block);
+    cfg.set_phis(return_block, vartab.pop_dirty_tracker());
 
     ret
 }

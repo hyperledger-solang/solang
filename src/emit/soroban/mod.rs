@@ -117,6 +117,7 @@ impl HostFunctions {
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
             HostFunctions::StrKeyToAddr => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::GetLedgerTimestamp => bin.context.i64_type().fn_type(&[], false),
             HostFunctions::GetCurrentContractAddress => bin.context.i64_type().fn_type(&[], false),
             HostFunctions::ObjToI128Lo64 => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::ObjToI128Hi64 => bin.context.i64_type().fn_type(&[ty.into()], false),
@@ -172,6 +173,7 @@ impl SorobanTarget {
             }
             ast::Type::Uint(32) => ScSpecTypeDef::U32,
             ast::Type::Int(32) => ScSpecTypeDef::I32,
+            ast::Type::Enum(_) => ScSpecTypeDef::U32,
             ast::Type::Uint(64) => ScSpecTypeDef::U64,
             ast::Type::Int(64) => ScSpecTypeDef::I64,
             ast::Type::Int(128) => ScSpecTypeDef::I128,
@@ -327,6 +329,7 @@ impl SorobanTarget {
                             match ty {
                                 ast::Type::Uint(32) => ScSpecTypeDef::U32,
                                 ast::Type::Int(32) => ScSpecTypeDef::I32,
+                                ast::Type::Enum(_) => ScSpecTypeDef::U32,
                                 ast::Type::Uint(64) => ScSpecTypeDef::U64,
                                 &ast::Type::Int(64) => ScSpecTypeDef::I64,
                                 ast::Type::Int(128) => ScSpecTypeDef::I128,
@@ -364,6 +367,7 @@ impl SorobanTarget {
                         match ty {
                             ast::Type::Uint(32) => ScSpecTypeDef::U32,
                             ast::Type::Int(32) => ScSpecTypeDef::I32,
+                            ast::Type::Enum(_) => ScSpecTypeDef::U32,
                             ast::Type::Uint(64) => ScSpecTypeDef::U64,
                             ast::Type::Int(64) => ScSpecTypeDef::I64,
                             ast::Type::Int(128) => ScSpecTypeDef::I128,
@@ -458,6 +462,7 @@ impl SorobanTarget {
             HostFunctions::VecPut,
             HostFunctions::StringNewFromLinearMemory,
             HostFunctions::StrKeyToAddr,
+            HostFunctions::GetLedgerTimestamp,
             HostFunctions::GetCurrentContractAddress,
             HostFunctions::BytesNewFromLinearMemory,
             HostFunctions::BytesCopyToLinearMemory,
