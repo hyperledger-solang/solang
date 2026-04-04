@@ -107,7 +107,7 @@ fn lang_error(
         Variant {
             name: name.to_string(),
             fields: vec![Field::new(None, reg.register_type(ty).into(), None, vec![])],
-            index: n.try_into().expect("we do not allow custome error types"),
+            index: n.try_into().expect("we do not allow custom error types"),
             docs: Default::default(),
         }
     });
