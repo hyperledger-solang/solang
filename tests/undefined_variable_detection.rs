@@ -660,7 +660,6 @@ fn try_catch() {
                 r = hex"ABCD";
                 emit StringFailure(_err);
             } catch (bytes memory _err) {
-                r = hex"ABCD";
                 emit BytesFailure(_err);
             }
 
@@ -740,4 +739,26 @@ fn try_catch() {
         errors[0].notes[0].message,
         "Variable read before being defined"
     );
+}
+
+#[test]
+fn memory_array_delete() {
+    let file = r#"
+    contract C {
+        function len() public returns (uint ret) {
+            uint[] memory data = new uint[](2);
+            data[0] = 234;
+            data[1] = 123;
+            delete data[0];
+            delete data[1];
+            assembly {
+                ret := mload(data)
+            }
+        }
+    }
+    "#;
+
+    let ns = parse_and_codegen(file);
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 0);
 }

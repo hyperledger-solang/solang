@@ -216,6 +216,36 @@ pub(crate) fn statement(
         Statement::Delete(_, ty, expr) => {
             let var_expr = expression(expr, cfg, contract_no, Some(func), ns, vartab, opt);
 
+            // Check if this is a memory array element by checking if the type is a reference
+            // to a non-storage type (i.e., a memory array element)
+            match &ty {
+                Type::Ref(inner_ty) => {
+                    // This is a reference to memory, likely an array element
+                    // For delete operations, we need to set the element to its default value
+                    // Get the default value of the dereferenced type
+                    if let Some(default_value) = inner_ty.default(ns) {
+                        // Create a store instruction to set the element to its default value
+                        cfg.add(
+                            vartab,
+                            Instr::Store {
+                                dest: var_expr,
+                                data: default_value,
+                            },
+                        );
+                        return;
+                    }
+                    // If no default value available, this shouldn't happen for valid types
+                    // but we'll fall through to clear storage as a fallback
+                }
+                Type::StorageRef(_, _) => {
+                    // This is a storage reference, use clear storage
+                }
+                _ => {
+                    // For other types, use clear storage as fallback
+                }
+            }
+
+            // For non-memory array elements (storage references and other types), use clear storage
             cfg.add(
                 vartab,
                 Instr::ClearStorage {
