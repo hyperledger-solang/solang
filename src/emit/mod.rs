@@ -83,6 +83,7 @@ pub trait TargetRuntime<'a> {
         bin: &Binary<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
+        slot_ty: Option<&ast::Type>,
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a>;
@@ -91,9 +92,10 @@ pub trait TargetRuntime<'a> {
     fn storage_store(
         &self,
         bin: &Binary<'a>,
-        ty: &ast::Type,
+        elem_ty: &ast::Type,
         existing: bool,
         slot: &mut IntValue<'a>,
+        slot_ty: Option<&ast::Type>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,

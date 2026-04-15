@@ -14,6 +14,7 @@ mod reaching_definitions;
 pub mod revert;
 mod solana_accounts;
 mod solana_deploy;
+mod soroban;
 mod statements;
 mod storage;
 mod strength_reduce;
@@ -33,7 +34,7 @@ use self::{
     vartable::Vartable,
 };
 use crate::sema::ast::{
-    FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
+    ArrayLength, FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
 };
 use crate::{sema::ast, Target};
 use std::cmp::Ordering;
@@ -99,12 +100,15 @@ pub enum HostFunctions {
     PutContractData,
     GetContractData,
     HasContractData,
+    DeleteContractData,
     ExtendContractDataTtl,
     ExtendCurrentContractInstanceAndCodeTtl,
     LogFromLinearMemory,
     SymbolNewFromLinearMemory,
     VectorNew,
     VectorNewFromLinearMemory,
+    VecUnpackToLinearMemory,
+    VecLen,
     MapNewFromLinearMemory,
     Call,
     ObjToU64,
@@ -130,8 +134,12 @@ pub enum HostFunctions {
     MapNew,
     MapPut,
     VecPushBack,
+    VecPopBack,
+    VecGet,
+    VecPut,
     StringNewFromLinearMemory,
     StrKeyToAddr,
+    GetLedgerTimestamp,
     GetCurrentContractAddress,
     BytesNewFromLinearMemory,
     BytesLen,
@@ -144,12 +152,14 @@ impl HostFunctions {
             HostFunctions::PutContractData => "l._",
             HostFunctions::GetContractData => "l.1",
             HostFunctions::HasContractData => "l.0",
+            HostFunctions::DeleteContractData => "l.2",
             HostFunctions::ExtendContractDataTtl => "l.7",
             HostFunctions::ExtendCurrentContractInstanceAndCodeTtl => "l.8",
             HostFunctions::LogFromLinearMemory => "x._",
             HostFunctions::SymbolNewFromLinearMemory => "b.j",
             HostFunctions::VectorNew => "v._",
             HostFunctions::VectorNewFromLinearMemory => "v.g",
+            HostFunctions::VecUnpackToLinearMemory => "v.h",
             HostFunctions::Call => "d._",
             HostFunctions::ObjToU64 => "i.0",
             HostFunctions::ObjFromU64 => "i._",
@@ -177,10 +187,15 @@ impl HostFunctions {
             HostFunctions::VecPushBack => "v.6",
             HostFunctions::StringNewFromLinearMemory => "b.i",
             HostFunctions::StrKeyToAddr => "a.1",
+            HostFunctions::GetLedgerTimestamp => "x.4",
             HostFunctions::GetCurrentContractAddress => "x.7",
             HostFunctions::BytesNewFromLinearMemory => "b.3",
             HostFunctions::BytesLen => "b.8",
             HostFunctions::BytesCopyToLinearMemory => "b.1",
+            HostFunctions::VecLen => "v.3",
+            HostFunctions::VecPopBack => "v.7",
+            HostFunctions::VecGet => "v.1",
+            HostFunctions::VecPut => "v.0",
         }
     }
 }
@@ -360,31 +375,46 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
     for layout in &ns.contracts[contract_no].layout {
         let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
-        if let Some(init) = &var.initializer {
-            let storage = ns.contracts[contract_no].get_storage_slot(
-                pt::Loc::Codegen,
-                layout.contract_no,
-                layout.var_no,
-                ns,
-                None,
-            );
+        let soroban_init_with_vec = ns.target == Target::Soroban
+            && match &var.ty {
+                Type::String | Type::DynamicBytes | Type::Slice(_) => true,
+                Type::Array(elem_ty, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                    !elem_ty.is_reference_type(ns)
+                }
+                _ => false,
+            };
 
-            let mut value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
+        let mut value = if let Some(init) = &var.initializer {
+            expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt)
+        } else if soroban_init_with_vec {
+            soroban::soroban_vec_new(&var.loc, &var.ty, &mut cfg, &mut vartab)
+        } else {
+            continue;
+        };
 
-            if ns.target == Target::Soroban {
-                value = soroban_encode_arg(value, &mut cfg, &mut vartab, ns);
-            }
+        let storage = ns.contracts[contract_no].get_storage_slot(
+            pt::Loc::Codegen,
+            layout.contract_no,
+            layout.var_no,
+            ns,
+            None,
+        );
 
-            cfg.add(
-                &mut vartab,
-                Instr::SetStorage {
-                    value,
-                    ty: var.ty.clone(),
-                    storage,
-                    storage_type: var.storage_type.clone(),
-                },
-            );
+        //let mut value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
+
+        if ns.target == Target::Soroban {
+            value = soroban_encode_arg(value, &mut cfg, &mut vartab, ns);
         }
+
+        cfg.add(
+            &mut vartab,
+            Instr::SetStorage {
+                value,
+                ty: var.ty.clone(),
+                storage,
+                storage_type: var.storage_type.clone(),
+            },
+        );
     }
 
     cfg.add(&mut vartab, Instr::Return { value: Vec::new() });

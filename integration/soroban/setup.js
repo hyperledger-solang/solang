@@ -27,7 +27,11 @@ const NETWORK_PASSPHRASE = Networks.TESTNET;
 
 // --- Paths ---
 const CONTRACT_IDS_DIR = path.join(dirname, '.stellar', 'contract-ids');
-const ALICE_FILE = path.join(dirname, 'alice.txt'); // tests expect seed-only here
+const SIGNER_FILES = {
+  alice: path.join(dirname, 'alice.txt'),
+  bob: path.join(dirname, 'bob.txt'),
+  charlie: path.join(dirname, 'charlie.txt'),
+};
 
 // --- SDK server ---
 const server = new rpc.Server(RPC_URL);
@@ -58,33 +62,42 @@ function extractSeed(raw) {
   return null;
 }
 
-// Save alice in the legacy format expected by your tests: ONLY the secret seed.
-function saveAliceTxtSeedOnly(kp) {
-  writeFileSync(ALICE_FILE, kp.secret().trim() + '\n');
+// Save signer seed in the legacy format expected by tests.
+function saveSignerSeedOnly(signerName, kp) {
+  const signerFile = SIGNER_FILES[signerName];
+  if (!signerFile) {
+    throw new Error(`unknown signer '${signerName}'`);
+  }
+  writeFileSync(signerFile, kp.secret().trim() + '\n');
 }
 
-// create/fund or reuse an account named "alice"
-async function getAlice() {
-  // prefer env override if you want to reuse a key (optional)
-  const envRaw = process.env.ALICE_SECRET?.trim();
+// create/fund or reuse signer account
+async function getSigner(signerName) {
+  const signerFile = SIGNER_FILES[signerName];
+  if (!signerFile) {
+    throw new Error(`unknown signer '${signerName}'`);
+  }
+
+  const envVarName = `${signerName.toUpperCase()}_SECRET`;
+  const envRaw = process.env[envVarName]?.trim();
   if (envRaw) {
     const seed = extractSeed(envRaw);
-    if (!seed) throw new Error('ALICE_SECRET is set but not a valid S… seed');
+    if (!seed) throw new Error(`${envVarName} is set but not a valid S… seed`);
     const kp = Keypair.fromSecret(seed);
     await server.requestAirdrop(kp.publicKey()).catch(() => {}); // no-op if already funded
-    saveAliceTxtSeedOnly(kp); // normalize file for tests
+    saveSignerSeedOnly(signerName, kp); // normalize file for tests
     return kp;
   }
 
-  // if we already wrote alice.txt, parse/normalize it (supports multi-line legacy)
-  if (existsSync(ALICE_FILE)) {
-    const raw = readFileSync(ALICE_FILE, 'utf8');
+  // if signer file exists, parse/normalize it (supports multi-line legacy)
+  if (existsSync(signerFile)) {
+    const raw = readFileSync(signerFile, 'utf8');
     const seed = extractSeed(raw);
     if (seed) {
       const kp = Keypair.fromSecret(seed);
       await server.requestAirdrop(kp.publicKey()).catch(() => {});
       // normalize file to seed-only so future runs & tests are stable
-      saveAliceTxtSeedOnly(kp);
+      saveSignerSeedOnly(signerName, kp);
       return kp;
     }
     // fall through if file was malformed
@@ -92,9 +105,9 @@ async function getAlice() {
 
   // otherwise generate & fund
   const kp = Keypair.random();
-  logStep(`Funding ${kp.publicKey()} via Friendbot`);
+  logStep(`Funding ${signerName} (${kp.publicKey()}) via Friendbot`);
   await server.requestAirdrop(kp.publicKey());
-  saveAliceTxtSeedOnly(kp);
+  saveSignerSeedOnly(signerName, kp);
   return kp;
 }
 
@@ -189,26 +202,29 @@ async function createContract(sourceAccount, signer, wasmHash) {
   return contractId;
 }
 
-async function deployOne(wasmPath, signer) {
+async function deployOne(wasmPath, signerName, signer) {
   const name = filenameNoExtension(wasmPath);
   const outFile = path.join(CONTRACT_IDS_DIR, `${name}.txt`);
   const wasmBytes = readFileSync(wasmPath);
 
-  logStep(`Uploading WASM: ${wasmPath}`);
+  logStep(`[${signerName}] Uploading WASM: ${wasmPath}`);
   let account = await loadSourceAccount(signer.publicKey());
   const wasmHash = await uploadWasm(account, signer, wasmBytes);
 
-  logStep(`Creating contract for: ${name}`);
+  logStep(`[${signerName}] Creating contract for: ${name}`);
   account = await loadSourceAccount(signer.publicKey()); // refresh sequence
   const contractId = await createContract(account, signer, wasmHash);
 
   mkdirSync(CONTRACT_IDS_DIR, { recursive: true });
   writeFileSync(outFile, contractId + '\n');
-  console.log(`✔ Wrote contract id -> ${outFile}`);
+  console.log(`✔ [${signerName}] Wrote contract id -> ${outFile}`);
 }
 
 async function deployAll() {
-  const signer = await getAlice();
+  const signerNames = ['alice', 'bob', 'charlie'];
+  const signers = await Promise.all(
+    signerNames.map(async (name) => ({ name, keypair: await getSigner(name) }))
+  );
   const files = readdirSync(dirname).filter((f) => f.endsWith('.wasm'));
 
   // include your Rust artifact, same path you used before
@@ -221,10 +237,28 @@ async function deployAll() {
   );
   if (!files.includes(rustWasm)) files.push(rustWasm);
 
+  files.sort();
   console.log('Found WASM files:', files);
-  for (const f of files) {
-    const full = path.join(dirname, f);
-    await deployOne(full, signer);
+
+  // Shard files round-robin across signers; each signer runs sequentially to
+  // keep account sequence numbers valid, while signer groups run in parallel.
+  const shardMap = signers.map((s) => ({ signer: s, files: [] }));
+  files.forEach((file, index) => {
+    shardMap[index % shardMap.length].files.push(file);
+  });
+
+  await Promise.all(
+    shardMap.map(async ({ signer, files: signerFiles }) => {
+      for (const f of signerFiles) {
+        const full = path.join(dirname, f);
+        await deployOne(full, signer.name, signer.keypair);
+      }
+    })
+  );
+
+  console.log('Deployment shard summary:');
+  for (const { signer, files: signerFiles } of shardMap) {
+    console.log(`  ${signer.name}: ${signerFiles.length} contracts`);
   }
 }
 

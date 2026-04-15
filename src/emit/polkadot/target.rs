@@ -1440,6 +1440,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         bin: &Binary<'a>,
         ty: &Type,
         slot: &mut IntValue<'a>,
+        _slot_ty: Option<&Type>,
         function: FunctionValue,
         _storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
@@ -1456,6 +1457,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         ty: &Type,
         _existing: bool,
         slot: &mut IntValue<'a>,
+        _slot_ty: Option<&Type>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
         _: &Option<StorageType>,

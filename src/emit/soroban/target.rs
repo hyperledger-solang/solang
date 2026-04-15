@@ -42,9 +42,17 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         bin: &Binary<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
+        slot_ty: Option<&ast::Type>,
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
+        if let Some(Type::StorageRef(_, inner)) = slot_ty {
+            if let Type::Array(inner_ty, _) = inner.as_ref() {
+                if !is_reference_type(inner_ty) {
+                    return get_storage_vec_subscript(bin, function, *slot);
+                }
+            }
+        }
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(bin);
 
@@ -133,10 +141,19 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         ty: &ast::Type,
         existing: bool,
         slot: &mut IntValue<'a>,
+        slot_ty: Option<&ast::Type>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) {
+        if let Some(Type::StorageRef(_, inner)) = slot_ty {
+            if let Type::Array(inner_ty, _) = inner.as_ref() {
+                if !is_reference_type(inner_ty) {
+                    return set_storage_vec_subscript(bin, function, *slot, dest.into_int_value());
+                }
+            }
+        }
+
         emit_context!(bin);
 
         let storage_type = storage_type_to_int(storage_type);
@@ -155,7 +172,15 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
         // In case of struct, we receive a buffer in that format: [ field1, field2, ... ] where each field is a Soroban tagged value of type i64
         // therefore, for each field, we need to extract it from the buffer and call PutContractData for each field separately
-        if let Type::Struct(ast::StructType::UserDefined(n)) = ty {
+
+        // This check is added to handle the case we are stroing a struct in storage
+        let inner_ty = if let Type::StorageRef(mutable, inner) = ty {
+            inner
+        } else {
+            ty
+        };
+
+        if let Type::Struct(ast::StructType::UserDefined(n)) = inner_ty {
             let field_count = &bin.ns.structs[*n].fields.len();
 
             let data_ptr = bin.vector_bytes(dest);
@@ -198,7 +223,23 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: &mut IntValue<'a>,
         function: FunctionValue<'a>,
     ) {
-        unimplemented!()
+        let storage_type = storage_type_to_int(&None);
+
+        let type_int = bin.context.i64_type().const_int(storage_type, false);
+
+        let function_value = bin
+            .module
+            .get_function(HostFunctions::DeleteContractData.name())
+            .unwrap();
+
+        let call = bin
+            .builder
+            .build_call(
+                function_value,
+                &[slot.as_basic_value_enum().into(), type_int.into()],
+                "del_contract_data",
+            )
+            .unwrap();
     }
 
     // Bytes and string have special storage layout
@@ -272,6 +313,50 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
+        if let Type::StorageRef(_, ty) = ty {
+            if let Type::Array(inner, _) = *ty.clone() {
+                if !is_reference_type(&inner) {
+                    // here, we return a memory array with the following format: [ slot, index ]
+
+                    let arr = bin
+                        .builder
+                        .build_array_alloca(
+                            bin.context.i64_type(),
+                            bin.context.i64_type().const_int(2, false),
+                            "array_subscript",
+                        )
+                        .unwrap();
+
+                    bin.builder.build_store(arr, slot).unwrap();
+
+                    // advance pointer to index
+
+                    let index_ptr = unsafe {
+                        bin.builder
+                            .build_gep(
+                                bin.context.i64_type().array_type(1),
+                                arr,
+                                &[
+                                    bin.context.i64_type().const_zero(),
+                                    bin.context.i64_type().const_int(1, false),
+                                ],
+                                "index_ptr",
+                            )
+                            .unwrap()
+                    };
+
+                    bin.builder.build_store(index_ptr, index).unwrap();
+
+                    // now return the pointer as int value
+                    let arr_ptr_as_int = bin
+                        .builder
+                        .build_ptr_to_int(arr, bin.context.i64_type(), "array_ptr_as_int")
+                        .unwrap();
+                    return arr_ptr_as_int;
+                }
+            }
+        }
+
         let vec_new = bin
             .builder
             .build_call(
@@ -358,12 +443,83 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     fn storage_array_length(
         &self,
-        _bin: &Binary<'a>,
+        bin: &Binary<'a>,
         _function: FunctionValue,
-        _slot: IntValue<'a>,
-        _elem_ty: &Type,
+        slot: IntValue<'a>,
+        elem_ty: &Type,
     ) -> IntValue<'a> {
-        unimplemented!()
+        if !is_reference_type(elem_ty) {
+            // Native arrays use VecObject layout: load vec object then call VecLen.
+            let load_storage = bin
+                .builder
+                .build_call(
+                    bin.module
+                        .get_function(HostFunctions::GetContractData.name())
+                        .unwrap(),
+                    &[
+                        slot.into(),
+                        bin.context.i64_type().const_int(1, false).into(), // persistent storage
+                    ],
+                    "load_storage",
+                )
+                .unwrap()
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            let u32_val = bin
+                .builder
+                .build_call(
+                    bin.module
+                        .get_function(HostFunctions::VecLen.name())
+                        .unwrap(),
+                    &[load_storage.into()],
+                    "vec_len",
+                )
+                .unwrap()
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            // VecLen returns U32Val => payload in top 32 bits.
+            return bin
+                .builder
+                .build_right_shift(
+                    u32_val,
+                    bin.context.i64_type().const_int(32, false),
+                    false,
+                    "length",
+                )
+                .unwrap();
+        }
+        // Reference arrays keep old layout: length encoded in slot as U64Small.
+        let storage_ty = bin.context.i64_type().const_int(1, false);
+        let loaded_len = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::GetContractData.name())
+                    .unwrap(),
+                &[slot.into(), storage_ty.into()],
+                "get_len",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        // U64Small payload is shifted by 8 bits.
+        bin.builder
+            .build_right_shift(
+                loaded_len,
+                bin.context.i64_type().const_int(8, false),
+                false,
+                "length",
+            )
+            .unwrap()
     }
 
     /// keccak256 hash
@@ -579,6 +735,111 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         emit_context!(bin);
 
         match expr {
+            Expression::Builtin {
+                kind: Builtin::Timestamp,
+                args,
+                ..
+            } => {
+                assert_eq!(args.len(), 0, "timestamp expects no arguments");
+
+                let function_name = HostFunctions::GetLedgerTimestamp.name();
+                let function_value = bin.module.get_function(function_name).unwrap();
+                let timestamp_val = bin
+                    .builder
+                    .build_call(function_value, &[], function_name)
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                // Decode U64Val: U64Small values are immediate, otherwise decode U64Object via ObjToU64.
+                let tag = bin
+                    .builder
+                    .build_and(
+                        timestamp_val,
+                        bin.context.i64_type().const_int(0xff, false),
+                        "timestamp_tag",
+                    )
+                    .unwrap();
+                let is_u64_small = bin
+                    .builder
+                    .build_int_compare(
+                        inkwell::IntPredicate::EQ,
+                        tag,
+                        bin.context.i64_type().const_int(6, false), // Tag::U64Small
+                        "is_u64_small",
+                    )
+                    .unwrap();
+
+                let value_is_small = bin
+                    .context
+                    .append_basic_block(function, "timestamp_value_is_small");
+                let value_is_object = bin
+                    .context
+                    .append_basic_block(function, "timestamp_value_is_object");
+                let value_decoded = bin
+                    .context
+                    .append_basic_block(function, "timestamp_value_decoded");
+
+                bin.builder
+                    .build_conditional_branch(is_u64_small, value_is_small, value_is_object)
+                    .unwrap();
+
+                bin.builder.position_at_end(value_is_small);
+
+                let small_value = bin
+                    .builder
+                    .build_right_shift(
+                        timestamp_val,
+                        bin.context.i64_type().const_int(8, false),
+                        false,
+                        "timestamp_small_value",
+                    )
+                    .unwrap();
+
+                bin.builder
+                    .build_unconditional_branch(value_decoded)
+                    .unwrap();
+
+                let small_value_block = bin.builder.get_insert_block().unwrap();
+
+                bin.builder.position_at_end(value_is_object);
+
+                let decode_function_name = HostFunctions::ObjToU64.name();
+                let decode_function_value = bin.module.get_function(decode_function_name).unwrap();
+                let object_value = bin
+                    .builder
+                    .build_call(
+                        decode_function_value,
+                        &[timestamp_val.into()],
+                        decode_function_name,
+                    )
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                bin.builder
+                    .build_unconditional_branch(value_decoded)
+                    .unwrap();
+
+                let object_value_block = bin.builder.get_insert_block().unwrap();
+
+                bin.builder.position_at_end(value_decoded);
+
+                let timestamp = bin
+                    .builder
+                    .build_phi(bin.context.i64_type(), "timestamp")
+                    .unwrap();
+                timestamp.add_incoming(&[
+                    (&small_value, small_value_block),
+                    (&object_value, object_value_block),
+                ]);
+
+                timestamp.as_basic_value()
+            }
             Expression::Builtin {
                 kind: Builtin::ExtendTtl,
                 args,
@@ -823,6 +1084,145 @@ fn encode_value<'a>(
         .unwrap()
 }
 
+fn load_slot_index_from_key_ptr<'a>(
+    bin: &Binary<'a>,
+    key_ptr: PointerValue<'a>,
+) -> (IntValue<'a>, IntValue<'a>) {
+    let slot_val = bin
+        .builder
+        .build_load(bin.context.i64_type(), key_ptr, "key_slot")
+        .unwrap()
+        .into_int_value(); // slot loaded from key array
+    let index_ptr = unsafe {
+        bin.builder
+            .build_gep(
+                bin.context.i64_type(),
+                key_ptr,
+                &[bin.context.i64_type().const_int(1, false)],
+                "key_index_ptr",
+            )
+            .unwrap()
+    }; // pointer to index element
+    let index_val = bin
+        .builder
+        .build_load(bin.context.i64_type(), index_ptr, "key_index")
+        .unwrap()
+        .into_int_value(); // index loaded from key array
+    (slot_val, index_val)
+}
+
+fn get_storage_vec_subscript<'a>(
+    bin: &Binary<'a>,
+    _function: FunctionValue<'a>,
+    key_vec: IntValue<'a>,
+) -> BasicValueEnum<'a> {
+    let key_ptr = bin
+        .builder
+        .build_int_to_ptr(key_vec, bin.context.ptr_type(Default::default()), "key_ptr")
+        .unwrap(); // pointer to key array
+    let (slot_val, index_val) = load_slot_index_from_key_ptr(bin, key_ptr); // slot/index from key array
+
+    let vec_obj = bin
+        .builder
+        .build_call(
+            bin.module
+                .get_function(HostFunctions::GetContractData.name())
+                .unwrap(),
+            &[
+                slot_val.into(),
+                bin.context.i64_type().const_int(1, false).into(),
+            ],
+            "load_storage",
+        )
+        .unwrap()
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value(); // vec object from storage
+    let index_val = encode_value(index_val, 32, 4, bin); // index encoded as u32 val
+    let elem_val = bin
+        .builder
+        .build_call(
+            bin.module
+                .get_function(HostFunctions::VecGet.name())
+                .unwrap(),
+            &[vec_obj.into(), index_val.into()],
+            "vec_get",
+        )
+        .unwrap()
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value(); // element from vec
+    elem_val.as_basic_value_enum()
+}
+
+fn set_storage_vec_subscript<'a>(
+    bin: &Binary<'a>,
+    _function: FunctionValue<'a>,
+    key_vec: IntValue<'a>,
+    value: IntValue<'a>,
+) {
+    let key_ptr = bin
+        .builder
+        .build_int_to_ptr(key_vec, bin.context.ptr_type(Default::default()), "key_ptr")
+        .unwrap(); // pointer to key array
+    let (slot_val, index_val) = load_slot_index_from_key_ptr(bin, key_ptr); // slot/index from key array
+
+    // encode index as u32 val
+    let index_val = encode_value(index_val, 32, 4, bin); // index encoded as u32 val
+
+    let vec_obj = bin
+        .builder
+        .build_call(
+            bin.module
+                .get_function(HostFunctions::GetContractData.name())
+                .unwrap(),
+            &[
+                slot_val.into(),
+                bin.context.i64_type().const_int(1, false).into(),
+            ],
+            "load_storage",
+        )
+        .unwrap()
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value(); // vec object from storage
+    let new_vec_obj = bin
+        .builder
+        .build_call(
+            bin.module
+                .get_function(HostFunctions::VecPut.name())
+                .unwrap(),
+            &[vec_obj.into(), index_val.into(), value.into()],
+            "vec_put",
+        )
+        .unwrap()
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value(); // updated vec object
+    let _store_storage = bin
+        .builder
+        .build_call(
+            bin.module
+                .get_function(HostFunctions::PutContractData.name())
+                .unwrap(),
+            &[
+                slot_val.into(),
+                new_vec_obj.into(),
+                bin.context.i64_type().const_int(1, false).into(),
+            ],
+            "store_storage",
+        )
+        .unwrap()
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value(); // store updated vec
+}
+
 fn is_val_true<'ctx>(bin: &Binary<'ctx>, val: IntValue<'ctx>) -> IntValue<'ctx> {
     let tag_mask = bin.context.i64_type().const_int(0xff, false);
     let tag_true = bin.context.i64_type().const_int(1, false);
@@ -847,6 +1247,7 @@ pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<
         Type::Bool => 0,        // Tag::False
         Type::Uint(32) => 4,    // Tag::U32Val
         Type::Int(32) => 5,     // Tag::I32Val
+        Type::Enum(_) => 4,     // Tag::U32Val
         Type::Uint(64) => 6,    // Tag::U64Small
         Type::Int(64) => 7,     // Tag::I64Small
         Type::Uint(128) => 10,  // Tag::U128Small
@@ -1054,4 +1455,24 @@ pub fn soroban_get_fields_to_val_buffer<'a>(
 
     //bin.vector_bytes(  vec_ptr.as_basic_value_enum())
     vec_ptr
+}
+
+fn is_reference_type(ty: &Type) -> bool {
+    match ty {
+        Type::Bool => false,
+        Type::Address(_) => false,
+        Type::Int(_) => false,
+        Type::Uint(_) => false,
+        Type::Rational => false,
+        Type::Bytes(_) => false,
+        Type::Enum(_) => false,
+        Type::Struct(_) => true,
+        Type::Array(..) => true,
+        Type::DynamicBytes => true,
+        Type::String => true,
+        Type::Mapping(..) => true,
+        Type::Contract(_) => false,
+        Type::InternalFunction { .. } => false,
+        _ => false,
+    }
 }

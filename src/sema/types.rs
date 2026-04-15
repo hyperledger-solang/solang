@@ -1303,6 +1303,7 @@ impl Type {
             Type::Unresolved => "unresolved".into(),
             Type::BufferPointer => "buffer_pointer".into(),
             Type::FunctionSelector => "function_selector".into(),
+            Type::SorobanHandle(inner) => format!("soroban_handle({})", inner.to_string(ns)),
         }
     }
 
