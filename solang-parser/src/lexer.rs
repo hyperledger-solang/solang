@@ -880,10 +880,7 @@ impl<'input> Lexer<'input> {
                         // that standard Solidity code using these words as
                         // variable or function names continues to compile.
                         if !self.soroban
-                            && matches!(
-                                w,
-                                Token::Persistent | Token::Temporary | Token::Instance
-                            )
+                            && matches!(w, Token::Persistent | Token::Temporary | Token::Instance)
                         {
                             Some((start, Token::Identifier(id), end))
                         } else {
