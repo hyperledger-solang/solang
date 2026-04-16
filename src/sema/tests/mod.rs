@@ -611,6 +611,30 @@ contract Child {
 }
 
 #[test]
+fn state_initializer_contract_call_requires_accounts() {
+    let src = r#"
+    contract C {
+        uint public x = this.foo();
+
+        function foo() external pure returns (uint) {
+            return 1;
+        }
+    }
+    "#;
+    let mut cache = FileResolver::default();
+    cache.set_file_contents("test.sol", src.to_string());
+
+    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
+
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(
+        errors[0].message,
+        "accounts are required for calling a contract from this context. You can provide the accounts with the {accounts: ...} call argument"
+    );
+}
+
+#[test]
 fn get_import_map() {
     let mut cache = FileResolver::default();
     let map = OsString::from("@openzepellin");
