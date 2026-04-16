@@ -4,7 +4,7 @@
 
 mod data_account;
 
-use crate::sema::ast::{Expression, Parameter, Statement, TryCatch, Type};
+use crate::sema::ast::{Expression, ExternalCallAccounts, Parameter, Statement, TryCatch, Type};
 use crate::sema::yul::ast::InlineAssembly;
 use crate::{parse_and_resolve, sema::ast, FileResolver, Target};
 use solang_parser::pt::Loc;
@@ -628,6 +628,38 @@ fn state_initializer_contract_call_requires_accounts() {
 
     let errors = ns.diagnostics.errors();
     assert!(errors.is_empty());
+
+    let contract = &ns.contracts[0];
+    let foo_no = *contract
+        .functions
+        .iter()
+        .find(|function_no| ns.functions[**function_no].name == "foo")
+        .unwrap();
+
+    let initializer = contract.variables[0].initializer.as_ref().unwrap();
+
+    match initializer {
+        Expression::ExternalFunctionCall {
+            returns,
+            function,
+            args,
+            call_args,
+            ..
+        } => {
+            assert_eq!(returns, &vec![Type::Uint(256)]);
+            assert!(args.is_empty());
+            assert!(matches!(
+                call_args.accounts,
+                ExternalCallAccounts::AbsentArgument
+            ));
+
+            assert!(matches!(
+                function.as_ref(),
+                Expression::ExternalFunction { function_no, .. } if *function_no == foo_no
+            ));
+        }
+        _ => panic!("unexpected initializer expression: {initializer:?}"),
+    }
 }
 
 #[test]
