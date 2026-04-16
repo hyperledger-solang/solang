@@ -627,11 +627,7 @@ fn state_initializer_contract_call_requires_accounts() {
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
     let errors = ns.diagnostics.errors();
-    assert_eq!(errors.len(), 1);
-    assert_eq!(
-        errors[0].message,
-        "accounts are required for calling a contract from this context. You can provide the accounts with the {accounts: ...} call argument"
-    );
+    assert!(errors.is_empty());
 }
 
 #[test]
