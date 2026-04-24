@@ -315,3 +315,18 @@ fn storage_slot_on_return_data() {
     runtime.function("get", key.to_vec());
     assert_eq!(runtime.output(), runtime.caller())
 }
+
+#[test]
+fn continue_only_for_body() {
+    build_solidity(
+        r#"
+contract C {
+    function f() public pure {
+        assembly {
+            for { let i := 0 } lt(i, 1) { i := add(i, 1) } { continue }
+        }
+    }
+}
+        "#,
+    );
+}
