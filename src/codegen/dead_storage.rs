@@ -336,6 +336,11 @@ fn apply_transfers(
 
     debug_assert_eq!(transfers.len(), cfg.blocks[block_no].instr.len());
 
+    if transfers.is_empty() {
+        block_vars.insert(block_no, vec![vars.clone()]);
+        return;
+    }
+
     // this is done in two passes. The first pass just deals with variables.
     // The second pass deals with storage stores
 
