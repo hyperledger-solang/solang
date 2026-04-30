@@ -52,6 +52,9 @@ Documented Counterparts
    * - `token <https://github.com/stellar/soroban-examples/tree/main/token>`_
      - `docs/examples/soroban/token.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/token.sol>`_
      - Token-style contract with balances, allowances, and Soroban auth.
+   * - `events <https://github.com/stellar/soroban-examples/tree/main/events>`_
+     - `tests/soroban_testcases/events.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/events.rs>`_
+     - Solidity ``event`` declarations and ``emit`` statements, with indexed fields mapping to Soroban topics and non-indexed fields mapping to event data.
    * - `ttl <https://github.com/stellar/soroban-examples/tree/main/ttl>`_
      - `docs/examples/soroban/ttl_storage.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/ttl_storage.sol>`_
      - Extending TTL on stored contract data.
@@ -172,7 +175,6 @@ The following upstream examples do not currently have a documented Solidity coun
 - `deployer <https://github.com/stellar/soroban-examples/tree/main/deployer>`_
 - `errors <https://github.com/stellar/soroban-examples/tree/main/errors>`_
 - `eth_abi <https://github.com/stellar/soroban-examples/tree/main/eth_abi>`_
-- `events <https://github.com/stellar/soroban-examples/tree/main/events>`_
 - `fuzzing <https://github.com/stellar/soroban-examples/tree/main/fuzzing>`_
 - `merkle_distribution <https://github.com/stellar/soroban-examples/tree/main/merkle_distribution>`_
 - `mint-lock <https://github.com/stellar/soroban-examples/tree/main/mint-lock>`_

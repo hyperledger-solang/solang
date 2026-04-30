@@ -156,6 +156,10 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::ContractEvent => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
         }
     }
 }
@@ -468,6 +472,7 @@ impl SorobanTarget {
             HostFunctions::BytesCopyToLinearMemory,
             HostFunctions::VecLen,
             HostFunctions::VecPopBack,
+            HostFunctions::ContractEvent,
         ];
 
         for func in &host_functions {
