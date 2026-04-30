@@ -1017,11 +1017,35 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     fn emit_event<'b>(
         &self,
         bin: &Binary<'b>,
-        function: FunctionValue<'b>,
+        _function: FunctionValue<'b>,
         data: BasicValueEnum<'b>,
         topics: &[BasicValueEnum<'b>],
     ) {
-        unimplemented!()
+        emit_context!(bin);
+
+        // Build a Soroban VecObject from the topics slice.
+        // VectorNew() -> VecObject
+        let mut topics_vec = call!(HostFunctions::VectorNew.name(), &[])
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        // VecPushBack(vec: VecObject, val: Val) -> VecObject
+        for topic in topics.iter() {
+            topics_vec = call!(
+                HostFunctions::VecPushBack.name(),
+                &[topics_vec.into(), (*topic).into()]
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+        }
+
+        // contract_event(topics: VecObject, data: Val) -> Void
+        call!(
+            HostFunctions::ContractEvent.name(),
+            &[topics_vec.into(), data.into()]
+        );
     }
 
     /// Return ABI encoded data
