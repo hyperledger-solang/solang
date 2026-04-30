@@ -2,10 +2,12 @@
 
 mod polkadot;
 mod solana;
+mod soroban;
 
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::events::polkadot::PolkadotEventEmitter;
 use crate::codegen::events::solana::SolanaEventEmitter;
+use crate::codegen::events::soroban::SorobanEventEmitter;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
 use crate::sema::ast;
@@ -51,6 +53,11 @@ pub(super) fn new_event_emitter<'a>(
             event_no,
         }),
 
-        Target::Soroban => todo!(),
+        Target::Soroban => Box::new(SorobanEventEmitter {
+            loc: *loc,
+            args,
+            ns,
+            event_no,
+        }),
     }
 }

@@ -144,6 +144,7 @@ pub enum HostFunctions {
     BytesNewFromLinearMemory,
     BytesLen,
     BytesCopyToLinearMemory,
+    ContractEvent,
 }
 
 impl HostFunctions {
@@ -192,6 +193,7 @@ impl HostFunctions {
             HostFunctions::BytesNewFromLinearMemory => "b.3",
             HostFunctions::BytesLen => "b.8",
             HostFunctions::BytesCopyToLinearMemory => "b.1",
+            HostFunctions::ContractEvent => "x.1",
             HostFunctions::VecLen => "v.3",
             HostFunctions::VecPopBack => "v.7",
             HostFunctions::VecGet => "v.1",
