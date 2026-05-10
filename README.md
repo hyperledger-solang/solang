@@ -83,6 +83,12 @@ stellar contract invoke --network testnet --id CDGUMUXA6IRRVMMKIVQJWLZZONDXBJ4AI
 ℹ️  Signing transaction: e0d68ae85bfbe0fceed8bcadd6613e12b3159f27dbf7c18e35e94de2b4a11ee2
 ```
 
+For the current Soroban support matrix, see the
+[`Soroban support matrix`](https://solang.readthedocs.io/en/latest/targets/soroban_support_matrix.html).
+For Soroban compatibility details, see the
+[`Soroban target docs`](https://solang.readthedocs.io/en/latest/targets/soroban.html).
+The repository-level Soroban maintenance policy lives in [`MAINTENANCE.MD`](MAINTENANCE.MD).
+
 
 
 ## Tentative roadmap
