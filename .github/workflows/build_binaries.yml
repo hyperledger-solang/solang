@@ -22,7 +22,7 @@ jobs:
       - name: Build
         run: cargo build --verbose --release
       - name: Test
-        run: cargo test --workspace --verbose --release
+        run: cargo test --workspace --lib --bins --verbose --release
       - name: Package
         run: |
           mkdir -p dist
@@ -48,7 +48,7 @@ jobs:
       - run: tar Jxf llvm16.0-linux-arm64.tar.xz
       - run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
       - run: cargo build --verbose --release
-      - run: cargo test --workspace --verbose --release
+      - run: cargo test --workspace --lib --bins --verbose --release
       - run: |
           mkdir -p dist
           cp target/release/solang dist/solang-linux-arm64
@@ -71,7 +71,7 @@ jobs:
         with:
           components: clippy
       - run: cargo build --release --verbose
-      - run: cargo test --workspace --release --verbose
+      - run: cargo test --workspace --lib --bins --release --verbose
       - run: |
           mkdir dist
           copy target\release\solang.exe dist\solang.exe
@@ -92,7 +92,7 @@ jobs:
       - run: tar Jxf llvm16.0-mac-arm.tar.xz
       - run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
       - run: cargo build --release --verbose
-      - run: cargo test --workspace --release --verbose
+      - run: cargo test --workspace --lib --bins --release --verbose
       - run: |
           mkdir -p dist
           cp target/release/solang dist/solang-mac-arm
@@ -113,7 +113,7 @@ jobs:
       - run: tar Jxf llvm16.0-mac-intel.tar.xz
       - run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
       - run: cargo build --release --verbose
-      - run: cargo test --workspace --release --verbose
+      - run: cargo test --workspace --lib --bins --release --verbose
       - run: |
           mkdir -p dist
           cp target/release/solang dist/solang-mac-intel
