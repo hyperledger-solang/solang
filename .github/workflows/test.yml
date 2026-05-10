@@ -187,11 +187,46 @@ jobs:
           ./test
         working-directory: ./stdlib
 
+  vscode:
+    name: Visual Code Extension
+    runs-on: solang-ubuntu-latest
+    needs: linux-x86-64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4.1.8
+        with:
+          name: solang-linux-x86-64
+          path: bin
+      - run: |
+          chmod 755 ./bin/solang
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '>=18.17'
+      - run: npm install
+        working-directory: ./vscode
+      - run: npm run compile
+        working-directory: ./vscode
+      - name: Run headless test
+        run: xvfb-run npm test
+        working-directory: ./vscode
+      - run: npm install -g vsce
+        working-directory: ./vscode
+      - run: vsce package
+        working-directory: ./vscode
+      - name: Upload test coverage files
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: vscode-tests
+          path: ./target/*.profraw
+
   coverage:
     name: Coverage report
     runs-on: ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci-7
-    needs: [linux-x86-64, soroban]
+    needs: [linux-x86-64, soroban, vscode]
     env:
       RUSTFLAGS: -C instrument-coverage -C llvm-args=--instrprof-atomic-counter-update-all --cfg=coverage --cfg=trybuild_no_target
       CARGO_INCREMENTAL: 0
@@ -218,6 +253,11 @@ jobs:
         uses: actions/download-artifact@v4.1.8
         with:
           name: soroban-tests
+          path: ./target
+      - name: Download VS Code coverage files
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: vscode-tests
           path: ./target
       - name: Unpack test coverage files
         run: tar -xf rust-tests.tar.gz
