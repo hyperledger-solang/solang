@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   LLVM_PROFILE_FILE: ${{ github.workspace }}/target/solang-%p-%10m.profraw
 
@@ -21,14 +24,14 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
-          # docs/conf.py uses `git describe --tags` which requires full history
+          # docs/conf.py uses `git describe --tags` which requires full history.
           fetch-depth: 0
       - name: Build docs
         working-directory: ./docs
         run: |
           # Without the --add safe.directory we get the following error:
           # fatal: detected dubious ownership in repository at '/__w/solang/solang'
-          # actions/checkout@v4 is supposed to fix this, but it does not work
+          # actions/checkout@v4 is supposed to fix this, but it does not work.
           git config --global --add safe.directory "${GITHUB_WORKSPACE}"
           pip install -r requirements.txt
           make html epub
@@ -43,263 +46,68 @@ jobs:
       CARGO_LLVM_COV: 1
       CARGO_LLVM_COV_TARGET_DIR: ${{ github.workspace }}/target
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: 1.88.0
-        components: |
-          llvm-tools
-          clippy
-          rustfmt
-    - name: cargo install cargo-llvm-cov
-      uses: taiki-e/install-action@cargo-llvm-cov
-    - name: Run cargo clippy
-      run: cargo clippy --workspace --tests --bins -- -D warnings
-    - name: Run cargo clippy without wasm_opt feature
-      run: cargo clippy --workspace --no-default-features --features language_server,llvm,soroban --bins -- -D warnings
-    - name: Run cargo clippy without llvm feature
-      run: cargo clippy --workspace --no-default-features --lib -- -D warnings
-    - name: Run cargo clippy with only soroban feature
-      run: cargo clippy --workspace --no-default-features --features soroban,llvm --lib -- -D warnings
-    - name: Run cargo doc
-      run: cargo doc --workspace --bins
-    - name: Run cargo fmt
-      run: cargo fmt --all -- --check
-    - name: Configure llvm-cov and build
-      if: always()
-      run: |
-        cargo llvm-cov clean --workspace
-        cargo build
-    - name: Run tests
-      if: always()
-      run: cargo llvm-cov --all-features --workspace --no-report --jobs 2
-    - name: Upload binary
-      uses: actions/upload-artifact@v4.4.0
-      with:
-        name: solang-linux-x86-64
-        path: ./target/debug/solang
-    - name: Compress test coverage files
-      run: |
-        rm -r bpf wasm tmp cxxbridge CACHEDIR.TAG
-        rm -r debug/build debug/deps debug/examples debug/incremental
-        tar -czvf rust-tests.tar.gz *
-      working-directory: ./target
-    - name: Upload test coverage files
-      uses: actions/upload-artifact@v4.4.0
-      with:
-        name: rust-tests.tar.gz
-        path: ./target/rust-tests.tar.gz
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+          components: |
+            llvm-tools
+            clippy
+            rustfmt
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Run cargo clippy
+        run: cargo clippy --workspace --lib --bins -- -D warnings
+      - name: Run Soroban test clippy
+        run: cargo clippy -p solang --all-features --test soroban -- -D warnings
+      - name: Run cargo clippy without wasm_opt feature
+        run: cargo clippy --workspace --no-default-features --features language_server,llvm,soroban --bins -- -D warnings
+      - name: Run cargo clippy without llvm feature
+        run: cargo clippy --workspace --no-default-features --lib -- -D warnings
+      - name: Run cargo clippy with only soroban feature
+        run: cargo clippy --workspace --no-default-features --features soroban,llvm --lib -- -D warnings
+      - name: Run cargo doc
+        run: cargo doc --workspace --bins
+      - name: Run cargo fmt
+        run: cargo fmt --all -- --check
+      - name: Configure llvm-cov and build
+        if: always()
+        run: |
+          cargo llvm-cov clean --workspace
+          cargo build
+      - name: Run library and binary tests
+        if: always()
+        run: cargo llvm-cov --all-features --workspace --lib --bins --no-report --jobs 2
+      - name: Run Soroban Rust tests
+        if: always()
+        run: cargo llvm-cov --all-features --test soroban --no-report --jobs 2
+      - name: Upload binary
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: solang-linux-x86-64
+          path: ./target/debug/solang
+      - name: Compress test coverage files
+        run: |
+          rm -rf bpf wasm tmp cxxbridge CACHEDIR.TAG
+          rm -rf debug/build debug/deps debug/examples debug/incremental
+          tar -czvf rust-tests.tar.gz *
+        working-directory: ./target
+      - name: Upload test coverage files
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: rust-tests.tar.gz
+          path: ./target/rust-tests.tar.gz
 
-  linux-arm:
-    name: Linux Arm
-    runs-on: solang-arm
-    if: ${{ github.repository_owner == 'hyperledger-solang' }}
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: Basic build tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc g++ make
-    - uses: dtolnay/rust-toolchain@1.88.0
-    - name: Get LLVM
-      run: curl -sSL --output llvm16.0-linux-arm64.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-linux-arm64.tar.xz
-    - name: Extract LLVM
-      run: tar Jxf llvm16.0-linux-arm64.tar.xz
-    - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v4.4.0
-      with:
-        name: solang-linux-arm64
-        path: ./target/debug/solang
-
-  windows:
-    name: Windows
-    runs-on: windows-latest
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: Download LLVM
-      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-win.zip
-    - name: Extract LLVM
-      run: unzip c:\llvm.zip -d c:/
-    - name: Add LLVM to Path
-      run: echo "c:\llvm16.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
-    # Use C:\ as D:\ might run out of space
-    - name: "Use C: for rust temporary files"
-      run: echo "CARGO_TARGET_DIR=C:\target" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-    - uses: dtolnay/rust-toolchain@1.88.0
-      with:
-        components: clippy
-    # We run clippy on Linux in the lint job above, but this does not check #[cfg(windows)] items
-    - name: Run cargo clippy
-      run: cargo clippy --workspace --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v4.4.0
-      with:
-        name: solang.exe
-        path: C:/target/debug/solang.exe
-    # Print disk usage to debug disk space problems
-    - run: Get-PSDrive
-      if: always()
-
-  mac-arm:
-    name: Mac Arm
-    runs-on: macos-13-xlarge
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - uses: dtolnay/rust-toolchain@1.88.0
-    - name: Get LLVM
-      run: curl -sSL --output llvm16.0-mac-arm.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-arm.tar.xz
-    - name: Extract LLVM
-      run: tar Jxf llvm16.0-mac-arm.tar.xz
-    - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose --workspace
-    - name: Run tests without wasm_opt
-      run: cargo test --verbose --workspace --no-default-features --features language_server,llvm,soroban
-    - uses: actions/upload-artifact@v4.4.0
-      with:
-        name: solang-mac-arm
-        path: ./target/debug/solang
-
-  mac-intel:
-    name: Mac Intel
-    runs-on: macos-13
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - uses: dtolnay/rust-toolchain@1.88.0
-    - name: Get LLVM
-      run: wget -q -O llvm16.0-mac-intel.tar.xz https://github.com/hyperledger-solang/solang-llvm/releases/download/llvm16-0/llvm16.0-mac-intel.tar.xz
-    - name: Extract LLVM
-      run: tar Jxf llvm16.0-mac-intel.tar.xz
-    - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm16.0/bin" >> $GITHUB_PATH
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v4.4.0
-      with:
-        name: solang-mac-intel
-        path: ./target/debug/solang
-
-  mac-universal:
-    name: Mac Universal Binary
-    runs-on: macos-13
-    needs: [mac-arm, mac-intel]
-    steps:
-    - uses: actions/download-artifact@v4.1.8
-      with:
-        name: solang-mac-intel
-    - run: mv solang solang-mac-intel
-    - uses: actions/download-artifact@v4.1.8
-      with:
-        name: solang-mac-arm
-    - run: mv solang solang-mac-arm
-    - run: lipo -create -output solang-mac solang-mac-intel solang-mac-arm
-    - uses: actions/upload-artifact@v4.4.0
-      with:
-        name: solang-mac
-        path: solang-mac
-
-  container:
-    name: Container Image
-    runs-on: solang-ubuntu-latest
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-    - run: echo "push=--push" >> $GITHUB_OUTPUT
-      id: push
-      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    - run: |
-        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-        docker buildx build . \
-          ${{steps.push.outputs.push}} \
-          --tag ghcr.io/${GITHUB_REPOSITORY}:latest \
-          --label org.opencontainers.image.description="Solidity Compiler for Solana and Polkadot version $(git describe --tags)"
-
-  anchor:
-    name: Anchor Integration test
-    runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-7
-    needs: linux-x86-64
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: '16'
-    - uses: dtolnay/rust-toolchain@1.88.0
-    - name: Setup yarn
-      run: npm install -g yarn
-    - uses: actions/download-artifact@v4.1.8
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - name: Solang Compiler
-      run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    # Ensure nohup writes output to a file, not the terminal.
-    # If we don't, solana-test-validator might not be able to write its
-    # output and exit
-    - run: nohup solana-test-validator -q > validator.out &
-    - name: Build Anchor test program
-      run: |
-        yarn install
-        anchor build
-      working-directory: ./integration/anchor
-    - name: Deploy Anchor program
-      run: |
-        solana -ul airdrop -k id.json 10
-        anchor deploy
-      working-directory: ./integration/anchor
-    - name: Create Solidity interface file for Anchor
-      run: yarn parse-idl
-      working-directory: ./integration/anchor
-    - name: Build Solang contracts
-      run: yarn build
-      working-directory: ./integration/anchor
-    - name: Test Anchor
-      run: anchor test --skip-local-validator
-      working-directory: ./integration/anchor
-    - name: Upload test coverage files
-      uses: actions/upload-artifact@v4.4.0
-      with:
-       name: anchor-tests
-       path: ./target/*.profraw
-  
   soroban:
     name: Soroban Integration test
     runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci-7
     env:
-      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt   # helps Node/Axios find the bundle
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
     needs: linux-x86-64
     steps:
       - name: Checkout sources
@@ -307,9 +115,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'   # strongly recommended; 16 is EOL (works too, but less robust)
+          node-version: '18'
 
-      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: dtolnay/rust-toolchain@1.90.0
         with:
           target: wasm32-unknown-unknown
 
@@ -323,14 +131,14 @@ jobs:
           chmod 755 ./bin/solang
           echo "$(pwd)/bin" >> $GITHUB_PATH
 
-      - name: Install system dependencies (+ CA bundle)
+      - name: Install system dependencies
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
             ca-certificates curl openssl libdbus-1-dev pkg-config
           update-ca-certificates
 
-      - name: Install Soroban
+      - name: Install Stellar CLI
         run: cargo install --locked stellar-cli --version 23.0.0
 
       - name: Add wasm32v1-none target
@@ -346,7 +154,7 @@ jobs:
         run: npm run build
         working-directory: ./integration/soroban
 
-      - name: Build rust contracts
+      - name: Build Rust contracts
         run: stellar contract build --profile release-with-logs
         working-directory: ./integration/soroban/rust/contracts
 
@@ -364,160 +172,6 @@ jobs:
           name: soroban-tests
           path: ./target/*.profraw
 
-  solana:
-    name: Solana Integration test
-    runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-7
-    needs: linux-x86-64
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: '16'
-    - uses: dtolnay/rust-toolchain@1.88.0
-    - uses: actions/download-artifact@v4.1.8
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - name: Solang Compiler
-      run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    # Ensure nohup writes output to a file, not the terminal.
-    # If we don't, solana-test-validator might not be able to write its
-    # output and exit
-    - run: nohup solana-test-validator -q > validator.out &
-    - run: npm install
-      working-directory: ./integration/solana
-    - name: Build Solang contracts
-      run: npm run build
-      working-directory: ./integration/solana
-    - name: Deploy and test contracts
-      run: npm run test
-      working-directory: ./integration/solana
-    - name: Upload test coverage files
-      uses: actions/upload-artifact@v4.4.0
-      with:
-        name: solana-tests
-        path: ./target/*.profraw
-
-  polkadot:
-    name: Polkadot Integration test
-    runs-on: solang-ubuntu-latest
-    needs: linux-x86-64
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-      # We can't run substrate node as a github actions service, since it requires
-      # command line arguments. See https://github.com/actions/runner/pull/1152
-    - name: Start substrate contracts node
-      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:62a8a6c substrate-contracts-node --dev --rpc-external -lwarn,runtime::contracts=trace) >> $GITHUB_OUTPUT
-      id: substrate
-    - uses: actions/download-artifact@v4.1.8
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    - uses: actions/setup-node@v4
-      with:
-        node-version: '16'
-    - run: npm install
-      working-directory: ./integration/polkadot
-    - name: Build ink! contracts
-      run: npm run build-ink
-      working-directory: ./integration/polkadot
-    - name: Build Solang contracts
-      run: npm run build
-      working-directory: ./integration/polkadot
-    - name: Deploy and test contracts
-      run: npm run test
-      working-directory: ./integration/polkadot
-    - name: Upload test coverage files
-      uses: actions/upload-artifact@v4.4.0
-      with:
-        name: polkadot-tests
-        path: ./target/*.profraw
-    - name: cleanup
-      if: always()
-      run: docker kill ${{steps.substrate.outputs.id}}
-
-  polkadot-subxt:
-    name: Polkadot Integration test with subxt
-    runs-on: ubuntu-22.04
-    needs: linux-x86-64
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-      # We can't run substrate node as a github actions service, since it requires
-      # command line arguments. See https://github.com/actions/runner/pull/1152
-    - name: Start substrate
-      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:62a8a6c substrate-contracts-node --dev --rpc-external -lwarn,runtime::contracts=trace) >> $GITHUB_OUTPUT
-      id: substrate
-    - uses: actions/download-artifact@v4.1.8
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    - name: Install latest rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
-    - run: 'parallel solang compile -v --target polkadot --wasm-opt z -o ./contracts/ ::: ../polkadot/*.sol ../polkadot/test/*.sol'
-      working-directory: ./integration/subxt-tests
-    - name: Deploy and test contracts
-      run: cargo test -- --test-threads=1
-      working-directory: ./integration/subxt-tests
-    - name: cleanup
-      if: always()
-      run: docker kill ${{steps.substrate.outputs.id}}
-    - name: Upload test coverage files
-      uses: actions/upload-artifact@v4.4.0
-      with:
-        name: polkadot-subxt-tests
-        path: ./target/*.profraw
-
-  vscode:
-    name: Visual Code Extension
-    runs-on: solang-ubuntu-latest
-    needs: linux-x86-64
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - uses: actions/download-artifact@v4.1.8
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    - name: Install Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '>=18.17'
-    - run: npm install
-      working-directory: ./vscode
-    - run: npm run compile
-      working-directory: ./vscode
-    - name: Run headless test
-      run: xvfb-run npm test
-      working-directory: ./vscode
-    - run: npm install -g vsce
-      working-directory: ./vscode
-    - run: vsce package
-      working-directory: ./vscode
-    - name: Upload test coverage files
-      uses: actions/upload-artifact@v4.4.0
-      with:
-        name: vscode-tests
-        path: ./target/*.profraw
-
   std-lib-tests:
     name: Stdlib
     runs-on: solang-ubuntu-latest
@@ -525,8 +179,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
       - name: Lints for stdlib
-        run: |
-          make lint
+        run: make lint
         working-directory: ./stdlib
       - name: Stdlib tests
         run: |
@@ -534,11 +187,46 @@ jobs:
           ./test
         working-directory: ./stdlib
 
+  vscode:
+    name: Visual Code Extension
+    runs-on: solang-ubuntu-latest
+    needs: linux-x86-64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4.1.8
+        with:
+          name: solang-linux-x86-64
+          path: bin
+      - run: |
+          chmod 755 ./bin/solang
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '>=18.17'
+      - run: npm install
+        working-directory: ./vscode
+      - run: npm run compile
+        working-directory: ./vscode
+      - name: Run headless test
+        run: xvfb-run npm test
+        working-directory: ./vscode
+      - run: npm install -g vsce
+        working-directory: ./vscode
+      - run: vsce package
+        working-directory: ./vscode
+      - name: Upload test coverage files
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: vscode-tests
+          path: ./target/*.profraw
+
   coverage:
-    runs-on: ubuntu-latest
     name: Coverage report
+    runs-on: ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci-7
-    needs: [linux-x86-64, solana, anchor, polkadot, polkadot-subxt, vscode]
+    needs: [linux-x86-64, soroban, vscode]
     env:
       RUSTFLAGS: -C instrument-coverage -C llvm-args=--instrprof-atomic-counter-update-all --cfg=coverage --cfg=trybuild_no_target
       CARGO_INCREMENTAL: 0
@@ -552,36 +240,21 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.88.0
+          toolchain: 1.90.0
           components: llvm-tools
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Download Rust coverage files
         uses: actions/download-artifact@v4.1.8
         with:
-         name: rust-tests.tar.gz
-         path: ./target
-      - name: Download Solana coverage files
+          name: rust-tests.tar.gz
+          path: ./target
+      - name: Download Soroban coverage files
         uses: actions/download-artifact@v4.1.8
         with:
-          name: solana-tests
+          name: soroban-tests
           path: ./target
-      - name: Download Polkadot coverage files
-        uses: actions/download-artifact@v4.1.8
-        with:
-          name: polkadot-tests
-          path: ./target
-      - name: Download Polkadot subxt coverage files
-        uses: actions/download-artifact@v4.1.8
-        with:
-          name: polkadot-subxt-tests
-          path: ./target
-      - name: Download Anchor coverage files
-        uses: actions/download-artifact@v4.1.8
-        with:
-          name: anchor-tests
-          path: ./target
-      - name: Download VSCode coverage files
+      - name: Download VS Code coverage files
         uses: actions/download-artifact@v4.1.8
         with:
           name: vscode-tests
@@ -597,3 +270,22 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           fail_ci_if_error: false
+
+  container:
+    name: Container Image
+    runs-on: solang-ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+          docker buildx build . \
+            --push \
+            --tag ghcr.io/${GITHUB_REPOSITORY}:latest \
+            --label org.opencontainers.image.description="Solidity Compiler for Soroban version $(git describe --tags)"
