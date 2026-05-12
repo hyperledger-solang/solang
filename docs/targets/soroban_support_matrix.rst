@@ -37,8 +37,8 @@ Language Features
      - Supported
      - Primitive types, ``uint256`` and ``int256``, documented struct shapes, mappings and nested mappings, and memory/storage arrays. Examples: `token.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/token.sol>`_, `timelock.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/timelock/timelock.sol>`_, `liquidity_pool.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/liquidity_pool/liquidity_pool.sol>`_, `atomic_swap <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/atomic_swap>`_, and `liquidity_pool <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/liquidity_pool>`_.
    * - Events and logs
-     - Partially supported
-     - ``print()`` and runtime error logging are available. Solidity events are not. Example: `error.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/error.sol>`_.
+     - Supported
+     - Solidity ``event`` declarations and ``emit`` statements are supported. Indexed fields map to Soroban event topics and non-indexed fields map to event data. ``print()`` and runtime error logging are also available. Example: `error.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/error.sol>`_.
    * - Complex user-defined and composite types
      - Partial support
      - Coverage is still limited. More complex user-defined types and deeper composite values, such as nested structs, might not compile in some cases.
