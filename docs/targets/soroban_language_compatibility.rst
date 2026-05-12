@@ -124,6 +124,33 @@ For the storage and representation side of those features, see :doc:`soroban_rus
 
 Current documented support is summarized on :doc:`soroban_support_matrix`.
 
+Events
+++++++
+
+Solidity ``event`` declarations and ``emit`` statements are supported on Soroban. The Soroban host records contract events through the ``contract_event`` host function, which takes a vector of topics and a data value.
+
+Solang maps Solidity event fields to Soroban event components as follows:
+
+- ``indexed`` fields become entries in the Soroban topics vector
+- non-indexed fields become the event data value
+
+For example:
+
+.. code-block:: solidity
+
+    contract EventEmitter {
+        event Transfer(address indexed from, address indexed to, uint64 value);
+
+        function transfer(address from, address to, uint64 amount) public {
+            from.requireAuth();
+            emit Transfer(from, to, amount);
+        }
+    }
+
+In the example above, ``from`` and ``to`` are indexed and appear as topics in the recorded Soroban event. ``value`` is non-indexed and becomes the event data. Note that Soroban imposes a limit of four topics per event, and topics cannot contain ``Vec``, ``Map``, or ``Bytes`` values longer than 32 bytes.
+
+See `tests/soroban_testcases/events.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/events.rs>`_ for tested examples.
+
 Integer Widths
 ++++++++++++++
 
