@@ -338,7 +338,9 @@ impl SorobanTarget {
                                 ast::Type::Uint(256) => ScSpecTypeDef::U256,
                                 ast::Type::Bool => ScSpecTypeDef::Bool,
                                 ast::Type::Address(_) => ScSpecTypeDef::Address,
-                                ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
+                                ast::Type::Bytes(_) | ast::Type::DynamicBytes => {
+                                    ScSpecTypeDef::Bytes
+                                }
                                 ast::Type::String => ScSpecTypeDef::String,
                                 ast::Type::Array(ty, _) => {
                                     let element = Self::vec_spec_type(ty.as_ref());
@@ -377,7 +379,7 @@ impl SorobanTarget {
                             ast::Type::Int(_) => ScSpecTypeDef::I32,
                             ast::Type::Bool => ScSpecTypeDef::Bool,
                             ast::Type::Address(_) => ScSpecTypeDef::Address,
-                            ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
+                            ast::Type::Bytes(_) | ast::Type::DynamicBytes => ScSpecTypeDef::Bytes,
                             ast::Type::String => ScSpecTypeDef::String,
                             ast::Type::Void => ScSpecTypeDef::Void,
                             ast::Type::Struct(_) => ScSpecTypeDef::Void, // TODO: Map struct types.

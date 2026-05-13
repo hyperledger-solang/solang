@@ -888,11 +888,8 @@ impl<'a> Binary<'a> {
 
     fn var_ty_uses_pointer_storage(&self, ty: &Type) -> bool {
         match ty.deref_memory() {
-            Type::Struct(_)
-            | Type::Array(..)
-            | Type::DynamicBytes
-            | Type::ExternalFunction { .. } => true,
-            Type::String => self.ns.target != Target::Soroban,
+            Type::Struct(_) | Type::Array(..) | Type::ExternalFunction { .. } => true,
+            Type::String | Type::DynamicBytes => self.ns.target != Target::Soroban,
             _ => false,
         }
     }
