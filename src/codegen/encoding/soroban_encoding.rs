@@ -277,7 +277,7 @@ pub fn soroban_decode_arg(
                     call: InternalCallTy::HostFunction {
                         name: HostFunctions::BytesCopyToLinearMemory.name().to_string(),
                     },
-                    args: vec![arg, dest_encoded, src_off_encoded, len_encoded],
+                    args: vec![arg, src_off_encoded, dest_encoded, len_encoded],
                 },
             );
 
