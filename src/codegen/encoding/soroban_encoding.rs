@@ -209,6 +209,91 @@ pub fn soroban_decode_arg(
             }
         }
 
+        Type::Bytes(n) if n <= 4 => Expression::Trunc {
+            loc: Loc::Codegen,
+            ty: Type::Bytes(n),
+            expr: Box::new(Expression::ShiftRight {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                left: Box::new(arg),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: 32u64.into(),
+                }),
+                signed: false,
+            }),
+        },
+
+        Type::Bytes(n) if n > 4 => {
+            let n_expr = Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(32),
+                value: BigInt::from(n as u64),
+            };
+
+            let buf_var = vartab.temp_name("bytes_buf", &Type::DynamicBytes);
+            wrapper_cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Loc::Codegen,
+                    res: buf_var,
+                    expr: Expression::AllocDynamicBytes {
+                        loc: Loc::Codegen,
+                        ty: Type::DynamicBytes,
+                        size: Box::new(n_expr.clone()),
+                        initializer: None,
+                    },
+                },
+            );
+            let buf = Expression::Variable {
+                loc: Loc::Codegen,
+                ty: Type::DynamicBytes,
+                var_no: buf_var,
+            };
+
+            let dest_ptr = Expression::VectorData {
+                pointer: Box::new(buf.clone()),
+            };
+            let dest_encoded = zext_shift_add(Loc::Codegen, dest_ptr, 32, 4);
+            let src_off_encoded = zext_shift_add(
+                Loc::Codegen,
+                Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(0u64),
+                },
+                32,
+                4,
+            );
+            let len_encoded = zext_shift_add(Loc::Codegen, n_expr, 32, 4);
+
+            let unused = vartab.temp_name("bytes_copy_ret", &Type::Uint(64));
+            wrapper_cfg.add(
+                vartab,
+                Instr::Call {
+                    res: vec![unused],
+                    return_tys: vec![Type::Uint(64)],
+                    call: InternalCallTy::HostFunction {
+                        name: HostFunctions::BytesCopyToLinearMemory.name().to_string(),
+                    },
+                    args: vec![arg, dest_encoded, src_off_encoded, len_encoded],
+                },
+            );
+
+            Expression::Load {
+                loc: Loc::Codegen,
+                ty: Type::Bytes(n),
+                expr: Box::new(Expression::Cast {
+                    loc: Loc::Codegen,
+                    ty: Type::Ref(Box::new(Type::DynamicBytes)),
+                    expr: Box::new(Expression::VectorData {
+                        pointer: Box::new(buf),
+                    }),
+                }),
+            }
+        }
+
         _ => unimplemented!("unimplemented ty {:#?} in soroban decoder", ty),
     }
 }
@@ -726,6 +811,101 @@ pub fn soroban_encode_arg(
             res: obj,
             expr: item.clone(),
         },
+        Type::Bytes(n) if n <= 4 => {
+            let widened = Expression::ZeroExt {
+                loc: item.loc(),
+                ty: Type::Uint(64),
+                expr: Box::new(item.clone()),
+            };
+            let shifted = Expression::ShiftLeft {
+                loc: item.loc(),
+                ty: Type::Uint(64),
+                left: Box::new(widened),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    value: 32u64.into(),
+                }),
+            };
+            Instr::Set {
+                loc: item.loc(),
+                res: obj,
+                expr: Expression::Add {
+                    loc: item.loc(),
+                    ty: Type::Uint(64),
+                    left: Box::new(shifted),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: item.loc(),
+                        ty: Type::Uint(64),
+                        value: 4u64.into(),
+                    }),
+                    overflowing: false,
+                },
+            }
+        }
+
+        Type::Bytes(n) if n > 4 => {
+            let n_val = BigInt::from(n as u64);
+
+            let n_expr = Expression::NumberLiteral {
+                loc: item.loc(),
+                ty: Type::Uint(32),
+                value: n_val.clone(),
+            };
+
+            let buf_var = vartab.temp_name("bytes_spill", &Type::DynamicBytes);
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: item.loc(),
+                    res: buf_var,
+                    expr: Expression::AllocDynamicBytes {
+                        loc: item.loc(),
+                        ty: Type::DynamicBytes,
+                        size: Box::new(n_expr.clone()),
+                        initializer: None,
+                    },
+                },
+            );
+            let buf = Expression::Variable {
+                loc: item.loc(),
+                ty: Type::DynamicBytes,
+                var_no: buf_var,
+            };
+
+            cfg.add(
+                vartab,
+                Instr::Store {
+                    dest: Expression::Cast {
+                        loc: item.loc(),
+                        ty: Type::Ref(Box::new(Type::DynamicBytes)),
+                        expr: Box::new(Expression::VectorData {
+                            pointer: Box::new(buf.clone()),
+                        }),
+                    },
+                    data: item.clone(),
+                },
+            );
+
+            let encoded_ptr = zext_shift_add(
+                item.loc(),
+                Expression::VectorData {
+                    pointer: Box::new(buf),
+                },
+                32,
+                4,
+            );
+            let encoded_len = zext_shift_add(item.loc(), n_expr, 32, 4);
+
+            Instr::Call {
+                res: vec![obj],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::BytesNewFromLinearMemory.name().to_string(),
+                },
+                args: vec![encoded_ptr, encoded_len],
+            }
+        }
 
         _ => todo!("Type not yet supported in soroban encoder: {:?}", item.ty()),
     };
