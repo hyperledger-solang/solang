@@ -209,23 +209,7 @@ pub fn soroban_decode_arg(
             }
         }
 
-        Type::Bytes(n) if n <= 4 => Expression::Trunc {
-            loc: Loc::Codegen,
-            ty: Type::Bytes(n),
-            expr: Box::new(Expression::ShiftRight {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                left: Box::new(arg),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: Loc::Codegen,
-                    ty: Type::Uint(64),
-                    value: 32u64.into(),
-                }),
-                signed: false,
-            }),
-        },
-
-        Type::Bytes(n) if n > 4 => {
+        Type::Bytes(n) => {
             let n_expr = Expression::NumberLiteral {
                 loc: Loc::Codegen,
                 ty: Type::Uint(32),
@@ -811,40 +795,8 @@ pub fn soroban_encode_arg(
             res: obj,
             expr: item.clone(),
         },
-        Type::Bytes(n) if n <= 4 => {
-            let widened = Expression::ZeroExt {
-                loc: item.loc(),
-                ty: Type::Uint(64),
-                expr: Box::new(item.clone()),
-            };
-            let shifted = Expression::ShiftLeft {
-                loc: item.loc(),
-                ty: Type::Uint(64),
-                left: Box::new(widened),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: item.loc(),
-                    ty: Type::Uint(64),
-                    value: 32u64.into(),
-                }),
-            };
-            Instr::Set {
-                loc: item.loc(),
-                res: obj,
-                expr: Expression::Add {
-                    loc: item.loc(),
-                    ty: Type::Uint(64),
-                    left: Box::new(shifted),
-                    right: Box::new(Expression::NumberLiteral {
-                        loc: item.loc(),
-                        ty: Type::Uint(64),
-                        value: 4u64.into(),
-                    }),
-                    overflowing: false,
-                },
-            }
-        }
 
-        Type::Bytes(n) if n > 4 => {
+        Type::Bytes(n) => {
             let n_val = BigInt::from(n as u64);
 
             let n_expr = Expression::NumberLiteral {
