@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 contract Pause {
-    bool private _isPaused;
+    bool private instance _isPaused;
 
     function paused() public view returns (bool) {
         return _isPaused;
