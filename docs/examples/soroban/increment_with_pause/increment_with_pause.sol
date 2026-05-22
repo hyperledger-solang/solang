@@ -1,11 +1,10 @@
-// SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.0;
+/// SPDX-License-Identifier: Apache-2.0
 
 interface IPause {
     function paused() external view returns (bool);
 }
 
-contract IncrementContract {
+contract increment_with_pause {
     IPause private instance pauseContract;
     uint32 private instance count;
 
@@ -16,13 +15,23 @@ contract IncrementContract {
     }
 
     function increment() public returns (uint32) {
-        // Cross-contract call to check the paused state
         if (pauseContract.paused()) {
             revert PausedError();
         }
 
         count += 1;
-        
         return count;
+    }
+}
+
+contract pause {
+    bool private instance _isPaused;
+
+    function paused() public view returns (bool) {
+        return _isPaused;
+    }
+
+    function set(bool p) public {
+        _isPaused = p;
     }
 }
