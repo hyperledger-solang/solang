@@ -1,22 +1,25 @@
 /// SPDX-License-Identifier: Apache-2.0
 
-interface IPause {
-    function paused() external view returns (bool);
-}
-
 contract increment_with_pause {
-    IPause private instance pauseContract;
+    address private instance pauseAddr;
     uint32 private instance count;
 
     error PausedError();
 
-    constructor(IPause _pause) {
-        pauseContract = _pause;
+    constructor(address _pauseAddr) {
+        pauseAddr = _pauseAddr;
     }
 
     function increment() public returns (uint32) {
-        if (pauseContract.paused()) {
-            revert PausedError();
+        bytes memory payload = abi.encode("paused");
+        (bool ok, bytes memory ret) = pauseAddr.call(payload);
+        
+        // Decode the return value if the call succeeds
+        if (ok) {
+            bool isPaused = abi.decode(ret, (bool));
+            if (isPaused) {
+                revert PausedError();
+            }
         }
 
         count += 1;
