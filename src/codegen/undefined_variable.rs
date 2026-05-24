@@ -72,7 +72,7 @@ pub fn check_variables_in_expression(
     instr.recurse_expressions(&mut params, find_undefined_variables_in_expression);
 }
 
-/// Auxiliar function for expression.recurse. It checks if a variable is read before being defined
+/// Auxiliary function for expression.recurse. It checks if a variable is read before being defined
 pub fn find_undefined_variables_in_expression(
     exp: &Expression,
     ctx: &mut FindUndefinedVariablesParams,

@@ -445,7 +445,7 @@ impl AbiEncoding for ScaleEncoding {
         // `codegen::abi_encode()` also returns the actual encoded size,
         // so slightly overestimating it shouldn't  matter.
         // However, the actual length of the encoded data produced by `codegen::abi_encode()`
-        // is ignored in some places, wich results in buggy contracts if we have not an exact estimate.
+        // is ignored in some places, which results in buggy contracts if we have not an exact estimate.
         // Once this is fixed (the encoded size return by `codegen::abi_encode()` must never be ignored),
         // this can just be always 4 bytes .
         encode_compact(size, None, None, vartab, cfg)
