@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::HashTy;
+use crate::codegen::error::CodegenError;
 use crate::codegen::Builtin;
 use crate::codegen::Expression;
 use crate::emit::binary::Binary;
@@ -18,11 +19,48 @@ use inkwell::values::{
     PointerValue,
 };
 
+use solang_parser::helpers::CodeLocation;
 use solang_parser::pt::{Loc, StorageType};
 
 use num_traits::ToPrimitive;
 
 use std::collections::HashMap;
+
+fn unsupported_soroban<T>(loc: Loc, operation: impl Into<String>) -> T {
+    panic!(
+        "{}",
+        CodegenError::unsupported_soroban_operation(loc, operation)
+    )
+}
+
+fn runtime_helper<'a>(
+    bin: &Binary<'a>,
+    name: &str,
+    operation: impl Into<String>,
+) -> FunctionValue<'a> {
+    bin.module.get_function(name).unwrap_or_else(|| {
+        panic!(
+            "{}",
+            CodegenError::missing_runtime_helper(name, operation, bin.ns.target)
+        )
+    })
+}
+
+fn expect_llvm_entity<T>(
+    value: Option<T>,
+    operation: impl Into<String>,
+    entity: impl Into<String>,
+) -> T {
+    value.unwrap_or_else(|| panic!("{}", CodegenError::missing_llvm_entity(operation, entity)))
+}
+
+fn expect_return_value<T>(value: Option<T>, operation: impl Into<String>) -> T {
+    expect_llvm_entity(value, operation, "expected return value")
+}
+
+fn invalid_cfg<T>(operation: impl Into<String>, reason: impl Into<String>) -> T {
+    panic!("{}", CodegenError::invalid_cfg_invariant(operation, reason))
+}
 
 // TODO: Implement TargetRuntime for SorobanTarget.
 #[allow(unused_variables)]
@@ -34,7 +72,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
-        todo!()
+        unsupported_soroban(Loc::Codegen, "raw storage integer loads")
     }
 
     fn storage_load(
@@ -250,7 +288,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
     ) {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "storage string and bytes stores")
     }
 
     fn get_storage_string(
@@ -259,7 +297,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "storage string and bytes loads")
     }
 
     fn set_storage_extfunc(
@@ -270,7 +308,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         dest: PointerValue,
         dest_ty: BasicTypeEnum,
     ) {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "storage external function stores")
     }
 
     fn get_storage_extfunc(
@@ -279,7 +317,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "storage external function loads")
     }
 
     fn get_storage_bytes_subscript(
@@ -290,7 +328,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         index: IntValue<'a>,
         loc: Loc,
     ) -> IntValue<'a> {
-        unimplemented!()
+        unsupported_soroban(loc, "storage bytes subscript loads")
     }
 
     fn set_storage_bytes_subscript(
@@ -302,7 +340,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         value: IntValue<'a>,
         loc: Loc,
     ) {
-        unimplemented!()
+        unsupported_soroban(loc, "storage bytes subscript stores")
     }
 
     fn storage_subscript(
@@ -426,7 +464,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         val: Option<BasicValueEnum<'a>>,
     ) -> BasicValueEnum<'a> {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "storage array push")
     }
 
     fn storage_pop(
@@ -438,7 +476,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         load: bool,
         loc: Loc,
     ) -> Option<BasicValueEnum<'a>> {
-        unimplemented!()
+        unsupported_soroban(loc, "storage array pop")
     }
 
     fn storage_array_length(
@@ -530,7 +568,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         length: IntValue,
         dest: PointerValue,
     ) {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "keccak256 hashing")
     }
 
     /// Prints a string
@@ -562,12 +600,12 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     /// Return success without any result
     fn return_empty_abi(&self, bin: &Binary) {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "empty ABI returns")
     }
 
     /// Return failure code
     fn return_code<'b>(&self, bin: &'b Binary, ret: IntValue<'b>) {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "return codes")
     }
 
     /// Return failure without any result
@@ -583,7 +621,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         args: &[BasicMetadataValueEnum<'a>],
         first_arg_type: Option<BasicTypeEnum>,
     ) -> Option<BasicValueEnum<'a>> {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "target-specific builtin functions")
     }
 
     /// Calls constructor
@@ -599,7 +637,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         contract_args: ContractArgs<'b>,
         loc: Loc,
     ) {
-        unimplemented!()
+        unsupported_soroban(loc, "contract construction")
     }
 
     /// call external function
@@ -676,29 +714,46 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         let vec_object = bin
             .builder
             .build_call(
-                bin.module
-                    .get_function(HostFunctions::VectorNewFromLinearMemory.name())
-                    .unwrap(),
+                runtime_helper(
+                    bin,
+                    HostFunctions::VectorNewFromLinearMemory.name(),
+                    "building Soroban external call argument vector",
+                ),
                 &[args_ptr_encoded.into(), args_len_encoded.into()],
                 "vec_object",
             )
             .unwrap()
             .try_as_basic_value()
             .left()
-            .unwrap()
+            .unwrap_or_else(|| {
+                expect_return_value(None, "building Soroban external call argument vector")
+            })
             .into_int_value();
 
         let call_res = bin
             .builder
             .build_call(
-                bin.module.get_function(HostFunctions::Call.name()).unwrap(),
-                &[address.unwrap().into(), symbol.into(), vec_object.into()],
+                runtime_helper(
+                    bin,
+                    HostFunctions::Call.name(),
+                    "emitting Soroban external call",
+                ),
+                &[
+                    expect_llvm_entity(
+                        address,
+                        "emitting Soroban external call",
+                        "target contract address",
+                    )
+                    .into(),
+                    symbol.into(),
+                    vec_object.into(),
+                ],
                 "call",
             )
             .unwrap()
             .try_as_basic_value()
             .left()
-            .unwrap()
+            .unwrap_or_else(|| expect_return_value(None, "emitting Soroban external call"))
             .into_int_value();
 
         let allocate_i64 = bin
@@ -721,7 +776,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         _value: IntValue<'b>,
         loc: Loc,
     ) {
-        unimplemented!()
+        unsupported_soroban(loc, "value transfer")
     }
 
     /// builtin expressions
@@ -743,14 +798,17 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 assert_eq!(args.len(), 0, "timestamp expects no arguments");
 
                 let function_name = HostFunctions::GetLedgerTimestamp.name();
-                let function_value = bin.module.get_function(function_name).unwrap();
+                let function_value =
+                    runtime_helper(bin, function_name, "reading Soroban ledger timestamp");
                 let timestamp_val = bin
                     .builder
                     .build_call(function_value, &[], function_name)
                     .unwrap()
                     .try_as_basic_value()
                     .left()
-                    .unwrap()
+                    .unwrap_or_else(|| {
+                        expect_return_value(None, "reading Soroban ledger timestamp")
+                    })
                     .into_int_value();
 
                 // Decode U64Val: U64Small values are immediate, otherwise decode U64Object via ObjToU64.
@@ -802,12 +860,20 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                     .build_unconditional_branch(value_decoded)
                     .unwrap();
 
-                let small_value_block = bin.builder.get_insert_block().unwrap();
+                let small_value_block = expect_llvm_entity(
+                    bin.builder.get_insert_block(),
+                    "decoding Soroban ledger timestamp",
+                    "small timestamp block",
+                );
 
                 bin.builder.position_at_end(value_is_object);
 
                 let decode_function_name = HostFunctions::ObjToU64.name();
-                let decode_function_value = bin.module.get_function(decode_function_name).unwrap();
+                let decode_function_value = runtime_helper(
+                    bin,
+                    decode_function_name,
+                    "decoding Soroban ledger timestamp object",
+                );
                 let object_value = bin
                     .builder
                     .build_call(
@@ -818,14 +884,20 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                     .unwrap()
                     .try_as_basic_value()
                     .left()
-                    .unwrap()
+                    .unwrap_or_else(|| {
+                        expect_return_value(None, "decoding Soroban ledger timestamp object")
+                    })
                     .into_int_value();
 
                 bin.builder
                     .build_unconditional_branch(value_decoded)
                     .unwrap();
 
-                let object_value_block = bin.builder.get_insert_block().unwrap();
+                let object_value_block = expect_llvm_entity(
+                    bin.builder.get_insert_block(),
+                    "decoding Soroban ledger timestamp",
+                    "object timestamp block",
+                );
 
                 bin.builder.position_at_end(value_decoded);
 
@@ -893,7 +965,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
                 // Call the function
                 let function_name = HostFunctions::ExtendContractDataTtl.name();
-                let function_value = bin.module.get_function(function_name).unwrap();
+                let function_value =
+                    runtime_helper(bin, function_name, "emitting Soroban extendTtl builtin");
 
                 let value = bin
                     .builder
@@ -916,7 +989,9 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                     .unwrap()
                     .try_as_basic_value()
                     .left()
-                    .unwrap()
+                    .unwrap_or_else(|| {
+                        expect_return_value(None, "emitting Soroban extendTtl builtin")
+                    })
                     .into_int_value();
 
                 value.into()
@@ -956,7 +1031,11 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
                 // Call the function
                 let function_name = HostFunctions::ExtendCurrentContractInstanceAndCodeTtl.name();
-                let function_value = bin.module.get_function(function_name).unwrap();
+                let function_value = runtime_helper(
+                    bin,
+                    function_name,
+                    "emitting Soroban extendInstanceTtl builtin",
+                );
 
                 let value = bin
                     .builder
@@ -977,12 +1056,14 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                     .unwrap()
                     .try_as_basic_value()
                     .left()
-                    .unwrap()
+                    .unwrap_or_else(|| {
+                        expect_return_value(None, "emitting Soroban extendInstanceTtl builtin")
+                    })
                     .into_int_value();
 
                 value.into()
             }
-            _ => unimplemented!("unsupported builtin"),
+            _ => unsupported_soroban(expr.loc(), "this Soroban builtin"),
         }
     }
 
@@ -993,12 +1074,12 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     /// Return the value we received
     fn value_transferred<'b>(&self, bin: &Binary<'b>) -> IntValue<'b> {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "transferred value reads")
     }
 
     /// Terminate execution, destroy bin and send remaining funds to addr
     fn selfdestruct<'b>(&self, bin: &Binary<'b>, addr: ArrayValue<'b>) {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "selfdestruct")
     }
 
     /// Crypto Hash
@@ -1010,7 +1091,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         string: PointerValue<'b>,
         length: IntValue<'b>,
     ) -> IntValue<'b> {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "hash builtins")
     }
 
     /// Emit event
@@ -1055,7 +1136,7 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         data: PointerValue<'b>,
         data_len: BasicValueEnum<'b>,
     ) {
-        unimplemented!()
+        unsupported_soroban(Loc::Codegen, "ABI data returns")
     }
 }
 
@@ -1087,7 +1168,10 @@ fn encode_value<'a>(
                 .unwrap();
         }
         64 => (),
-        _ => unreachable!(),
+        _ => invalid_cfg(
+            "encoding Soroban host value",
+            "expected a 32-bit or 64-bit integer value",
+        ),
     }
 
     let shifted = bin
@@ -1387,14 +1471,20 @@ pub fn soroban_get_fields_to_val_buffer<'a>(
     let vec_ptr = bin
         .builder
         .build_call(
-            bin.module.get_function("soroban_malloc").unwrap(),
+            runtime_helper(
+                bin,
+                "soroban_malloc",
+                "allocating Soroban storage struct field buffer",
+            ),
             &[size_bytes.into()],
             "soroban_malloc",
         )
         .unwrap()
         .try_as_basic_value()
         .left()
-        .unwrap()
+        .unwrap_or_else(|| {
+            expect_return_value(None, "allocating Soroban storage struct field buffer")
+        })
         .into_pointer_value();
 
     let storage_ty_i64 = bin.context.i64_type().const_int(storage_type, false);
