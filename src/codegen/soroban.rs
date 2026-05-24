@@ -1,14 +1,525 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::cfg::{ControlFlowGraph, Instr, InternalCallTy};
+use super::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use super::encoding::soroban_encoding::soroban_encode_arg;
+use super::error::CodegenError;
 use super::expression::{expression, load_storage};
 use super::vartable::Vartable;
 use super::Options;
-use crate::codegen::{Expression, HostFunctions};
+use crate::codegen::{Builtin, Expression, HostFunctions};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
-use solang_parser::pt;
+use crate::sema::Recurse;
+use crate::Target;
+use solang_parser::helpers::CodeLocation;
+use solang_parser::{diagnostics::Diagnostic, pt};
+use std::collections::BTreeSet;
+
+pub(super) fn validate_accessor_abi_types(contract_no: usize, ns: &mut Namespace) {
+    if ns.target != Target::Soroban {
+        return;
+    }
+
+    for variable in &ns.contracts[contract_no].variables {
+        if !matches!(variable.visibility, pt::Visibility::Public(_)) {
+            continue;
+        }
+
+        if let Some(unsupported_type) = unsupported_accessor_type(&variable.ty, ns) {
+            ns.diagnostics.push(Diagnostic::error(
+                variable.loc,
+                format!(
+                    "type '{unsupported_type}' is not supported as a Soroban public variable accessor return value"
+                ),
+            ));
+        }
+    }
+}
+
+pub(super) fn validate_event_abi_types(contract_no: usize, ns: &mut Namespace) {
+    if ns.target != Target::Soroban {
+        return;
+    }
+
+    for event_no in ns.contracts[contract_no].emits_events.clone() {
+        for field in &ns.events[event_no].fields {
+            if let Some(unsupported_type) = unsupported_event_type(&field.ty, ns) {
+                ns.diagnostics.push(Diagnostic::error(
+                    field.ty_loc.unwrap_or(field.loc),
+                    format!(
+                        "type '{unsupported_type}' is not supported as a Soroban event parameter"
+                    ),
+                ));
+            }
+        }
+    }
+}
+
+pub(super) fn validate_abi_types(all_cfg: &[ControlFlowGraph], ns: &mut Namespace) {
+    if ns.target != Target::Soroban {
+        return;
+    }
+
+    for cfg in all_cfg {
+        if !cfg.public {
+            continue;
+        }
+
+        if is_public_accessor(cfg, ns) {
+            continue;
+        }
+
+        if cfg.returns.len() > 1 {
+            let loc = cfg.returns[1].ty_loc.unwrap_or(cfg.returns[1].loc);
+            ns.diagnostics.push(Diagnostic::error(
+                loc,
+                "Soroban external functions can return at most one value".to_string(),
+            ));
+            continue;
+        }
+
+        for param in cfg.params.as_ref() {
+            if let Some(unsupported_type) = unsupported_parameter_type(&param.ty, ns) {
+                ns.diagnostics.push(Diagnostic::error(
+                    param.ty_loc.unwrap_or(param.loc),
+                    format!(
+                        "type '{unsupported_type}' is not supported as a Soroban external function parameter"
+                    ),
+                ));
+            }
+        }
+
+        for ret in cfg.returns.as_ref() {
+            if let Some(unsupported_type) = unsupported_return_type(&ret.ty, ns) {
+                ns.diagnostics.push(Diagnostic::error(
+                    ret.ty_loc.unwrap_or(ret.loc),
+                    format!(
+                        "type '{unsupported_type}' is not supported as a Soroban external function return value"
+                    ),
+                ));
+            }
+        }
+    }
+
+    validate_string_handle_code_paths(all_cfg, ns);
+    validate_unsupported_codegen_paths(all_cfg, ns);
+}
+
+fn unsupported_parameter_type(ty: &Type, ns: &Namespace) -> Option<String> {
+    match ty {
+        Type::DynamicBytes => Some("bytes memory".to_string()),
+        Type::Bytes(n) => Some(format!("bytes{n}")),
+        Type::Struct(_) => Some(format!("{} memory", ty.to_string(ns))),
+        Type::Array(elem, _) if has_unsupported_soroban_array_element(elem.as_ref()) => {
+            Some(format!("{} memory", ty.to_string(ns)))
+        }
+        _ => None,
+    }
+}
+
+fn is_public_accessor(cfg: &ControlFlowGraph, ns: &Namespace) -> bool {
+    match cfg.function_no {
+        ASTFunction::SolidityFunction(function_no) => ns.functions[function_no].is_accessor,
+        _ => false,
+    }
+}
+
+fn unsupported_accessor_type(ty: &Type, ns: &Namespace) -> Option<String> {
+    match ty {
+        Type::DynamicBytes => Some("bytes".to_string()),
+        Type::Bytes(n) => Some(format!("bytes{n}")),
+        Type::Mapping(mapping) => unsupported_accessor_type(mapping.value.as_ref(), ns),
+        Type::Array(elem, _) => unsupported_accessor_type(elem.as_ref(), ns),
+        Type::Struct(struct_ty) => {
+            let fields = &struct_ty.definition(ns).fields;
+
+            if fields.len() > 1 {
+                Some(ty.to_string(ns))
+            } else {
+                fields
+                    .first()
+                    .and_then(|field| unsupported_accessor_type(&field.ty, ns))
+            }
+        }
+        _ => None,
+    }
+}
+
+fn unsupported_event_type(ty: &Type, ns: &Namespace) -> Option<String> {
+    match ty {
+        Type::DynamicBytes => Some("bytes".to_string()),
+        Type::Bytes(n) => Some(format!("bytes{n}")),
+        Type::Struct(_) => Some(ty.to_string(ns)),
+        _ => None,
+    }
+}
+
+fn unsupported_return_type(ty: &Type, ns: &Namespace) -> Option<String> {
+    match ty {
+        Type::String => Some("string memory".to_string()),
+        Type::DynamicBytes => Some("bytes memory".to_string()),
+        Type::Bytes(n) => Some(format!("bytes{n}")),
+        Type::Struct(_) => Some(format!("{} memory", ty.to_string(ns))),
+        Type::Array(_, _) => Some(format!("{} memory", ty.to_string(ns))),
+        _ => None,
+    }
+}
+
+fn has_unsupported_soroban_array_element(ty: &Type) -> bool {
+    match ty {
+        Type::DynamicBytes | Type::Struct(_) => true,
+        Type::Array(elem, _) => has_unsupported_soroban_array_element(elem.as_ref()),
+        _ => false,
+    }
+}
+
+fn validate_unsupported_codegen_paths(all_cfg: &[ControlFlowGraph], ns: &mut Namespace) {
+    for cfg in all_cfg {
+        for block in &cfg.blocks {
+            for instr in &block.instr {
+                validate_unsupported_codegen_instr(instr, ns);
+            }
+        }
+    }
+}
+
+fn validate_unsupported_codegen_instr(instr: &Instr, ns: &mut Namespace) {
+    validate_unsupported_codegen_instr_expressions(instr, ns);
+
+    match instr {
+        Instr::LoadStorage { ty, storage, .. } => {
+            if let Some(unsupported_type) = unsupported_soroban_storage_type(ty, ns) {
+                push_codegen_error(
+                    ns,
+                    CodegenError::unsupported_soroban_type(
+                        storage.loc(),
+                        "in storage load",
+                        unsupported_type,
+                    ),
+                );
+            }
+        }
+        Instr::SetStorage { ty, storage, .. } => {
+            if let Some(unsupported_type) = unsupported_soroban_storage_type(ty, ns) {
+                push_codegen_error(
+                    ns,
+                    CodegenError::unsupported_soroban_type(
+                        storage.loc(),
+                        "in storage store",
+                        unsupported_type,
+                    ),
+                );
+            }
+        }
+        Instr::SetStorageBytes { offset, .. } => {
+            push_codegen_error(
+                ns,
+                CodegenError::unsupported_soroban_operation(
+                    offset.loc(),
+                    "storage bytes subscript assignment",
+                ),
+            );
+        }
+        Instr::PushStorage { ty, storage, .. } => {
+            if let Some(unsupported_type) = unsupported_soroban_storage_type(ty, ns) {
+                push_codegen_error(
+                    ns,
+                    CodegenError::unsupported_soroban_type(
+                        storage.loc(),
+                        "in storage push",
+                        unsupported_type,
+                    ),
+                );
+            }
+        }
+        Instr::PopStorage { ty, storage, .. } => {
+            if let Some(unsupported_type) = unsupported_soroban_storage_type(ty, ns) {
+                push_codegen_error(
+                    ns,
+                    CodegenError::unsupported_soroban_type(
+                        storage.loc(),
+                        "in storage pop",
+                        unsupported_type,
+                    ),
+                );
+            }
+        }
+        Instr::Constructor { loc, .. } => {
+            push_codegen_error(
+                ns,
+                CodegenError::unsupported_soroban_operation(*loc, "contract construction"),
+            );
+        }
+        Instr::ValueTransfer { address, .. } => {
+            push_codegen_error(
+                ns,
+                CodegenError::unsupported_soroban_operation(address.loc(), "value transfer"),
+            );
+        }
+        Instr::SelfDestruct { recipient } => {
+            push_codegen_error(
+                ns,
+                CodegenError::unsupported_soroban_operation(recipient.loc(), "selfdestruct"),
+            );
+        }
+        _ => (),
+    }
+}
+
+fn validate_unsupported_codegen_instr_expressions(instr: &Instr, ns: &mut Namespace) {
+    let mut cx = UnsupportedCodegenExprContext {
+        diagnostics: Vec::new(),
+    };
+
+    instr.recurse_expressions(&mut cx, reject_unsupported_codegen_expr);
+
+    for diagnostic in cx.diagnostics {
+        push_codegen_error(ns, diagnostic);
+    }
+}
+
+struct UnsupportedCodegenExprContext {
+    diagnostics: Vec<CodegenError>,
+}
+
+fn reject_unsupported_codegen_expr(
+    expr: &Expression,
+    cx: &mut UnsupportedCodegenExprContext,
+) -> bool {
+    if let Expression::Subscript { loc, array_ty, .. } = expr {
+        if array_ty.is_storage_bytes() {
+            cx.diagnostics
+                .push(CodegenError::unsupported_soroban_operation(
+                    *loc,
+                    "storage bytes subscript load",
+                ));
+        }
+    }
+
+    true
+}
+
+fn unsupported_soroban_storage_type(ty: &Type, ns: &Namespace) -> Option<String> {
+    match ty.deref_any() {
+        Type::ExternalFunction { .. } => Some(ty.to_string(ns)),
+        Type::Array(elem, _) => unsupported_soroban_storage_type(elem.as_ref(), ns),
+        Type::Mapping(mapping) => unsupported_soroban_storage_type(mapping.value.as_ref(), ns),
+        Type::Struct(struct_ty) => struct_ty
+            .definition(ns)
+            .fields
+            .iter()
+            .find_map(|field| unsupported_soroban_storage_type(&field.ty, ns)),
+        _ => None,
+    }
+}
+
+fn push_codegen_error(ns: &mut Namespace, err: CodegenError) {
+    if let Some(diagnostic) = err.diagnostic() {
+        ns.diagnostics.push(diagnostic);
+    }
+}
+
+fn validate_string_handle_code_paths(all_cfg: &[ControlFlowGraph], ns: &mut Namespace) {
+    for cfg in all_cfg {
+        let mut string_handle_vars = BTreeSet::new();
+
+        for block in &cfg.blocks {
+            for instr in &block.instr {
+                validate_string_handle_uses(instr, &string_handle_vars, ns);
+
+                match instr {
+                    Instr::Set { res, expr, .. } => {
+                        update_string_handle_var(*res, expr, &mut string_handle_vars);
+                    }
+                    Instr::Call {
+                        res,
+                        return_tys,
+                        call: InternalCallTy::Static { cfg_no },
+                        args,
+                    } => {
+                        validate_static_string_call_args(
+                            &all_cfg[*cfg_no],
+                            args,
+                            &string_handle_vars,
+                            ns,
+                        );
+
+                        for (res_no, ty) in res.iter().zip(return_tys.iter()) {
+                            if matches!(ty, Type::String) {
+                                string_handle_vars.insert(*res_no);
+                            } else {
+                                string_handle_vars.remove(res_no);
+                            }
+                        }
+                    }
+                    Instr::Call {
+                        res, return_tys, ..
+                    } => {
+                        for (res_no, ty) in res.iter().zip(return_tys.iter()) {
+                            if matches!(ty, Type::String) {
+                                string_handle_vars.insert(*res_no);
+                            } else {
+                                string_handle_vars.remove(res_no);
+                            }
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+    }
+}
+
+fn update_string_handle_var(
+    res: usize,
+    expr: &Expression,
+    string_handle_vars: &mut BTreeSet<usize>,
+) {
+    if is_soroban_string_handle_expr(expr, string_handle_vars) {
+        string_handle_vars.insert(res);
+    } else {
+        string_handle_vars.remove(&res);
+    }
+}
+
+fn validate_static_string_call_args(
+    callee: &ControlFlowGraph,
+    args: &[Expression],
+    string_handle_vars: &BTreeSet<usize>,
+    ns: &mut Namespace,
+) {
+    for (arg, param) in args.iter().zip(callee.params.iter()) {
+        if matches!(param.ty, Type::String)
+            && !is_soroban_string_handle_expr(arg, string_handle_vars)
+        {
+            ns.diagnostics.push(Diagnostic::error(
+                arg.loc(),
+                "passing string memory values to internal functions is not supported for target soroban"
+                    .to_string(),
+            ));
+        }
+    }
+}
+
+fn validate_string_handle_uses(
+    instr: &Instr,
+    string_handle_vars: &BTreeSet<usize>,
+    ns: &mut Namespace,
+) {
+    let mut cx = StringHandleUseContext {
+        string_handle_vars,
+        diagnostics: Vec::new(),
+    };
+
+    match instr {
+        Instr::Set { expr, .. } => {
+            expr.recurse(&mut cx, reject_string_handle_memory_use);
+        }
+        Instr::Call { args, .. } | Instr::Return { value: args } => {
+            for arg in args {
+                arg.recurse(&mut cx, reject_string_handle_memory_use);
+            }
+        }
+        Instr::BranchCond { cond, .. } | Instr::Print { expr: cond } => {
+            cond.recurse(&mut cx, reject_string_handle_memory_use);
+        }
+        Instr::Store { dest, data } => {
+            dest.recurse(&mut cx, reject_string_handle_memory_use);
+            data.recurse(&mut cx, reject_string_handle_memory_use);
+        }
+        Instr::AssertFailure {
+            encoded_args: Some(expr),
+        } => {
+            expr.recurse(&mut cx, reject_string_handle_memory_use);
+        }
+        Instr::LoadStorage { storage, .. } | Instr::ClearStorage { storage, .. } => {
+            storage.recurse(&mut cx, reject_string_handle_memory_use);
+        }
+        Instr::SetStorage { value, storage, .. } => {
+            value.recurse(&mut cx, reject_string_handle_memory_use);
+            storage.recurse(&mut cx, reject_string_handle_memory_use);
+        }
+        Instr::SetStorageBytes {
+            value,
+            storage,
+            offset,
+        } => {
+            value.recurse(&mut cx, reject_string_handle_memory_use);
+            storage.recurse(&mut cx, reject_string_handle_memory_use);
+            offset.recurse(&mut cx, reject_string_handle_memory_use);
+        }
+        Instr::PushStorage { value, storage, .. } => {
+            if let Some(value) = value {
+                value.recurse(&mut cx, reject_string_handle_memory_use);
+            }
+
+            storage.recurse(&mut cx, reject_string_handle_memory_use);
+        }
+        Instr::PopStorage { storage, .. } => {
+            storage.recurse(&mut cx, reject_string_handle_memory_use);
+        }
+        Instr::PushMemory { array, value, .. } => {
+            Expression::Variable {
+                loc: pt::Loc::Codegen,
+                ty: Type::String,
+                var_no: *array,
+            }
+            .recurse(&mut cx, reject_string_handle_memory_use);
+            value.recurse(&mut cx, reject_string_handle_memory_use);
+        }
+        _ => (),
+    }
+
+    for diagnostic in cx.diagnostics {
+        ns.diagnostics.push(diagnostic);
+    }
+}
+
+struct StringHandleUseContext<'a> {
+    string_handle_vars: &'a BTreeSet<usize>,
+    diagnostics: Vec<Diagnostic>,
+}
+
+fn reject_string_handle_memory_use(expr: &Expression, cx: &mut StringHandleUseContext<'_>) -> bool {
+    if let Expression::Builtin {
+        loc,
+        kind: Builtin::ArrayLength,
+        args,
+        ..
+    } = expr
+    {
+        if args.first().is_some_and(|arg| {
+            matches!(arg.ty(), Type::String)
+                && is_soroban_string_handle_expr(arg, cx.string_handle_vars)
+        }) {
+            cx.diagnostics.push(Diagnostic::error(
+                *loc,
+                "using string memory as bytes is not supported for target soroban".to_string(),
+            ));
+        }
+    }
+
+    true
+}
+
+fn is_soroban_string_handle_expr(expr: &Expression, string_handle_vars: &BTreeSet<usize>) -> bool {
+    match expr {
+        Expression::FunctionArg {
+            ty: Type::String, ..
+        } => true,
+        Expression::Variable {
+            ty: Type::String,
+            var_no,
+            ..
+        } => string_handle_vars.contains(var_no),
+        Expression::Cast {
+            ty: Type::String,
+            expr,
+            ..
+        } => is_soroban_string_handle_expr(expr, string_handle_vars),
+        _ => false,
+    }
+}
 
 fn soroban_vec_handle_ty(vec_ty: &Type) -> Type {
     let inner_ty = if let Type::StorageRef(_, inner) = vec_ty {
