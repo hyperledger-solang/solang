@@ -3,6 +3,7 @@
 use crate::codegen::cfg::InternalCallTy;
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::create_encoder;
+use crate::codegen::error::CodegenError;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::HostFunctions;
 use crate::codegen::{Builtin, Expression};
@@ -209,7 +210,14 @@ pub fn soroban_decode_arg(
             }
         }
 
-        _ => unimplemented!("unimplemented ty {:#?} in soroban decoder", ty),
+        _ => panic!(
+            "{}",
+            CodegenError::unsupported_soroban_type(
+                arg.loc(),
+                "by the Soroban decoder",
+                ty.to_string(ns),
+            )
+        ),
     }
 }
 
@@ -722,7 +730,14 @@ pub fn soroban_encode_arg(
             expr: encode_vector(item.clone(), cfg, vartab),
         },
 
-        _ => todo!("Type not yet supported in soroban encoder: {:?}", item.ty()),
+        _ => panic!(
+            "{}",
+            CodegenError::unsupported_soroban_type(
+                item.loc(),
+                "by the Soroban encoder",
+                item.ty().to_string(ns),
+            )
+        ),
     };
 
     cfg.add(vartab, ret);
