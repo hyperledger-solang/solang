@@ -143,7 +143,7 @@ pub fn soroban_decode_arg(
         },
         Type::Uint(64) => decode_u64(wrapper_cfg, vartab, arg),
 
-        Type::Address(_) | Type::String => arg.clone(),
+        Type::Address(_) | Type::String | Type::DynamicBytes => arg.clone(),
 
         Type::Enum(enum_no) => {
             let decoded = soroban_decode_arg(arg, wrapper_cfg, vartab, ns, Some(Type::Uint(32)));
@@ -728,6 +728,11 @@ pub fn soroban_encode_arg(
             loc: Loc::Codegen,
             res: obj,
             expr: encode_vector(item.clone(), cfg, vartab),
+        },
+        Type::DynamicBytes => Instr::Set {
+            loc: Loc::Codegen,
+            res: obj,
+            expr: item.clone(),
         },
 
         _ => panic!(
