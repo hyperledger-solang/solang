@@ -2,6 +2,7 @@
 mod alloc;
 mod array_args;
 mod bytes_n_codec;
+mod bytes_subscript;
 mod dynamic_bytes;
 mod atomic_swap;
 mod auth;
