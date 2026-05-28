@@ -290,7 +290,115 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         index: IntValue<'a>,
         loc: Loc,
     ) -> IntValue<'a> {
-        unimplemented!()
+        let bytes_obj = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::GetContractData.name())
+                    .unwrap(),
+                &[
+                    slot.into(),
+                    bin.context.i64_type().const_int(1, false).into(),
+                ],
+                "load_bytes_storage",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let len_u32val = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::BytesLen.name())
+                    .unwrap(),
+                &[bytes_obj.into()],
+                "bytes_len",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let len_decoded = bin
+            .builder
+            .build_right_shift(
+                len_u32val,
+                bin.context.i64_type().const_int(32, false),
+                false,
+                "len_decoded",
+            )
+            .unwrap();
+
+        let index64 = if index.get_type().get_bit_width() == 64 {
+            index
+        } else {
+            bin.builder
+                .build_int_z_extend(index, bin.context.i64_type(), "index64")
+                .unwrap()
+        };
+
+        let in_range = bin
+            .builder
+            .build_int_compare(inkwell::IntPredicate::ULT, index64, len_decoded, "in_range")
+            .unwrap();
+
+        let get_block = bin
+            .context
+            .append_basic_block(function, "bytes_get_in_range");
+        let oob_block = bin.context.append_basic_block(function, "bytes_get_oob");
+
+        bin.builder
+            .build_conditional_branch(in_range, get_block, oob_block)
+            .unwrap();
+
+        bin.builder.position_at_end(oob_block);
+        bin.log_runtime_error(
+            self,
+            "storage bytes index out of bounds".to_string(),
+            Some(loc),
+        );
+        self.assert_failure(
+            bin,
+            bin.context.ptr_type(Default::default()).const_null(),
+            bin.context.i32_type().const_zero(),
+        );
+
+        bin.builder.position_at_end(get_block);
+
+        let index_encoded = encode_value(index64, 32, 4, bin);
+
+        let result_u32val = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::BytesGet.name())
+                    .unwrap(),
+                &[bytes_obj.into(), index_encoded.into()],
+                "byte_val_u32val",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let raw_u64 = bin
+            .builder
+            .build_right_shift(
+                result_u32val,
+                bin.context.i64_type().const_int(32, false),
+                false,
+                "raw_u64",
+            )
+            .unwrap();
+
+        bin.builder
+            .build_int_truncate(raw_u64, bin.context.i8_type(), "byte_val")
+            .unwrap()
     }
 
     fn set_storage_bytes_subscript(
@@ -302,7 +410,124 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         value: IntValue<'a>,
         loc: Loc,
     ) {
-        unimplemented!()
+        let bytes_obj = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::GetContractData.name())
+                    .unwrap(),
+                &[
+                    slot.into(),
+                    bin.context.i64_type().const_int(1, false).into(),
+                ],
+                "load_bytes_storage",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let len_u32val = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::BytesLen.name())
+                    .unwrap(),
+                &[bytes_obj.into()],
+                "bytes_len",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let len_decoded = bin
+            .builder
+            .build_right_shift(
+                len_u32val,
+                bin.context.i64_type().const_int(32, false),
+                false,
+                "len_decoded",
+            )
+            .unwrap();
+
+        let index64 = if index.get_type().get_bit_width() == 64 {
+            index
+        } else {
+            bin.builder
+                .build_int_z_extend(index, bin.context.i64_type(), "index64")
+                .unwrap()
+        };
+
+        let in_range = bin
+            .builder
+            .build_int_compare(inkwell::IntPredicate::ULT, index64, len_decoded, "in_range")
+            .unwrap();
+
+        let set_block = bin
+            .context
+            .append_basic_block(function, "bytes_set_in_range");
+        let oob_block = bin.context.append_basic_block(function, "bytes_set_oob");
+
+        bin.builder
+            .build_conditional_branch(in_range, set_block, oob_block)
+            .unwrap();
+
+        bin.builder.position_at_end(oob_block);
+        bin.log_runtime_error(
+            self,
+            "storage bytes index out of bounds".to_string(),
+            Some(loc),
+        );
+        self.assert_failure(
+            bin,
+            bin.context.ptr_type(Default::default()).const_null(),
+            bin.context.i32_type().const_zero(),
+        );
+
+        bin.builder.position_at_end(set_block);
+
+        let index_encoded = encode_value(index64, 32, 4, bin);
+
+        let value64 = if value.get_type().get_bit_width() == 64 {
+            value
+        } else {
+            bin.builder
+                .build_int_z_extend(value, bin.context.i64_type(), "value64")
+                .unwrap()
+        };
+        let value_encoded = encode_value(value64, 32, 4, bin);
+
+        let new_bytes_obj = bin
+            .builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::BytesPut.name())
+                    .unwrap(),
+                &[bytes_obj.into(), index_encoded.into(), value_encoded.into()],
+                "new_bytes_obj",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        bin.builder
+            .build_call(
+                bin.module
+                    .get_function(HostFunctions::PutContractData.name())
+                    .unwrap(),
+                &[
+                    slot.into(),
+                    new_bytes_obj.into(),
+                    bin.context.i64_type().const_int(1, false).into(),
+                ],
+                "store_bytes_storage",
+            )
+            .unwrap();
     }
 
     fn storage_subscript(
