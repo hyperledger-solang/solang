@@ -4,6 +4,7 @@ mod array_args;
 mod bytes_n_codec;
 mod bytes_subscript;
 mod dynamic_bytes;
+mod hash;
 mod atomic_swap;
 mod auth;
 mod constructor;
