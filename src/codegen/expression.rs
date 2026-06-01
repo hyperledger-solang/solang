@@ -2913,6 +2913,10 @@ fn expr_builtin(
                 args: arguments,
             }
         }
+        ast::Builtin::Sha256 | ast::Builtin::Keccak256 if ns.target == Target::Soroban => {
+            soroban_compute_hash(args, &builtin, cfg, contract_no, func, ns, vartab, opt, loc)
+        }
+
         _ => {
             let arguments: Vec<Expression> = args
                 .iter()
@@ -2963,6 +2967,45 @@ fn alloc_dynamic_array(
         size: Box::new(size),
         initializer: init.clone(),
     }
+}
+
+fn soroban_compute_hash(
+    args: &[ast::Expression],
+    builtin: &ast::Builtin,
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    func: Option<&Function>,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    opt: &Options,
+    loc: &pt::Loc,
+) -> Expression {
+    let host_fn_name = match builtin {
+        ast::Builtin::Sha256 => HostFunctions::ComputeSha256.name().to_string(),
+        ast::Builtin::Keccak256 => HostFunctions::ComputeKeccak256.name().to_string(),
+        _ => unreachable!("soroban_compute_hash only lowers sha256 and keccak256"),
+    };
+
+    let raw_input = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+    let input = soroban_encode_arg(raw_input, cfg, vartab, ns);
+
+    let digest_var = vartab.temp_name("digest_obj", &Type::Uint(64));
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![digest_var],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction { name: host_fn_name },
+            args: vec![input],
+        },
+    );
+    let digest = Expression::Variable {
+        loc: *loc,
+        ty: Type::Uint(64),
+        var_no: digest_var,
+    };
+
+    soroban_decode_arg(digest, cfg, vartab, ns, Some(Type::Bytes(32)))
 }
 
 fn add(

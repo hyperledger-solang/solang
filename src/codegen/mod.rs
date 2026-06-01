@@ -146,6 +146,8 @@ pub enum HostFunctions {
     BytesCopyToLinearMemory,
     BytesGet,
     BytesPut,
+    ComputeSha256,
+    ComputeKeccak256,
 }
 
 impl HostFunctions {
@@ -200,6 +202,8 @@ impl HostFunctions {
             HostFunctions::VecPopBack => "v.7",
             HostFunctions::VecGet => "v.1",
             HostFunctions::VecPut => "v.0",
+            HostFunctions::ComputeSha256 => "c._",
+            HostFunctions::ComputeKeccak256 => "c.1",
         }
     }
 }

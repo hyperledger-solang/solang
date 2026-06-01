@@ -164,6 +164,8 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::ComputeSha256 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ComputeKeccak256 => bin.context.i64_type().fn_type(&[ty.into()], false),
         }
     }
 }
@@ -481,6 +483,8 @@ impl SorobanTarget {
             HostFunctions::BytesPut,
             HostFunctions::VecLen,
             HostFunctions::VecPopBack,
+            HostFunctions::ComputeSha256,
+            HostFunctions::ComputeKeccak256,
         ];
 
         for func in &host_functions {
