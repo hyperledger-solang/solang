@@ -142,8 +142,8 @@ impl BufferValidator<'_> {
 
         cfg.set_basic_block(invalid);
 
-        // TODO: This needs a proper error message
-        let error = SolidityError::Panic(PanicCode::Generic);
+        // Use ArrayIndexOob panic code for proper Solidity-compliant error reporting
+        let error = SolidityError::Panic(PanicCode::ArrayIndexOob);
         assert_failure(&Loc::Codegen, error, ns, cfg, vartab);
 
         cfg.set_basic_block(valid);
@@ -222,8 +222,8 @@ impl BufferValidator<'_> {
         );
 
         cfg.set_basic_block(out_of_bounds_block);
-        // TODO: Add an error message here
-        let error = SolidityError::Panic(PanicCode::Generic);
+        // Use ArrayIndexOob panic code for proper Solidity-compliant error reporting
+        let error = SolidityError::Panic(PanicCode::ArrayIndexOob);
         assert_failure(&Loc::Codegen, error, ns, cfg, vartab);
         cfg.set_basic_block(inbounds_block);
     }
