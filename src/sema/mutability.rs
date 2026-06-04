@@ -289,9 +289,13 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
             Statement::Expression(_, _, expr) => {
                 expr.recurse(state, read_expression);
             }
-            Statement::Delete(loc, _, _) => {
+            Statement::Delete(loc, _, _expr) => {
+                // Always require data account access for delete operations
                 state.data_account |= DataAccountUsage::WRITE;
-                state.write(loc)
+                
+                // For mutability analysis, all delete operations are write operations
+                // Delete operations inherently modify state, so they should prevent 'pure'/'view' functions
+                state.write(loc);
             }
             Statement::Destructure(_, fields, expr) => {
                 // This is either a list or internal/external function call
