@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{HashTy, ReturnCode};
+use crate::codegen::error::CodegenError;
 use crate::codegen::revert::PanicCode;
 use crate::codegen::{Builtin, Expression};
 use crate::emit::binary::Binary;
@@ -10,6 +11,7 @@ use crate::emit::{loop_builder::LoopBuilder, BinaryOp, TargetRuntime, Variable};
 use crate::emit_context;
 use crate::sema::ast::{ArrayLength, RetrieveType, StructType, Type};
 use crate::Target;
+use inkwell::builder::BuilderError;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, StringRadix};
 use inkwell::values::{
@@ -19,6 +21,55 @@ use inkwell::{AddressSpace, IntPredicate};
 use num_bigint::Sign;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
+
+fn emit_or_panic<T>(result: Result<T, BuilderError>, operation: impl Into<String>) -> T {
+    result.unwrap_or_else(|err| panic!("{}", CodegenError::llvm_builder(operation, err)))
+}
+
+fn runtime_helper<'a>(
+    bin: &Binary<'a>,
+    name: &str,
+    operation: impl Into<String>,
+) -> FunctionValue<'a> {
+    bin.module.get_function(name).unwrap_or_else(|| {
+        panic!(
+            "{}",
+            CodegenError::missing_runtime_helper(name, operation, bin.ns.target)
+        );
+    })
+}
+
+fn expect_llvm_entity<T>(
+    value: Option<T>,
+    operation: impl Into<String>,
+    entity: impl Into<String>,
+) -> T {
+    value.unwrap_or_else(|| {
+        panic!("{}", CodegenError::missing_llvm_entity(operation, entity));
+    })
+}
+
+fn expect_return_value<T>(value: Option<T>, operation: impl Into<String>) -> T {
+    expect_llvm_entity(value, operation, "expected return value")
+}
+
+fn expect_numeric_conversion<T>(
+    value: Option<T>,
+    operation: impl Into<String>,
+    raw_value: impl Into<String>,
+    target_type: impl Into<String>,
+) -> T {
+    value.unwrap_or_else(|| {
+        panic!(
+            "{}",
+            CodegenError::numeric_conversion(operation, raw_value, target_type)
+        );
+    })
+}
+
+fn invalid_cfg<T>(operation: impl Into<String>, reason: impl Into<String>) -> T {
+    panic!("{}", CodegenError::invalid_cfg_invariant(operation, reason))
+}
 
 /// The expression function recursively emits code for expressions. The BasicEnumValue it
 /// returns depends on the context; if it is simple integer, bool or bytes32 expression, the value
@@ -35,7 +86,11 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
     emit_context!(bin);
 
     match e {
-        Expression::FunctionArg { arg_no, .. } => function.get_nth_param(*arg_no as u32).unwrap(),
+        Expression::FunctionArg { arg_no, .. } => expect_llvm_entity(
+            function.get_nth_param(*arg_no as u32),
+            "emitting function argument expression",
+            format!("function parameter {arg_no}"),
+        ),
         Expression::BoolLiteral { value, .. } => bin
             .context
             .bool_type()
@@ -88,18 +143,28 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let s = bin
                 .builder
                 .build_call(
-                    bin.module.get_function(allocator).unwrap(),
+                    runtime_helper(bin, allocator, "allocating struct literal"),
                     &[struct_ty
                         .size_of()
-                        .unwrap()
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "{}",
+                                CodegenError::missing_llvm_entity(
+                                    "emitting expression",
+                                    "type size"
+                                )
+                            )
+                        })
                         .const_cast(bin.context.i32_type(), false)
                         .into()],
                     "",
                 )
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .try_as_basic_value()
                 .left()
-                .unwrap()
+                .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
                 .into_pointer_value();
 
             for (i, expr) in fields.iter().enumerate() {
@@ -114,7 +179,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                             ],
                             "struct member",
                         )
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 };
 
                 let elem = expression(target, bin, expr, vartab, function);
@@ -123,12 +190,18 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     let load_type = bin.llvm_type(&expr.ty());
                     bin.builder
                         .build_load(load_type, elem.into_pointer_value(), "elem")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 } else {
                     elem
                 };
 
-                bin.builder.build_store(elemptr, elem).unwrap();
+                bin.builder
+                    .build_store(elemptr, elem)
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
             }
 
             s.into()
@@ -164,7 +237,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let s = hex::encode(bs);
 
             ty.const_int_from_string(&s, StringRadix::Hexadecimal)
-                .unwrap()
+                .unwrap_or_else(|| {
+                    panic!(
+                        "{}",
+                        CodegenError::missing_llvm_entity("emitting expression", "integer literal")
+                    )
+                })
                 .into()
         }
         Expression::Add {
@@ -192,7 +270,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 )
                 .into()
             } else {
-                bin.builder.build_int_add(left, right, "").unwrap().into()
+                bin.builder
+                    .build_int_add(left, right, "")
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
+                    .into()
             }
         }
         Expression::Subtract {
@@ -219,7 +302,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 )
                 .into()
             } else {
-                bin.builder.build_int_sub(left, right, "").unwrap().into()
+                bin.builder
+                    .build_int_sub(left, right, "")
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
+                    .into()
             }
         }
         Expression::Multiply {
@@ -257,10 +345,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let name = format!("udivmod{div_bits}");
 
-                let f = bin
-                    .module
-                    .get_function(&name)
-                    .expect("div function missing");
+                let f = runtime_helper(bin, &name, format!("{bits}-bit unsigned division"));
 
                 let ty = bin.context.custom_width_int_type(div_bits);
 
@@ -273,23 +358,41 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .build_store(
                         dividend,
                         if bits < div_bits {
-                            bin.builder.build_int_z_extend(left, ty, "").unwrap()
+                            bin.builder
+                                .build_int_z_extend(left, ty, "")
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::llvm_builder("emitting expression", err)
+                                    )
+                                })
                         } else {
                             left
                         },
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 bin.builder
                     .build_store(
                         divisor,
                         if bits < div_bits {
-                            bin.builder.build_int_z_extend(right, ty, "").unwrap()
+                            bin.builder
+                                .build_int_z_extend(right, ty, "")
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::llvm_builder("emitting expression", err)
+                                    )
+                                })
                         } else {
                             right
                         },
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let ret = bin
                     .builder
@@ -298,10 +401,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
                         "udiv",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .try_as_basic_value()
                     .left()
-                    .unwrap();
+                    .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"));
 
                 let success = bin
                     .builder
@@ -311,13 +416,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.context.i32_type().const_zero(),
                         "success",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let success_block = bin.context.append_basic_block(function, "success");
                 let bail_block = bin.context.append_basic_block(function, "bail");
-                bin.builder
-                    .build_conditional_branch(success, success_block, bail_block)
-                    .unwrap();
+                emit_or_panic(
+                    bin.builder
+                        .build_conditional_branch(success, success_block, bail_block),
+                    format!("emitting division-by-zero guard for {bits}-bit unsigned division"),
+                );
 
                 bin.builder.position_at_end(bail_block);
 
@@ -331,13 +440,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let quotient = bin
                     .builder
                     .build_load(ty, quotient, "quotient")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into_int_value();
 
                 if bits < div_bits {
                     bin.builder
                         .build_int_truncate(quotient, left.get_type(), "")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 } else {
                     quotient
                 }
@@ -345,7 +458,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             } else {
                 bin.builder
                     .build_int_unsigned_div(left, right, "")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into()
             }
         }
@@ -362,10 +477,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let name = format!("sdivmod{div_bits}");
 
-                let f = bin
-                    .module
-                    .get_function(&name)
-                    .expect("div function missing");
+                let f = runtime_helper(bin, &name, format!("{bits}-bit signed division"));
 
                 let ty = bin.context.custom_width_int_type(div_bits);
 
@@ -378,23 +490,41 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .build_store(
                         dividend,
                         if bits < div_bits {
-                            bin.builder.build_int_s_extend(left, ty, "").unwrap()
+                            bin.builder
+                                .build_int_s_extend(left, ty, "")
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::llvm_builder("emitting expression", err)
+                                    )
+                                })
                         } else {
                             left
                         },
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 bin.builder
                     .build_store(
                         divisor,
                         if bits < div_bits {
-                            bin.builder.build_int_s_extend(right, ty, "").unwrap()
+                            bin.builder
+                                .build_int_s_extend(right, ty, "")
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::llvm_builder("emitting expression", err)
+                                    )
+                                })
                         } else {
                             right
                         },
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let ret = bin
                     .builder
@@ -403,10 +533,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
                         "udiv",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .try_as_basic_value()
                     .left()
-                    .unwrap();
+                    .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"));
 
                 let success = bin
                     .builder
@@ -416,13 +548,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.context.i32_type().const_zero(),
                         "success",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let success_block = bin.context.append_basic_block(function, "success");
                 let bail_block = bin.context.append_basic_block(function, "bail");
-                bin.builder
-                    .build_conditional_branch(success, success_block, bail_block)
-                    .unwrap();
+                emit_or_panic(
+                    bin.builder
+                        .build_conditional_branch(success, success_block, bail_block),
+                    format!("emitting division-by-zero guard for {bits}-bit signed division"),
+                );
 
                 bin.builder.position_at_end(bail_block);
 
@@ -436,13 +572,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let quotient = bin
                     .builder
                     .build_load(ty, quotient, "quotient")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into_int_value();
 
                 if bits < div_bits {
                     bin.builder
                         .build_int_truncate(quotient, left.get_type(), "")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 } else {
                     quotient
                 }
@@ -457,17 +597,25 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         left.get_type().const_zero(),
                         "left_negative",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let left = bin
                     .builder
                     .build_select(
                         left_negative,
-                        bin.builder.build_int_neg(left, "signed_left").unwrap(),
+                        bin.builder
+                            .build_int_neg(left, "signed_left")
+                            .unwrap_or_else(|err| {
+                                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                            }),
                         left,
                         "left_abs",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into_int_value();
 
                 let right_negative = bin
@@ -478,38 +626,61 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         right.get_type().const_zero(),
                         "right_negative",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let right = bin
                     .builder
                     .build_select(
                         right_negative,
-                        bin.builder.build_int_neg(right, "signed_right").unwrap(),
+                        bin.builder
+                            .build_int_neg(right, "signed_right")
+                            .unwrap_or_else(|err| {
+                                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                            }),
                         right,
                         "right_abs",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into_int_value();
 
-                let res = bin.builder.build_int_unsigned_div(left, right, "").unwrap();
+                let res = bin
+                    .builder
+                    .build_int_unsigned_div(left, right, "")
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let negate_result = bin
                     .builder
                     .build_xor(left_negative, right_negative, "negate_result")
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 bin.builder
                     .build_select(
                         negate_result,
-                        bin.builder.build_int_neg(res, "unsigned_res").unwrap(),
+                        bin.builder
+                            .build_int_neg(res, "unsigned_res")
+                            .unwrap_or_else(|err| {
+                                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                            }),
                         res,
                         "res",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
             } else {
                 bin.builder
                     .build_int_signed_div(left, right, "")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into()
             }
         }
@@ -526,10 +697,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let name = format!("udivmod{div_bits}");
 
-                let f = bin
-                    .module
-                    .get_function(&name)
-                    .expect("div function missing");
+                let f = runtime_helper(bin, &name, format!("{bits}-bit unsigned modulo"));
 
                 let ty = bin.context.custom_width_int_type(div_bits);
 
@@ -542,23 +710,41 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .build_store(
                         dividend,
                         if bits < div_bits {
-                            bin.builder.build_int_z_extend(left, ty, "").unwrap()
+                            bin.builder
+                                .build_int_z_extend(left, ty, "")
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::llvm_builder("emitting expression", err)
+                                    )
+                                })
                         } else {
                             left
                         },
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 bin.builder
                     .build_store(
                         divisor,
                         if bits < div_bits {
-                            bin.builder.build_int_z_extend(right, ty, "").unwrap()
+                            bin.builder
+                                .build_int_z_extend(right, ty, "")
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::llvm_builder("emitting expression", err)
+                                    )
+                                })
                         } else {
                             right
                         },
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let ret = bin
                     .builder
@@ -567,10 +753,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
                         "udiv",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .try_as_basic_value()
                     .left()
-                    .unwrap();
+                    .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"));
 
                 let success = bin
                     .builder
@@ -580,13 +768,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.context.i32_type().const_zero(),
                         "success",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let success_block = bin.context.append_basic_block(function, "success");
                 let bail_block = bin.context.append_basic_block(function, "bail");
-                bin.builder
-                    .build_conditional_branch(success, success_block, bail_block)
-                    .unwrap();
+                emit_or_panic(
+                    bin.builder
+                        .build_conditional_branch(success, success_block, bail_block),
+                    format!("emitting division-by-zero guard for {bits}-bit unsigned modulo"),
+                );
 
                 bin.builder.position_at_end(bail_block);
 
@@ -600,13 +792,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let rem = bin
                     .builder
                     .build_load(ty, rem, "urem")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into_int_value();
 
                 if bits < div_bits {
                     bin.builder
                         .build_int_truncate(rem, bin.context.custom_width_int_type(bits), "")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 } else {
                     rem
                 }
@@ -614,7 +810,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             } else {
                 bin.builder
                     .build_int_unsigned_rem(left, right, "")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into()
             }
         }
@@ -631,10 +829,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let name = format!("sdivmod{div_bits}");
 
-                let f = bin
-                    .module
-                    .get_function(&name)
-                    .expect("div function missing");
+                let f = runtime_helper(bin, &name, format!("{bits}-bit signed modulo"));
 
                 let ty = bin.context.custom_width_int_type(div_bits);
 
@@ -647,23 +842,41 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .build_store(
                         dividend,
                         if bits < div_bits {
-                            bin.builder.build_int_s_extend(left, ty, "").unwrap()
+                            bin.builder
+                                .build_int_s_extend(left, ty, "")
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::llvm_builder("emitting expression", err)
+                                    )
+                                })
                         } else {
                             left
                         },
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 bin.builder
                     .build_store(
                         divisor,
                         if bits < div_bits {
-                            bin.builder.build_int_s_extend(right, ty, "").unwrap()
+                            bin.builder
+                                .build_int_s_extend(right, ty, "")
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::llvm_builder("emitting expression", err)
+                                    )
+                                })
                         } else {
                             right
                         },
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let ret = bin
                     .builder
@@ -672,10 +885,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
                         "sdiv",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .try_as_basic_value()
                     .left()
-                    .unwrap();
+                    .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"));
 
                 let success = bin
                     .builder
@@ -685,13 +900,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.context.i32_type().const_zero(),
                         "success",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let success_block = bin.context.append_basic_block(function, "success");
                 let bail_block = bin.context.append_basic_block(function, "bail");
-                bin.builder
-                    .build_conditional_branch(success, success_block, bail_block)
-                    .unwrap();
+                emit_or_panic(
+                    bin.builder
+                        .build_conditional_branch(success, success_block, bail_block),
+                    format!("emitting division-by-zero guard for {bits}-bit signed modulo"),
+                );
 
                 bin.builder.position_at_end(bail_block);
 
@@ -705,13 +924,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let rem = bin
                     .builder
                     .build_load(ty, rem, "srem")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into_int_value();
 
                 if bits < div_bits {
                     bin.builder
                         .build_int_truncate(rem, bin.context.custom_width_int_type(bits), "")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 } else {
                     rem
                 }
@@ -726,17 +949,25 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         left.get_type().const_zero(),
                         "left_negative",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let left = bin
                     .builder
                     .build_select(
                         left_negative,
-                        bin.builder.build_int_neg(left, "signed_left").unwrap(),
+                        bin.builder
+                            .build_int_neg(left, "signed_left")
+                            .unwrap_or_else(|err| {
+                                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                            }),
                         left,
                         "left_abs",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let right_negative = bin
                     .builder
@@ -746,35 +977,53 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         right.get_type().const_zero(),
                         "right_negative",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let right = bin
                     .builder
                     .build_select(
                         right_negative,
-                        bin.builder.build_int_neg(right, "signed_right").unwrap(),
+                        bin.builder
+                            .build_int_neg(right, "signed_right")
+                            .unwrap_or_else(|err| {
+                                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                            }),
                         right,
                         "right_abs",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let res = bin
                     .builder
                     .build_int_unsigned_rem(left.into_int_value(), right.into_int_value(), "")
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 bin.builder
                     .build_select(
                         left_negative,
-                        bin.builder.build_int_neg(res, "unsigned_res").unwrap(),
+                        bin.builder
+                            .build_int_neg(res, "unsigned_res")
+                            .unwrap_or_else(|err| {
+                                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                            }),
                         res,
                         "res",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
             } else {
                 bin.builder
                     .build_int_signed_rem(left, right, "")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into()
             }
         }
@@ -804,13 +1053,20 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let error_return = bin
                 .builder
                 .build_call(f, &[left.into(), right.into(), o.into()], "power")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .try_as_basic_value()
                 .left()
-                .unwrap();
+                .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"));
 
             // Load the result pointer
-            let res = bin.builder.build_load(left.get_type(), o, "").unwrap();
+            let res = bin
+                .builder
+                .build_load(left.get_type(), o, "")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             // A return other than zero will abort execution. We need to check if power() returned a zero or not.
             let error_block = bin.context.append_basic_block(function, "error");
@@ -824,11 +1080,15 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     error_return.get_type().const_zero().into_int_value(),
                     "",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
-            bin.builder
-                .build_conditional_branch(error_ret, error_block, return_block)
-                .unwrap();
+            emit_or_panic(
+                bin.builder
+                    .build_conditional_branch(error_ret, error_block, return_block),
+                "emitting math-overflow guard for power expression",
+            );
             bin.builder.position_at_end(error_block);
 
             bin.log_runtime_error(target, "math overflow".to_string(), Some(*loc));
@@ -851,12 +1111,16 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     let l = bin
                         .builder
                         .build_extract_value(left, index as u32, "left")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                         .into_int_value();
                     let r = bin
                         .builder
                         .build_extract_value(right, index as u32, "right")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                         .into_int_value();
 
                     res = bin
@@ -865,10 +1129,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                             res,
                             bin.builder
                                 .build_int_compare(IntPredicate::EQ, l, r, "")
-                                .unwrap(),
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::llvm_builder("emitting expression", err)
+                                    )
+                                }),
                             "cmp",
                         )
-                        .unwrap();
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        });
                 }
 
                 res.into()
@@ -878,7 +1149,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 bin.builder
                     .build_int_compare(IntPredicate::EQ, left, right, "")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into()
             }
         }
@@ -894,12 +1167,16 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     let l = bin
                         .builder
                         .build_extract_value(left, index as u32, "left")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                         .into_int_value();
                     let r = bin
                         .builder
                         .build_extract_value(right, index as u32, "right")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                         .into_int_value();
 
                     res = bin
@@ -908,10 +1185,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                             res,
                             bin.builder
                                 .build_int_compare(IntPredicate::NE, l, r, "")
-                                .unwrap(),
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::llvm_builder("emitting expression", err)
+                                    )
+                                }),
                             "cmp",
                         )
-                        .unwrap();
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        });
                 }
 
                 res.into()
@@ -921,7 +1205,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 bin.builder
                     .build_int_compare(IntPredicate::NE, left, right, "")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into()
             }
         }
@@ -957,7 +1243,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         right,
                         "",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into()
             }
         }
@@ -993,7 +1281,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         right,
                         "",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into()
             }
         }
@@ -1029,7 +1319,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         right,
                         "",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into()
             }
         }
@@ -1065,7 +1357,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         right,
                         "",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .into()
             }
         }
@@ -1075,7 +1369,11 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let stack = bin.build_alloca(function, address.get_type(), "address");
 
-            bin.builder.build_store(stack, address).unwrap();
+            bin.builder
+                .build_store(stack, address)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             stack.into()
         }
@@ -1084,23 +1382,39 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             if ty.is_reference_type(bin.ns) && !ty.is_fixed_reference_type(bin.ns) {
                 let loaded_type = bin.context.ptr_type(AddressSpace::default());
-                let value = bin.builder.build_load(loaded_type, ptr, "").unwrap();
+                let value = bin
+                    .builder
+                    .build_load(loaded_type, ptr, "")
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
                 // if the pointer is null, it needs to be allocated
                 let allocation_needed = bin
                     .builder
                     .build_is_null(value.into_pointer_value(), "allocation_needed")
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 let allocate = bin.context.append_basic_block(function, "allocate");
                 let already_allocated = bin
                     .context
                     .append_basic_block(function, "already_allocated");
 
-                bin.builder
-                    .build_conditional_branch(allocation_needed, allocate, already_allocated)
-                    .unwrap();
+                emit_or_panic(
+                    bin.builder.build_conditional_branch(
+                        allocation_needed,
+                        allocate,
+                        already_allocated,
+                    ),
+                    "emitting lazy allocation branch for reference load",
+                );
 
-                let entry = bin.builder.get_insert_block().unwrap();
+                let entry = expect_llvm_entity(
+                    bin.builder.get_insert_block(),
+                    "emitting lazy allocation for reference load",
+                    "current insertion block",
+                );
 
                 bin.builder.position_at_end(allocate);
 
@@ -1112,25 +1426,41 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let new_struct = bin
                     .builder
                     .build_call(
-                        bin.module.get_function("__malloc").unwrap(),
+                        runtime_helper(bin, "__malloc", "allocating lazy reference load"),
                         &[llvm_ty
                             .size_of()
-                            .unwrap()
+                            .unwrap_or_else(|| {
+                                panic!(
+                                    "{}",
+                                    CodegenError::missing_llvm_entity(
+                                        "emitting expression",
+                                        "type size"
+                                    )
+                                )
+                            })
                             .const_cast(bin.context.i32_type(), false)
                             .into()],
                         "",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .try_as_basic_value()
                     .left()
-                    .unwrap()
+                    .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
                     .into_pointer_value();
 
-                bin.builder.build_store(ptr, new_struct).unwrap();
+                bin.builder
+                    .build_store(ptr, new_struct)
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 bin.builder
                     .build_unconditional_branch(already_allocated)
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 bin.builder.position_at_end(already_allocated);
 
@@ -1141,14 +1471,20 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.context.ptr_type(AddressSpace::default()),
                         &format!("ptr_{}", ty.to_string(bin.ns)),
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 combined_struct_ptr.add_incoming(&[(&value, entry), (&new_struct, allocate)]);
 
                 combined_struct_ptr.as_basic_value()
             } else {
                 let loaded_type = bin.llvm_type(ty);
-                bin.builder.build_load(loaded_type, ptr, "").unwrap()
+                bin.builder
+                    .build_load(loaded_type, ptr, "")
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
             }
         }
 
@@ -1158,7 +1494,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder
                 .build_int_z_extend(e, ty.into_int_type(), "")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into()
         }
         Expression::Negate {
@@ -1170,7 +1508,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let e = expression(target, bin, expr, vartab, function).into_int_value();
 
             if *overflowing {
-                bin.builder.build_int_neg(e, "").unwrap().into()
+                bin.builder
+                    .build_int_neg(e, "")
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
+                    .into()
             } else {
                 build_binary_op_with_overflow_check(
                     target,
@@ -1191,7 +1534,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder
                 .build_int_s_extend(e, ty.into_int_type(), "")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into()
         }
         Expression::Trunc { ty, expr, .. } => {
@@ -1200,7 +1545,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder
                 .build_int_truncate(e, ty.into_int_type(), "")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into()
         }
         Expression::Cast { ty: to, expr, .. } => {
@@ -1224,26 +1571,32 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             // Swap the byte order
             let bytes_ptr = bin.build_alloca(function, e.get_type(), "bytes_ptr");
-            bin.builder.build_store(bytes_ptr, e).unwrap();
+            bin.builder.build_store(bytes_ptr, e).unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            });
             let init = bin.build_alloca(function, e.get_type(), "init");
             bin.builder
                 .build_call(
-                    bin.module.get_function("__leNtobeN").unwrap(),
+                    runtime_helper(bin, "__leNtobeN", "converting bytes to big endian"),
                     &[bytes_ptr.into(), init.into(), size.into()],
                     "",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             bin.builder
                 .build_call(
-                    bin.module.get_function("vector_new").unwrap(),
+                    runtime_helper(bin, "vector_new", "creating bytes cast error payload"),
                     &[size.into(), elem_size.into(), init.into()],
                     "",
                 )
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .try_as_basic_value()
                 .left()
-                .unwrap()
+                .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
         }
         Expression::BytesCast {
             loc,
@@ -1264,12 +1617,16 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.context.i32_type().const_int(*n as u64, false),
                     "is_equal_to_n",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
             let cast = bin.context.append_basic_block(function, "cast");
             let error = bin.context.append_basic_block(function, "error");
-            bin.builder
-                .build_conditional_branch(is_equal_to_n, cast, error)
-                .unwrap();
+            emit_or_panic(
+                bin.builder
+                    .build_conditional_branch(is_equal_to_n, cast, error),
+                format!("emitting dynamic bytes to bytes{n} cast length check"),
+            );
 
             bin.builder.position_at_end(error);
             bin.log_runtime_error(target, "bytes cast error".to_string(), Some(*loc));
@@ -1285,43 +1642,71 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder
                 .build_call(
-                    bin.module.get_function("__beNtoleN").unwrap(),
+                    runtime_helper(bin, "__beNtoleN", "converting bytes to little endian"),
                     &[bytes_ptr.into(), le_bytes_ptr.into(), len.into()],
                     "",
                 )
-                .unwrap();
-            bin.builder.build_load(ty, le_bytes_ptr, "bytes").unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
+            bin.builder
+                .build_load(ty, le_bytes_ptr, "bytes")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
         }
         Expression::Not { expr, .. } => {
             let e = expression(target, bin, expr, vartab, function).into_int_value();
 
             bin.builder
                 .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into()
         }
         Expression::BitwiseNot { expr, .. } => {
             let e = expression(target, bin, expr, vartab, function).into_int_value();
 
-            bin.builder.build_not(e, "").unwrap().into()
+            bin.builder
+                .build_not(e, "")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
+                .into()
         }
         Expression::BitwiseOr { left, right: r, .. } => {
             let left = expression(target, bin, left, vartab, function).into_int_value();
             let right = expression(target, bin, r, vartab, function).into_int_value();
 
-            bin.builder.build_or(left, right, "").unwrap().into()
+            bin.builder
+                .build_or(left, right, "")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
+                .into()
         }
         Expression::BitwiseAnd { left, right, .. } => {
             let left = expression(target, bin, left, vartab, function).into_int_value();
             let right = expression(target, bin, right, vartab, function).into_int_value();
 
-            bin.builder.build_and(left, right, "").unwrap().into()
+            bin.builder
+                .build_and(left, right, "")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
+                .into()
         }
         Expression::BitwiseXor { left, right, .. } => {
             let left = expression(target, bin, left, vartab, function).into_int_value();
             let right = expression(target, bin, right, vartab, function).into_int_value();
 
-            bin.builder.build_xor(left, right, "").unwrap().into()
+            bin.builder
+                .build_xor(left, right, "")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
+                .into()
         }
         Expression::ShiftLeft { left, right, .. } => {
             let left = expression(target, bin, left, vartab, function).into_int_value();
@@ -1329,7 +1714,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder
                 .build_left_shift(left, right, "")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into()
         }
         Expression::ShiftRight {
@@ -1343,7 +1730,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder
                 .build_right_shift(left, right, *signed, "")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into()
         }
         Expression::Subscript {
@@ -1370,11 +1759,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let array = expression(target, bin, a, vartab, function).into_pointer_value();
                 let index = expression(target, bin, index, vartab, function).into_int_value();
 
-                let llvm_ty = bin.module.get_struct_type("struct.SolAccountInfo").unwrap();
+                let llvm_ty = expect_llvm_entity(
+                    bin.module.get_struct_type("struct.SolAccountInfo"),
+                    "emitting account info member access",
+                    "struct.SolAccountInfo",
+                );
                 unsafe {
                     bin.builder
                         .build_gep(llvm_ty, array, &[index], "account_info")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                         .into()
                 }
             } else if ty.is_dynamic_memory() {
@@ -1388,7 +1783,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     array_index = bin
                         .builder
                         .build_int_truncate(array_index, bin.context.i32_type(), "index")
-                        .unwrap();
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        });
                 }
 
                 let index = bin
@@ -1397,11 +1794,21 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         array_index,
                         bin.llvm_type(elem_ty.deref_memory())
                             .size_of()
-                            .unwrap()
+                            .unwrap_or_else(|| {
+                                panic!(
+                                    "{}",
+                                    CodegenError::missing_llvm_entity(
+                                        "emitting expression",
+                                        "type size"
+                                    )
+                                )
+                            })
                             .const_cast(bin.context.i32_type(), false),
                         "",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 unsafe {
                     bin.builder
@@ -1411,7 +1818,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                             &[index],
                             "index_access",
                         )
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 }
                 .into()
             } else {
@@ -1427,7 +1836,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                             &[bin.context.i32_type().const_zero(), index],
                             "index_access",
                         )
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                         .into()
                 }
             }
@@ -1443,7 +1854,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder
                 .build_struct_gep(struct_ty, struct_ptr, *member as u32, "struct member")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into()
         }
         Expression::ConstArrayLiteral {
@@ -1458,7 +1871,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .collect::<Vec<IntValue>>();
             let ty = exprs[0].get_type();
 
-            let top_size = *dims.next().unwrap();
+            let top_size = *dims.next().unwrap_or_else(|| {
+                invalid_cfg("emitting array literal", "missing array dimension")
+            });
 
             // Create a vector of ArrayValues
             let mut arrays = exprs
@@ -1504,17 +1919,27 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let p = bin
                 .builder
                 .build_call(
-                    bin.module.get_function("__malloc").unwrap(),
+                    runtime_helper(bin, "__malloc", "allocating array literal"),
                     &[ty.size_of()
-                        .unwrap()
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "{}",
+                                CodegenError::missing_llvm_entity(
+                                    "emitting expression",
+                                    "type size"
+                                )
+                            )
+                        })
                         .const_cast(bin.context.i32_type(), false)
                         .into()],
                     "array_literal",
                 )
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .try_as_basic_value()
                 .left()
-                .unwrap();
+                .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"));
 
             for (i, expr) in values.iter().enumerate() {
                 let mut ind = vec![bin.context.i32_type().const_zero()];
@@ -1530,7 +1955,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let elemptr = unsafe {
                     bin.builder
                         .build_gep(ty, p.into_pointer_value(), &ind, &format!("elemptr{i}"))
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 };
 
                 let elem = expression(target, bin, expr, vartab, function);
@@ -1539,12 +1966,18 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     let load_type = bin.llvm_type(&expr.ty());
                     bin.builder
                         .build_load(load_type, elem.into_pointer_value(), "elem")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 } else {
                     elem
                 };
 
-                bin.builder.build_store(elemptr, elem).unwrap();
+                bin.builder
+                    .build_store(elemptr, elem)
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
             }
 
             p
@@ -1556,7 +1989,15 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             ..
         } => {
             if matches!(ty, Type::Slice(_)) {
-                let init = initializer.as_ref().unwrap();
+                let init = initializer.as_ref().unwrap_or_else(|| {
+                    panic!(
+                        "{}",
+                        CodegenError::invalid_cfg_invariant(
+                            "emitting expression",
+                            "missing initializer"
+                        )
+                    )
+                });
 
                 let data = bin.emit_global_string("const_string", init, true);
 
@@ -1583,7 +2024,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let elem_size = bin
                     .llvm_type(&elem)
                     .size_of()
-                    .unwrap()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "{}",
+                            CodegenError::missing_llvm_entity("emitting expression", "type size")
+                        )
+                    })
                     .const_cast(bin.context.i32_type(), false);
 
                 bin.vector_new(size, elem_size, initializer.as_ref())
@@ -1616,7 +2062,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let start = unsafe {
                 bin.builder
                     .build_gep(bin.context.i8_type(), data, &[offset], "start")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
             };
 
             if matches!(returns[0], Type::Bytes(_) | Type::FunctionSelector) {
@@ -1626,7 +2074,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let store = bin.build_alloca(function, bytes_ty, "stack");
                 bin.builder
                     .build_call(
-                        bin.module.get_function("__beNtoleN").unwrap(),
+                        runtime_helper(bin, "__beNtoleN", "converting array literal bytes"),
                         &[
                             start.into(),
                             store.into(),
@@ -1634,14 +2082,20 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         ],
                         "",
                     )
-                    .unwrap();
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
                 bin.builder
                     .build_load(bytes_ty, store, &format!("bytes{n}"))
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
             } else {
                 bin.builder
                     .build_load(bin.llvm_type(&returns[0]), start, "value")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
             }
         }
         Expression::Keccak256 { exprs, .. } => {
@@ -1657,11 +2111,24 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     _ => v
                         .get_type()
                         .size_of()
-                        .unwrap()
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "{}",
+                                CodegenError::missing_llvm_entity(
+                                    "emitting expression",
+                                    "type size"
+                                )
+                            )
+                        })
                         .const_cast(bin.context.i32_type(), false),
                 };
 
-                length = bin.builder.build_int_add(length, len, "").unwrap();
+                length = bin
+                    .builder
+                    .build_int_add(length, len, "")
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 values.push((v, len, e.ty()));
             }
@@ -1670,7 +2137,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let src = bin
                 .builder
                 .build_array_alloca(bin.context.i8_type(), length, "keccak_src")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             // fill in all the fields
             let mut offset = bin.context.i32_type().const_zero();
@@ -1679,10 +2148,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let elem = unsafe {
                     bin.builder
                         .build_gep(bin.context.i8_type(), src, &[offset], "elem")
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 };
 
-                offset = bin.builder.build_int_add(offset, len, "").unwrap();
+                offset = bin
+                    .builder
+                    .build_int_add(offset, len, "")
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 match ty {
                     Type::DynamicBytes | Type::String => {
@@ -1690,25 +2166,36 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                         bin.builder
                             .build_call(
-                                bin.module.get_function("__memcpy").unwrap(),
+                                runtime_helper(bin, "__memcpy", "copying string literal data"),
                                 &[elem.into(), data.into(), len.into()],
                                 "",
                             )
-                            .unwrap();
+                            .unwrap_or_else(|err| {
+                                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                            });
                     }
                     _ => {
-                        bin.builder.build_store(elem, v).unwrap();
+                        bin.builder.build_store(elem, v).unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        });
                     }
                 }
             }
             let dst_type = bin.context.custom_width_int_type(256);
-            let dst = bin.builder.build_alloca(dst_type, "keccak_dst").unwrap();
+            let dst = bin
+                .builder
+                .build_alloca(dst_type, "keccak_dst")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             target.keccak256_hash(bin, src, length, dst);
 
             bin.builder
                 .build_load(dst_type, dst, "keccak256_hash")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
         }
         Expression::StringCompare { left, right, .. } => {
             let (left, left_len) = string_location(target, bin, left, vartab, function);
@@ -1716,14 +2203,16 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder
                 .build_call(
-                    bin.module.get_function("__memcmp").unwrap(),
+                    runtime_helper(bin, "__memcmp", "comparing string equality"),
                     &[left.into(), left_len.into(), right.into(), right_len.into()],
                     "",
                 )
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .try_as_basic_value()
                 .left()
-                .unwrap()
+                .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
         }
         Expression::ReturnData { .. } => target.return_data(bin, function).into(),
         Expression::StorageArrayLength { array, elem_ty, .. } => {
@@ -1744,7 +2233,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
             bin.builder
                 .build_call(
-                    bin.module.get_function("__beNtoleN").unwrap(),
+                    runtime_helper(bin, "__beNtoleN", "loading selector bytes"),
                     &[
                         bin.selector.as_pointer_value().into(),
                         selector.into(),
@@ -1752,11 +2241,15 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     ],
                     "",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             bin.builder
                 .build_load(selector_type, selector, "selector")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
         }
         Expression::Builtin {
             kind: Builtin::AddMod,
@@ -1774,31 +2267,47 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_int_add(
                     bin.builder
                         .build_int_z_extend(x, arith_ty, "wide_x")
-                        .unwrap(),
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        }),
                     bin.builder
                         .build_int_z_extend(y, arith_ty, "wide_y")
-                        .unwrap(),
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        }),
                     "x_plus_y",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let divisor = bin
                 .builder
                 .build_int_z_extend(k, arith_ty, "wide_k")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let pdividend = bin.build_alloca(function, arith_ty, "dividend");
             let pdivisor = bin.build_alloca(function, arith_ty, "divisor");
             let rem = bin.build_alloca(function, arith_ty, "remainder");
             let quotient = bin.build_alloca(function, arith_ty, "quotient");
 
-            bin.builder.build_store(pdividend, dividend).unwrap();
-            bin.builder.build_store(pdivisor, divisor).unwrap();
+            bin.builder
+                .build_store(pdividend, dividend)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
+            bin.builder
+                .build_store(pdivisor, divisor)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let ret = bin
                 .builder
                 .build_call(
-                    bin.module.get_function("udivmod512").unwrap(),
+                    runtime_helper(bin, "udivmod512", "addmod builtin lowering"),
                     &[
                         pdividend.into(),
                         pdivisor.into(),
@@ -1807,10 +2316,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     ],
                     "quotient",
                 )
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .try_as_basic_value()
                 .left()
-                .unwrap()
+                .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
                 .into_int_value();
 
             let success = bin
@@ -1821,13 +2332,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.context.i32_type().const_zero(),
                     "success",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let success_block = bin.context.append_basic_block(function, "success");
             let bail_block = bin.context.append_basic_block(function, "bail");
-            bin.builder
-                .build_conditional_branch(success, success_block, bail_block)
-                .unwrap();
+            emit_or_panic(
+                bin.builder
+                    .build_conditional_branch(success, success_block, bail_block),
+                "emitting zero-modulus guard for addmod builtin",
+            );
 
             bin.builder.position_at_end(bail_block);
 
@@ -1839,21 +2354,29 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.return_values[&ReturnCode::Success].get_type(),
                     "ret",
                 )
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into();
 
-            bin.builder.build_return(Some(&ret)).unwrap();
+            bin.builder.build_return(Some(&ret)).unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            });
             bin.builder.position_at_end(success_block);
 
             let remainder = bin
                 .builder
                 .build_load(arith_ty, rem, "remainder")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into_int_value();
 
             bin.builder
                 .build_int_truncate(remainder, res_ty, "quotient")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into()
         }
         Expression::Builtin {
@@ -1875,21 +2398,29 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     x_m,
                     bin.builder
                         .build_int_z_extend(x, arith_ty, "wide_x")
-                        .unwrap(),
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        }),
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
             bin.builder
                 .build_store(
                     y_m,
                     bin.builder
                         .build_int_z_extend(y, arith_ty, "wide_y")
-                        .unwrap(),
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        }),
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             bin.builder
                 .build_call(
-                    bin.module.get_function("__mul32").unwrap(),
+                    runtime_helper(bin, "__mul32", "mulmod builtin multiplication lowering"),
                     &[
                         x_m.into(),
                         y_m.into(),
@@ -1898,30 +2429,44 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     ],
                     "",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
             let k = expression(target, bin, &args[2], vartab, function).into_int_value();
             let dividend = bin
                 .builder
                 .build_load(arith_ty, x_times_y_m, "x_t_y")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let divisor = bin
                 .builder
                 .build_int_z_extend(k, arith_ty, "wide_k")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let pdividend = bin.build_alloca(function, arith_ty, "dividend");
             let pdivisor = bin.build_alloca(function, arith_ty, "divisor");
             let rem = bin.build_alloca(function, arith_ty, "remainder");
             let quotient = bin.build_alloca(function, arith_ty, "quotient");
 
-            bin.builder.build_store(pdividend, dividend).unwrap();
-            bin.builder.build_store(pdivisor, divisor).unwrap();
+            bin.builder
+                .build_store(pdividend, dividend)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
+            bin.builder
+                .build_store(pdivisor, divisor)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let ret = bin
                 .builder
                 .build_call(
-                    bin.module.get_function("udivmod512").unwrap(),
+                    runtime_helper(bin, "udivmod512", "mulmod builtin division lowering"),
                     &[
                         pdividend.into(),
                         pdivisor.into(),
@@ -1930,10 +2475,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     ],
                     "quotient",
                 )
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .try_as_basic_value()
                 .left()
-                .unwrap()
+                .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
                 .into_int_value();
 
             let success = bin
@@ -1944,13 +2491,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.context.i32_type().const_zero(),
                     "success",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let success_block = bin.context.append_basic_block(function, "success");
             let bail_block = bin.context.append_basic_block(function, "bail");
-            bin.builder
-                .build_conditional_branch(success, success_block, bail_block)
-                .unwrap();
+            emit_or_panic(
+                bin.builder
+                    .build_conditional_branch(success, success_block, bail_block),
+                "emitting zero-modulus guard for mulmod builtin",
+            );
 
             bin.builder.position_at_end(bail_block);
 
@@ -1962,22 +2513,30 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.return_values[&ReturnCode::Success].get_type(),
                     "ret",
                 )
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into();
 
-            bin.builder.build_return(Some(&ret)).unwrap();
+            bin.builder.build_return(Some(&ret)).unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            });
 
             bin.builder.position_at_end(success_block);
 
             let remainder = bin
                 .builder
                 .build_load(arith_ty, rem, "quotient")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into_int_value();
 
             bin.builder
                 .build_int_truncate(remainder, res_ty, "quotient")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .into()
         }
         Expression::Builtin {
@@ -2013,7 +2572,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 Builtin::Keccak256 => HashTy::Keccak256,
                 Builtin::Blake2_128 => HashTy::Blake2_128,
                 Builtin::Blake2_256 => HashTy::Blake2_256,
-                _ => unreachable!(),
+                _ => invalid_cfg("emitting hash builtin", "expression is not a hash builtin"),
             };
 
             target
@@ -2025,7 +2584,11 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             args,
             ..
         } => {
-            let vector_ty = bin.module.get_struct_type("struct.vector").unwrap();
+            let vector_ty = expect_llvm_entity(
+                bin.module.get_struct_type("struct.vector"),
+                "emitting concat builtin",
+                "struct.vector",
+            );
 
             let mut length = i32_zero!();
 
@@ -2037,7 +2600,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     length = bin
                         .builder
                         .build_int_add(length, bin.vector_len(v), "length")
-                        .unwrap();
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        });
 
                     v
                 })
@@ -2049,23 +2614,35 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     length,
                     vector_ty
                         .size_of()
-                        .unwrap()
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "{}",
+                                CodegenError::missing_llvm_entity(
+                                    "emitting expression",
+                                    "type size"
+                                )
+                            )
+                        })
                         .const_cast(bin.context.i32_type(), false),
                     "size",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let v = bin
                 .builder
                 .build_call(
-                    bin.module.get_function("__malloc").unwrap(),
+                    runtime_helper(bin, "__malloc", "allocating concat result"),
                     &[size.into()],
                     "",
                 )
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
                 .try_as_basic_value()
                 .left()
-                .unwrap()
+                .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
                 .into_pointer_value();
 
             let mut dest = bin.vector_bytes(v.into());
@@ -2077,14 +2654,16 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 dest = bin
                     .builder
                     .build_call(
-                        bin.module.get_function("__memcpy").unwrap(),
+                        runtime_helper(bin, "__memcpy", "copying concat argument"),
                         &[dest.into(), from.into(), len.into()],
                         "",
                     )
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
                     .try_as_basic_value()
                     .left()
-                    .unwrap()
+                    .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
                     .into_pointer_value();
             }
 
@@ -2092,15 +2671,27 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let len_ptr = bin
                 .builder
                 .build_struct_gep(vector_ty, v, 0, "len")
-                .unwrap();
-            bin.builder.build_store(len_ptr, length).unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
+            bin.builder
+                .build_store(len_ptr, length)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let size_ptr = bin
                 .builder
                 .build_struct_gep(vector_ty, v, 1, "size")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
-            bin.builder.build_store(size_ptr, length).unwrap();
+            bin.builder
+                .build_store(size_ptr, length)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             v.into()
         }
@@ -2126,7 +2717,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let advanced = unsafe {
                 bin.builder
                     .build_gep(bin.context.i8_type(), pointer, &[offset], "adv_pointer")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
             };
 
             advanced.into()
@@ -2139,7 +2732,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .builder
                 .build_ptr_to_int(data, bin.context.i32_type(), "ptr_as_int32");
 
-            res.unwrap().into()
+            res.unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            })
+            .into()
         }
 
         Expression::RationalNumberLiteral { .. }
@@ -2166,13 +2762,17 @@ pub(super) fn compare_address<'a, T: TargetRuntime<'a> + ?Sized>(
     let left = bin.build_alloca(function, bin.address_type(), "left");
     let right = bin.build_alloca(function, bin.address_type(), "right");
 
-    bin.builder.build_store(left, l).unwrap();
-    bin.builder.build_store(right, r).unwrap();
+    bin.builder
+        .build_store(left, l)
+        .unwrap_or_else(|err| panic!("{}", CodegenError::llvm_builder("emitting expression", err)));
+    bin.builder
+        .build_store(right, r)
+        .unwrap_or_else(|err| panic!("{}", CodegenError::llvm_builder("emitting expression", err)));
 
     let res = bin
         .builder
         .build_call(
-            bin.module.get_function("__memcmp_ord").unwrap(),
+            runtime_helper(bin, "__memcmp_ord", "comparing byte slices"),
             &[
                 left.into(),
                 right.into(),
@@ -2183,15 +2783,15 @@ pub(super) fn compare_address<'a, T: TargetRuntime<'a> + ?Sized>(
             ],
             "",
         )
-        .unwrap()
+        .unwrap_or_else(|err| panic!("{}", CodegenError::llvm_builder("emitting expression", err)))
         .try_as_basic_value()
         .left()
-        .unwrap()
+        .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
         .into_int_value();
 
     bin.builder
         .build_int_compare(op, res, bin.context.i32_type().const_zero(), "")
-        .unwrap()
+        .unwrap_or_else(|err| panic!("{}", CodegenError::llvm_builder("emitting expression", err)))
 }
 
 fn runtime_cast<'a>(
@@ -2249,7 +2849,11 @@ fn runtime_cast<'a>(
 
             let src = bin.build_alloca(function, llvm_ty, "dest");
 
-            bin.builder.build_store(src, val.into_int_value()).unwrap();
+            bin.builder
+                .build_store(src, val.into_int_value())
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let dest = bin.build_alloca(function, bin.address_type(), "address");
 
@@ -2260,15 +2864,19 @@ fn runtime_cast<'a>(
 
             bin.builder
                 .build_call(
-                    bin.module.get_function("__leNtobeN").unwrap(),
+                    runtime_helper(bin, "__leNtobeN", "converting fixed bytes to big endian"),
                     &[src.into(), dest.into(), len.into()],
                     "",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             bin.builder
                 .build_load(bin.address_type(), dest, "val")
-                .unwrap()
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
         }
         (Type::Address(_), Type::Bytes(_) | Type::Int(_) | Type::Uint(_) | Type::Value) => {
             let llvm_ty = bin.llvm_type(to);
@@ -2277,7 +2885,9 @@ fn runtime_cast<'a>(
 
             bin.builder
                 .build_store(src, val.into_array_value())
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let dest = bin.build_alloca(function, llvm_ty, "dest");
 
@@ -2288,13 +2898,19 @@ fn runtime_cast<'a>(
 
             bin.builder
                 .build_call(
-                    bin.module.get_function("__beNtoleN").unwrap(),
+                    runtime_helper(bin, "__beNtoleN", "converting fixed bytes to little endian"),
                     &[src.into(), dest.into(), len.into()],
                     "",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
-            bin.builder.build_load(llvm_ty, dest, "val").unwrap()
+            bin.builder
+                .build_load(llvm_ty, dest, "val")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
         }
         (Type::Bool, Type::Int(_) | Type::Uint(_)) => bin
             .builder
@@ -2303,7 +2919,9 @@ fn runtime_cast<'a>(
                 bin.llvm_type(to).into_int_type(),
                 "bool_to_int_cast",
             )
-            .unwrap()
+            .unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            })
             .into(),
         (_, Type::Uint(_)) if !from.is_contract_storage() && from.is_reference_type(bin.ns) => bin
             .builder
@@ -2312,7 +2930,9 @@ fn runtime_cast<'a>(
                 bin.llvm_type(to).into_int_type(),
                 "ptr_to_int",
             )
-            .unwrap()
+            .unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            })
             .into(),
         (Type::Uint(_), _) if to.is_reference_type(bin.ns) => bin
             .builder
@@ -2321,7 +2941,9 @@ fn runtime_cast<'a>(
                 bin.context.ptr_type(AddressSpace::default()),
                 "int_to_ptr",
             )
-            .unwrap()
+            .unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            })
             .into(),
         (Type::DynamicBytes | Type::String, Type::Slice(_)) => {
             let slice_ty = bin.llvm_type(to);
@@ -2332,37 +2954,61 @@ fn runtime_cast<'a>(
             let data_ptr = bin
                 .builder
                 .build_struct_gep(slice_ty, slice, 0, "data")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
-            bin.builder.build_store(data_ptr, data).unwrap();
+            bin.builder
+                .build_store(data_ptr, data)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let len = bin
                 .builder
                 .build_int_z_extend(bin.vector_len(val), bin.context.i64_type(), "len")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let len_ptr = bin
                 .builder
                 .build_struct_gep(slice_ty, slice, 1, "len")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
-            bin.builder.build_store(len_ptr, len).unwrap();
+            bin.builder.build_store(len_ptr, len).unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            });
 
-            bin.builder.build_load(slice_ty, slice, "slice").unwrap()
+            bin.builder
+                .build_load(slice_ty, slice, "slice")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
         }
         (Type::Address(_), Type::Slice(_)) => {
             let slice_ty = bin.llvm_type(to);
             let slice = bin.build_alloca(function, slice_ty, "slice");
             let address = bin.build_alloca(function, bin.llvm_type(from), "address");
 
-            bin.builder.build_store(address, val).unwrap();
+            bin.builder.build_store(address, val).unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            });
 
             let data_ptr = bin
                 .builder
                 .build_struct_gep(slice_ty, slice, 0, "data")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
-            bin.builder.build_store(data_ptr, address).unwrap();
+            bin.builder
+                .build_store(data_ptr, address)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let len = bin
                 .context
@@ -2372,17 +3018,29 @@ fn runtime_cast<'a>(
             let len_ptr = bin
                 .builder
                 .build_struct_gep(slice_ty, slice, 1, "len")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
-            bin.builder.build_store(len_ptr, len).unwrap();
+            bin.builder.build_store(len_ptr, len).unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            });
 
-            bin.builder.build_load(slice_ty, slice, "slice").unwrap()
+            bin.builder
+                .build_load(slice_ty, slice, "slice")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
         }
         (Type::Bytes(bytes_length), Type::Slice(_)) => {
             let llvm_ty = bin.llvm_type(from);
             let src = bin.build_alloca(function, llvm_ty, "src");
 
-            bin.builder.build_store(src, val.into_int_value()).unwrap();
+            bin.builder
+                .build_store(src, val.into_int_value())
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let dest = bin.build_alloca(
                 function,
@@ -2392,7 +3050,7 @@ fn runtime_cast<'a>(
 
             bin.builder
                 .build_call(
-                    bin.module.get_function("__leNtobeN").unwrap(),
+                    runtime_helper(bin, "__leNtobeN", "converting address to bytes"),
                     &[
                         src.into(),
                         dest.into(),
@@ -2403,7 +3061,9 @@ fn runtime_cast<'a>(
                     ],
                     "",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let slice_ty = bin.llvm_type(to);
             let slice = bin.build_alloca(function, slice_ty, "slice");
@@ -2411,9 +3071,15 @@ fn runtime_cast<'a>(
             let data_ptr = bin
                 .builder
                 .build_struct_gep(slice_ty, slice, 0, "data")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
-            bin.builder.build_store(data_ptr, dest).unwrap();
+            bin.builder
+                .build_store(data_ptr, dest)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let len = bin
                 .context
@@ -2423,13 +3089,24 @@ fn runtime_cast<'a>(
             let len_ptr = bin
                 .builder
                 .build_struct_gep(slice_ty, slice, 1, "len")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
-            bin.builder.build_store(len_ptr, len).unwrap();
+            bin.builder.build_store(len_ptr, len).unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            });
 
-            bin.builder.build_load(slice_ty, slice, "slice").unwrap()
+            bin.builder
+                .build_load(slice_ty, slice, "slice")
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                })
         }
-        _ => unreachable!(),
+        _ => invalid_cfg(
+            "casting basic value to slice",
+            "unsupported source expression",
+        ),
     }
 }
 
@@ -2447,7 +3124,10 @@ pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
     emit_context!(bin);
 
     let Type::Slice(to_elem_ty) = to else {
-        unreachable!()
+        invalid_cfg(
+            "emitting expression as slice",
+            "destination type is not a slice",
+        )
     };
 
     let llvm_to = bin.llvm_type(to);
@@ -2482,10 +3162,16 @@ pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
                             &[i32_const!(i.into()), i32_zero!()],
                             "output_ptr",
                         )
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 };
 
-                bin.builder.build_store(output_ptr, ptr).unwrap();
+                bin.builder
+                    .build_store(output_ptr, ptr)
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
 
                 // SAFETY: llvm_to is an array of slices, so i is slice no and 1 is the len ptr
                 // of the slice struct. Since indexes are correct for type it is safe.
@@ -2497,10 +3183,16 @@ pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
                             &[i32_const!(i.into()), i32_const!(1)],
                             "output_len",
                         )
-                        .unwrap()
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        })
                 };
 
-                bin.builder.build_store(output_len, len).unwrap();
+                bin.builder
+                    .build_store(output_len, len)
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    });
             }
 
             (output, llvm_length)
@@ -2542,7 +3234,9 @@ fn basic_value_to_slice<'a>(
             let len = bin
                 .builder
                 .build_int_z_extend(len, bin.context.i64_type(), "ext")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             (data, len)
         }
@@ -2553,10 +3247,12 @@ fn basic_value_to_slice<'a>(
             )
             .try_as_basic_value()
             .left()
-            .unwrap()
+            .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
             .into_pointer_value();
 
-            bin.builder.build_store(address, val).unwrap();
+            bin.builder.build_store(address, val).unwrap_or_else(|err| {
+                panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+            });
 
             let len = i64_const!(bin.ns.address_length as u64);
 
@@ -2566,23 +3262,29 @@ fn basic_value_to_slice<'a>(
             let llvm_ty = bin.llvm_type(from);
             let src = bin.build_alloca(function, llvm_ty, "src");
 
-            bin.builder.build_store(src, val.into_int_value()).unwrap();
+            bin.builder
+                .build_store(src, val.into_int_value())
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let bytes_length: u64 = (*bytes_length).into();
 
             let dest = call!("__malloc", &[i32_const!(bytes_length).into()])
                 .try_as_basic_value()
                 .left()
-                .unwrap()
+                .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
                 .into_pointer_value();
 
             bin.builder
                 .build_call(
-                    bin.module.get_function("__leNtobeN").unwrap(),
+                    runtime_helper(bin, "__leNtobeN", "converting array bytes"),
                     &[src.into(), dest.into(), i32_const!(bytes_length).into()],
                     "",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let len = i64_const!(bytes_length);
 
@@ -2593,10 +3295,18 @@ fn basic_value_to_slice<'a>(
 
             let to = bin.llvm_type(to);
 
-            let length = match dims.last().unwrap() {
+            let length = match dims
+                .last()
+                .unwrap_or_else(|| invalid_cfg("casting array to bytes", "missing array dimension"))
+            {
                 ArrayLength::Dynamic => bin.vector_len(val),
-                ArrayLength::Fixed(len) => i32_const!(len.to_u64().unwrap()),
-                _ => unreachable!(),
+                ArrayLength::Fixed(len) => i32_const!(expect_numeric_conversion(
+                    len.to_u64(),
+                    "casting fixed array to bytes",
+                    len.to_string(),
+                    "u64",
+                )),
+                _ => invalid_cfg("casting array to bytes", "invalid array length kind"),
             };
 
             // FIXME: In Program Runtime v1, we can't do dynamic alloca. Remove the malloc once we move to
@@ -2608,20 +3318,32 @@ fn basic_value_to_slice<'a>(
                         .build_int_truncate(
                             bin.llvm_type(&Type::Slice(Type::Bytes(1).into()))
                                 .size_of()
-                                .unwrap(),
+                                .unwrap_or_else(|| {
+                                    panic!(
+                                        "{}",
+                                        CodegenError::missing_llvm_entity(
+                                            "emitting expression",
+                                            "type size"
+                                        )
+                                    )
+                                }),
                             bin.context.i32_type(),
                             "slice_size",
                         )
-                        .unwrap(),
+                        .unwrap_or_else(|err| {
+                            panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                        }),
                     length,
                     "size",
                 )
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             let output = call!("__malloc", &[size.into()])
                 .try_as_basic_value()
                 .left()
-                .unwrap()
+                .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
                 .into_pointer_value();
 
             // loop over seeds
@@ -2645,7 +3367,9 @@ fn basic_value_to_slice<'a>(
             let input_elem = if load {
                 bin.builder
                     .build_load(bin.llvm_field_ty(&from_elem), input_elem, "elem")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
             } else {
                 input_elem.into()
             };
@@ -2657,30 +3381,47 @@ fn basic_value_to_slice<'a>(
             let output_data = unsafe {
                 bin.builder
                     .build_gep(to, output, &[index, i32_zero!()], "output_data")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
             };
 
-            bin.builder.build_store(output_data, data).unwrap();
+            bin.builder
+                .build_store(output_data, data)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             // SAFETY: to is an array of slices, so index is slice no and 1 is the len ptr
             // of the slice struct. Since indexes are correct from type it is safe.
             let output_len = unsafe {
                 bin.builder
                     .build_gep(to, output, &[index, i32_const!(1)], "output_len")
-                    .unwrap()
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
             };
 
-            bin.builder.build_store(output_len, len).unwrap();
+            bin.builder
+                .build_store(output_len, len)
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             builder.finish(bin);
 
             let length = bin
                 .builder
                 .build_int_z_extend(length, bin.context.i64_type(), "length")
-                .unwrap();
+                .unwrap_or_else(|err| {
+                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                });
 
             (output, length)
         }
-        _ => unreachable!(),
+        _ => invalid_cfg(
+            "emitting expression as slice",
+            "unsupported source expression",
+        ),
     }
 }

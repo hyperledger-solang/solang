@@ -7,6 +7,7 @@ mod constructor;
 mod dead_storage;
 pub(crate) mod dispatch;
 pub(crate) mod encoding;
+pub(crate) mod error;
 mod events;
 mod expression;
 pub(super) mod polkadot;
@@ -302,6 +303,18 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
     if !ns.diagnostics.any_errors() && ns.contracts[contract_no].instantiable {
         layout(contract_no, ns);
 
+        if ns.target == Target::Soroban {
+            soroban::validate_accessor_abi_types(contract_no, ns);
+            if ns.diagnostics.any_errors() {
+                return;
+            }
+
+            soroban::validate_event_abi_types(contract_no, ns);
+            if ns.diagnostics.any_errors() {
+                return;
+            }
+        }
+
         let mut cfg_no = 0;
         let mut all_cfg = Vec::new();
 
@@ -357,6 +370,13 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             cfg::generate_cfg(contract_no, None, cfg_no, &mut all_cfg, ns, opt);
 
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
+        }
+
+        if ns.target == Target::Soroban {
+            soroban::validate_abi_types(&all_cfg, ns);
+            if ns.diagnostics.any_errors() {
+                return;
+            }
         }
 
         for mut dispatch_cfg in function_dispatch(contract_no, &mut all_cfg, ns, opt) {

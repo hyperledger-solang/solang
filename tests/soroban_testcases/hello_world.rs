@@ -1,13 +1,41 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use soroban_sdk::testutils::Logs;
-use soroban_sdk::{IntoVal, String, Vec};
+use solang::codegen::Options;
+use solang::file_resolver::FileResolver;
+use solang::sema::ast::Namespace;
+use solang::{compile, Target};
+use solang_parser::diagnostics::Level;
+use std::ffi::OsStr;
+
+fn compile_soroban(src: &str) -> Namespace {
+    let tmp_file = OsStr::new("test.sol");
+    let mut cache = FileResolver::default();
+    cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
+    let opt = inkwell::OptimizationLevel::Default;
+
+    let (_, ns) = compile(
+        tmp_file,
+        &mut cache,
+        Target::Soroban,
+        &Options {
+            opt_level: opt.into(),
+            log_runtime_errors: true,
+            log_prints: true,
+            #[cfg(feature = "wasm_opt")]
+            wasm_opt: Some(contract_build::OptimizationPasses::Z),
+            soroban_version: None,
+            ..Default::default()
+        },
+        vec!["unknown".to_string()],
+        "0.0.1",
+    );
+
+    ns
+}
 
 #[test]
-#[should_panic(expected = "unsupported return type Array")]
 fn hello_world() {
-    let runtime = build_solidity(
+    let ns = compile_soroban(
         r#"
         contract HelloWorld {
             function hello(string memory to) public pure returns (string[] memory) {
@@ -17,19 +45,17 @@ fn hello_world() {
                 return res;
             }
         }"#,
-        |_| {},
     );
 
-    let addr = runtime.contracts.last().unwrap();
+    let errors = ns
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.level == Level::Error)
+        .collect::<Vec<_>>();
 
-    let to_str = String::from_str(&runtime.env, "Dev");
-    let res = runtime.invoke_contract(addr, "hello", vec![to_str.into_val(&runtime.env)]);
-
-    let vec_res: Vec<String> = res.into_val(&runtime.env);
-    println!("Logs: {:?}", runtime.env.logs().all());
-    assert_eq!(vec_res.len(), 2);
-
-    // Check elements
-    let _str0 = vec_res.get(0).unwrap();
-    let _str1 = vec_res.get(1).unwrap();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(
+        errors[0].message,
+        "type 'string[] memory' is not supported as a Soroban external function return value"
+    );
 }
