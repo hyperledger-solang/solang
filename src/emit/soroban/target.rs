@@ -1063,6 +1063,36 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
                 value.into()
             }
+            Expression::Builtin {
+                loc,
+                tys,
+                kind: Builtin::BlockNumber,
+                args,
+            } => {
+                let function_name = HostFunctions::GetLedgerSequence.name();
+                let function_value =
+                    runtime_helper(bin, function_name, "reading Soroban ledger sequence number/block.number");
+
+                let u32_val = bin
+                    .builder
+                    .build_call(function_value, &[], function_name)
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                return bin
+                    .builder
+                    .build_right_shift(
+                        u32_val,
+                        bin.context.i64_type().const_int(32, false),
+                        false,
+                        "block",
+                    )
+                    .unwrap()
+                    .into();
+            }
             _ => unsupported_soroban(expr.loc(), "this Soroban builtin"),
         }
     }

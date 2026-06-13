@@ -3,6 +3,7 @@ mod alloc;
 mod array_args;
 mod atomic_swap;
 mod auth;
+mod block_number;
 mod constructor;
 mod cross_contract_calls;
 mod events;
