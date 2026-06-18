@@ -3,7 +3,7 @@
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
-use crate::sema::ast::{self, Namespace, Type};
+use crate::sema::ast::{self, Function, Namespace, Type};
 use solang_parser::pt::Loc;
 
 /// The per-event emission strategy, produced by a target. Defined in
@@ -109,5 +109,61 @@ pub(crate) trait TargetCodegen {
         buffer_size_expr: Option<Expression>,
     ) -> Vec<Expression> {
         crate::codegen::encoding::abi_decode(loc, buffer, types, ns, vartab, cfg, buffer_size_expr)
+    }
+
+    /// Lower `arr.push(value)` on a contract-storage array. Each target owns its storage
+    /// representation (Solana flat slots, Polkadot hashed slots, Soroban host vectors), so
+    /// there is no shared default.
+    fn storage_array_push(
+        &self,
+        loc: &Loc,
+        args: &[ast::Expression],
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression;
+
+    /// Lower `arr.pop()` on a contract-storage array. See [`Self::storage_array_push`].
+    fn storage_array_pop(
+        &self,
+        loc: &Loc,
+        args: &[ast::Expression],
+        return_ty: &Type,
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression;
+
+    /// Compute the storage slot of array element `index` for the hashed-slots push path.
+    /// The default derives it from `keccak256(array_slot)`; Soroban indexes its host vector
+    /// with an encoded key instead.
+    fn storage_array_entry_offset(
+        &self,
+        loc: &Loc,
+        var_expr: &Expression,
+        index: Expression,
+        elem_ty: &Type,
+        slot_ty: &Type,
+        _cfg: &mut ControlFlowGraph,
+        _vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> Expression {
+        crate::codegen::storage::array_offset(
+            loc,
+            Expression::Keccak256 {
+                loc: *loc,
+                ty: slot_ty.clone(),
+                exprs: vec![var_expr.clone()],
+            },
+            index,
+            elem_ty.clone(),
+            ns,
+        )
     }
 }

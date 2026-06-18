@@ -3,9 +3,7 @@
 use super::revert::{
     assert_failure, expr_assert, log_runtime_error, require, PanicCode, SolidityError,
 };
-use super::storage::{
-    array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
-};
+use super::storage::array_offset;
 use super::targets::soroban::encoding::soroban_encode;
 use super::targets::soroban::encoding::{soroban_decode_arg, soroban_encode_arg};
 use super::{
@@ -1259,21 +1257,7 @@ pub fn expression(
             args,
         } => {
             if args[0].ty().is_contract_storage() {
-                if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
-                    array_push(loc, args, cfg, contract_no, func, ns, vartab, opt, target)
-                } else {
-                    storage_slots_array_push(
-                        loc,
-                        args,
-                        cfg,
-                        contract_no,
-                        func,
-                        ns,
-                        vartab,
-                        opt,
-                        target,
-                    )
-                }
+                target.storage_array_push(loc, args, cfg, contract_no, func, ns, vartab, opt)
             } else {
                 let second_arg = if args.len() > 1 {
                     expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target)
@@ -1302,33 +1286,7 @@ pub fn expression(
             args,
         } => {
             if args[0].ty().is_contract_storage() {
-                if ns.target == Target::Solana || args[0].ty().is_storage_bytes() {
-                    array_pop(
-                        loc,
-                        args,
-                        &ty[0],
-                        cfg,
-                        contract_no,
-                        func,
-                        ns,
-                        vartab,
-                        opt,
-                        target,
-                    )
-                } else {
-                    storage_slots_array_pop(
-                        loc,
-                        args,
-                        &ty[0],
-                        cfg,
-                        contract_no,
-                        func,
-                        ns,
-                        vartab,
-                        opt,
-                        target,
-                    )
-                }
+                target.storage_array_pop(loc, args, &ty[0], cfg, contract_no, func, ns, vartab, opt)
             } else {
                 let address_res = vartab.temp_anonymous(&ty[0]);
 

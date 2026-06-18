@@ -9,6 +9,7 @@ use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::error::CodegenError;
 use crate::codegen::expression::{expression, load_storage};
 use crate::codegen::interface::TargetCodegen;
+use crate::codegen::storage::{array_pop, storage_slots_array_push};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
 use crate::codegen::{Builtin, Expression, HostFunctions};
@@ -136,6 +137,97 @@ impl TargetCodegen for SorobanTarget {
     ) -> Vec<Expression> {
         soroban_decode(loc, buffer, types, ns, vartab, cfg, buffer_size_expr)
     }
+
+    fn storage_array_push(
+        &self,
+        loc: &pt::Loc,
+        args: &[ast::Expression],
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression {
+        // Arrays whose elements are reference types use the shared hashed-slots path (the
+        // entry offset and value encoding are routed back through this target); everything
+        // else (scalars, `bytes`) goes through the dedicated host-vector push.
+        let elem_is_ref = !args[0].ty().is_storage_bytes()
+            && matches!(
+                args[0].ty(),
+                Type::StorageRef(_, inner)
+                    if matches!(inner.deref_any(), Type::Array(elem_ty, _)
+                        if elem_ty.is_reference_type(ns))
+            );
+        if elem_is_ref {
+            storage_slots_array_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
+        } else {
+            soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
+        }
+    }
+
+    fn storage_array_pop(
+        &self,
+        loc: &pt::Loc,
+        args: &[ast::Expression],
+        return_ty: &Type,
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression {
+        if args[0].ty().is_storage_bytes() {
+            array_pop(
+                loc,
+                args,
+                return_ty,
+                cfg,
+                contract_no,
+                func,
+                ns,
+                vartab,
+                opt,
+                self,
+            )
+        } else {
+            soroban_storage_pop(
+                loc,
+                args,
+                return_ty,
+                cfg,
+                contract_no,
+                func,
+                ns,
+                vartab,
+                opt,
+                self,
+            )
+        }
+    }
+
+    fn storage_array_entry_offset(
+        &self,
+        loc: &pt::Loc,
+        var_expr: &Expression,
+        index: Expression,
+        elem_ty: &Type,
+        _slot_ty: &Type,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> Expression {
+        // Soroban indexes its host vector by an encoded key rather than a hashed slot.
+        let index_encoded = soroban_encode_arg(index, cfg, vartab, ns);
+        Expression::Subscript {
+            loc: *loc,
+            ty: elem_ty.clone(),
+            array_ty: Type::StorageRef(false, Box::new(elem_ty.clone())),
+            expr: Box::new(var_expr.clone()),
+            index: Box::new(index_encoded),
+        }
+    }
 }
 
 pub(super) fn validate_accessor_abi_types(contract_no: usize, ns: &mut Namespace) {
@@ -175,7 +267,6 @@ pub(super) fn validate_event_abi_types(contract_no: usize, ns: &mut Namespace) {
                 ));
             }
         }
-
     }
 }
 

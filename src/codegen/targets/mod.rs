@@ -6,10 +6,15 @@ use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::solana_accounts::account_collection::collect_accounts_from_contract;
 use crate::codegen::solana_accounts::account_management::manage_contract_accounts;
-use crate::codegen::{dispatch, Options};
+use crate::codegen::storage::{
+    array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
+};
+use crate::codegen::vartable::Vartable;
+use crate::codegen::{dispatch, Expression, Options};
 use crate::sema::ast;
-use crate::sema::ast::Namespace;
+use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
 use crate::Target;
+use solang_parser::pt::Loc;
 
 use self::soroban::SorobanTarget;
 
@@ -64,6 +69,47 @@ impl TargetCodegen for SolanaTarget {
     fn selector_hash_algorithm(&self) -> ast::Builtin {
         ast::Builtin::Sha256
     }
+
+    fn storage_array_push(
+        &self,
+        loc: &Loc,
+        args: &[ast::Expression],
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression {
+        // Solana stores dynamic arrays as flat slots.
+        array_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
+    }
+
+    fn storage_array_pop(
+        &self,
+        loc: &Loc,
+        args: &[ast::Expression],
+        return_ty: &Type,
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression {
+        array_pop(
+            loc,
+            args,
+            return_ty,
+            cfg,
+            contract_no,
+            func,
+            ns,
+            vartab,
+            opt,
+            self,
+        )
+    }
 }
 
 impl TargetCodegen for PolkadotTarget {
@@ -75,5 +121,65 @@ impl TargetCodegen for PolkadotTarget {
         opt: &Options,
     ) -> Vec<ControlFlowGraph> {
         dispatch::polkadot::function_dispatch(contract_no, all_cfg, ns, opt)
+    }
+
+    fn storage_array_push(
+        &self,
+        loc: &Loc,
+        args: &[ast::Expression],
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression {
+        // `bytes` uses the flat-slot path; typed arrays use hashed slots.
+        if args[0].ty().is_storage_bytes() {
+            array_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
+        } else {
+            storage_slots_array_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
+        }
+    }
+
+    fn storage_array_pop(
+        &self,
+        loc: &Loc,
+        args: &[ast::Expression],
+        return_ty: &Type,
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression {
+        if args[0].ty().is_storage_bytes() {
+            array_pop(
+                loc,
+                args,
+                return_ty,
+                cfg,
+                contract_no,
+                func,
+                ns,
+                vartab,
+                opt,
+                self,
+            )
+        } else {
+            storage_slots_array_pop(
+                loc,
+                args,
+                return_ty,
+                cfg,
+                contract_no,
+                func,
+                ns,
+                vartab,
+                opt,
+                self,
+            )
+        }
     }
 }
