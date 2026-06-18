@@ -10,6 +10,7 @@ pub(crate) mod encoding;
 pub(crate) mod error;
 mod events;
 mod expression;
+mod interface;
 pub(super) mod polkadot;
 mod reaching_definitions;
 pub mod revert;
@@ -20,6 +21,7 @@ mod statements;
 mod storage;
 mod strength_reduce;
 pub(crate) mod subexpression_elimination;
+mod targets;
 mod tests;
 mod undefined_variable;
 mod unused_variable;
@@ -29,9 +31,8 @@ mod yul;
 
 use self::{
     cfg::{optimize_and_check_cfg, ControlFlowGraph, Instr},
-    dispatch::function_dispatch,
     expression::expression,
-    solana_accounts::account_collection::collect_accounts_from_contract,
+    interface::TargetCodegen,
     vartable::Vartable,
 };
 use crate::sema::ast::{
@@ -41,7 +42,6 @@ use crate::{sema::ast, Target};
 use std::cmp::Ordering;
 
 use crate::codegen::cfg::ASTFunction;
-use crate::codegen::solana_accounts::account_management::manage_contract_accounts;
 use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::eval::eval_const_number;
@@ -247,6 +247,8 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
         return;
     }
 
+    let target = targets::make_target(ns);
+
     let mut contracts_done = Vec::new();
 
     contracts_done.resize(ns.contracts.len(), false);
@@ -272,7 +274,7 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
                 continue;
             }
 
-            contract(contract_no, ns, opt);
+            contract(contract_no, ns, opt, target.as_ref());
 
             if ns.diagnostics.any_errors() {
                 return;
@@ -282,37 +284,18 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
         }
     }
 
-    if ns.target == Target::Solana {
-        for contract_no in 0..ns.contracts.len() {
-            if ns.contracts[contract_no].instantiable {
-                let diag = collect_accounts_from_contract(contract_no, ns);
-                ns.diagnostics.extend(diag);
-            }
-        }
+    target.post_process_program(ns, opt);
 
-        for contract_no in 0..ns.contracts.len() {
-            if ns.contracts[contract_no].instantiable {
-                manage_contract_accounts(contract_no, ns);
-            }
-        }
-    }
     ns.diagnostics.sort_and_dedup();
 }
 
-fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
+fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options, target: &dyn TargetCodegen) {
     if !ns.diagnostics.any_errors() && ns.contracts[contract_no].instantiable {
         layout(contract_no, ns);
 
-        if ns.target == Target::Soroban {
-            soroban::validate_accessor_abi_types(contract_no, ns);
-            if ns.diagnostics.any_errors() {
-                return;
-            }
-
-            soroban::validate_event_abi_types(contract_no, ns);
-            if ns.diagnostics.any_errors() {
-                return;
-            }
+        target.validate_contract(contract_no, ns);
+        if ns.diagnostics.any_errors() {
+            return;
         }
 
         let mut cfg_no = 0;
@@ -372,14 +355,12 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
-        if ns.target == Target::Soroban {
-            soroban::validate_abi_types(&all_cfg, ns);
-            if ns.diagnostics.any_errors() {
-                return;
-            }
+        target.validate_cfgs(&all_cfg, ns);
+        if ns.diagnostics.any_errors() {
+            return;
         }
 
-        for mut dispatch_cfg in function_dispatch(contract_no, &mut all_cfg, ns, opt) {
+        for mut dispatch_cfg in target.function_dispatch(contract_no, &mut all_cfg, ns, opt) {
             optimize_and_check_cfg(&mut dispatch_cfg, ns, ASTFunction::None, opt);
             all_cfg.push(dispatch_cfg);
         }
