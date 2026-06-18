@@ -4,7 +4,7 @@ pub(crate) mod dispatch;
 pub(crate) mod encoding;
 pub(crate) mod events;
 
-use self::encoding::{soroban_decode_arg, soroban_encode_arg};
+use self::encoding::{soroban_decode, soroban_decode_arg, soroban_encode, soroban_encode_arg};
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::error::CodegenError;
 use crate::codegen::expression::{expression, load_storage};
@@ -109,6 +109,33 @@ impl TargetCodegen for SorobanTarget {
             _ => None,
         }
     }
+
+    fn abi_encode(
+        &self,
+        loc: &pt::Loc,
+        args: Vec<Expression>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+        packed: bool,
+    ) -> (Expression, Expression) {
+        // Soroban encodes to ScVal handles; soroban_encode returns a 3-tuple, drop the spread.
+        let (buffer, size, _) = soroban_encode(loc, args, ns, vartab, cfg, packed);
+        (buffer, size)
+    }
+
+    fn abi_decode(
+        &self,
+        loc: &pt::Loc,
+        buffer: &Expression,
+        types: &[Type],
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+        buffer_size_expr: Option<Expression>,
+    ) -> Vec<Expression> {
+        soroban_decode(loc, buffer, types, ns, vartab, cfg, buffer_size_expr)
+    }
 }
 
 pub(super) fn validate_accessor_abi_types(contract_no: usize, ns: &mut Namespace) {
@@ -148,6 +175,7 @@ pub(super) fn validate_event_abi_types(contract_no: usize, ns: &mut Namespace) {
                 ));
             }
         }
+
     }
 }
 

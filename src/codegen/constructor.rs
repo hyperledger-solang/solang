@@ -13,8 +13,6 @@ use crate::Target;
 use num_bigint::{BigInt, Sign};
 use solang_parser::pt::Loc;
 
-use super::encoding::abi_encode;
-
 /// This function encodes the constructor arguments and place an instruction in the CFG to
 /// call the constructor of a contract.
 pub(super) fn call_constructor(
@@ -102,7 +100,7 @@ pub(super) fn call_constructor(
 
     args.append(&mut constructor_args);
 
-    let (encoded_args, _) = abi_encode(loc, args, ns, vartab, cfg, false);
+    let (encoded_args, _) = target.abi_encode(loc, args, ns, vartab, cfg, false);
     cfg.add(
         vartab,
         Instr::Constructor {

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::encoding::{abi_decode, abi_encode};
 use super::revert::{
     assert_failure, expr_assert, log_runtime_error, require, PanicCode, SolidityError,
 };
@@ -2265,7 +2264,7 @@ fn abi_encode_many(
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt, target))
         .collect::<Vec<Expression>>();
 
-    abi_encode(loc, args, ns, vartab, cfg, false).0
+    target.abi_encode(loc, args, ns, vartab, cfg, false).0
 }
 
 fn abi_encode_packed(
@@ -2284,7 +2283,7 @@ fn abi_encode_packed(
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt, target))
         .collect::<Vec<Expression>>();
 
-    let (encoded, _) = abi_encode(loc, packed, ns, vartab, cfg, true);
+    let (encoded, _) = target.abi_encode(loc, packed, ns, vartab, cfg, true);
     encoded
 }
 
@@ -2295,11 +2294,14 @@ fn encode_many_with_selector(
     ns: &Namespace,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     let mut encoder_args: Vec<Expression> = Vec::with_capacity(args.len() + 1);
     encoder_args.push(selector);
     encoder_args.append(&mut args);
-    abi_encode(loc, encoder_args, ns, vartab, cfg, false).0
+    target
+        .abi_encode(loc, encoder_args, ns, vartab, cfg, false)
+        .0
 }
 
 fn abi_encode_with_selector(
@@ -2327,7 +2329,7 @@ fn abi_encode_with_selector(
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt, target))
         .collect::<Vec<Expression>>();
-    encode_many_with_selector(loc, selector, args, ns, vartab, cfg)
+    encode_many_with_selector(loc, selector, args, ns, vartab, cfg, target)
 }
 
 fn abi_encode_with_signature(
@@ -2355,7 +2357,7 @@ fn abi_encode_with_signature(
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt, target))
         .collect::<Vec<Expression>>();
-    encode_many_with_selector(loc, selector, args, ns, vartab, cfg)
+    encode_many_with_selector(loc, selector, args, ns, vartab, cfg, target)
 }
 
 fn abi_encode_call(
@@ -2388,7 +2390,7 @@ fn abi_encode_call(
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt, target))
         .collect::<Vec<Expression>>();
-    encode_many_with_selector(loc, selector, args, ns, vartab, cfg)
+    encode_many_with_selector(loc, selector, args, ns, vartab, cfg, target)
 }
 
 fn builtin_evm_gasprice(
@@ -2975,7 +2977,7 @@ fn expr_builtin(
                 args_vec.push(arg);
             }
 
-            let args_encoded = abi_encode(loc, args_vec.clone(), ns, vartab, cfg, false);
+            let args_encoded = target.abi_encode(loc, args_vec.clone(), ns, vartab, cfg, false);
 
             let args_buf = args_encoded.0;
 
@@ -4164,7 +4166,7 @@ pub fn emit_function_call(
                     },
                 );
 
-                let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
+                let (payload, _) = target.abi_encode(loc, args, ns, vartab, cfg, false);
 
                 let flags = call_args.flags.as_ref().map(|expr| {
                     expression(expr, cfg, caller_contract_no, func, ns, vartab, opt, target)
@@ -4207,7 +4209,7 @@ pub fn emit_function_call(
                         .iter()
                         .map(|e| e.ty.clone())
                         .collect::<Vec<Type>>();
-                    abi_decode(
+                    target.abi_decode(
                         loc,
                         &Expression::ReturnData { loc: *loc },
                         &tys,
@@ -4269,7 +4271,7 @@ pub fn emit_function_call(
                 tys.insert(0, Type::Bytes(ns.target.selector_length()));
                 args.insert(0, selector);
 
-                let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
+                let (payload, _) = target.abi_encode(loc, args, ns, vartab, cfg, false);
 
                 let flags = call_args.flags.as_ref().map(|expr| {
                     expression(expr, cfg, caller_contract_no, func, ns, vartab, opt, target)
@@ -4305,7 +4307,7 @@ pub fn emit_function_call(
                 }
 
                 if !func_returns.is_empty() && returns[0] != Type::Void {
-                    abi_decode(
+                    target.abi_decode(
                         loc,
                         &Expression::ReturnData { loc: *loc },
                         returns,
@@ -4341,7 +4343,7 @@ pub fn emit_function_call(
             if tys.len() == 1 && tys[0] == Type::Void {
                 vec![Expression::Poison]
             } else {
-                abi_decode(loc, &data, tys, ns, vartab, cfg, None)
+                target.abi_decode(loc, &data, tys, ns, vartab, cfg, None)
             }
         }
         _ => unreachable!(),

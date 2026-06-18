@@ -16,7 +16,6 @@ use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
 use crate::codegen::encoding::scale_encoding::ScaleEncoding;
 use crate::codegen::expression::load_storage;
-use crate::codegen::targets::soroban::encoding::{soroban_decode, soroban_encode};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type, Type::Uint};
@@ -39,10 +38,6 @@ pub(super) fn abi_encode(
     cfg: &mut ControlFlowGraph,
     packed: bool,
 ) -> (Expression, Expression) {
-    if ns.target == Target::Soroban {
-        let ret = soroban_encode(loc, args, ns, vartab, cfg, packed);
-        return (ret.0, ret.1);
-    }
     let mut encoder = create_encoder(ns, packed);
     let size = calculate_size_args(&mut encoder, &args, ns, vartab, cfg);
     let encoded_bytes = vartab.temp_name("abi_encoded", &Type::DynamicBytes);
@@ -95,10 +90,6 @@ pub(super) fn abi_decode(
     cfg: &mut ControlFlowGraph,
     buffer_size_expr: Option<Expression>,
 ) -> Vec<Expression> {
-    if ns.target == Target::Soroban {
-        return soroban_decode(loc, buffer, types, ns, vartab, cfg, buffer_size_expr);
-    }
-
     let buffer_size = vartab.temp_anonymous(&Uint(32));
     if let Some(length_expression) = buffer_size_expr {
         cfg.add(

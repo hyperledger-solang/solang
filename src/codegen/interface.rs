@@ -80,4 +80,34 @@ pub(crate) trait TargetCodegen {
     ) -> Option<Expression> {
         None
     }
+
+    /// Encode `args` into the target's wire format, returning `(buffer, length)`.
+    /// The default drives the shared buffer encoder (Borsh / SCALE); Soroban encodes to
+    /// ScVal handles instead.
+    fn abi_encode(
+        &self,
+        loc: &Loc,
+        args: Vec<Expression>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+        packed: bool,
+    ) -> (Expression, Expression) {
+        crate::codegen::encoding::abi_encode(loc, args, ns, vartab, cfg, packed)
+    }
+
+    /// Decode `types` out of `buffer`. The default drives the shared buffer decoder
+    /// (Borsh / SCALE); Soroban decodes ScVal handles instead.
+    fn abi_decode(
+        &self,
+        loc: &Loc,
+        buffer: &Expression,
+        types: &[Type],
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+        buffer_size_expr: Option<Expression>,
+    ) -> Vec<Expression> {
+        crate::codegen::encoding::abi_decode(loc, buffer, types, ns, vartab, cfg, buffer_size_expr)
+    }
 }
