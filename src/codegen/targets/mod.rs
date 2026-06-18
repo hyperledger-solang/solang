@@ -7,6 +7,7 @@ use crate::codegen::interface::TargetCodegen;
 use crate::codegen::solana_accounts::account_collection::collect_accounts_from_contract;
 use crate::codegen::solana_accounts::account_management::manage_contract_accounts;
 use crate::codegen::{dispatch, Options};
+use crate::sema::ast;
 use crate::sema::ast::Namespace;
 use crate::Target;
 
@@ -54,6 +55,14 @@ impl TargetCodegen for SolanaTarget {
                 manage_contract_accounts(contract_no, ns);
             }
         }
+    }
+
+    fn storage_array_length_is_inline(&self) -> bool {
+        true
+    }
+
+    fn selector_hash_algorithm(&self) -> ast::Builtin {
+        ast::Builtin::Sha256
     }
 }
 

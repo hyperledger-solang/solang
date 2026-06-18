@@ -4,7 +4,7 @@ pub(crate) mod dispatch;
 pub(crate) mod encoding;
 pub(crate) mod events;
 
-use self::encoding::soroban_encode_arg;
+use self::encoding::{soroban_decode_arg, soroban_encode_arg};
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::error::CodegenError;
 use crate::codegen::expression::{expression, load_storage};
@@ -45,6 +45,69 @@ impl TargetCodegen for SorobanTarget {
         opt: &Options,
     ) -> Vec<ControlFlowGraph> {
         dispatch::function_dispatch(contract_no, all_cfg, ns, opt)
+    }
+
+    fn storage_array_length_is_inline(&self) -> bool {
+        true
+    }
+
+    fn lower_load(
+        &self,
+        load: Expression,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> Expression {
+        // Check the INNER expression's type (the pointer): if it is Ref(SorobanHandle),
+        // the variable holds an encoded handle and must be decoded on load.
+        if let Expression::Load { ref expr, .. } = load {
+            if let Type::Ref(inner) = expr.ty() {
+                if matches!(inner.as_ref(), Type::SorobanHandle(_)) {
+                    return soroban_decode_arg(load, cfg, vartab, ns, None);
+                }
+            }
+        }
+        load
+    }
+
+    fn prepare_storage_value(
+        &self,
+        value: Expression,
+        dest: &Expression,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> Expression {
+        // For Store to a non-SorobanHandle Ref, pass the value through unchanged.
+        if let Type::Ref(inner) = dest.ty() {
+            if !matches!(inner.as_ref(), Type::SorobanHandle(_)) {
+                return value;
+            }
+        }
+        // SetStorage or Store to a SorobanHandle: encode as ScVal.
+        soroban_encode_arg(value, cfg, vartab, ns)
+    }
+
+    fn default_storage_value(
+        &self,
+        loc: &pt::Loc,
+        ty: &Type,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> Option<Expression> {
+        match ty {
+            Type::String | Type::DynamicBytes | Type::Slice(_) => {
+                Some(soroban_vec_new(loc, ty, cfg, vartab))
+            }
+            Type::Array(elem_ty, dims)
+                if dims.last() == Some(&ast::ArrayLength::Dynamic)
+                    && !elem_ty.is_reference_type(ns) =>
+            {
+                Some(soroban_vec_new(loc, ty, cfg, vartab))
+            }
+            _ => None,
+        }
     }
 }
 

@@ -783,7 +783,7 @@ pub fn expression(
                 },
                 Type::Array(_, dim) => match dim.last().unwrap() {
                     ArrayLength::Dynamic => {
-                        if ns.target == Target::Solana || ns.target == Target::Soroban {
+                        if target.storage_array_length_is_inline() {
                             Expression::StorageArrayLength {
                                 loc: *loc,
                                 ty: ty.clone(),
@@ -1234,26 +1234,13 @@ pub fn expression(
                 target,
             ));
 
-            // Soroban lazy decode path: if memory contains encoded handles, decode on demand.
-            if ns.target == Target::Soroban {
-                if let Type::Ref(inner) = expr.ty() {
-                    if matches!(inner.as_ref(), Type::SorobanHandle(_)) {
-                        let load_handle = Expression::Load {
-                            loc: *loc,
-                            ty: inner.as_ref().clone(),
-                            expr: expr.clone(),
-                        };
-
-                        return soroban_decode_arg(load_handle, cfg, vartab, ns, None);
-                    }
-                }
-            }
-
-            Expression::Load {
+            let load = Expression::Load {
                 loc: *loc,
                 ty: ty.clone(),
                 expr,
-            }
+            };
+            // Target gets to rewrite the Load (Soroban decodes handles; others return as-is).
+            target.lower_load(load, cfg, vartab, ns)
         }
         // for some built-ins, we have to inline special case code
         ast::Expression::Builtin {
@@ -1808,16 +1795,17 @@ fn post_incdec(
 
             match var.ty() {
                 Type::StorageRef(..) => {
-                    let mut value = Expression::Variable {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        var_no: res,
-                    };
-                    // If the target is Soroban, encode the value before storing it in storage.
-                    if ns.target == Target::Soroban {
-                        value = soroban_encode_arg(value, cfg, vartab, ns);
-                    }
-
+                    let value = target.prepare_storage_value(
+                        Expression::Variable {
+                            loc: *loc,
+                            ty: ty.clone(),
+                            var_no: res,
+                        },
+                        &dest,
+                        cfg,
+                        vartab,
+                        ns,
+                    );
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
@@ -1937,16 +1925,17 @@ fn pre_incdec(
 
             match var.ty() {
                 Type::StorageRef(..) => {
-                    let mut value = Expression::Variable {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        var_no: res,
-                    };
-
-                    if ns.target == Target::Soroban {
-                        value = soroban_encode_arg(value, cfg, vartab, ns)
-                    }
-
+                    let value = target.prepare_storage_value(
+                        Expression::Variable {
+                            loc: *loc,
+                            ty: ty.clone(),
+                            var_no: res,
+                        },
+                        &dest,
+                        cfg,
+                        vartab,
+                        ns,
+                    );
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
@@ -2353,11 +2342,7 @@ fn abi_encode_with_signature(
     target: &dyn TargetCodegen,
 ) -> Expression {
     let mut args_iter = args.iter();
-    let hash_algorithm = if ns.target == Target::Solana {
-        ast::Builtin::Sha256
-    } else {
-        ast::Builtin::Keccak256
-    };
+    let hash_algorithm = target.selector_hash_algorithm();
 
     let hash = ast::Expression::Builtin {
         loc: *loc,
@@ -3802,16 +3787,17 @@ pub fn assign_single(
                     }
                 }
                 Type::StorageRef(..) => {
-                    let mut value = Expression::Variable {
-                        loc: left.loc(),
-                        ty: ty.clone(),
-                        var_no: pos,
-                    };
-
-                    if ns.target == Target::Soroban {
-                        value = soroban_encode_arg(value, cfg, vartab, ns);
-                    }
-
+                    let value = target.prepare_storage_value(
+                        Expression::Variable {
+                            loc: left.loc(),
+                            ty: ty.clone(),
+                            var_no: pos,
+                        },
+                        &dest,
+                        cfg,
+                        vartab,
+                        ns,
+                    );
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
@@ -3823,29 +3809,17 @@ pub fn assign_single(
                     );
                 }
                 Type::Ref(_) => {
-                    let data = if ns.target == Target::Soroban
-                        && matches!(
-                            dest.ty(),
-                            Type::Ref(inner) if matches!(inner.as_ref(), Type::SorobanHandle(_))
-                        ) {
-                        soroban_encode_arg(
-                            Expression::Variable {
-                                loc: Loc::Codegen,
-                                ty: ty.clone(),
-                                var_no: pos,
-                            },
-                            cfg,
-                            vartab,
-                            ns,
-                        )
-                    } else {
+                    let data = target.prepare_storage_value(
                         Expression::Variable {
                             loc: Loc::Codegen,
                             ty: ty.clone(),
                             var_no: pos,
-                        }
-                    };
-
+                        },
+                        &dest,
+                        cfg,
+                        vartab,
+                        ns,
+                    );
                     cfg.add(vartab, Instr::Store { dest, data });
                 }
                 _ => unreachable!(),

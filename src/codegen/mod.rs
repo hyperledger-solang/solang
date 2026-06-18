@@ -35,7 +35,7 @@ use self::{
     vartable::Vartable,
 };
 use crate::sema::ast::{
-    ArrayLength, FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
+    FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
 };
 use crate::{sema::ast, Target};
 use std::cmp::Ordering;
@@ -52,7 +52,6 @@ use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::{pt, pt::CodeLocation};
-use targets::soroban::encoding::soroban_encode_arg;
 
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
@@ -383,15 +382,6 @@ fn storage_initializer(
     for layout in &ns.contracts[contract_no].layout {
         let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
-        let soroban_init_with_vec = ns.target == Target::Soroban
-            && match &var.ty {
-                Type::String | Type::DynamicBytes | Type::Slice(_) => true,
-                Type::Array(elem_ty, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
-                    !elem_ty.is_reference_type(ns)
-                }
-                _ => false,
-            };
-
         let mut value = if let Some(init) = &var.initializer {
             expression(
                 init,
@@ -403,8 +393,10 @@ fn storage_initializer(
                 opt,
                 target,
             )
-        } else if soroban_init_with_vec {
-            targets::soroban::soroban_vec_new(&var.loc, &var.ty, &mut cfg, &mut vartab)
+        } else if let Some(default) =
+            target.default_storage_value(&var.loc, &var.ty, &mut cfg, &mut vartab, ns)
+        {
+            default
         } else {
             continue;
         };
@@ -417,11 +409,7 @@ fn storage_initializer(
             None,
         );
 
-        //let mut value = expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt);
-
-        if ns.target == Target::Soroban {
-            value = soroban_encode_arg(value, &mut cfg, &mut vartab, ns);
-        }
+        value = target.prepare_storage_value(value, &storage, &mut cfg, &mut vartab, ns);
 
         cfg.add(
             &mut vartab,
