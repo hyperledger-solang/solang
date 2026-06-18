@@ -2,12 +2,11 @@
 
 mod polkadot;
 mod solana;
-mod soroban;
 
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::events::polkadot::PolkadotEventEmitter;
 use crate::codegen::events::solana::SolanaEventEmitter;
-use crate::codegen::events::soroban::SorobanEventEmitter;
+use crate::codegen::targets::soroban::events::SorobanEventEmitter;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
 use crate::sema::ast;

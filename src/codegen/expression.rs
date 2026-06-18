@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::encoding::soroban_encoding::{soroban_decode_arg, soroban_encode_arg};
-use super::encoding::{abi_decode, abi_encode, soroban_encoding::soroban_encode};
+use super::encoding::{abi_decode, abi_encode};
 use super::revert::{
     assert_failure, expr_assert, log_runtime_error, require, PanicCode, SolidityError,
 };
 use super::storage::{
     array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
 };
+use super::targets::soroban::encoding::soroban_encode;
+use super::targets::soroban::encoding::{soroban_decode_arg, soroban_encode_arg};
 use super::{
     cfg::{ControlFlowGraph, Instr, InternalCallTy},
     vartable::Vartable,

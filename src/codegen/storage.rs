@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::encoding::soroban_encoding::soroban_encode_arg;
+use crate::codegen::targets::soroban::encoding::soroban_encode_arg;
 use crate::codegen::Expression;
 use crate::sema::ast;
 use crate::Target;
@@ -15,7 +15,7 @@ use super::revert::SolidityError;
 use super::Options;
 use super::{
     cfg::{ControlFlowGraph, Instr},
-    soroban::{soroban_storage_pop, soroban_storage_push},
+    targets::soroban::{soroban_storage_pop, soroban_storage_push},
     vartable::Vartable,
 };
 use crate::codegen::revert::{assert_failure, log_runtime_error};

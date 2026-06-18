@@ -2,4 +2,3 @@
 
 pub(crate) mod polkadot;
 pub(super) mod solana;
-pub(super) mod soroban;

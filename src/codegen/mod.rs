@@ -16,7 +16,6 @@ mod reaching_definitions;
 pub mod revert;
 mod solana_accounts;
 mod solana_deploy;
-mod soroban;
 mod statements;
 mod storage;
 mod strength_reduce;
@@ -48,12 +47,12 @@ use crate::sema::eval::eval_const_number;
 use crate::sema::Recurse;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
-use encoding::soroban_encoding::soroban_encode_arg;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::{pt, pt::CodeLocation};
+use targets::soroban::encoding::soroban_encode_arg;
 
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
@@ -390,7 +389,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
         let mut value = if let Some(init) = &var.initializer {
             expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt)
         } else if soroban_init_with_vec {
-            soroban::soroban_vec_new(&var.loc, &var.ty, &mut cfg, &mut vartab)
+            targets::soroban::soroban_vec_new(&var.loc, &var.ty, &mut cfg, &mut vartab)
         } else {
             continue;
         };

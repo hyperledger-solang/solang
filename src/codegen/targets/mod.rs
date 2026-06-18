@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
+pub(crate) mod soroban;
+
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::solana_accounts::account_collection::collect_accounts_from_contract;
 use crate::codegen::solana_accounts::account_management::manage_contract_accounts;
-use crate::codegen::{dispatch, soroban, Options};
+use crate::codegen::{dispatch, Options};
 use crate::sema::ast::Namespace;
 use crate::Target;
+
+use self::soroban::SorobanTarget;
 
 pub(crate) fn make_target(ns: &Namespace) -> Box<dyn TargetCodegen> {
     match &ns.target {
@@ -17,33 +21,8 @@ pub(crate) fn make_target(ns: &Namespace) -> Box<dyn TargetCodegen> {
     }
 }
 
-pub(crate) struct SorobanTarget;
 pub(crate) struct SolanaTarget;
 pub(crate) struct PolkadotTarget;
-
-impl TargetCodegen for SorobanTarget {
-    fn validate_contract(&self, contract_no: usize, ns: &mut Namespace) {
-        soroban::validate_accessor_abi_types(contract_no, ns);
-        if ns.diagnostics.any_errors() {
-            return;
-        }
-        soroban::validate_event_abi_types(contract_no, ns);
-    }
-
-    fn validate_cfgs(&self, all_cfg: &[ControlFlowGraph], ns: &mut Namespace) {
-        soroban::validate_abi_types(all_cfg, ns);
-    }
-
-    fn function_dispatch(
-        &self,
-        contract_no: usize,
-        all_cfg: &mut [ControlFlowGraph],
-        ns: &mut Namespace,
-        opt: &Options,
-    ) -> Vec<ControlFlowGraph> {
-        dispatch::soroban::function_dispatch(contract_no, all_cfg, ns, opt)
-    }
-}
 
 impl TargetCodegen for SolanaTarget {
     fn function_dispatch(

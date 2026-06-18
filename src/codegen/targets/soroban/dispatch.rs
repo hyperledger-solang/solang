@@ -5,7 +5,7 @@ use crate::sema::ast;
 use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy},
-        encoding::soroban_encoding::{soroban_decode_arg, soroban_encode_arg},
+        targets::soroban::encoding::{soroban_decode_arg, soroban_encode_arg},
         vartable::Vartable,
         Expression, Options,
     },

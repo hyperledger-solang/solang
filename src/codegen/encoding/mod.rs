@@ -11,13 +11,12 @@
 mod borsh_encoding;
 mod buffer_validator;
 pub(super) mod scale_encoding;
-pub mod soroban_encoding;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
 use crate::codegen::encoding::scale_encoding::ScaleEncoding;
-use crate::codegen::encoding::soroban_encoding::{soroban_decode, soroban_encode};
 use crate::codegen::expression::load_storage;
+use crate::codegen::targets::soroban::encoding::{soroban_decode, soroban_encode};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type, Type::Uint};

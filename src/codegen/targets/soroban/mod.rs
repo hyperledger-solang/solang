@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
-use super::encoding::soroban_encoding::soroban_encode_arg;
-use super::error::CodegenError;
-use super::expression::{expression, load_storage};
-use super::vartable::Vartable;
-use super::Options;
+pub(crate) mod dispatch;
+pub(crate) mod encoding;
+pub(crate) mod events;
+
+use self::encoding::soroban_encode_arg;
+use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
+use crate::codegen::error::CodegenError;
+use crate::codegen::expression::{expression, load_storage};
+use crate::codegen::interface::TargetCodegen;
+use crate::codegen::vartable::Vartable;
+use crate::codegen::Options;
 use crate::codegen::{Builtin, Expression, HostFunctions};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
@@ -14,6 +19,34 @@ use crate::Target;
 use solang_parser::helpers::CodeLocation;
 use solang_parser::{diagnostics::Diagnostic, pt};
 use std::collections::BTreeSet;
+
+/// Codegen for the Soroban target. All Soroban-specific lowering lives under this module
+/// (`dispatch`, `encoding`, `events`, plus the validation and storage helpers below).
+pub(crate) struct SorobanTarget;
+
+impl TargetCodegen for SorobanTarget {
+    fn validate_contract(&self, contract_no: usize, ns: &mut Namespace) {
+        validate_accessor_abi_types(contract_no, ns);
+        if ns.diagnostics.any_errors() {
+            return;
+        }
+        validate_event_abi_types(contract_no, ns);
+    }
+
+    fn validate_cfgs(&self, all_cfg: &[ControlFlowGraph], ns: &mut Namespace) {
+        validate_abi_types(all_cfg, ns);
+    }
+
+    fn function_dispatch(
+        &self,
+        contract_no: usize,
+        all_cfg: &mut [ControlFlowGraph],
+        ns: &mut Namespace,
+        opt: &Options,
+    ) -> Vec<ControlFlowGraph> {
+        dispatch::function_dispatch(contract_no, all_cfg, ns, opt)
+    }
+}
 
 pub(super) fn validate_accessor_abi_types(contract_no: usize, ns: &mut Namespace) {
     if ns.target != Target::Soroban {
@@ -531,7 +564,7 @@ fn soroban_vec_handle_ty(vec_ty: &Type) -> Type {
     Type::SorobanHandle(Box::new(inner_ty))
 }
 
-pub(super) fn soroban_vec_new(
+pub(crate) fn soroban_vec_new(
     loc: &pt::Loc,
     vec_ty: &Type,
     cfg: &mut ControlFlowGraph,
@@ -625,7 +658,7 @@ fn soroban_vec_pop_back(
     new_vec_var
 }
 
-pub(super) fn soroban_storage_push(
+pub(crate) fn soroban_storage_push(
     loc: &pt::Loc,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
@@ -656,7 +689,7 @@ pub(super) fn soroban_storage_push(
     var_expr
 }
 
-pub(super) fn soroban_storage_pop(
+pub(crate) fn soroban_storage_pop(
     loc: &pt::Loc,
     args: &[ast::Expression],
     return_ty: &Type,

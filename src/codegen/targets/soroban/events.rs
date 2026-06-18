@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::encoding::soroban_encoding::soroban_encode_arg;
 use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
+use crate::codegen::targets::soroban::encoding::soroban_encode_arg;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
 use crate::sema::ast::{self, Function, Namespace, Type};
@@ -15,10 +15,10 @@ use solang_parser::pt;
 /// Each indexed Solidity event field becomes a topic Val in the Soroban
 /// `contract_event` call. The first non-indexed field becomes the data Val.
 /// If there are no non-indexed fields, a zero Val is passed as data.
-pub(super) struct SorobanEventEmitter<'a> {
-    pub(super) args: &'a [ast::Expression],
-    pub(super) ns: &'a Namespace,
-    pub(super) event_no: usize,
+pub(crate) struct SorobanEventEmitter<'a> {
+    pub(crate) args: &'a [ast::Expression],
+    pub(crate) ns: &'a Namespace,
+    pub(crate) event_no: usize,
 }
 
 impl EventEmitter for SorobanEventEmitter<'_> {
