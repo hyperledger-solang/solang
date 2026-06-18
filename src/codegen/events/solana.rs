@@ -13,12 +13,12 @@ use crate::sema::ast::{Function, Namespace, Type};
 use solang_parser::pt::Loc;
 
 /// This struct implements the trait 'EventEmitter' to handle the emission of events for Solana.
-pub(super) struct SolanaEventEmitter<'a> {
-    pub(super) loc: Loc,
+pub(crate) struct SolanaEventEmitter<'a> {
+    pub(crate) loc: Loc,
     /// Arguments passed to the event
-    pub(super) args: &'a [ast::Expression],
-    pub(super) ns: &'a Namespace,
-    pub(super) event_no: usize,
+    pub(crate) args: &'a [ast::Expression],
+    pub(crate) ns: &'a Namespace,
+    pub(crate) event_no: usize,
 }
 
 impl EventEmitter for SolanaEventEmitter<'_> {

@@ -13,7 +13,6 @@ use super::{
 use super::{polkadot, Options};
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
-use crate::codegen::events::new_event_emitter;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression, HostFunctions};
@@ -861,7 +860,7 @@ pub fn expression(
             }
         },
         ast::Expression::EventSelector { loc, ty, event_no } => {
-            let emitter = new_event_emitter(loc, *event_no, &[], ns);
+            let emitter = target.event_emitter(loc, *event_no, &[], ns);
 
             Expression::BytesLiteral {
                 loc: *loc,

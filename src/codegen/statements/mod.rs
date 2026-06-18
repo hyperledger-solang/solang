@@ -2,7 +2,6 @@
 
 use super::{
     cfg::{ControlFlowGraph, Instr},
-    events::new_event_emitter,
     expression::{assign_single, emit_function_call, expression},
     revert::revert,
     unused_variable::{
@@ -634,7 +633,7 @@ pub(crate) fn statement(
             args,
             ..
         } => {
-            let emitter = new_event_emitter(loc, *event_no, args, ns);
+            let emitter = target.event_emitter(loc, *event_no, args, ns);
             emitter.emit(contract_no, func, cfg, vartab, opt, target);
         }
         Statement::Revert {

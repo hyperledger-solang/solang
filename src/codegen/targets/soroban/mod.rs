@@ -5,10 +5,11 @@ pub(crate) mod encoding;
 pub(crate) mod events;
 
 use self::encoding::{soroban_decode, soroban_decode_arg, soroban_encode, soroban_encode_arg};
+use self::events::SorobanEventEmitter;
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::error::CodegenError;
 use crate::codegen::expression::{expression, load_storage};
-use crate::codegen::interface::TargetCodegen;
+use crate::codegen::interface::{EventEmitter, TargetCodegen};
 use crate::codegen::storage::{array_pop, storage_slots_array_push};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
@@ -227,6 +228,16 @@ impl TargetCodegen for SorobanTarget {
             expr: Box::new(var_expr.clone()),
             index: Box::new(index_encoded),
         }
+    }
+
+    fn event_emitter<'a>(
+        &self,
+        _loc: &pt::Loc,
+        event_no: usize,
+        args: &'a [ast::Expression],
+        ns: &'a Namespace,
+    ) -> Box<dyn EventEmitter + 'a> {
+        Box::new(SorobanEventEmitter { args, ns, event_no })
     }
 }
 

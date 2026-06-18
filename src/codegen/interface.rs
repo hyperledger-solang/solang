@@ -4,13 +4,10 @@ use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
 use crate::sema::ast::{self, Function, Namespace, Type};
-use solang_parser::pt::Loc;
+use solang_parser::pt::{self, Loc};
 
 /// The per-event emission strategy, produced by a target. Defined in
-/// [`crate::codegen::events`]; re-exported here so both boundary traits have a
-/// single home. `TargetCodegen::event_emitter` is wired to return it in a later phase,
-/// hence the allow until the first in-crate use lands.
-#[allow(unused_imports)]
+/// [`crate::codegen::events`]; re-exported here so the boundary is readable in one file.
 pub(crate) use crate::codegen::events::EventEmitter;
 
 pub(crate) trait TargetCodegen {
@@ -139,6 +136,16 @@ pub(crate) trait TargetCodegen {
         vartab: &mut Vartable,
         opt: &Options,
     ) -> Expression;
+
+    /// Return the event emitter for the given event. The returned emitter borrows `args` and
+    /// `ns` so the lifetime must be threaded through.
+    fn event_emitter<'a>(
+        &self,
+        loc: &pt::Loc,
+        event_no: usize,
+        args: &'a [ast::Expression],
+        ns: &'a Namespace,
+    ) -> Box<dyn EventEmitter + 'a>;
 
     /// Compute the storage slot of array element `index` for the hashed-slots push path.
     /// The default derives it from `keccak256(array_slot)`; Soroban indexes its host vector

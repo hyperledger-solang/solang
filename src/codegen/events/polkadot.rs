@@ -17,11 +17,11 @@ use solang_parser::pt;
 /// Data and topic encoding follow [ink! v5.0][0].
 ///
 /// [0]: https://use.ink/basics/events/#topics
-pub(super) struct PolkadotEventEmitter<'a> {
+pub(crate) struct PolkadotEventEmitter<'a> {
     /// Arguments passed to the event
-    pub(super) args: &'a [ast::Expression],
-    pub(super) ns: &'a Namespace,
-    pub(super) event_no: usize,
+    pub(crate) args: &'a [ast::Expression],
+    pub(crate) ns: &'a Namespace,
+    pub(crate) event_no: usize,
 }
 
 impl EventEmitter for PolkadotEventEmitter<'_> {

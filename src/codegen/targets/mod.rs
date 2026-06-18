@@ -3,7 +3,9 @@
 pub(crate) mod soroban;
 
 use crate::codegen::cfg::ControlFlowGraph;
-use crate::codegen::interface::TargetCodegen;
+use crate::codegen::events::polkadot::PolkadotEventEmitter;
+use crate::codegen::events::solana::SolanaEventEmitter;
+use crate::codegen::interface::{EventEmitter, TargetCodegen};
 use crate::codegen::solana_accounts::account_collection::collect_accounts_from_contract;
 use crate::codegen::solana_accounts::account_management::manage_contract_accounts;
 use crate::codegen::storage::{
@@ -14,7 +16,7 @@ use crate::codegen::{dispatch, Expression, Options};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
 use crate::Target;
-use solang_parser::pt::Loc;
+use solang_parser::pt::{self, Loc};
 
 use self::soroban::SorobanTarget;
 
@@ -110,6 +112,16 @@ impl TargetCodegen for SolanaTarget {
             self,
         )
     }
+
+    fn event_emitter<'a>(
+        &self,
+        loc: &pt::Loc,
+        event_no: usize,
+        args: &'a [ast::Expression],
+        ns: &'a Namespace,
+    ) -> Box<dyn EventEmitter + 'a> {
+        Box::new(SolanaEventEmitter { loc: *loc, args, ns, event_no })
+    }
 }
 
 impl TargetCodegen for PolkadotTarget {
@@ -181,5 +193,15 @@ impl TargetCodegen for PolkadotTarget {
                 self,
             )
         }
+    }
+
+    fn event_emitter<'a>(
+        &self,
+        _loc: &pt::Loc,
+        event_no: usize,
+        args: &'a [ast::Expression],
+        ns: &'a Namespace,
+    ) -> Box<dyn EventEmitter + 'a> {
+        Box::new(PolkadotEventEmitter { args, ns, event_no })
     }
 }
