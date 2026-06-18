@@ -5,6 +5,7 @@ use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::abi_encode;
 use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
 use crate::sema::ast;
@@ -32,6 +33,7 @@ impl EventEmitter for SolanaEventEmitter<'_> {
         cfg: &mut ControlFlowGraph,
         vartab: &mut Vartable,
         opt: &Options,
+        target: &dyn TargetCodegen,
     ) {
         let discriminator = Expression::BytesLiteral {
             loc: Loc::Codegen,
@@ -42,7 +44,18 @@ impl EventEmitter for SolanaEventEmitter<'_> {
         let mut codegen_args = self
             .args
             .iter()
-            .map(|e| expression(e, cfg, contract_no, Some(func), self.ns, vartab, opt))
+            .map(|e| {
+                expression(
+                    e,
+                    cfg,
+                    contract_no,
+                    Some(func),
+                    self.ns,
+                    vartab,
+                    opt,
+                    target,
+                )
+            })
             .collect::<Vec<Expression>>();
 
         let mut to_be_encoded: Vec<Expression> = vec![discriminator];

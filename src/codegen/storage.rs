@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::soroban::encoding::soroban_encode_arg;
 use crate::codegen::Expression;
 use crate::sema::ast;
@@ -94,6 +95,7 @@ pub fn storage_slots_array_push(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     let inner_ty = if let Type::StorageRef(_, inner) = args[0].ty() {
         if let Type::Array(elem_ty, _) = inner.deref_any() {
@@ -106,14 +108,14 @@ pub fn storage_slots_array_push(
     };
 
     if ns.target == Target::Soroban && !inner_ty.is_reference_type(ns) {
-        return soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt);
+        return soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt, target);
     }
 
     // set array+length to val_expr
     let slot_ty = ns.storage_type();
     let length_pos = vartab.temp_anonymous(&slot_ty);
 
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
 
     // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
     let expr = load_storage(loc, &slot_ty, var_expr.clone(), cfg, vartab, None, ns);
@@ -175,7 +177,7 @@ pub fn storage_slots_array_push(
     );
 
     if args.len() == 2 {
-        let mut value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
+        let mut value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target);
 
         if ns.target == Target::Soroban {
             value = soroban_encode_arg(value, cfg, vartab, ns);
@@ -249,6 +251,7 @@ pub fn storage_slots_array_pop(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     if ns.target == Target::Soroban {
         return soroban_storage_pop(
@@ -261,6 +264,7 @@ pub fn storage_slots_array_pop(
             ns,
             vartab,
             opt,
+            target,
         );
     }
 
@@ -270,7 +274,7 @@ pub fn storage_slots_array_pop(
     let length_pos = vartab.temp_anonymous(&slot_ty);
 
     let ty = args[0].ty();
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
     let expr = load_storage(loc, &length_ty, var_expr.clone(), cfg, vartab, None, ns);
 
@@ -475,12 +479,13 @@ pub fn array_push(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     if ns.target == Target::Soroban {
-        return soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt);
+        return soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt, target);
     }
 
-    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
 
     let mut ty = args[0].ty().storage_array_elem();
 
@@ -493,6 +498,7 @@ pub fn array_push(
             ns,
             vartab,
             opt,
+            target,
         ))
     } else {
         ty.deref_any().default(ns)
@@ -532,8 +538,9 @@ pub fn array_pop(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
-    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+    let storage = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
 
     let ty = args[0].ty().storage_array_elem().deref_into();
 

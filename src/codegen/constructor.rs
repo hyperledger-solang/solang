@@ -2,6 +2,7 @@
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::expression::{default_gas, expression};
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
 use crate::sema::{
@@ -30,14 +31,15 @@ pub(super) fn call_constructor(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
     let value = call_args
         .value
         .as_ref()
-        .map(|v| expression(v, cfg, callee_contract_no, func, ns, vartab, opt));
+        .map(|v| expression(v, cfg, callee_contract_no, func, ns, vartab, opt, target));
 
     let gas = if let Some(gas) = &call_args.gas {
-        expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+        expression(gas, cfg, callee_contract_no, func, ns, vartab, opt, target)
     } else {
         default_gas(ns)
     };
@@ -45,7 +47,7 @@ pub(super) fn call_constructor(
     let salt = call_args
         .salt
         .as_ref()
-        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
+        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt, target));
     let address = if ns.target == Target::Solana {
         if let Some(literal_id) = &ns.contracts[contract_no].program_id {
             Some(Expression::NumberLiteral {
@@ -62,6 +64,7 @@ pub(super) fn call_constructor(
                 ns,
                 vartab,
                 opt,
+                target,
             );
             Some(address)
         }
@@ -71,14 +74,14 @@ pub(super) fn call_constructor(
     let seeds = call_args
         .seeds
         .as_ref()
-        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
+        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt, target));
     let accounts = call_args
         .accounts
-        .map(|expr| expression(expr, cfg, contract_no, func, ns, vartab, opt));
+        .map(|expr| expression(expr, cfg, contract_no, func, ns, vartab, opt, target));
 
     let mut constructor_args = constructor_args
         .iter()
-        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt))
+        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt, target))
         .collect::<Vec<Expression>>();
 
     let selector = match constructor_no {

@@ -667,10 +667,11 @@ pub(crate) fn soroban_storage_push(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     // Storage wrapper: evaluate storage key/value and load vec object from storage.
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
-    let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
+    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
+    let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target);
     let vec_ty = args[0].ty();
 
     let old_vec_obj = load_storage(loc, &vec_ty, var_expr.clone(), cfg, vartab, None, ns);
@@ -699,9 +700,10 @@ pub(crate) fn soroban_storage_pop(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     // Storage wrapper: evaluate storage key and load vec object from storage.
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     let vec_ty = args[0].ty();
 
     let old_vec_obj = load_storage(loc, &vec_ty, var_expr.clone(), cfg, vartab, None, ns);

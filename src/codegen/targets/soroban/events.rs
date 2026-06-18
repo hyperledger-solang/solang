@@ -3,6 +3,7 @@
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::soroban::encoding::soroban_encode_arg;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
@@ -34,13 +35,23 @@ impl EventEmitter for SorobanEventEmitter<'_> {
         cfg: &mut ControlFlowGraph,
         vartab: &mut Vartable,
         opt: &Options,
+        target: &dyn TargetCodegen,
     ) {
         let event = &self.ns.events[self.event_no];
         let mut topics: Vec<Expression> = Vec::new();
         let mut data_args: Vec<Expression> = Vec::new();
 
         for (ast_exp, field) in self.args.iter().zip(event.fields.iter()) {
-            let value = expression(ast_exp, cfg, contract_no, Some(func), self.ns, vartab, opt);
+            let value = expression(
+                ast_exp,
+                cfg,
+                contract_no,
+                Some(func),
+                self.ns,
+                vartab,
+                opt,
+                target,
+            );
             let encoded = soroban_encode_arg(value, cfg, vartab, self.ns);
             if field.indexed {
                 topics.push(encoded);

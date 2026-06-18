@@ -329,16 +329,17 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options, target: &dyn 
                 &mut all_cfg,
                 ns,
                 opt,
+                target,
             )
         }
 
         // generate the cfg for yul functions
         for yul_func_no in ns.contracts[contract_no].yul_functions.clone() {
-            generate_yul_function_cfg(contract_no, yul_func_no, &mut all_cfg, ns, opt);
+            generate_yul_function_cfg(contract_no, yul_func_no, &mut all_cfg, ns, opt, target);
         }
 
         // Generate cfg for storage initializers
-        let cfg = storage_initializer(contract_no, ns, opt);
+        let cfg = storage_initializer(contract_no, ns, opt, target);
         let pos = all_cfg.len();
         all_cfg.push(cfg);
         ns.contracts[contract_no].initializer = Some(pos);
@@ -349,7 +350,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options, target: &dyn 
             let cfg_no = all_cfg.len();
             all_cfg.push(ControlFlowGraph::placeholder());
 
-            cfg::generate_cfg(contract_no, None, cfg_no, &mut all_cfg, ns, opt);
+            cfg::generate_cfg(contract_no, None, cfg_no, &mut all_cfg, ns, opt, target);
 
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
@@ -369,7 +370,12 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options, target: &dyn 
 }
 
 /// This function will set all contract storage initializers and should be called from the constructor
-fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) -> ControlFlowGraph {
+fn storage_initializer(
+    contract_no: usize,
+    ns: &mut Namespace,
+    opt: &Options,
+    target: &dyn TargetCodegen,
+) -> ControlFlowGraph {
     // note the single `:` to prevent a name clash with user-declared functions
     let mut cfg = ControlFlowGraph::new(STORAGE_INITIALIZER.to_string(), ASTFunction::None);
     let mut vartab = Vartable::new(ns.next_id);
@@ -387,7 +393,16 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
             };
 
         let mut value = if let Some(init) = &var.initializer {
-            expression(init, &mut cfg, contract_no, None, ns, &mut vartab, opt)
+            expression(
+                init,
+                &mut cfg,
+                contract_no,
+                None,
+                ns,
+                &mut vartab,
+                opt,
+                target,
+            )
         } else if soroban_init_with_vec {
             targets::soroban::soroban_vec_new(&var.loc, &var.ty, &mut cfg, &mut vartab)
         } else {

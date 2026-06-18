@@ -6,6 +6,7 @@ use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::abi_encode;
 use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression, Options};
 use crate::sema::ast::{self, Function, Namespace, RetrieveType, Type};
@@ -38,6 +39,7 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
         cfg: &mut ControlFlowGraph,
         vartab: &mut Vartable,
         opt: &Options,
+        target: &dyn TargetCodegen,
     ) {
         let loc = pt::Loc::Builtin;
         let event = &self.ns.events[self.event_no];
@@ -60,7 +62,16 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
         };
 
         for (ast_exp, field) in self.args.iter().zip(event.fields.iter()) {
-            let value_exp = expression(ast_exp, cfg, contract_no, Some(func), self.ns, vartab, opt);
+            let value_exp = expression(
+                ast_exp,
+                cfg,
+                contract_no,
+                Some(func),
+                self.ns,
+                vartab,
+                opt,
+                target,
+            );
             let value_var = vartab.temp_anonymous(&value_exp.ty());
             let value = Expression::Variable {
                 loc,
@@ -146,7 +157,18 @@ impl EventEmitter for PolkadotEventEmitter<'_> {
         let data = self
             .args
             .iter()
-            .map(|e| expression(e, cfg, contract_no, Some(func), self.ns, vartab, opt))
+            .map(|e| {
+                expression(
+                    e,
+                    cfg,
+                    contract_no,
+                    Some(func),
+                    self.ns,
+                    vartab,
+                    opt,
+                    target,
+                )
+            })
             .collect::<Vec<_>>();
         let encoded_data = if data.is_empty() {
             Expression::AllocDynamicBytes {

@@ -4,6 +4,7 @@ use crate::codegen::cfg::{
     optimize_and_check_cfg, populate_arguments, populate_named_returns, ASTFunction,
     ControlFlowGraph, Instr,
 };
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::statements::LoopScopes;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::statements::statement;
@@ -26,10 +27,21 @@ pub fn inline_assembly_cfg(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
     let mut loops = LoopScopes::new();
     for stmt in &inline_assembly.body {
-        statement(stmt, contract_no, &mut loops, ns, cfg, vartab, &None, opt);
+        statement(
+            stmt,
+            contract_no,
+            &mut loops,
+            ns,
+            cfg,
+            vartab,
+            &None,
+            opt,
+            target,
+        );
     }
 }
 
@@ -40,8 +52,9 @@ pub(crate) fn generate_yul_function_cfg(
     all_cfgs: &mut [ControlFlowGraph],
     ns: &mut Namespace,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
-    let mut cfg = yul_function_cfg(contract_no, function_no, ns, opt);
+    let mut cfg = yul_function_cfg(contract_no, function_no, ns, opt, target);
 
     optimize_and_check_cfg(&mut cfg, ns, ASTFunction::YulFunction(function_no), opt);
     all_cfgs[ns.yul_functions[function_no].cfg_no] = cfg;
@@ -53,6 +66,7 @@ fn yul_function_cfg(
     function_no: usize,
     ns: &mut Namespace,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> ControlFlowGraph {
     let mut vartab =
         Vartable::from_symbol_table(&ns.yul_functions[function_no].symtable, ns.next_id);
@@ -105,6 +119,7 @@ fn yul_function_cfg(
             &mut vartab,
             &Some(returns.clone()),
             opt,
+            target,
         );
     }
 

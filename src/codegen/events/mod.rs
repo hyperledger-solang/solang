@@ -6,6 +6,7 @@ mod solana;
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::events::polkadot::PolkadotEventEmitter;
 use crate::codegen::events::solana::SolanaEventEmitter;
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::soroban::events::SorobanEventEmitter;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
@@ -30,6 +31,7 @@ pub(crate) trait EventEmitter {
         cfg: &mut ControlFlowGraph,
         vartab: &mut Vartable,
         opt: &Options,
+        target: &dyn TargetCodegen,
     );
 
     /// Generates the selector

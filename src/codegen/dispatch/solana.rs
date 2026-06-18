@@ -2,6 +2,7 @@
 
 use crate::codegen::{
     cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
+    interface::TargetCodegen,
     solana_deploy::solana_deploy,
     vartable::Vartable,
     Builtin, Expression, Options,
@@ -22,6 +23,7 @@ pub(crate) fn function_dispatch(
     all_cfg: &[ControlFlowGraph],
     ns: &mut Namespace,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> ControlFlowGraph {
     let mut vartab = Vartable::new(ns.next_id);
     let mut cfg = ControlFlowGraph::new(SOLANA_DISPATCH_CFG_NAME.into(), ASTFunction::None);
@@ -175,6 +177,7 @@ pub(crate) fn function_dispatch(
                 &mut vartab,
                 &mut cfg,
                 opt,
+                target,
             )
         } else {
             continue;
@@ -401,6 +404,7 @@ fn add_constructor_dispatch_case(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> usize {
     let entry = cfg.new_basic_block(format!("constructor_cfg_{cfg_no}"));
     cfg.set_basic_block(entry);
@@ -434,9 +438,9 @@ fn add_constructor_dispatch_case(
     if let ASTFunction::SolidityFunction(function_no) = func_cfg.function_no {
         let func = &ns.functions[function_no];
 
-        solana_deploy(func, &returns, contract_no, vartab, cfg, ns, opt);
+        solana_deploy(func, &returns, contract_no, vartab, cfg, ns, opt, target);
     } else if let Some((func, _)) = &ns.contracts[contract_no].default_constructor {
-        solana_deploy(func, &returns, contract_no, vartab, cfg, ns, opt);
+        solana_deploy(func, &returns, contract_no, vartab, cfg, ns, opt, target);
     } else {
         unreachable!();
     }

@@ -37,6 +37,7 @@ impl TargetCodegen for SolanaTarget {
             all_cfg,
             ns,
             opt,
+            self,
         )]
     }
 

@@ -6,6 +6,7 @@ use crate::codegen::{
     constructor::call_constructor,
     encoding::{abi_decode, abi_encode},
     expression::{default_gas, expression},
+    interface::TargetCodegen,
     polkadot,
     revert::{ERROR_SELECTOR, PANIC_SELECTOR},
     vartable::Vartable,
@@ -31,6 +32,7 @@ pub(super) fn try_catch(
     placeholder: Option<&Instr>,
     return_override: Option<&Instr>,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
     if !ns.target.is_polkadot() {
         unimplemented!()
@@ -50,6 +52,7 @@ pub(super) fn try_catch(
         opt,
         ok_block,
         catch_block,
+        target,
     );
 
     vartab.new_dirty_tracker();
@@ -67,6 +70,7 @@ pub(super) fn try_catch(
         opt,
         ok_block,
         finally_block,
+        target,
     );
 
     insert_catch_clauses(
@@ -83,6 +87,7 @@ pub(super) fn try_catch(
         catch_block,
         finally_block,
         error_ret_data_var,
+        target,
     );
 
     //  Remove the variables only in scope inside the catch clauses block from the phi set for the finally block
@@ -116,8 +121,18 @@ fn insert_try_expression(
     opt: &Options,
     ok_block: usize,
     catch_block: usize,
+    target: &dyn TargetCodegen,
 ) -> usize {
-    let (cases, return_types) = exec_try(try_stmt, func, cfg, callee_contract_no, ns, vartab, opt);
+    let (cases, return_types) = exec_try(
+        try_stmt,
+        func,
+        cfg,
+        callee_contract_no,
+        ns,
+        vartab,
+        opt,
+        target,
+    );
 
     let error_ret_data_var = vartab.temp_name("error_ret_data", &Type::DynamicBytes);
 
@@ -194,6 +209,7 @@ fn exec_try(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> (polkadot::RetCodeCheck, Vec<Type>) {
     let success = vartab.temp(
         &pt::Identifier {
@@ -216,7 +232,16 @@ fn exec_try(
             } = function.ty()
             {
                 let value = if let Some(value) = &call_args.value {
-                    expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt)
+                    expression(
+                        value,
+                        cfg,
+                        callee_contract_no,
+                        Some(func),
+                        ns,
+                        vartab,
+                        opt,
+                        target,
+                    )
                 } else {
                     Expression::NumberLiteral {
                         loc: Codegen,
@@ -225,7 +250,16 @@ fn exec_try(
                     }
                 };
                 let gas = if let Some(gas) = &call_args.gas {
-                    expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt)
+                    expression(
+                        gas,
+                        cfg,
+                        callee_contract_no,
+                        Some(func),
+                        ns,
+                        vartab,
+                        opt,
+                        target,
+                    )
                 } else {
                     default_gas(ns)
                 };
@@ -237,11 +271,23 @@ fn exec_try(
                     ns,
                     vartab,
                     opt,
+                    target,
                 );
 
                 let mut args = args
                     .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, Some(func), ns, vartab, opt))
+                    .map(|a| {
+                        expression(
+                            a,
+                            cfg,
+                            callee_contract_no,
+                            Some(func),
+                            ns,
+                            vartab,
+                            opt,
+                            target,
+                        )
+                    })
                     .collect::<Vec<Expression>>();
 
                 let selector = function.external_function_selector();
@@ -252,7 +298,16 @@ fn exec_try(
                 let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
                 let flags = call_args.flags.as_ref().map(|expr| {
-                    expression(expr, cfg, callee_contract_no, Some(func), ns, vartab, opt)
+                    expression(
+                        expr,
+                        cfg,
+                        callee_contract_no,
+                        Some(func),
+                        ns,
+                        vartab,
+                        opt,
+                        target,
+                    )
                 });
 
                 cfg.add(
@@ -309,6 +364,7 @@ fn exec_try(
                 vartab,
                 cfg,
                 opt,
+                target,
             );
 
             let cases = polkadot::RetCodeCheckBuilder::default()
@@ -335,6 +391,7 @@ fn insert_success_code_block(
     opt: &Options,
     ok_block: usize,
     finally_block: usize,
+    target: &dyn TargetCodegen,
 ) {
     cfg.set_basic_block(ok_block);
 
@@ -352,6 +409,7 @@ fn insert_success_code_block(
             placeholder,
             return_override,
             opt,
+            target,
         );
 
         finally_reachable = stmt.reachable();
@@ -384,6 +442,7 @@ fn insert_catch_clauses(
     catch_block: usize,
     finally_block: usize,
     error_ret_data_var: usize,
+    target: &dyn TargetCodegen,
 ) {
     cfg.set_basic_block(catch_block);
 
@@ -409,6 +468,7 @@ fn insert_catch_clauses(
             opt,
             finally_block,
             buffer,
+            target,
         );
         return;
     }
@@ -472,6 +532,7 @@ fn insert_catch_clauses(
                     placeholder,
                     return_override,
                     opt,
+                    target,
                 );
 
                 reachable = stmt.reachable();
@@ -538,6 +599,7 @@ fn insert_catch_clauses(
             opt,
             finally_block,
             buffer,
+            target,
         );
     }
 }
@@ -556,6 +618,7 @@ fn insert_catchall_clause_code_block(
     opt: &Options,
     finally_block: usize,
     error_data_buf: Expression,
+    target: &dyn TargetCodegen,
 ) {
     if let Some(res) = try_stmt.catch_all.as_ref().unwrap().param_pos {
         let instruction = Instr::Set {
@@ -580,6 +643,7 @@ fn insert_catchall_clause_code_block(
             placeholder,
             return_override,
             opt,
+            target,
         );
 
         reachable = stmt.reachable();

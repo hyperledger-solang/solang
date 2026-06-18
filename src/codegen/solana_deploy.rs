@@ -4,6 +4,7 @@ use super::{
     cfg::ReturnCode, expression, Builtin, ControlFlowGraph, Expression, Instr, Options, Type,
     Vartable,
 };
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::revert::string_to_expr;
 use crate::codegen::solana_accounts::account_management::{
     account_meta_literal, retrieve_key_from_account_info,
@@ -39,6 +40,7 @@ pub(super) fn solana_deploy(
     cfg: &mut ControlFlowGraph,
     ns: &Namespace,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
     let contract = &ns.contracts[contract_no];
 
@@ -306,7 +308,7 @@ pub(super) fn solana_deploy(
 
         // Calculate minimum balance for rent-exempt
         let (space, lamports) = if let Some((_, space_expr)) = &func.annotations.space {
-            let expr = expression(space_expr, cfg, contract_no, None, ns, vartab, opt);
+            let expr = expression(space_expr, cfg, contract_no, None, ns, vartab, opt, target);
             // If the space is not a literal or a constant expression,
             // we must verify if we are allocating enough space during runtime.
             if eval_const_number(space_expr, ns, &mut Diagnostics::default()).is_err() {
@@ -533,7 +535,7 @@ pub(super) fn solana_deploy(
             .annotations
             .seeds
             .iter()
-            .map(|seed| expression(&seed.1, cfg, contract_no, None, ns, vartab, opt))
+            .map(|seed| expression(&seed.1, cfg, contract_no, None, ns, vartab, opt, target))
             .collect::<Vec<Expression>>();
 
         if let Some((_, bump)) = &func.annotations.bump {
@@ -548,7 +550,16 @@ pub(super) fn solana_deploy(
                 }
                 .into(),
             };
-            seeds.push(expression(&expr, cfg, contract_no, None, ns, vartab, opt));
+            seeds.push(expression(
+                &expr,
+                cfg,
+                contract_no,
+                None,
+                ns,
+                vartab,
+                opt,
+                target,
+            ));
         }
 
         let seeds = if !seeds.is_empty() {

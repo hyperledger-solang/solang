@@ -3,6 +3,7 @@
 #![cfg(test)]
 
 use crate::codegen::cfg::ControlFlowGraph;
+use crate::codegen::targets::make_target;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::expression::expression;
 use crate::codegen::{Builtin, Expression, Options};
@@ -24,11 +25,27 @@ fn bool_literal() {
     let opt = Options::default();
 
     let expr = ast::YulExpression::BoolLiteral(loc, true, Type::Bool);
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(res, Expression::BoolLiteral { loc, value: true });
 
     let expr = ast::YulExpression::BoolLiteral(loc, true, Type::Uint(32));
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::NumberLiteral {
@@ -39,7 +56,15 @@ fn bool_literal() {
     );
 
     let expr = ast::YulExpression::BoolLiteral(loc, false, Type::Uint(32));
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::NumberLiteral {
@@ -59,7 +84,15 @@ fn number_literal() {
     let opt = Options::default();
 
     let expr = ast::YulExpression::NumberLiteral(loc, BigInt::from(32), Type::Uint(256));
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::NumberLiteral {
@@ -79,7 +112,15 @@ fn string_literal() {
     let opt = Options::default();
 
     let expr = ast::YulExpression::StringLiteral(loc, vec![0, 3, 255, 127], Type::Uint(128));
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::NumberLiteral {
@@ -99,7 +140,15 @@ fn yul_local_variable() {
     let opt = Options::default();
 
     let expr = ast::YulExpression::YulLocalVariable(loc, Type::Int(16), 5);
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::Variable {
@@ -165,7 +214,15 @@ fn contract_constant_variable() {
     ns.contracts.push(contract);
 
     let expr = ast::YulExpression::ConstantVariable(loc, Type::Uint(64), Some(0), 0);
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::NumberLiteral {
@@ -203,7 +260,15 @@ fn global_constant_variable() {
     };
     ns.constants.push(var);
     let expr = ast::YulExpression::ConstantVariable(loc, Type::Uint(64), None, 0);
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::NumberLiteral {
@@ -224,7 +289,15 @@ fn storage_variable() {
     let opt = Options::default();
 
     let expr = ast::YulExpression::StorageVariable(loc, Type::Bool, 0, 0);
-    let _ = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let _ = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
 }
 
 #[test]
@@ -242,7 +315,15 @@ fn storage_variable_reference() {
         Some(StorageLocation::Storage(loc)),
         0,
     );
-    let _ = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let _ = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
 }
 
 #[test]
@@ -254,7 +335,15 @@ fn solidity_local_variable() {
     let opt = Options::default();
 
     let expr = ast::YulExpression::SolidityLocalVariable(loc, Type::Uint(32), None, 7);
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::Variable {
@@ -317,7 +406,15 @@ fn slot_suffix() {
         )),
         YulSuffix::Slot,
     );
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::NumberLiteral {
@@ -337,7 +434,15 @@ fn slot_suffix() {
         )),
         YulSuffix::Slot,
     );
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::Variable {
@@ -368,7 +473,15 @@ fn slot_suffix_panic() {
         YulSuffix::Slot,
     );
 
-    let _res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let _res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
 }
 
 #[test]
@@ -390,7 +503,15 @@ fn offset_suffix() {
         YulSuffix::Offset,
     );
 
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::NumberLiteral {
@@ -410,7 +531,15 @@ fn offset_suffix() {
         )),
         YulSuffix::Offset,
     );
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::NumberLiteral {
@@ -430,7 +559,15 @@ fn offset_suffix() {
         )),
         YulSuffix::Offset,
     );
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::Cast {
@@ -468,7 +605,15 @@ fn offset_suffix_panic_calldata() {
         YulSuffix::Offset,
     );
 
-    let _res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let _res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
 }
 
 #[test]
@@ -486,7 +631,15 @@ fn offset_suffix_panic_other() {
         YulSuffix::Offset,
     );
 
-    let _res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let _res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
 }
 
 #[test]
@@ -515,7 +668,15 @@ fn length_suffix() {
         YulSuffix::Length,
     );
 
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::Builtin {
@@ -561,7 +722,15 @@ fn length_suffix_panic() {
         YulSuffix::Length,
     );
 
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
     assert_eq!(
         res,
         Expression::Builtin {
@@ -606,7 +775,15 @@ fn selector_suffix() {
         )),
         YulSuffix::Selector,
     );
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
 
     assert_eq!(
         res,
@@ -650,7 +827,15 @@ fn selector_suffix_panic() {
         )),
         YulSuffix::Selector,
     );
-    let _res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let _res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
 }
 
 #[test]
@@ -675,7 +860,15 @@ fn address_suffix() {
         )),
         YulSuffix::Address,
     );
-    let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
 
     assert_eq!(
         res,
@@ -719,5 +912,13 @@ fn address_suffix_panic() {
         )),
         YulSuffix::Address,
     );
-    let _res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
+    let _res = expression(
+        &expr,
+        0,
+        &ns,
+        &mut vartab,
+        &mut cfg,
+        &opt,
+        &*make_target(&ns),
+    );
 }

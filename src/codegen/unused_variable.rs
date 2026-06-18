@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::Options;
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::{cfg::ControlFlowGraph, vartable::Vartable, OptimizationLevel};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{Builtin, Expression, Function, Namespace};
@@ -15,6 +16,7 @@ pub struct SideEffectsCheckParameters<'a> {
     pub ns: &'a Namespace,
     pub vartab: &'a mut Vartable,
     pub opt: &'a Options,
+    pub target: &'a dyn TargetCodegen,
 }
 
 /// Check if we should remove an assignment. The expression in the argument is the left-hand side
