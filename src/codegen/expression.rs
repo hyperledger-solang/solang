@@ -4,8 +4,7 @@ use super::revert::{
     assert_failure, expr_assert, log_runtime_error, require, PanicCode, SolidityError,
 };
 use super::storage::array_offset;
-use super::targets::soroban::encoding::soroban_encode;
-use super::targets::soroban::encoding::{soroban_decode_arg, soroban_encode_arg};
+use super::targets::soroban::encoding::{soroban_encode, soroban_encode_arg};
 use super::{
     cfg::{ControlFlowGraph, Instr, InternalCallTy},
     vartable::Vartable,
@@ -62,7 +61,7 @@ pub fn expression(
             let storage_type = storage_type(expr, ns);
             let storage = expression(expr, cfg, contract_no, func, ns, vartab, opt, target);
 
-            load_storage(loc, ty, storage, cfg, vartab, storage_type, ns)
+            load_storage(loc, ty, storage, cfg, vartab, storage_type, ns, target)
         }
         ast::Expression::Add {
             loc,
@@ -787,7 +786,16 @@ pub fn expression(
                                 elem_ty: elem_ty.clone(),
                             }
                         } else {
-                            load_storage(loc, &ns.storage_type(), array, cfg, vartab, None, ns)
+                            load_storage(
+                                loc,
+                                &ns.storage_type(),
+                                array,
+                                cfg,
+                                vartab,
+                                None,
+                                ns,
+                                target,
+                            )
                         }
                     }
                     ArrayLength::Fixed(length) => {
@@ -930,72 +938,10 @@ pub fn expression(
             field: field_no,
         } if ty.is_contract_storage() => {
             if let Type::Struct(struct_ty) = var.ty().deref_any() {
-                let offset = if ns.target == Target::Solana {
-                    struct_ty.definition(ns).storage_offsets[*field_no].clone()
-                } else {
-                    struct_ty.definition(ns).fields[..*field_no]
-                        .iter()
-                        .filter(|field| !field.infinite_size)
-                        .map(|field| field.ty.storage_slots(ns))
-                        .sum()
-                };
-
-                if ns.target == Target::Soroban {
-                    // In Soroban, storage struct members are accessed via a key whose representation is a Soroban Vec.
-                    // Therefore instead of adding the offset we insert it as a separate argument.
-
-                    let soroban_key =
-                        expression(var, cfg, contract_no, func, ns, vartab, opt, target);
-
-                    let offset = Expression::NumberLiteral {
-                        loc: *loc,
-                        ty: Type::Uint(32),
-                        value: offset,
-                    };
-
-                    let offset_encoded = soroban_encode_arg(offset, cfg, vartab, ns);
-
-                    let res = vartab.temp_name("vec_push_codegen", &Type::Uint(64));
-                    let var = Expression::Variable {
-                        loc: Loc::Codegen,
-                        ty: Type::Uint(64),
-                        var_no: res,
-                    };
-
-                    let enum_vec_put = Instr::Call {
-                        res: vec![res],
-                        return_tys: vec![Type::Uint(64)],
-                        call: InternalCallTy::HostFunction {
-                            name: HostFunctions::VecPushBack.name().to_string(),
-                        },
-                        args: vec![soroban_key, offset_encoded],
-                    };
-
-                    cfg.add(vartab, enum_vec_put);
-
-                    var
-                } else {
-                    Expression::Add {
-                        loc: *loc,
-                        ty: ns.storage_type(),
-                        overflowing: true,
-                        left: Box::new(expression(
-                            var,
-                            cfg,
-                            contract_no,
-                            func,
-                            ns,
-                            vartab,
-                            opt,
-                            target,
-                        )),
-                        right: Box::new(Expression::NumberLiteral {
-                            loc: *loc,
-                            ty: ns.storage_type(),
-                            value: offset,
-                        }),
-                    }
-                }
+                let var_expr = expression(var, cfg, contract_no, func, ns, vartab, opt, target);
+                target.lower_storage_struct_member(
+                    loc, var_expr, struct_ty, *field_no, ns, cfg, vartab,
+                )
             } else {
                 unreachable!();
             }
@@ -1330,11 +1276,7 @@ pub fn expression(
             if opt.log_prints {
                 let expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
 
-                let to_print = if ns.target.is_polkadot() {
-                    add_prefix_and_delimiter_to_print(expr)
-                } else {
-                    expr
-                };
+                let to_print = target.lower_print_expr(expr);
 
                 let res = if let Expression::AllocDynamicBytes {
                     loc,
@@ -1419,15 +1361,6 @@ pub fn expression(
             args,
             ..
         } => abi_encode_call(args, cfg, contract_no, func, ns, vartab, loc, opt, target),
-        // The Polkadot gas price builtin takes an argument; the others do not
-        ast::Expression::Builtin {
-            loc,
-            kind: ast::Builtin::Gasprice,
-            args: expr,
-            ..
-        } if expr.len() == 1 && ns.target == Target::EVM => {
-            builtin_evm_gasprice(loc, expr, cfg, contract_no, func, ns, vartab, opt, target)
-        }
         ast::Expression::Builtin {
             loc,
             tys,
@@ -1449,19 +1382,27 @@ pub fn expression(
             tys,
             kind,
             args,
-        } => expr_builtin(
-            args,
-            cfg,
-            contract_no,
-            func,
-            ns,
-            vartab,
-            loc,
-            tys,
-            *kind,
-            opt,
-            target,
-        ),
+        } => {
+            // Target gets first refusal; EVM uses this for gasleft(amount), for example.
+            if let Some(e) =
+                target.lower_builtin(loc, *kind, args, cfg, contract_no, func, ns, vartab, opt)
+            {
+                return e;
+            }
+            expr_builtin(
+                args,
+                cfg,
+                contract_no,
+                func,
+                ns,
+                vartab,
+                loc,
+                tys,
+                *kind,
+                opt,
+                target,
+            )
+        }
         ast::Expression::FormatString { loc, format: args } => {
             format_string(args, cfg, contract_no, func, ns, vartab, loc, opt, target)
         }
@@ -1685,6 +1626,7 @@ fn post_incdec(
             vartab,
             storage_type.clone(),
             ns,
+            target,
         ),
         _ => v,
     };
@@ -1827,6 +1769,7 @@ fn pre_incdec(
             vartab,
             storage_type.clone(),
             ns,
+            target,
         ),
         _ => v,
     };
@@ -2350,7 +2293,7 @@ fn abi_encode_call(
     encode_many_with_selector(loc, selector, args, ns, vartab, cfg, target)
 }
 
-fn builtin_evm_gasprice(
+pub(crate) fn builtin_evm_gasprice(
     loc: &pt::Loc,
     expr: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
@@ -2677,29 +2620,6 @@ fn expr_builtin(
                     ty: Type::Address(false),
                     value: BigInt::from_bytes_be(Sign::Plus, constant_id),
                 };
-            }
-
-            // In soroban, address is retrieved via a host function call
-            if ns.target == Target::Soroban {
-                let address_var_no = vartab.temp_anonymous(&Type::Uint(64));
-                let address_var = Expression::Variable {
-                    loc: *loc,
-                    ty: Type::Address(false),
-                    var_no: address_var_no,
-                };
-
-                let retrieve_address = Instr::Call {
-                    res: vec![address_var_no],
-                    return_tys: vec![Type::Uint(64)],
-                    call: InternalCallTy::HostFunction {
-                        name: HostFunctions::GetCurrentContractAddress.name().to_string(),
-                    },
-                    args: vec![],
-                };
-
-                cfg.add(vartab, retrieve_address);
-
-                return address_var;
             }
 
             // In emit, GetAddress returns a pointer to the address
@@ -3970,7 +3890,7 @@ pub fn emit_function_call(
             let gas = if let Some(gas) = &call_args.gas {
                 expression(gas, cfg, caller_contract_no, func, ns, vartab, opt, target)
             } else {
-                default_gas(ns)
+                default_gas(ns, target)
             };
             let value = if let Some(value) = &call_args.value {
                 expression(
@@ -4082,7 +4002,7 @@ pub fn emit_function_call(
                 let gas = if let Some(gas) = &call_args.gas {
                     expression(gas, cfg, caller_contract_no, func, ns, vartab, opt, target)
                 } else {
-                    default_gas(ns)
+                    default_gas(ns, target)
                 };
                 let accounts = call_args.accounts.map(|expr| {
                     expression(expr, cfg, caller_contract_no, func, ns, vartab, opt, target)
@@ -4201,7 +4121,7 @@ pub fn emit_function_call(
                 let gas = if let Some(gas) = &call_args.gas {
                     expression(gas, cfg, caller_contract_no, func, ns, vartab, opt, target)
                 } else {
-                    default_gas(ns)
+                    default_gas(ns, target)
                 };
                 let value = if let Some(value) = &call_args.value {
                     expression(
@@ -4307,16 +4227,12 @@ pub fn emit_function_call(
     }
 }
 
-pub fn default_gas(ns: &Namespace) -> Expression {
+pub fn default_gas(_ns: &Namespace, target: &dyn TargetCodegen) -> Expression {
     Expression::NumberLiteral {
         loc: pt::Loc::Codegen,
         ty: Type::Uint(64),
-        // See EIP150
-        value: if ns.target == Target::EVM {
-            BigInt::from(i64::MAX)
-        } else {
-            BigInt::zero()
-        },
+        // See EIP-150; EVM uses i64::MAX, other targets use 0.
+        value: target.default_gas_builtin(),
     }
 }
 
@@ -4367,20 +4283,7 @@ fn array_subscript(
         let array = expression(array, cfg, contract_no, func, ns, vartab, opt, target);
         let index = expression(index, cfg, contract_no, func, ns, vartab, opt, target);
 
-        return match ns.target {
-            Target::Solana | Target::Soroban | Target::EVM => Expression::Subscript {
-                loc: *loc,
-                ty: elem_ty.clone(),
-                array_ty: array_ty.clone(),
-                expr: Box::new(array),
-                index: Box::new(index),
-            },
-            Target::Polkadot { .. } => Expression::Keccak256 {
-                loc: *loc,
-                ty: array_ty.clone(),
-                exprs: vec![array, index],
-            },
-        };
+        return target.lower_mapping_subscript(loc, elem_ty, array_ty, array, index);
     }
 
     let mut array = expression(array, cfg, contract_no, func, ns, vartab, opt, target);
@@ -4421,7 +4324,7 @@ fn array_subscript(
                         };
                         // TODO(Soroban): Storage type here is None, since arrays are not yet supported in Soroban
                         let array_length =
-                            load_storage(loc, &ty, array.clone(), cfg, vartab, None, ns);
+                            load_storage(loc, &ty, array.clone(), cfg, vartab, None, ns, target);
                         if ns.target != Target::Soroban {
                             array = Expression::Keccak256 {
                                 loc: *loc,
@@ -4819,6 +4722,7 @@ pub fn load_storage(
     vartab: &mut Vartable,
     storage_type: Option<pt::StorageType>,
     ns: &Namespace,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
 
@@ -4838,11 +4742,7 @@ pub fn load_storage(
         var_no: res,
     };
 
-    if ns.target == Target::Soroban {
-        soroban_decode_arg(var, cfg, vartab, ns, None)
-    } else {
-        var
-    }
+    target.lower_load_storage(var, cfg, vartab, ns)
 }
 
 fn array_literal_to_memory_array(
@@ -4963,7 +4863,7 @@ fn code(loc: &Loc, _contract_no: usize, _ns: &Namespace, _opt: &Options) -> Expr
     }
 }
 
-fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
+pub(crate) fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
     let prefix = b"print: ";
     let delimiter = b",\n";
 

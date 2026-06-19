@@ -3,11 +3,11 @@
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
-use crate::sema::ast::{self, Function, Namespace, Type};
+use crate::sema::ast::{self, Function, Namespace, StructType, Type};
+use num_bigint::BigInt;
+use num_traits::Zero;
 use solang_parser::pt::{self, Loc};
 
-/// The per-event emission strategy, produced by a target. Defined in
-/// [`crate::codegen::events`]; re-exported here so the boundary is readable in one file.
 pub(crate) use crate::codegen::events::EventEmitter;
 
 pub(crate) trait TargetCodegen {
@@ -29,8 +29,6 @@ pub(crate) trait TargetCodegen {
     /// Whole-program post-processing, called once after every contract's CFGs.
     fn post_process_program(&self, _ns: &mut Namespace, _opt: &Options) {}
 
-    /// Hash algorithm used for function selector computation.
-    /// Keccak256 everywhere except Solana (Sha256).
     fn selector_hash_algorithm(&self) -> ast::Builtin {
         ast::Builtin::Keccak256
     }
@@ -39,6 +37,57 @@ pub(crate) trait TargetCodegen {
     /// or in a separate storage slot (Polkadot).
     fn storage_array_length_is_inline(&self) -> bool {
         false
+    }
+
+    /// Starting offset for the first storage slot. Solana reserves the first 16 bytes for
+    /// account metadata; all other targets begin at slot 0.
+    fn initial_storage_slot(&self) -> BigInt {
+        BigInt::zero()
+    }
+
+    fn align_storage_slot(&self, slot: BigInt, _ty: &Type, _ns: &Namespace) -> BigInt {
+        slot
+    }
+
+    fn default_gas_builtin(&self) -> BigInt {
+        BigInt::zero()
+    }
+
+    fn lower_print_expr(&self, expr: Expression) -> Expression {
+        expr
+    }
+
+    fn lower_mapping_subscript(
+        &self,
+        loc: &Loc,
+        elem_ty: &Type,
+        array_ty: &Type,
+        array: Expression,
+        index: Expression,
+    ) -> Expression {
+        Expression::Subscript {
+            loc: *loc,
+            ty: elem_ty.clone(),
+            array_ty: array_ty.clone(),
+            expr: Box::new(array),
+            index: Box::new(index),
+        }
+    }
+
+    /// Target-specific builtin lowering; `None` falls through to shared `expr_builtin`.
+    fn lower_builtin(
+        &self,
+        _loc: &Loc,
+        _builtin: ast::Builtin,
+        _args: &[ast::Expression],
+        _cfg: &mut ControlFlowGraph,
+        _contract_no: usize,
+        _func: Option<&Function>,
+        _ns: &Namespace,
+        _vartab: &mut Vartable,
+        _opt: &Options,
+    ) -> Option<Expression> {
+        None
     }
 
     /// Optionally rewrite a freshly-built `Load` expression.
@@ -78,9 +127,6 @@ pub(crate) trait TargetCodegen {
         None
     }
 
-    /// Encode `args` into the target's wire format, returning `(buffer, length)`.
-    /// The default drives the shared buffer encoder (Borsh / SCALE); Soroban encodes to
-    /// ScVal handles instead.
     fn abi_encode(
         &self,
         loc: &Loc,
@@ -93,8 +139,6 @@ pub(crate) trait TargetCodegen {
         crate::codegen::encoding::abi_encode(loc, args, ns, vartab, cfg, packed)
     }
 
-    /// Decode `types` out of `buffer`. The default drives the shared buffer decoder
-    /// (Borsh / SCALE); Soroban decodes ScVal handles instead.
     fn abi_decode(
         &self,
         loc: &Loc,
@@ -108,9 +152,6 @@ pub(crate) trait TargetCodegen {
         crate::codegen::encoding::abi_decode(loc, buffer, types, ns, vartab, cfg, buffer_size_expr)
     }
 
-    /// Lower `arr.push(value)` on a contract-storage array. Each target owns its storage
-    /// representation (Solana flat slots, Polkadot hashed slots, Soroban host vectors), so
-    /// there is no shared default.
     fn storage_array_push(
         &self,
         loc: &Loc,
@@ -123,7 +164,6 @@ pub(crate) trait TargetCodegen {
         opt: &Options,
     ) -> Expression;
 
-    /// Lower `arr.pop()` on a contract-storage array. See [`Self::storage_array_push`].
     fn storage_array_pop(
         &self,
         loc: &Loc,
@@ -137,8 +177,6 @@ pub(crate) trait TargetCodegen {
         opt: &Options,
     ) -> Expression;
 
-    /// Return the event emitter for the given event. The returned emitter borrows `args` and
-    /// `ns` so the lifetime must be threaded through.
     fn event_emitter<'a>(
         &self,
         loc: &pt::Loc,
@@ -147,9 +185,6 @@ pub(crate) trait TargetCodegen {
         ns: &'a Namespace,
     ) -> Box<dyn EventEmitter + 'a>;
 
-    /// Compute the storage slot of array element `index` for the hashed-slots push path.
-    /// The default derives it from `keccak256(array_slot)`; Soroban indexes its host vector
-    /// with an encoded key instead.
     fn storage_array_entry_offset(
         &self,
         loc: &Loc,
@@ -172,5 +207,26 @@ pub(crate) trait TargetCodegen {
             elem_ty.clone(),
             ns,
         )
+    }
+
+    fn lower_storage_struct_member(
+        &self,
+        loc: &Loc,
+        var_expr: Expression,
+        struct_ty: &StructType,
+        field_no: usize,
+        ns: &Namespace,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+    ) -> Expression;
+
+    fn lower_load_storage(
+        &self,
+        value: Expression,
+        _cfg: &mut ControlFlowGraph,
+        _vartab: &mut Vartable,
+        _ns: &Namespace,
+    ) -> Expression {
+        value
     }
 }

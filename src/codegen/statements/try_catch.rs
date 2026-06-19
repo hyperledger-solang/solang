@@ -261,7 +261,7 @@ fn exec_try(
                         target,
                     )
                 } else {
-                    default_gas(ns)
+                    default_gas(ns, target)
                 };
                 let function = expression(
                     function,

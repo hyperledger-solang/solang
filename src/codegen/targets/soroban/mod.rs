@@ -15,9 +15,10 @@ use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
 use crate::codegen::{Builtin, Expression, HostFunctions};
 use crate::sema::ast;
-use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
+use crate::sema::ast::{Function, Namespace, RetrieveType, StructType, Type};
 use crate::sema::Recurse;
 use crate::Target;
+use num_bigint::{BigInt, Sign};
 use solang_parser::helpers::CodeLocation;
 use solang_parser::{diagnostics::Diagnostic, pt};
 use std::collections::BTreeSet;
@@ -238,6 +239,101 @@ impl TargetCodegen for SorobanTarget {
         ns: &'a Namespace,
     ) -> Box<dyn EventEmitter + 'a> {
         Box::new(SorobanEventEmitter { args, ns, event_no })
+    }
+
+    fn lower_builtin(
+        &self,
+        loc: &pt::Loc,
+        builtin: ast::Builtin,
+        _args: &[ast::Expression],
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        _func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        _opt: &Options,
+    ) -> Option<Expression> {
+        match builtin {
+            ast::Builtin::GetAddress => {
+                // program_id is a compile-time constant address (Solana/Soroban); return it directly.
+                if let Some(constant_id) = &ns.contracts[contract_no].program_id {
+                    return Some(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Address(false),
+                        value: BigInt::from_bytes_be(Sign::Plus, constant_id),
+                    });
+                }
+                let address_var_no = vartab.temp_anonymous(&Type::Uint(64));
+                let address_var = Expression::Variable {
+                    loc: *loc,
+                    ty: Type::Address(false),
+                    var_no: address_var_no,
+                };
+                cfg.add(
+                    vartab,
+                    Instr::Call {
+                        res: vec![address_var_no],
+                        return_tys: vec![Type::Uint(64)],
+                        call: InternalCallTy::HostFunction {
+                            name: HostFunctions::GetCurrentContractAddress.name().to_string(),
+                        },
+                        args: vec![],
+                    },
+                );
+                Some(address_var)
+            }
+            _ => None,
+        }
+    }
+
+    fn lower_storage_struct_member(
+        &self,
+        loc: &pt::Loc,
+        var_expr: Expression,
+        struct_ty: &StructType,
+        field_no: usize,
+        ns: &Namespace,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+    ) -> Expression {
+        let offset: BigInt = struct_ty.definition(ns).fields[..field_no]
+            .iter()
+            .filter(|field| !field.infinite_size)
+            .map(|field| field.ty.storage_slots(ns))
+            .sum();
+        let offset_expr = Expression::NumberLiteral {
+            loc: *loc,
+            ty: Type::Uint(32),
+            value: offset,
+        };
+        let offset_encoded = soroban_encode_arg(offset_expr, cfg, vartab, ns);
+        let res = vartab.temp_name("vec_push_codegen", &Type::Uint(64));
+        cfg.add(
+            vartab,
+            Instr::Call {
+                res: vec![res],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::VecPushBack.name().to_string(),
+                },
+                args: vec![var_expr, offset_encoded],
+            },
+        );
+        Expression::Variable {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            var_no: res,
+        }
+    }
+
+    fn lower_load_storage(
+        &self,
+        value: Expression,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> Expression {
+        soroban_decode_arg(value, cfg, vartab, ns, None)
     }
 }
 
@@ -867,7 +963,16 @@ pub(crate) fn soroban_storage_push(
     let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target);
     let vec_ty = args[0].ty();
 
-    let old_vec_obj = load_storage(loc, &vec_ty, var_expr.clone(), cfg, vartab, None, ns);
+    let old_vec_obj = load_storage(
+        loc,
+        &vec_ty,
+        var_expr.clone(),
+        cfg,
+        vartab,
+        None,
+        ns,
+        target,
+    );
     let new_vec_var = soroban_vec_push_back(loc, old_vec_obj, &vec_ty, value, cfg, ns, vartab);
 
     // Storage wrapper: store updated vec object.
@@ -899,7 +1004,16 @@ pub(crate) fn soroban_storage_pop(
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     let vec_ty = args[0].ty();
 
-    let old_vec_obj = load_storage(loc, &vec_ty, var_expr.clone(), cfg, vartab, None, ns);
+    let old_vec_obj = load_storage(
+        loc,
+        &vec_ty,
+        var_expr.clone(),
+        cfg,
+        vartab,
+        None,
+        ns,
+        target,
+    );
     let new_vec_var = soroban_vec_pop_back(loc, old_vec_obj, &vec_ty, cfg, vartab);
     let new_vec_no = match &new_vec_var {
         Expression::Variable { var_no, .. } => *var_no,

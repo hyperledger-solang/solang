@@ -39,7 +39,7 @@ pub(super) fn call_constructor(
     let gas = if let Some(gas) = &call_args.gas {
         expression(gas, cfg, callee_contract_no, func, ns, vartab, opt, target)
     } else {
-        default_gas(ns)
+        default_gas(ns, target)
     };
 
     let salt = call_args

@@ -289,10 +289,10 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
 
 fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options, target: &dyn TargetCodegen) {
     if !ns.diagnostics.any_errors() && ns.contracts[contract_no].instantiable {
-        layout(contract_no, ns);
-
+        layout(contract_no, ns, target);
+        let errors_before = ns.diagnostics.count_errors();
         target.validate_contract(contract_no, ns);
-        if ns.diagnostics.any_errors() {
+        if ns.diagnostics.count_errors() > errors_before {
             return;
         }
 
@@ -354,8 +354,9 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options, target: &dyn 
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
+        let errors_before = ns.diagnostics.count_errors();
         target.validate_cfgs(&all_cfg, ns);
-        if ns.diagnostics.any_errors() {
+        if ns.diagnostics.count_errors() > errors_before {
             return;
         }
 
@@ -432,28 +433,14 @@ fn storage_initializer(
 }
 
 /// Layout the contract. We determine the layout of variables and deal with overriding variables
-fn layout(contract_no: usize, ns: &mut Namespace) {
-    let mut slot = if ns.target == Target::Solana {
-        BigInt::from(SOLANA_FIRST_OFFSET)
-    } else {
-        BigInt::zero()
-    };
+fn layout(contract_no: usize, ns: &mut Namespace, target: &dyn TargetCodegen) {
+    let mut slot = target.initial_storage_slot();
 
     for base_contract_no in ns.contract_bases(contract_no) {
         for var_no in 0..ns.contracts[base_contract_no].variables.len() {
             if !ns.contracts[base_contract_no].variables[var_no].constant {
                 let ty = ns.contracts[base_contract_no].variables[var_no].ty.clone();
-
-                if ns.target == Target::Solana {
-                    // elements need to be aligned on solana
-                    let alignment = ty.align_of(ns);
-
-                    let offset = slot.clone() % alignment;
-
-                    if offset > BigInt::zero() {
-                        slot += alignment - offset;
-                    }
-                }
+                slot = target.align_storage_slot(slot, &ty, ns);
 
                 ns.contracts[contract_no].layout.push(Layout {
                     slot: slot.clone(),

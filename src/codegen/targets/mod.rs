@@ -14,8 +14,10 @@ use crate::codegen::storage::{
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{dispatch, Expression, Options};
 use crate::sema::ast;
-use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
+use crate::sema::ast::{Function, Namespace, RetrieveType, StructType, Type};
 use crate::Target;
+use num_bigint::BigInt;
+use num_traits::Zero;
 use solang_parser::pt::{self, Loc};
 
 use self::soroban::SorobanTarget;
@@ -24,13 +26,15 @@ pub(crate) fn make_target(ns: &Namespace) -> Box<dyn TargetCodegen> {
     match &ns.target {
         Target::Soroban => Box::new(SorobanTarget),
         Target::Solana => Box::new(SolanaTarget),
-        // EVM reuses the Polkadot codegen path — intentional, not a gap.
-        Target::Polkadot { .. } | Target::EVM => Box::new(PolkadotTarget),
+        Target::Polkadot { .. } => Box::new(PolkadotTarget { is_evm: false }),
+        Target::EVM => Box::new(PolkadotTarget { is_evm: true }),
     }
 }
 
 pub(crate) struct SolanaTarget;
-pub(crate) struct PolkadotTarget;
+pub(crate) struct PolkadotTarget {
+    pub(crate) is_evm: bool,
+}
 
 impl TargetCodegen for SolanaTarget {
     fn function_dispatch(
@@ -70,6 +74,19 @@ impl TargetCodegen for SolanaTarget {
 
     fn selector_hash_algorithm(&self) -> ast::Builtin {
         ast::Builtin::Sha256
+    }
+
+    fn initial_storage_slot(&self) -> BigInt {
+        BigInt::from(crate::codegen::SOLANA_FIRST_OFFSET)
+    }
+
+    fn align_storage_slot(&self, mut slot: BigInt, ty: &Type, ns: &Namespace) -> BigInt {
+        let alignment = ty.align_of(ns);
+        let offset = slot.clone() % alignment;
+        if offset > BigInt::zero() {
+            slot += alignment - offset;
+        }
+        slot
     }
 
     fn storage_array_push(
@@ -120,7 +137,36 @@ impl TargetCodegen for SolanaTarget {
         args: &'a [ast::Expression],
         ns: &'a Namespace,
     ) -> Box<dyn EventEmitter + 'a> {
-        Box::new(SolanaEventEmitter { loc: *loc, args, ns, event_no })
+        Box::new(SolanaEventEmitter {
+            loc: *loc,
+            args,
+            ns,
+            event_no,
+        })
+    }
+
+    fn lower_storage_struct_member(
+        &self,
+        loc: &Loc,
+        var_expr: Expression,
+        struct_ty: &StructType,
+        field_no: usize,
+        ns: &Namespace,
+        _cfg: &mut ControlFlowGraph,
+        _vartab: &mut Vartable,
+    ) -> Expression {
+        let offset = struct_ty.definition(ns).storage_offsets[field_no].clone();
+        Expression::Add {
+            loc: *loc,
+            ty: ns.storage_type(),
+            overflowing: true,
+            left: Box::new(var_expr),
+            right: Box::new(Expression::NumberLiteral {
+                loc: *loc,
+                ty: ns.storage_type(),
+                value: offset,
+            }),
+        }
     }
 }
 
@@ -203,5 +249,105 @@ impl TargetCodegen for PolkadotTarget {
         ns: &'a Namespace,
     ) -> Box<dyn EventEmitter + 'a> {
         Box::new(PolkadotEventEmitter { args, ns, event_no })
+    }
+
+    fn default_gas_builtin(&self) -> BigInt {
+        if self.is_evm {
+            BigInt::from(i64::MAX)
+        } else {
+            BigInt::zero()
+        }
+    }
+
+    fn lower_print_expr(&self, expr: Expression) -> Expression {
+        if self.is_evm {
+            expr
+        } else {
+            crate::codegen::expression::add_prefix_and_delimiter_to_print(expr)
+        }
+    }
+
+    fn lower_mapping_subscript(
+        &self,
+        loc: &Loc,
+        elem_ty: &Type,
+        array_ty: &Type,
+        array: Expression,
+        index: Expression,
+    ) -> Expression {
+        if self.is_evm {
+            Expression::Subscript {
+                loc: *loc,
+                ty: elem_ty.clone(),
+                array_ty: array_ty.clone(),
+                expr: Box::new(array),
+                index: Box::new(index),
+            }
+        } else {
+            Expression::Keccak256 {
+                loc: *loc,
+                ty: array_ty.clone(),
+                exprs: vec![array, index],
+            }
+        }
+    }
+
+    fn lower_builtin(
+        &self,
+        loc: &Loc,
+        builtin: ast::Builtin,
+        args: &[ast::Expression],
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Option<Expression> {
+        match builtin {
+            ast::Builtin::Gasprice if self.is_evm && args.len() == 1 => {
+                Some(crate::codegen::expression::builtin_evm_gasprice(
+                    loc,
+                    args,
+                    cfg,
+                    contract_no,
+                    func,
+                    ns,
+                    vartab,
+                    opt,
+                    self,
+                ))
+            }
+            _ => None,
+        }
+    }
+
+    fn lower_storage_struct_member(
+        &self,
+        loc: &Loc,
+        var_expr: Expression,
+        struct_ty: &StructType,
+        field_no: usize,
+        ns: &Namespace,
+        _cfg: &mut ControlFlowGraph,
+        _vartab: &mut Vartable,
+    ) -> Expression {
+        // Polkadot/EVM lay struct fields out in consecutive storage slots.
+        let offset: BigInt = struct_ty.definition(ns).fields[..field_no]
+            .iter()
+            .filter(|field| !field.infinite_size)
+            .map(|field| field.ty.storage_slots(ns))
+            .sum();
+        Expression::Add {
+            loc: *loc,
+            ty: ns.storage_type(),
+            overflowing: true,
+            left: Box::new(var_expr),
+            right: Box::new(Expression::NumberLiteral {
+                loc: *loc,
+                ty: ns.storage_type(),
+                value: offset,
+            }),
+        }
     }
 }

@@ -16,6 +16,8 @@ use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
 use crate::codegen::encoding::scale_encoding::ScaleEncoding;
 use crate::codegen::expression::load_storage;
+use crate::codegen::interface::TargetCodegen;
+use crate::codegen::targets::make_target;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type, Type::Uint};
@@ -39,7 +41,8 @@ pub(super) fn abi_encode(
     packed: bool,
 ) -> (Expression, Expression) {
     let mut encoder = create_encoder(ns, packed);
-    let size = calculate_size_args(&mut encoder, &args, ns, vartab, cfg);
+    let target = make_target(ns);
+    let size = calculate_size_args(&mut encoder, &args, ns, vartab, cfg, target.as_ref());
     let encoded_bytes = vartab.temp_name("abi_encoded", &Type::DynamicBytes);
     let expr = Expression::AllocDynamicBytes {
         loc: *loc,
@@ -155,6 +158,7 @@ fn calculate_size_args(
     ns: &Namespace,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     if args.is_empty() {
         return Expression::NumberLiteral {
@@ -163,9 +167,9 @@ fn calculate_size_args(
             value: BigInt::zero(),
         };
     }
-    let mut size = encoder.get_expr_size(0, &args[0], ns, vartab, cfg);
+    let mut size = encoder.get_expr_size(0, &args[0], ns, vartab, cfg, target);
     for (i, item) in args.iter().enumerate().skip(1) {
-        let additional = encoder.get_expr_size(i, item, ns, vartab, cfg);
+        let additional = encoder.get_expr_size(i, item, ns, vartab, cfg, target);
         size = Expression::Add {
             loc: Codegen,
             ty: Uint(32),
@@ -1373,6 +1377,7 @@ pub(crate) trait AbiEncoding {
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
+        target: &dyn TargetCodegen,
     ) -> Expression {
         let ty = expr.ty().unwrap_user_type(ns);
         match &ty {
@@ -1399,14 +1404,14 @@ pub(crate) trait AbiEncoding {
                 value: BigInt::from(ns.target.selector_length()),
             },
             Type::Struct(struct_ty) => {
-                self.calculate_struct_size(arg_no, expr, struct_ty, ns, vartab, cfg)
+                self.calculate_struct_size(arg_no, expr, struct_ty, ns, vartab, cfg, target)
             }
             Type::Slice(ty) => {
                 let dims = vec![ArrayLength::Dynamic];
-                self.calculate_array_size(expr, ty, &dims, arg_no, ns, vartab, cfg)
+                self.calculate_array_size(expr, ty, &dims, arg_no, ns, vartab, cfg, target)
             }
             Type::Array(ty, dims) => {
-                self.calculate_array_size(expr, ty, dims, arg_no, ns, vartab, cfg)
+                self.calculate_array_size(expr, ty, dims, arg_no, ns, vartab, cfg, target)
             }
             Type::ExternalFunction { .. } => {
                 let selector_len: BigInt = ns.target.selector_length().into();
@@ -1419,18 +1424,18 @@ pub(crate) trait AbiEncoding {
             }
             Type::Ref(r) => {
                 if let Type::Struct(struct_ty) = &**r {
-                    return self.calculate_struct_size(arg_no, expr, struct_ty, ns, vartab, cfg);
+                    return self.calculate_struct_size(arg_no, expr, struct_ty, ns, vartab, cfg, target);
                 }
                 let loaded = Expression::Load {
                     loc: Codegen,
                     ty: *r.clone(),
                     expr: expr.clone().into(),
                 };
-                self.get_expr_size(arg_no, &loaded, ns, vartab, cfg)
+                self.get_expr_size(arg_no, &loaded, ns, vartab, cfg, target)
             }
             Type::StorageRef(_, r) => {
-                let var = load_storage(&Codegen, r, expr.clone(), cfg, vartab, None, ns);
-                let size = self.get_expr_size(arg_no, &var, ns, vartab, cfg);
+                let var = load_storage(&Codegen, r, expr.clone(), cfg, vartab, None, ns, target);
+                let size = self.get_expr_size(arg_no, &var, ns, vartab, cfg, target);
                 self.storage_cache_insert(arg_no, var.clone());
                 size
             }
@@ -1468,6 +1473,7 @@ pub(crate) trait AbiEncoding {
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
+        target: &dyn TargetCodegen,
     ) -> Expression {
         let dyn_dims = dims.iter().filter(|d| **d == ArrayLength::Dynamic).count();
 
@@ -1587,6 +1593,7 @@ pub(crate) trait AbiEncoding {
                 &mut index_vec,
                 vartab,
                 cfg,
+                target,
             );
             Expression::Variable {
                 loc: Codegen,
@@ -1610,6 +1617,7 @@ pub(crate) trait AbiEncoding {
         indexes: &mut Vec<usize>,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
+        target: &dyn TargetCodegen,
     ) {
         // If this dimension is dynamic, account for the encoded vector length variable.
         if !self.is_packed() && dims[dimension] == ArrayLength::Dynamic {
@@ -1646,7 +1654,7 @@ pub(crate) trait AbiEncoding {
         cfg.set_basic_block(for_loop.body_block);
         if 0 == dimension {
             let deref = index_array(arr.clone(), dims, indexes, false);
-            let elem_size = self.get_expr_size(arg_no, &deref, ns, vartab, cfg);
+            let elem_size = self.get_expr_size(arg_no, &deref, ns, vartab, cfg, target);
             let size_var = Expression::Variable {
                 loc: Codegen,
                 ty: Uint(32),
@@ -1677,6 +1685,7 @@ pub(crate) trait AbiEncoding {
                 indexes,
                 vartab,
                 cfg,
+                target,
             );
         }
         finish_array_loop(&for_loop, vartab, cfg);
@@ -1691,6 +1700,7 @@ pub(crate) trait AbiEncoding {
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
+        target: &dyn TargetCodegen,
     ) -> Expression {
         if let Some(struct_size) = ns.calculate_struct_non_padded_size(struct_ty) {
             return Expression::NumberLiteral {
@@ -1701,11 +1711,11 @@ pub(crate) trait AbiEncoding {
         }
         let first_type = struct_ty.definition(ns).fields[0].ty.clone();
         let first_field = load_struct_member(first_type, expr.clone(), 0, ns);
-        let mut size = self.get_expr_size(arg_no, &first_field, ns, vartab, cfg);
+        let mut size = self.get_expr_size(arg_no, &first_field, ns, vartab, cfg, target);
         for i in 1..struct_ty.definition(ns).fields.len() {
             let ty = struct_ty.definition(ns).fields[i].ty.clone();
             let field = load_struct_member(ty.clone(), expr.clone(), i, ns);
-            let expr_size = self.get_expr_size(arg_no, &field, ns, vartab, cfg).into();
+            let expr_size = self.get_expr_size(arg_no, &field, ns, vartab, cfg, target).into();
             size = Expression::Add {
                 loc: Codegen,
                 ty: Uint(32),
