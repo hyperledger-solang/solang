@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::account_from_number;
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
-use crate::codegen::solana_accounts::account_from_number;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{Contract, ExternalCallAccounts, Function, Namespace, SolanaAccount};
 use crate::sema::diagnostics::Diagnostics;

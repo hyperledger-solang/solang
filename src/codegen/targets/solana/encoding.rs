@@ -11,10 +11,10 @@ use solang_parser::pt::Loc::Codegen;
 use std::collections::HashMap;
 use std::ops::AddAssign;
 
-use super::buffer_validator::BufferValidator;
+use crate::codegen::encoding::buffer_validator::BufferValidator;
 
 /// This struct implements the trait AbiEncoding for Borsh encoding
-pub(super) struct BorshEncoding {
+pub(crate) struct BorshEncoding {
     storage_cache: HashMap<usize, Expression>,
     /// Are we packed encoding?
     packed_encoder: bool,

@@ -39,12 +39,12 @@ impl BufferValidator<'_> {
     }
 
     /// Set which item we are currently reading from the buffer
-    pub(super) fn set_argument_number(&mut self, arg_no: usize) {
+    pub(crate) fn set_argument_number(&mut self, arg_no: usize) {
         self.current_arg = arg_no;
     }
 
     /// Initialize the validator, by verifying every type that has a fixed size
-    pub(super) fn initialize_validation(
+    pub(crate) fn initialize_validation(
         &mut self,
         offset: &Expression,
         ns: &Namespace,
@@ -57,7 +57,7 @@ impl BufferValidator<'_> {
     }
 
     /// Validate the buffer for the current argument, if necessary.
-    pub(super) fn validate_buffer(
+    pub(crate) fn validate_buffer(
         &mut self,
         offset: &Expression,
         ns: &Namespace,
@@ -73,7 +73,7 @@ impl BufferValidator<'_> {
     }
 
     /// Validate if a given offset is within the buffer's bound.
-    pub(super) fn validate_offset(
+    pub(crate) fn validate_offset(
         &self,
         offset: Expression,
         ns: &Namespace,
@@ -84,17 +84,17 @@ impl BufferValidator<'_> {
     }
 
     /// Checks if a buffer validation is necessary
-    pub(super) fn validation_necessary(&self) -> bool {
+    pub(crate) fn validation_necessary(&self) -> bool {
         self.verified_until.is_none() || self.current_arg > self.verified_until.unwrap()
     }
 
     /// After an array validation, we do not need to re-check its elements.
-    pub(super) fn validate_array(&mut self) {
+    pub(crate) fn validate_array(&mut self) {
         self.verified_until = Some(self.current_arg);
     }
 
     /// Validate if offset + size is within the buffer's boundaries
-    pub(super) fn validate_offset_plus_size(
+    pub(crate) fn validate_offset_plus_size(
         &mut self,
         offset: &Expression,
         size: &Expression,
@@ -115,7 +115,7 @@ impl BufferValidator<'_> {
     }
 
     /// Validates if we have read all the bytes in a buffer
-    pub(super) fn validate_all_bytes_read(
+    pub(crate) fn validate_all_bytes_read(
         &self,
         end_offset: Expression,
         ns: &Namespace,
@@ -229,7 +229,7 @@ impl BufferValidator<'_> {
     }
 
     /// Create a new buffer validator to validate struct fields.
-    pub(super) fn create_sub_validator<'a>(&self, types: &'a [Type]) -> BufferValidator<'a> {
+    pub(crate) fn create_sub_validator<'a>(&self, types: &'a [Type]) -> BufferValidator<'a> {
         // If the struct has been previously validated, there is no need to validate it again,
         // so verified_until and current_arg are set to type.len() to avoid any further validation.
         BufferValidator {

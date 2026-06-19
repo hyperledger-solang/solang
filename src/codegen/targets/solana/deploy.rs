@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{
-    cfg::ReturnCode, expression, Builtin, ControlFlowGraph, Expression, Instr, Options, Type,
-    Vartable,
-};
+use super::accounts::account_management::{account_meta_literal, retrieve_key_from_account_info};
+use crate::codegen::cfg::{ControlFlowGraph, Instr, ReturnCode};
+use crate::codegen::expression::expression;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::revert::string_to_expr;
-use crate::codegen::solana_accounts::account_management::{
-    account_meta_literal, retrieve_key_from_account_info,
-};
+use crate::codegen::vartable::Vartable;
+use crate::codegen::{Builtin, Expression, Options};
+use crate::sema::ast::Type;
 use crate::sema::ast::{
     self, ArrayLength, CallTy, ExternalCallAccounts, Function, FunctionAttributes, Namespace,
     StructType,

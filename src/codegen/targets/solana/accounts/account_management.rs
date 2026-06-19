@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::Instr;
-use crate::codegen::dispatch::solana::SOLANA_DISPATCH_CFG_NAME;
+use crate::codegen::targets::solana::dispatch::SOLANA_DISPATCH_CFG_NAME;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{
     ArrayLength, Contract, ExternalCallAccounts, Function, Namespace, StructType, Type,

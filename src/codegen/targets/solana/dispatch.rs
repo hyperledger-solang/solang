@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::deploy::solana_deploy;
 use crate::codegen::{
     cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
     interface::TargetCodegen,
-    solana_deploy::solana_deploy,
     vartable::Vartable,
     Builtin, Expression, Options,
 };

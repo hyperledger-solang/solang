@@ -8,16 +8,15 @@
 /// - `AbiEncoding` defines the encoding and decoding API and must be implemented by all schemes.
 /// - There are some helper functions to work with more complex types.
 ///   Any such helper function should work fine regardless of the encoding scheme being used.
-mod borsh_encoding;
-mod buffer_validator;
+pub(crate) mod buffer_validator;
 pub(super) mod scale_encoding;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::encoding::borsh_encoding::BorshEncoding;
 use crate::codegen::encoding::scale_encoding::ScaleEncoding;
 use crate::codegen::expression::load_storage;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::make_target;
+use crate::codegen::targets::solana::encoding::BorshEncoding;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type, Type::Uint};
@@ -1424,7 +1423,8 @@ pub(crate) trait AbiEncoding {
             }
             Type::Ref(r) => {
                 if let Type::Struct(struct_ty) = &**r {
-                    return self.calculate_struct_size(arg_no, expr, struct_ty, ns, vartab, cfg, target);
+                    return self
+                        .calculate_struct_size(arg_no, expr, struct_ty, ns, vartab, cfg, target);
                 }
                 let loaded = Expression::Load {
                     loc: Codegen,
@@ -1715,7 +1715,9 @@ pub(crate) trait AbiEncoding {
         for i in 1..struct_ty.definition(ns).fields.len() {
             let ty = struct_ty.definition(ns).fields[i].ty.clone();
             let field = load_struct_member(ty.clone(), expr.clone(), i, ns);
-            let expr_size = self.get_expr_size(arg_no, &field, ns, vartab, cfg, target).into();
+            let expr_size = self
+                .get_expr_size(arg_no, &field, ns, vartab, cfg, target)
+                .into();
             size = Expression::Add {
                 loc: Codegen,
                 ty: Uint(32),

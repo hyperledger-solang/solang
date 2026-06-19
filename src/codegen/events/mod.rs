@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub(crate) mod polkadot;
-pub(crate) mod solana;
 
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::interface::TargetCodegen;

@@ -14,8 +14,6 @@ mod interface;
 pub(super) mod polkadot;
 mod reaching_definitions;
 pub mod revert;
-mod solana_accounts;
-mod solana_deploy;
 mod statements;
 mod storage;
 mod strength_reduce;
