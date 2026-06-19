@@ -1321,18 +1321,6 @@ pub fn expression(
         } => self_destruct(args, cfg, contract_no, func, ns, vartab, opt, target),
         ast::Expression::Builtin {
             loc,
-            kind: ast::Builtin::PayableSend,
-            args,
-            ..
-        } => payable_send(args, cfg, contract_no, func, ns, vartab, loc, opt, target),
-        ast::Expression::Builtin {
-            loc,
-            kind: ast::Builtin::PayableTransfer,
-            args,
-            ..
-        } => payable_transfer(args, cfg, contract_no, func, ns, vartab, loc, opt, target),
-        ast::Expression::Builtin {
-            loc,
             kind: ast::Builtin::AbiEncode,
             args,
             ..
@@ -1383,7 +1371,6 @@ pub fn expression(
             kind,
             args,
         } => {
-            // Target gets first refusal; EVM uses this for gasleft(amount), for example.
             if let Some(e) =
                 target.lower_builtin(loc, *kind, args, cfg, contract_no, func, ns, vartab, opt)
             {
@@ -2005,146 +1992,6 @@ fn self_destruct(
 ) -> Expression {
     let recipient = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     cfg.add(vartab, Instr::SelfDestruct { recipient });
-    Expression::Poison
-}
-
-fn payable_send(
-    args: &[ast::Expression],
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    loc: &pt::Loc,
-    opt: &Options,
-    target: &dyn TargetCodegen,
-) -> Expression {
-    let address = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
-    let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target);
-    let success = vartab.temp(
-        &pt::Identifier {
-            loc: *loc,
-            name: "success".to_owned(),
-        },
-        &Type::Uint(32),
-    );
-
-    // Ethereum can only transfer via external call
-    if ns.target == Target::EVM {
-        cfg.add(
-            vartab,
-            Instr::ExternalCall {
-                loc: *loc,
-                success: Some(success),
-                address: Some(address),
-                accounts: ExternalCallAccounts::AbsentArgument,
-                seeds: None,
-                payload: Expression::AllocDynamicBytes {
-                    loc: *loc,
-                    ty: Type::DynamicBytes,
-                    size: Box::new(Expression::NumberLiteral {
-                        loc: *loc,
-                        ty: Type::Uint(32),
-                        value: BigInt::from(0),
-                    }),
-                    initializer: Some(vec![]),
-                },
-                value,
-                gas: Expression::NumberLiteral {
-                    loc: *loc,
-                    ty: Type::Uint(64),
-                    value: BigInt::from(i64::MAX),
-                },
-                callty: CallTy::Regular,
-                contract_function_no: None,
-                flags: None,
-            },
-        );
-        return Expression::Variable {
-            loc: *loc,
-            ty: Type::Bool,
-            var_no: success,
-        };
-    }
-
-    cfg.add(
-        vartab,
-        Instr::ValueTransfer {
-            success: Some(success),
-            address,
-            value,
-        },
-    );
-
-    if ns.target != Target::Solana {
-        polkadot::check_transfer_ret(loc, success, cfg, ns, opt, vartab, false).unwrap()
-    } else {
-        unreachable!("Value transfer does not exist on Solana");
-    }
-}
-
-fn payable_transfer(
-    args: &[ast::Expression],
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    loc: &pt::Loc,
-    opt: &Options,
-    target: &dyn TargetCodegen,
-) -> Expression {
-    let address = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
-    let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target);
-    if ns.target == Target::EVM {
-        // Ethereum can only transfer via external call
-        cfg.add(
-            vartab,
-            Instr::ExternalCall {
-                loc: *loc,
-                success: None,
-                accounts: ExternalCallAccounts::AbsentArgument,
-                seeds: None,
-                address: Some(address),
-                payload: Expression::AllocDynamicBytes {
-                    loc: *loc,
-                    ty: Type::DynamicBytes,
-                    size: Box::new(Expression::NumberLiteral {
-                        loc: *loc,
-                        ty: Type::Uint(32),
-                        value: BigInt::from(0),
-                    }),
-                    initializer: Some(vec![]),
-                },
-                value,
-                gas: Expression::NumberLiteral {
-                    loc: *loc,
-                    ty: Type::Uint(64),
-                    value: BigInt::from(i64::MAX),
-                },
-                callty: CallTy::Regular,
-                contract_function_no: None,
-                flags: None,
-            },
-        );
-        return Expression::Poison;
-    }
-
-    let success = ns
-        .target
-        .is_polkadot()
-        .then(|| vartab.temp_name("success", &Type::Uint(32)));
-    let ins = Instr::ValueTransfer {
-        success,
-        address,
-        value,
-    };
-    cfg.add(vartab, ins);
-
-    if ns.target.is_polkadot() {
-        polkadot::check_transfer_ret(loc, success.unwrap(), cfg, ns, opt, vartab, true);
-    }
-
     Expression::Poison
 }
 
