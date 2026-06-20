@@ -7,7 +7,7 @@ pub(crate) mod return_code;
 pub(crate) mod try_catch;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::expression::expression;
+use crate::codegen::expression::{expression, load_storage};
 use crate::codegen::interface::{EventEmitter, TargetCodegen};
 use crate::codegen::storage::{
     array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
@@ -225,8 +225,17 @@ impl TargetCodegen for PolkadotTarget {
         ast::Builtin::Keccak256
     }
 
-    fn storage_array_length_is_inline(&self) -> bool {
-        false
+    fn lower_storage_array_length(
+        &self,
+        loc: &Loc,
+        _ty: &Type,
+        array: Expression,
+        _elem_ty: &Type,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> Expression {
+        load_storage(loc, &ns.storage_type(), array, cfg, vartab, None, ns, self)
     }
 
     fn initial_storage_slot(&self) -> BigInt {

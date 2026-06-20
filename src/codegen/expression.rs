@@ -779,25 +779,7 @@ pub fn expression(
                 },
                 Type::Array(_, dim) => match dim.last().unwrap() {
                     ArrayLength::Dynamic => {
-                        if target.storage_array_length_is_inline() {
-                            Expression::StorageArrayLength {
-                                loc: *loc,
-                                ty: ty.clone(),
-                                array: Box::new(array),
-                                elem_ty: elem_ty.clone(),
-                            }
-                        } else {
-                            load_storage(
-                                loc,
-                                &ns.storage_type(),
-                                array,
-                                cfg,
-                                vartab,
-                                None,
-                                ns,
-                                target,
-                            )
-                        }
+                        target.lower_storage_array_length(loc, ty, array, elem_ty, cfg, vartab, ns)
                     }
                     ArrayLength::Fixed(length) => {
                         let ast_expr = bigint_to_expression(

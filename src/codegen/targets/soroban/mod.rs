@@ -51,8 +51,22 @@ impl TargetCodegen for SorobanTarget {
         dispatch::function_dispatch(contract_no, all_cfg, ns, opt)
     }
 
-    fn storage_array_length_is_inline(&self) -> bool {
-        true
+    fn lower_storage_array_length(
+        &self,
+        loc: &pt::Loc,
+        ty: &Type,
+        array: Expression,
+        elem_ty: &Type,
+        _cfg: &mut ControlFlowGraph,
+        _vartab: &mut Vartable,
+        _ns: &Namespace,
+    ) -> Expression {
+        Expression::StorageArrayLength {
+            loc: *loc,
+            ty: ty.clone(),
+            array: Box::new(array),
+            elem_ty: elem_ty.clone(),
+        }
     }
 
     /// Soroban lazy decode path: if memory contains encoded handles, decode on demand.

@@ -41,7 +41,16 @@ pub(crate) trait TargetCodegen {
 
     fn selector_hash_algorithm(&self) -> ast::Builtin;
 
-    fn storage_array_length_is_inline(&self) -> bool;
+    fn lower_storage_array_length(
+        &self,
+        loc: &Loc,
+        ty: &Type,
+        array: Expression,
+        elem_ty: &Type,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> Expression;
 
     fn initial_storage_slot(&self) -> BigInt;
 

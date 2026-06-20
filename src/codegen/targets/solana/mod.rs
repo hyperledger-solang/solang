@@ -53,8 +53,22 @@ impl TargetCodegen for SolanaTarget {
         }
     }
 
-    fn storage_array_length_is_inline(&self) -> bool {
-        true
+    fn lower_storage_array_length(
+        &self,
+        loc: &Loc,
+        ty: &Type,
+        array: Expression,
+        elem_ty: &Type,
+        _cfg: &mut ControlFlowGraph,
+        _vartab: &mut Vartable,
+        _ns: &Namespace,
+    ) -> Expression {
+        Expression::StorageArrayLength {
+            loc: *loc,
+            ty: ty.clone(),
+            array: Box::new(array),
+            elem_ty: elem_ty.clone(),
+        }
     }
 
     fn selector_hash_algorithm(&self) -> ast::Builtin {
