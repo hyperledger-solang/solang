@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
+use crate::codegen::interface::EventEmitter;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::soroban::encoding::soroban_encode_arg;
 use crate::codegen::vartable::Vartable;

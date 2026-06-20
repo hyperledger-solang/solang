@@ -19,6 +19,7 @@ use crate::sema::ast::{Function, Namespace, RetrieveType, StructType, Type};
 use crate::sema::Recurse;
 use crate::Target;
 use num_bigint::{BigInt, Sign};
+use num_traits::Zero;
 use solang_parser::helpers::CodeLocation;
 use solang_parser::{diagnostics::Diagnostic, pt};
 use std::collections::BTreeSet;
@@ -334,6 +335,45 @@ impl TargetCodegen for SorobanTarget {
         ns: &Namespace,
     ) -> Expression {
         soroban_decode_arg(value, cfg, vartab, ns, None)
+    }
+
+    fn post_process_program(&self, _ns: &mut Namespace, _opt: &Options) {}
+
+    fn selector_hash_algorithm(&self) -> ast::Builtin {
+        ast::Builtin::Keccak256
+    }
+
+    fn initial_storage_slot(&self) -> BigInt {
+        BigInt::zero()
+    }
+
+    fn align_storage_slot(&self, slot: BigInt, _ty: &Type, _ns: &Namespace) -> BigInt {
+        slot
+    }
+
+    fn default_gas_builtin(&self) -> BigInt {
+        BigInt::zero()
+    }
+
+    fn lower_print_expr(&self, expr: Expression) -> Expression {
+        expr
+    }
+
+    fn lower_mapping_subscript(
+        &self,
+        loc: &pt::Loc,
+        elem_ty: &Type,
+        array_ty: &Type,
+        array: Expression,
+        index: Expression,
+    ) -> Expression {
+        Expression::Subscript {
+            loc: *loc,
+            ty: elem_ty.clone(),
+            array_ty: array_ty.clone(),
+            expr: Box::new(array),
+            index: Box::new(index),
+        }
     }
 }
 

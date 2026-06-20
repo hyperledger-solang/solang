@@ -1,29 +1,27 @@
 // SPDX-License-Identifier: Apache-2.0
 
-mod array_boundary;
 pub mod cfg;
-mod constant_folding;
 mod constructor;
-mod dead_storage;
-pub(crate) mod dispatch;
-pub(crate) mod encoding;
+pub(crate) use targets::abi as encoding;
 pub(crate) mod error;
-mod events;
 mod expression;
 mod interface;
-pub(super) mod polkadot;
-mod reaching_definitions;
+mod optimize;
+pub(crate) use optimize::array_boundary;
+pub(crate) use optimize::constant_folding;
+pub(crate) use optimize::dead_storage;
+pub(crate) use optimize::reaching_definitions;
+pub(crate) use optimize::strength_reduce;
+pub(crate) use optimize::subexpression_elimination;
+pub(crate) use optimize::undefined_variable;
+pub(crate) use optimize::unused_variable;
+pub(crate) use optimize::vector_to_slice;
 pub mod revert;
-mod statements;
+pub(crate) mod statements;
 mod storage;
-mod strength_reduce;
-pub(crate) mod subexpression_elimination;
-mod targets;
+pub(crate) mod targets;
 mod tests;
-mod undefined_variable;
-mod unused_variable;
 pub(crate) mod vartable;
-mod vector_to_slice;
 mod yul;
 
 use self::{

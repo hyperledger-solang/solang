@@ -11,9 +11,9 @@ use primitive_types::U256;
 use solang_parser::pt::Loc::Codegen;
 use std::collections::HashMap;
 
-use super::buffer_validator::BufferValidator;
+use crate::codegen::encoding::buffer_validator::BufferValidator;
 
-pub(super) struct ScaleEncoding {
+pub(crate) struct ScaleEncoding {
     storage_cache: HashMap<usize, Expression>,
     packed_encoder: bool,
 }
@@ -630,10 +630,7 @@ mod tests {
     use primitive_types::U256;
 
     use crate::{
-        codegen::{
-            encoding::{scale_encoding::ScaleEncoding, AbiEncoding},
-            Expression,
-        },
+        codegen::{encoding::AbiEncoding, targets::polkadot::encoding::ScaleEncoding, Expression},
         sema::ast::Type,
     };
 

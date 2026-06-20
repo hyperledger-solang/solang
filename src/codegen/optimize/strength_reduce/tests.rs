@@ -3,7 +3,7 @@
 #![cfg(test)]
 use super::expression_values::expression_values;
 use super::{highest_set_bit, Variables};
-use crate::codegen::strength_reduce::value::Value;
+use crate::codegen::optimize::strength_reduce::value::Value;
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, Type};
 use bitvec::prelude::BitArray;

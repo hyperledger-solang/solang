@@ -9,7 +9,7 @@ use super::{
     },
     vartable::Vartable,
     yul::inline_assembly_cfg,
-    Builtin, Expression, Options,
+    Expression, Options,
 };
 use crate::codegen::interface::TargetCodegen;
 use crate::sema::ast::{
@@ -21,8 +21,6 @@ use crate::sema::Recurse;
 use num_bigint::BigInt;
 use num_traits::Zero;
 use solang_parser::pt::{self, CodeLocation, Loc, Loc::Codegen};
-
-mod try_catch;
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
 pub(crate) fn statement(
@@ -614,19 +612,21 @@ pub(crate) fn statement(
             opt,
             target,
         ),
-        Statement::TryCatch(_, _, try_stmt) => self::try_catch::try_catch(
-            try_stmt,
-            func,
-            cfg,
-            contract_no,
-            ns,
-            vartab,
-            loops,
-            placeholder,
-            return_override,
-            opt,
-            target,
-        ),
+        Statement::TryCatch(_, _, try_stmt) => {
+            crate::codegen::targets::polkadot::try_catch::try_catch(
+                try_stmt,
+                func,
+                cfg,
+                contract_no,
+                ns,
+                vartab,
+                loops,
+                placeholder,
+                return_override,
+                opt,
+                target,
+            )
+        }
         Statement::Emit {
             loc,
             event_no,

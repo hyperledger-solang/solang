@@ -3,8 +3,8 @@
 use crate::abi::anchor::event_discriminator;
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::abi_encode;
-use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
+use crate::codegen::interface::EventEmitter;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};

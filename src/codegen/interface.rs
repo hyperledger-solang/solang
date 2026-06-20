@@ -5,17 +5,28 @@ use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
 use crate::sema::ast::{self, Function, Namespace, StructType, Type};
 use num_bigint::BigInt;
-use num_traits::Zero;
 use solang_parser::pt::{self, Loc};
 
-pub(crate) use crate::codegen::events::EventEmitter;
+pub(crate) trait EventEmitter {
+    fn emit(
+        &self,
+        contract_no: usize,
+        func: &crate::sema::ast::Function,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        opt: &Options,
+        target: &dyn TargetCodegen,
+    );
+
+    fn selector(&self, emitting_contract_no: usize) -> Vec<u8>;
+}
 
 pub(crate) trait TargetCodegen {
     /// Pre-CFG validation. Runs after storage layout, before any CFG is built.
-    fn validate_contract(&self, _contract_no: usize, _ns: &mut Namespace) {}
+    fn validate_contract(&self, _contract_no: usize, _ns: &mut Namespace);
 
     /// Post-CFG validation; needs the freshly built CFGs.
-    fn validate_cfgs(&self, _all_cfg: &[ControlFlowGraph], _ns: &mut Namespace) {}
+    fn validate_cfgs(&self, _all_cfg: &[ControlFlowGraph], _ns: &mut Namespace);
 
     /// Build the dispatcher CFG(s) appended after every function CFG is generated.
     fn function_dispatch(
@@ -27,35 +38,23 @@ pub(crate) trait TargetCodegen {
     ) -> Vec<ControlFlowGraph>;
 
     /// Whole-program post-processing, called once after every contract's CFGs.
-    fn post_process_program(&self, _ns: &mut Namespace, _opt: &Options) {}
+    fn post_process_program(&self, _ns: &mut Namespace, _opt: &Options);
 
-    fn selector_hash_algorithm(&self) -> ast::Builtin {
-        ast::Builtin::Keccak256
-    }
+    fn selector_hash_algorithm(&self) -> ast::Builtin;
 
     /// Whether dynamic storage arrays store their length inline in the value (Solana/Soroban)
     /// or in a separate storage slot (Polkadot).
-    fn storage_array_length_is_inline(&self) -> bool {
-        false
-    }
+    fn storage_array_length_is_inline(&self) -> bool;
 
     /// Starting offset for the first storage slot. Solana reserves the first 16 bytes for
     /// account metadata; all other targets begin at slot 0.
-    fn initial_storage_slot(&self) -> BigInt {
-        BigInt::zero()
-    }
+    fn initial_storage_slot(&self) -> BigInt;
 
-    fn align_storage_slot(&self, slot: BigInt, _ty: &Type, _ns: &Namespace) -> BigInt {
-        slot
-    }
+    fn align_storage_slot(&self, slot: BigInt, _ty: &Type, _ns: &Namespace) -> BigInt;
 
-    fn default_gas_builtin(&self) -> BigInt {
-        BigInt::zero()
-    }
+    fn default_gas_builtin(&self) -> BigInt;
 
-    fn lower_print_expr(&self, expr: Expression) -> Expression {
-        expr
-    }
+    fn lower_print_expr(&self, expr: Expression) -> Expression;
 
     fn lower_mapping_subscript(
         &self,
@@ -64,15 +63,7 @@ pub(crate) trait TargetCodegen {
         array_ty: &Type,
         array: Expression,
         index: Expression,
-    ) -> Expression {
-        Expression::Subscript {
-            loc: *loc,
-            ty: elem_ty.clone(),
-            array_ty: array_ty.clone(),
-            expr: Box::new(array),
-            index: Box::new(index),
-        }
-    }
+    ) -> Expression;
 
     /// Target-specific builtin lowering; `None` falls through to shared `expr_builtin`.
     fn lower_builtin(
@@ -86,9 +77,7 @@ pub(crate) trait TargetCodegen {
         _ns: &Namespace,
         _vartab: &mut Vartable,
         _opt: &Options,
-    ) -> Option<Expression> {
-        None
-    }
+    ) -> Option<Expression>;
 
     /// Optionally rewrite a freshly-built `Load` expression.
     /// Soroban decodes handles on load; other targets pass through unchanged.
@@ -98,9 +87,7 @@ pub(crate) trait TargetCodegen {
         _cfg: &mut ControlFlowGraph,
         _vartab: &mut Vartable,
         _ns: &Namespace,
-    ) -> Expression {
-        load
-    }
+    ) -> Expression;
 
     /// Transform a value just before it is written to storage or a storage-backed ref.
     /// Soroban encodes values to ScVal handles; other targets pass through unchanged.
@@ -111,9 +98,7 @@ pub(crate) trait TargetCodegen {
         _cfg: &mut ControlFlowGraph,
         _vartab: &mut Vartable,
         _ns: &Namespace,
-    ) -> Expression {
-        value
-    }
+    ) -> Expression;
 
     /// Default value for an uninitialised storage variable; `None` means "skip the variable".
     fn default_storage_value(
@@ -123,9 +108,7 @@ pub(crate) trait TargetCodegen {
         _cfg: &mut ControlFlowGraph,
         _vartab: &mut Vartable,
         _ns: &Namespace,
-    ) -> Option<Expression> {
-        None
-    }
+    ) -> Option<Expression>;
 
     fn abi_encode(
         &self,
@@ -135,9 +118,7 @@ pub(crate) trait TargetCodegen {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
         packed: bool,
-    ) -> (Expression, Expression) {
-        crate::codegen::encoding::abi_encode(loc, args, ns, vartab, cfg, packed)
-    }
+    ) -> (Expression, Expression);
 
     fn abi_decode(
         &self,
@@ -148,9 +129,7 @@ pub(crate) trait TargetCodegen {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
         buffer_size_expr: Option<Expression>,
-    ) -> Vec<Expression> {
-        crate::codegen::encoding::abi_decode(loc, buffer, types, ns, vartab, cfg, buffer_size_expr)
-    }
+    ) -> Vec<Expression>;
 
     fn storage_array_push(
         &self,
@@ -195,19 +174,7 @@ pub(crate) trait TargetCodegen {
         _cfg: &mut ControlFlowGraph,
         _vartab: &mut Vartable,
         ns: &Namespace,
-    ) -> Expression {
-        crate::codegen::storage::array_offset(
-            loc,
-            Expression::Keccak256 {
-                loc: *loc,
-                ty: slot_ty.clone(),
-                exprs: vec![var_expr.clone()],
-            },
-            index,
-            elem_ty.clone(),
-            ns,
-        )
-    }
+    ) -> Expression;
 
     fn lower_storage_struct_member(
         &self,
@@ -226,7 +193,5 @@ pub(crate) trait TargetCodegen {
         _cfg: &mut ControlFlowGraph,
         _vartab: &mut Vartable,
         _ns: &Namespace,
-    ) -> Expression {
-        value
-    }
+    ) -> Expression;
 }

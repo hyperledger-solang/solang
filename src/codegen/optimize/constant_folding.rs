@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::cfg::{ControlFlowGraph, Instr};
-use super::reaching_definitions;
+use crate::codegen::cfg::{ControlFlowGraph, Instr};
+use crate::codegen::reaching_definitions;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::{
     ast::{Diagnostic, Namespace, RetrieveType, StringLocation, Type},

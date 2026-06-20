@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
-use super::reaching_definitions::{Def, Transfer};
 use crate::codegen::cfg::ASTFunction;
+use crate::codegen::cfg::{BasicBlock, ControlFlowGraph, Instr};
+use crate::codegen::reaching_definitions::{Def, Transfer};
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, Type};
 use indexmap::IndexMap;

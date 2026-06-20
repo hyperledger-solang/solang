@@ -5,7 +5,7 @@ mod reaching_values;
 mod tests;
 mod value;
 
-use super::cfg::{ControlFlowGraph, Instr};
+use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::Expression;
 use crate::sema::ast::{ExternalCallAccounts, Namespace, Type};
 use bitvec::prelude::*;

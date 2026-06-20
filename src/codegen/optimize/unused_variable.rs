@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::Options;
 use crate::codegen::interface::TargetCodegen;
+use crate::codegen::Options;
 use crate::codegen::{cfg::ControlFlowGraph, vartable::Vartable, OptimizationLevel};
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{Builtin, Expression, Function, Namespace};

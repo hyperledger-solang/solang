@@ -8,14 +8,13 @@
 /// - `AbiEncoding` defines the encoding and decoding API and must be implemented by all schemes.
 /// - There are some helper functions to work with more complex types.
 ///   Any such helper function should work fine regardless of the encoding scheme being used.
-pub(crate) mod buffer_validator;
-pub(super) mod scale_encoding;
+pub(crate) use super::buffer_validator;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::encoding::scale_encoding::ScaleEncoding;
 use crate::codegen::expression::load_storage;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::make_target;
+use crate::codegen::targets::polkadot::encoding::ScaleEncoding;
 use crate::codegen::targets::solana::encoding::BorshEncoding;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
@@ -31,7 +30,7 @@ use self::buffer_validator::BufferValidator;
 
 /// Insert encoding instructions into the `cfg` for any `Expression` in `args`.
 /// Returns a pointer to the encoded data and the size as a 32bit integer.
-pub(super) fn abi_encode(
+pub(crate) fn abi_encode(
     loc: &Loc,
     args: Vec<Expression>,
     ns: &Namespace,
@@ -83,7 +82,7 @@ pub(super) fn abi_encode(
 
 /// Insert decoding routines into the `cfg` for the `Expression`s in `args`.
 /// Returns a vector containing the encoded data.
-pub(super) fn abi_decode(
+pub(crate) fn abi_decode(
     loc: &Loc,
     buffer: &Expression,
     types: &[Type],

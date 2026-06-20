@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{statement, Builtin, LoopScopes, Options};
+use crate::codegen::targets::polkadot::return_code as polkadot;
 use crate::codegen::{
     cfg::{ControlFlowGraph, Instr},
     constructor::call_constructor,
     encoding::{abi_decode, abi_encode},
     expression::{default_gas, expression},
     interface::TargetCodegen,
-    polkadot,
     revert::{ERROR_SELECTOR, PANIC_SELECTOR},
+    statements::{statement, LoopScopes},
     vartable::Vartable,
-    Expression,
+    Builtin, Expression, Options,
 };
 use crate::sema::ast::{
     self, CallTy, ExternalCallAccounts, Function, Namespace, RetrieveType, TryCatch, Type,
@@ -21,7 +21,7 @@ use num_traits::Zero;
 use solang_parser::pt::{self, CodeLocation, Loc::Codegen};
 
 /// Resolve try catch statement
-pub(super) fn try_catch(
+pub(crate) fn try_catch(
     try_stmt: &TryCatch,
     func: &Function,
     cfg: &mut ControlFlowGraph,

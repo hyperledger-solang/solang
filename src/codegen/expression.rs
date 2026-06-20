@@ -5,14 +5,15 @@ use super::revert::{
 };
 use super::storage::array_offset;
 use super::targets::soroban::encoding::{soroban_encode, soroban_encode_arg};
+use super::Options;
 use super::{
     cfg::{ControlFlowGraph, Instr, InternalCallTy},
     vartable::Vartable,
 };
-use super::{polkadot, Options};
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::interface::TargetCodegen;
+use crate::codegen::targets::polkadot::return_code as polkadot;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression, HostFunctions};
 use crate::sema::ast::ExternalCallAccounts;
