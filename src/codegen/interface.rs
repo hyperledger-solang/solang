@@ -37,17 +37,12 @@ pub(crate) trait TargetCodegen {
         opt: &Options,
     ) -> Vec<ControlFlowGraph>;
 
-    /// Whole-program post-processing, called once after every contract's CFGs.
     fn post_process_program(&self, _ns: &mut Namespace, _opt: &Options);
 
     fn selector_hash_algorithm(&self) -> ast::Builtin;
 
-    /// Whether dynamic storage arrays store their length inline in the value (Solana/Soroban)
-    /// or in a separate storage slot (Polkadot).
     fn storage_array_length_is_inline(&self) -> bool;
 
-    /// Starting offset for the first storage slot. Solana reserves the first 16 bytes for
-    /// account metadata; all other targets begin at slot 0.
     fn initial_storage_slot(&self) -> BigInt;
 
     fn align_storage_slot(&self, slot: BigInt, _ty: &Type, _ns: &Namespace) -> BigInt;
@@ -65,7 +60,6 @@ pub(crate) trait TargetCodegen {
         index: Expression,
     ) -> Expression;
 
-    /// Target-specific builtin lowering; `None` falls through to shared `expr_builtin`.
     fn lower_builtin(
         &self,
         _loc: &Loc,
@@ -79,8 +73,6 @@ pub(crate) trait TargetCodegen {
         _opt: &Options,
     ) -> Option<Expression>;
 
-    /// Optionally rewrite a freshly-built `Load` expression.
-    /// Soroban decodes handles on load; other targets pass through unchanged.
     fn lower_load(
         &self,
         load: Expression,
@@ -89,8 +81,6 @@ pub(crate) trait TargetCodegen {
         _ns: &Namespace,
     ) -> Expression;
 
-    /// Transform a value just before it is written to storage or a storage-backed ref.
-    /// Soroban encodes values to ScVal handles; other targets pass through unchanged.
     fn prepare_storage_value(
         &self,
         value: Expression,
@@ -100,7 +90,6 @@ pub(crate) trait TargetCodegen {
         _ns: &Namespace,
     ) -> Expression;
 
-    /// Default value for an uninitialised storage variable; `None` means "skip the variable".
     fn default_storage_value(
         &self,
         _loc: &Loc,

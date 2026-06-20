@@ -55,6 +55,7 @@ impl TargetCodegen for SorobanTarget {
         true
     }
 
+    /// Soroban lazy decode path: if memory contains encoded handles, decode on demand.
     fn lower_load(
         &self,
         load: Expression,
@@ -62,8 +63,6 @@ impl TargetCodegen for SorobanTarget {
         vartab: &mut Vartable,
         ns: &Namespace,
     ) -> Expression {
-        // Check the INNER expression's type (the pointer): if it is Ref(SorobanHandle),
-        // the variable holds an encoded handle and must be decoded on load.
         if let Expression::Load { ref expr, .. } = load {
             if let Type::Ref(inner) = expr.ty() {
                 if matches!(inner.as_ref(), Type::SorobanHandle(_)) {
@@ -256,7 +255,7 @@ impl TargetCodegen for SorobanTarget {
     ) -> Option<Expression> {
         match builtin {
             ast::Builtin::GetAddress => {
-                // program_id is a compile-time constant address (Solana/Soroban); return it directly.
+                // // In soroban, address is retrieved via a host function call
                 if let Some(constant_id) = &ns.contracts[contract_no].program_id {
                     return Some(Expression::NumberLiteral {
                         loc: *loc,
@@ -378,10 +377,6 @@ impl TargetCodegen for SorobanTarget {
 }
 
 pub(super) fn validate_accessor_abi_types(contract_no: usize, ns: &mut Namespace) {
-    if ns.target != Target::Soroban {
-        return;
-    }
-
     for variable in &ns.contracts[contract_no].variables {
         if !matches!(variable.visibility, pt::Visibility::Public(_)) {
             continue;
@@ -399,10 +394,6 @@ pub(super) fn validate_accessor_abi_types(contract_no: usize, ns: &mut Namespace
 }
 
 pub(super) fn validate_event_abi_types(contract_no: usize, ns: &mut Namespace) {
-    if ns.target != Target::Soroban {
-        return;
-    }
-
     for event_no in ns.contracts[contract_no].emits_events.clone() {
         for field in &ns.events[event_no].fields {
             if let Some(unsupported_type) = unsupported_event_type(&field.ty, ns) {
@@ -418,10 +409,6 @@ pub(super) fn validate_event_abi_types(contract_no: usize, ns: &mut Namespace) {
 }
 
 pub(super) fn validate_abi_types(all_cfg: &[ControlFlowGraph], ns: &mut Namespace) {
-    if ns.target != Target::Soroban {
-        return;
-    }
-
     for cfg in all_cfg {
         if !cfg.public {
             continue;

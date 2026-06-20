@@ -319,19 +319,18 @@ pub fn storage_slots_array_pop(
     let elem_ty = ty.storage_array_elem().deref_any().clone();
     let entry_pos = vartab.temp_anonymous(&slot_ty);
 
-    let array_offset_expr = array_offset(
+    let array_offset_expr = target.storage_array_entry_offset(
         loc,
-        Expression::Keccak256 {
-            loc: *loc,
-            ty: slot_ty.clone(),
-            exprs: vec![var_expr.clone()],
-        },
+        &var_expr,
         Expression::Variable {
             loc: *loc,
             ty: slot_ty.clone(),
             var_no: new_length,
         },
-        elem_ty.clone(),
+        &elem_ty,
+        &slot_ty,
+        cfg,
+        vartab,
         ns,
     );
 
