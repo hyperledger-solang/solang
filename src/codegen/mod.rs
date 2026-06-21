@@ -286,9 +286,8 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
 fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options, target: &dyn TargetCodegen) {
     if !ns.diagnostics.any_errors() && ns.contracts[contract_no].instantiable {
         layout(contract_no, ns, target);
-        let errors_before = ns.diagnostics.count_errors();
         target.validate_contract(contract_no, ns);
-        if ns.diagnostics.count_errors() > errors_before {
+        if ns.diagnostics.any_errors() {
             return;
         }
 
@@ -350,9 +349,8 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options, target: &dyn 
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
-        let errors_before = ns.diagnostics.count_errors();
         target.validate_cfgs(&all_cfg, ns);
-        if ns.diagnostics.count_errors() > errors_before {
+        if ns.diagnostics.any_errors() {
             return;
         }
 

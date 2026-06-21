@@ -15,6 +15,7 @@ use solang_parser::pt::Loc;
 
 /// This function encodes the constructor arguments and place an instruction in the CFG to
 /// call the constructor of a contract.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn call_constructor(
     loc: &Loc,
     contract_no: usize,
