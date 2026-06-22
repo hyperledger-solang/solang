@@ -42,6 +42,7 @@ pub(crate) fn resolve_for_loop(
 
     loop_scope.enter_scope();
 
+    let body_reachable = next_reachable;
     let resolved_exec_block = resolve_yul_block(
         &yul_for.execution_block.loc,
         &yul_for.execution_block.statements,
@@ -52,7 +53,8 @@ pub(crate) fn resolve_for_loop(
         symtable,
         ns,
     );
-    next_reachable &= resolved_exec_block.1;
+    let post_reachable = body_reachable
+        && (resolved_exec_block.1 || block_ends_with_reachable_continue(&resolved_exec_block.0));
 
     loop_scope.leave_scope();
 
@@ -60,7 +62,7 @@ pub(crate) fn resolve_for_loop(
         &yul_for.post_block.loc,
         &yul_for.post_block.statements,
         context,
-        next_reachable,
+        post_reachable,
         loop_scope,
         function_table,
         symtable,
@@ -81,6 +83,28 @@ pub(crate) fn resolve_for_loop(
         },
         resolved_init_block.1,
     ))
+}
+
+fn block_ends_with_reachable_continue(block: &YulBlock) -> bool {
+    block
+        .statements
+        .iter()
+        .rev()
+        .find(|statement| statement.is_reachable())
+        .map(statement_ends_with_reachable_continue)
+        .unwrap_or(false)
+}
+
+fn statement_ends_with_reachable_continue(statement: &YulStatement) -> bool {
+    if !statement.is_reachable() {
+        return false;
+    }
+
+    match statement {
+        YulStatement::Continue(..) => true,
+        YulStatement::Block(block) => block_ends_with_reachable_continue(block),
+        _ => false,
+    }
 }
 
 /// Resolve for initialization block.
