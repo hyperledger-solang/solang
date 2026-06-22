@@ -64,7 +64,7 @@ pub(crate) fn function_dispatch(
         var_no: argsdata_var,
     };
 
-    // ty:uint64 argslen_var = load ref(ty:uint64) (structmember ref(ty:uin64) (funcarg ty:struct(solparam), 3))
+    // ty:uint64 argslen_var = load ref(ty:uint64) (structmember ref(ty:uint64) (funcarg ty:struct(solparam), 3))
     cfg.add(
         &mut vartab,
         Instr::Set {
