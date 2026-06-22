@@ -10,7 +10,7 @@ use crate::codegen::interface::TargetCodegen;
 use crate::sema::ast::Namespace;
 use crate::Target;
 
-use self::polkadot::PolkadotTarget;
+use self::polkadot::{EvmTarget, PolkadotTarget};
 use self::solana::SolanaTarget;
 use self::soroban::SorobanTarget;
 
@@ -18,7 +18,7 @@ pub(crate) fn make_target(ns: &Namespace) -> Box<dyn TargetCodegen> {
     match &ns.target {
         Target::Soroban => Box::new(SorobanTarget),
         Target::Solana => Box::new(SolanaTarget),
-        Target::Polkadot { .. } => Box::new(PolkadotTarget { is_evm: false }),
-        Target::EVM => Box::new(PolkadotTarget { is_evm: true }),
+        Target::Polkadot { .. } => Box::new(PolkadotTarget),
+        Target::EVM => Box::new(EvmTarget(PolkadotTarget)),
     }
 }

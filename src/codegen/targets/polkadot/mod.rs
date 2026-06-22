@@ -19,14 +19,11 @@ use crate::sema::ast::{
     CallTy, ExternalCallAccounts, Function, Namespace, RetrieveType, StructType, Type,
 };
 use num_bigint::BigInt;
-use num_traits::Zero;
 use solang_parser::pt::{self, Loc};
 
 use self::events::PolkadotEventEmitter;
 
-pub(crate) struct PolkadotTarget {
-    pub(crate) is_evm: bool,
-}
+pub(crate) struct PolkadotTarget;
 
 impl TargetCodegen for PolkadotTarget {
     fn function_dispatch(
@@ -109,44 +106,20 @@ impl TargetCodegen for PolkadotTarget {
         Box::new(PolkadotEventEmitter { args, ns, event_no })
     }
 
-    fn default_gas_builtin(&self) -> BigInt {
-        if self.is_evm {
-            BigInt::from(i64::MAX)
-        } else {
-            BigInt::zero()
-        }
-    }
-
-    fn lower_print_expr(&self, expr: Expression) -> Expression {
-        if self.is_evm {
-            expr
-        } else {
-            crate::codegen::expression::add_prefix_and_delimiter_to_print(expr)
-        }
-    }
-
+    // Polkadot hashes (array, index) with keccak256 to form the storage key.
+    // All other targets use a direct Subscript (trait default).
     fn lower_mapping_subscript(
         &self,
         loc: &Loc,
-        elem_ty: &Type,
+        _elem_ty: &Type,
         array_ty: &Type,
         array: Expression,
         index: Expression,
     ) -> Expression {
-        if self.is_evm {
-            Expression::Subscript {
-                loc: *loc,
-                ty: elem_ty.clone(),
-                array_ty: array_ty.clone(),
-                expr: Box::new(array),
-                index: Box::new(index),
-            }
-        } else {
-            Expression::Keccak256 {
-                loc: *loc,
-                ty: array_ty.clone(),
-                exprs: vec![array, index],
-            }
+        Expression::Keccak256 {
+            loc: *loc,
+            ty: array_ty.clone(),
+            exprs: vec![array, index],
         }
     }
 
@@ -163,19 +136,6 @@ impl TargetCodegen for PolkadotTarget {
         opt: &Options,
     ) -> Option<Expression> {
         match builtin {
-            ast::Builtin::Gasprice if self.is_evm && args.len() == 1 => {
-                Some(crate::codegen::expression::builtin_evm_gasprice(
-                    loc,
-                    args,
-                    cfg,
-                    contract_no,
-                    func,
-                    ns,
-                    vartab,
-                    opt,
-                    self,
-                ))
-            }
             ast::Builtin::PayableSend => {
                 Some(self.payable_send(loc, args, cfg, contract_no, func, ns, vartab, opt))
             }
@@ -215,14 +175,9 @@ impl TargetCodegen for PolkadotTarget {
         }
     }
 
-    fn validate_contract(&self, _contract_no: usize, _ns: &mut Namespace) {}
-
-    fn validate_cfgs(&self, _all_cfg: &[ControlFlowGraph], _ns: &mut Namespace) {}
-
-    fn post_process_program(&self, _ns: &mut Namespace, _opt: &Options) {}
-
-    fn selector_hash_algorithm(&self) -> ast::Builtin {
-        ast::Builtin::Keccak256
+    // Polkadot prepends a `print:`/`,\n` delimiter; EVM and others pass through (trait default).
+    fn lower_print_expr(&self, expr: Expression) -> Expression {
+        crate::codegen::expression::add_prefix_and_delimiter_to_print(expr)
     }
 
     fn lower_storage_array_length(
@@ -237,110 +192,9 @@ impl TargetCodegen for PolkadotTarget {
     ) -> Expression {
         load_storage(loc, &ns.storage_type(), array, cfg, vartab, None, ns, self)
     }
-
-    fn initial_storage_slot(&self) -> BigInt {
-        BigInt::zero()
-    }
-
-    fn align_storage_slot(&self, slot: BigInt, _ty: &Type, _ns: &Namespace) -> BigInt {
-        slot
-    }
-
-    fn lower_load(
-        &self,
-        load: Expression,
-        _cfg: &mut ControlFlowGraph,
-        _vartab: &mut Vartable,
-        _ns: &Namespace,
-    ) -> Expression {
-        load
-    }
-
-    fn prepare_storage_value(
-        &self,
-        value: Expression,
-        _dest: &Expression,
-        _cfg: &mut ControlFlowGraph,
-        _vartab: &mut Vartable,
-        _ns: &Namespace,
-    ) -> Expression {
-        value
-    }
-
-    fn default_storage_value(
-        &self,
-        _loc: &Loc,
-        _ty: &Type,
-        _cfg: &mut ControlFlowGraph,
-        _vartab: &mut Vartable,
-        _ns: &Namespace,
-    ) -> Option<Expression> {
-        None
-    }
-
-    fn abi_encode(
-        &self,
-        loc: &Loc,
-        args: Vec<Expression>,
-        ns: &Namespace,
-        vartab: &mut Vartable,
-        cfg: &mut ControlFlowGraph,
-        packed: bool,
-    ) -> (Expression, Expression) {
-        crate::codegen::encoding::abi_encode(loc, args, ns, vartab, cfg, packed)
-    }
-
-    fn abi_decode(
-        &self,
-        loc: &Loc,
-        buffer: &Expression,
-        types: &[Type],
-        ns: &Namespace,
-        vartab: &mut Vartable,
-        cfg: &mut ControlFlowGraph,
-        buffer_size_expr: Option<Expression>,
-    ) -> Vec<Expression> {
-        crate::codegen::encoding::abi_decode(loc, buffer, types, ns, vartab, cfg, buffer_size_expr)
-    }
-
-    fn storage_array_entry_offset(
-        &self,
-        loc: &Loc,
-        var_expr: &Expression,
-        index: Expression,
-        elem_ty: &Type,
-        slot_ty: &Type,
-        _cfg: &mut ControlFlowGraph,
-        _vartab: &mut Vartable,
-        ns: &Namespace,
-    ) -> Expression {
-        crate::codegen::storage::array_offset(
-            loc,
-            Expression::Keccak256 {
-                loc: *loc,
-                ty: slot_ty.clone(),
-                exprs: vec![var_expr.clone()],
-            },
-            index,
-            elem_ty.clone(),
-            ns,
-        )
-    }
-
-    fn lower_load_storage(
-        &self,
-        value: Expression,
-        _cfg: &mut ControlFlowGraph,
-        _vartab: &mut Vartable,
-        _ns: &Namespace,
-    ) -> Expression {
-        value
-    }
 }
 
 impl PolkadotTarget {
-    /// Lower `address.send(value)` (`Builtin::PayableSend`). EVM routes through an external
-    /// call with an empty payload; Polkadot emits a `ValueTransfer` and checks the return code.
     fn payable_send(
         &self,
         loc: &Loc,
@@ -361,45 +215,6 @@ impl PolkadotTarget {
             },
             &Type::Uint(32),
         );
-
-        // Ethereum can only transfer via external call
-        if self.is_evm {
-            cfg.add(
-                vartab,
-                Instr::ExternalCall {
-                    loc: *loc,
-                    success: Some(success),
-                    address: Some(address),
-                    accounts: ExternalCallAccounts::AbsentArgument,
-                    seeds: None,
-                    payload: Expression::AllocDynamicBytes {
-                        loc: *loc,
-                        ty: Type::DynamicBytes,
-                        size: Box::new(Expression::NumberLiteral {
-                            loc: *loc,
-                            ty: Type::Uint(32),
-                            value: BigInt::from(0),
-                        }),
-                        initializer: Some(vec![]),
-                    },
-                    value,
-                    gas: Expression::NumberLiteral {
-                        loc: *loc,
-                        ty: Type::Uint(64),
-                        value: BigInt::from(i64::MAX),
-                    },
-                    callty: CallTy::Regular,
-                    contract_function_no: None,
-                    flags: None,
-                },
-            );
-            return Expression::Variable {
-                loc: *loc,
-                ty: Type::Bool,
-                var_no: success,
-            };
-        }
-
         cfg.add(
             vartab,
             Instr::ValueTransfer {
@@ -408,12 +223,9 @@ impl PolkadotTarget {
                 value,
             },
         );
-
         return_code::check_transfer_ret(loc, success, cfg, ns, opt, vartab, false).unwrap()
     }
 
-    /// Lower `address.transfer(value)` (`Builtin::PayableTransfer`). EVM routes through an
-    /// external call; Polkadot emits a `ValueTransfer` and reverts on a non-zero return code.
     fn payable_transfer(
         &self,
         loc: &Loc,
@@ -427,40 +239,6 @@ impl PolkadotTarget {
     ) -> Expression {
         let address = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, self);
         let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, self);
-        if self.is_evm {
-            // Ethereum can only transfer via external call
-            cfg.add(
-                vartab,
-                Instr::ExternalCall {
-                    loc: *loc,
-                    success: None,
-                    accounts: ExternalCallAccounts::AbsentArgument,
-                    seeds: None,
-                    address: Some(address),
-                    payload: Expression::AllocDynamicBytes {
-                        loc: *loc,
-                        ty: Type::DynamicBytes,
-                        size: Box::new(Expression::NumberLiteral {
-                            loc: *loc,
-                            ty: Type::Uint(32),
-                            value: BigInt::from(0),
-                        }),
-                        initializer: Some(vec![]),
-                    },
-                    value,
-                    gas: Expression::NumberLiteral {
-                        loc: *loc,
-                        ty: Type::Uint(64),
-                        value: BigInt::from(i64::MAX),
-                    },
-                    callty: CallTy::Regular,
-                    contract_function_no: None,
-                    flags: None,
-                },
-            );
-            return Expression::Poison;
-        }
-
         let success = vartab.temp_name("success", &Type::Uint(32));
         cfg.add(
             vartab,
@@ -470,9 +248,242 @@ impl PolkadotTarget {
                 value,
             },
         );
-
         return_code::check_transfer_ret(loc, success, cfg, ns, opt, vartab, true);
+        Expression::Poison
+    }
+}
 
+pub(crate) struct EvmTarget(pub(crate) PolkadotTarget);
+
+impl TargetCodegen for EvmTarget {
+    fn default_gas_builtin(&self) -> BigInt {
+        BigInt::from(i64::MAX)
+    }
+
+    fn lower_builtin(
+        &self,
+        loc: &Loc,
+        builtin: ast::Builtin,
+        args: &[ast::Expression],
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Option<Expression> {
+        match builtin {
+            ast::Builtin::Gasprice if args.len() == 1 => {
+                Some(crate::codegen::expression::builtin_evm_gasprice(
+                    loc,
+                    args,
+                    cfg,
+                    contract_no,
+                    func,
+                    ns,
+                    vartab,
+                    opt,
+                    self,
+                ))
+            }
+            ast::Builtin::PayableSend => {
+                Some(self.payable_send(loc, args, cfg, contract_no, func, ns, vartab, opt))
+            }
+            ast::Builtin::PayableTransfer => {
+                Some(self.payable_transfer(loc, args, cfg, contract_no, func, ns, vartab, opt))
+            }
+            _ => None,
+        }
+    }
+
+    fn function_dispatch(
+        &self,
+        contract_no: usize,
+        all_cfg: &mut [ControlFlowGraph],
+        ns: &mut Namespace,
+        opt: &Options,
+    ) -> Vec<ControlFlowGraph> {
+        self.0.function_dispatch(contract_no, all_cfg, ns, opt)
+    }
+
+    fn storage_array_push(
+        &self,
+        loc: &Loc,
+        args: &[ast::Expression],
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression {
+        self.0
+            .storage_array_push(loc, args, cfg, contract_no, func, ns, vartab, opt)
+    }
+
+    fn storage_array_pop(
+        &self,
+        loc: &Loc,
+        args: &[ast::Expression],
+        return_ty: &Type,
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression {
+        self.0.storage_array_pop(
+            loc,
+            args,
+            return_ty,
+            cfg,
+            contract_no,
+            func,
+            ns,
+            vartab,
+            opt,
+        )
+    }
+
+    fn event_emitter<'a>(
+        &self,
+        loc: &pt::Loc,
+        event_no: usize,
+        args: &'a [ast::Expression],
+        ns: &'a Namespace,
+    ) -> Box<dyn EventEmitter + 'a> {
+        self.0.event_emitter(loc, event_no, args, ns)
+    }
+
+    fn lower_storage_struct_member(
+        &self,
+        loc: &Loc,
+        var_expr: Expression,
+        struct_ty: &StructType,
+        field_no: usize,
+        ns: &Namespace,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+    ) -> Expression {
+        self.0
+            .lower_storage_struct_member(loc, var_expr, struct_ty, field_no, ns, cfg, vartab)
+    }
+
+    fn lower_storage_array_length(
+        &self,
+        loc: &Loc,
+        ty: &Type,
+        array: Expression,
+        elem_ty: &Type,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> Expression {
+        self.0
+            .lower_storage_array_length(loc, ty, array, elem_ty, cfg, vartab, ns)
+    }
+}
+
+impl EvmTarget {
+    fn payable_send(
+        &self,
+        loc: &Loc,
+        args: &[ast::Expression],
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression {
+        let address = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, self);
+        let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, self);
+        let success = vartab.temp(
+            &pt::Identifier {
+                loc: *loc,
+                name: "success".to_owned(),
+            },
+            &Type::Uint(32),
+        );
+        cfg.add(
+            vartab,
+            Instr::ExternalCall {
+                loc: *loc,
+                success: Some(success),
+                address: Some(address),
+                accounts: ExternalCallAccounts::AbsentArgument,
+                seeds: None,
+                payload: Expression::AllocDynamicBytes {
+                    loc: *loc,
+                    ty: Type::DynamicBytes,
+                    size: Box::new(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(0),
+                    }),
+                    initializer: Some(vec![]),
+                },
+                value,
+                gas: Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(i64::MAX),
+                },
+                callty: CallTy::Regular,
+                contract_function_no: None,
+                flags: None,
+            },
+        );
+        Expression::Variable {
+            loc: *loc,
+            ty: Type::Bool,
+            var_no: success,
+        }
+    }
+
+    fn payable_transfer(
+        &self,
+        loc: &Loc,
+        args: &[ast::Expression],
+        cfg: &mut ControlFlowGraph,
+        contract_no: usize,
+        func: Option<&Function>,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        opt: &Options,
+    ) -> Expression {
+        let address = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, self);
+        let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, self);
+        cfg.add(
+            vartab,
+            Instr::ExternalCall {
+                loc: *loc,
+                success: None,
+                accounts: ExternalCallAccounts::AbsentArgument,
+                seeds: None,
+                address: Some(address),
+                payload: Expression::AllocDynamicBytes {
+                    loc: *loc,
+                    ty: Type::DynamicBytes,
+                    size: Box::new(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(0),
+                    }),
+                    initializer: Some(vec![]),
+                },
+                value,
+                gas: Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(i64::MAX),
+                },
+                callty: CallTy::Regular,
+                contract_function_no: None,
+                flags: None,
+            },
+        );
         Expression::Poison
     }
 }
