@@ -11,6 +11,7 @@ use super::{
     vartable::Vartable,
 };
 
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::Expression;
 use crate::sema::{
     ast,
@@ -205,10 +206,11 @@ pub(super) fn expr_assert(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     let true_ = cfg.new_basic_block("noassert".to_owned());
     let false_ = cfg.new_basic_block("doassert".to_owned());
-    let cond = expression(args, cfg, contract_no, func, ns, vartab, opt);
+    let cond = expression(args, cfg, contract_no, func, ns, vartab, opt, target);
     cfg.add(
         vartab,
         Instr::BranchCond {
@@ -241,10 +243,11 @@ pub(super) fn require(
     vartab: &mut Vartable,
     opt: &Options,
     loc: Loc,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     let true_ = cfg.new_basic_block("noassert".to_owned());
     let false_ = cfg.new_basic_block("doassert".to_owned());
-    let cond = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+    let cond = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     cfg.add(
         vartab,
         Instr::BranchCond {
@@ -256,7 +259,7 @@ pub(super) fn require(
     cfg.set_basic_block(false_);
     let expr = args
         .get(1)
-        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
+        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt, target));
 
     // On Solana and Polkadot, print the reason
     if opt.log_runtime_errors {
@@ -338,10 +341,11 @@ pub(super) fn revert(
     vartab: &mut Vartable,
     opt: &Options,
     loc: &Loc,
+    target: &dyn TargetCodegen,
 ) {
     let exprs = args
         .iter()
-        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt))
+        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt, target))
         .collect::<Vec<_>>();
     if opt.log_runtime_errors {
         match (error_no, exprs.first()) {

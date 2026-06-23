@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::statements::LoopScopes;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::builtin::process_builtin;
@@ -24,6 +25,7 @@ pub(crate) fn statement(
     vartab: &mut Vartable,
     early_return: &Option<Instr>,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
     if !yul_statement.is_reachable() {
         return;
@@ -31,28 +33,59 @@ pub(crate) fn statement(
 
     match yul_statement {
         YulStatement::FunctionCall(_, _, func_no, args) => {
-            let returns = process_function_call(*func_no, args, contract_no, vartab, cfg, ns, opt);
+            let returns =
+                process_function_call(*func_no, args, contract_no, vartab, cfg, ns, opt, target);
             assert_eq!(returns.len(), 1);
             assert_eq!(returns[0], Expression::Poison);
         }
 
         YulStatement::BuiltInCall(loc, _, builtin_ty, args) => {
-            let expr = process_builtin(loc, *builtin_ty, args, contract_no, ns, vartab, cfg, opt);
+            let expr = process_builtin(
+                loc,
+                *builtin_ty,
+                args,
+                contract_no,
+                ns,
+                vartab,
+                cfg,
+                opt,
+                target,
+            );
             assert_eq!(expr, Expression::Poison);
         }
 
         YulStatement::Block(block) => {
             for item in &block.statements {
-                statement(item, contract_no, loops, ns, cfg, vartab, early_return, opt);
+                statement(
+                    item,
+                    contract_no,
+                    loops,
+                    ns,
+                    cfg,
+                    vartab,
+                    early_return,
+                    opt,
+                    target,
+                );
             }
         }
 
         YulStatement::VariableDeclaration(loc, _, vars, init) => {
-            process_variable_declaration(loc, vars, init, contract_no, ns, cfg, vartab, opt);
+            process_variable_declaration(
+                loc,
+                vars,
+                init,
+                contract_no,
+                ns,
+                cfg,
+                vartab,
+                opt,
+                target,
+            );
         }
 
         YulStatement::Assignment(loc, _, lhs, rhs) => {
-            process_assignment(loc, lhs, rhs, contract_no, ns, cfg, vartab, opt)
+            process_assignment(loc, lhs, rhs, contract_no, ns, cfg, vartab, opt, target)
         }
 
         YulStatement::IfBlock(_, _, condition, block) => process_if_block(
@@ -65,6 +98,7 @@ pub(crate) fn statement(
             vartab,
             early_return,
             opt,
+            target,
         ),
 
         YulStatement::Switch {
@@ -83,6 +117,7 @@ pub(crate) fn statement(
             cfg,
             early_return,
             opt,
+            target,
         ),
 
         YulStatement::For {
@@ -105,6 +140,7 @@ pub(crate) fn statement(
             vartab,
             early_return,
             opt,
+            target,
         ),
 
         YulStatement::Leave(..) => {
@@ -145,12 +181,13 @@ fn process_variable_declaration(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
     let initializer = if let Some(expr) = init {
         if let ast::YulExpression::FunctionCall(_, func_no, args, _) = expr {
-            process_function_call(*func_no, args, contract_no, vartab, cfg, ns, opt)
+            process_function_call(*func_no, args, contract_no, vartab, cfg, ns, opt, target)
         } else {
-            vec![expression(expr, contract_no, ns, vartab, cfg, opt)]
+            vec![expression(expr, contract_no, ns, vartab, cfg, opt, target)]
         }
     } else {
         let mut inits: Vec<Expression> = Vec::with_capacity(vars.len());
@@ -183,11 +220,12 @@ fn process_assignment(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
     if lhs.len() > 1 {
         // builtins with multiple returns are not implemented (yet)
         let returns = if let ast::YulExpression::FunctionCall(_, func_no, args, _) = rhs {
-            process_function_call(*func_no, args, contract_no, vartab, cfg, ns, opt)
+            process_function_call(*func_no, args, contract_no, vartab, cfg, ns, opt, target)
         } else {
             unreachable!("only function call return multiple values");
         };
@@ -198,7 +236,7 @@ fn process_assignment(
         return;
     }
 
-    let codegen_rhs = expression(rhs, contract_no, ns, vartab, cfg, opt);
+    let codegen_rhs = expression(rhs, contract_no, ns, vartab, cfg, opt, target);
     cfg_single_assigment(loc, &lhs[0], codegen_rhs, ns, cfg, vartab);
 }
 
@@ -355,8 +393,9 @@ fn process_if_block(
     vartab: &mut Vartable,
     early_return: &Option<Instr>,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
-    let cond = expression(cond, contract_no, ns, vartab, cfg, opt);
+    let cond = expression(cond, contract_no, ns, vartab, cfg, opt, target);
 
     let bool_cond = if cond.ty() == Type::Bool {
         cond
@@ -388,7 +427,17 @@ fn process_if_block(
     vartab.new_dirty_tracker();
 
     for stmt in &block.statements {
-        statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+        statement(
+            stmt,
+            contract_no,
+            loops,
+            ns,
+            cfg,
+            vartab,
+            early_return,
+            opt,
+            target,
+        );
     }
 
     if block.is_next_reachable() {
@@ -414,9 +463,20 @@ fn process_for_block(
     vartab: &mut Vartable,
     early_return: &Option<Instr>,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
     for stmt in &init_block.statements {
-        statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+        statement(
+            stmt,
+            contract_no,
+            loops,
+            ns,
+            cfg,
+            vartab,
+            early_return,
+            opt,
+            target,
+        );
     }
 
     if !init_block.is_next_reachable() {
@@ -431,7 +491,7 @@ fn process_for_block(
     cfg.add(vartab, Instr::Branch { block: cond_block });
     cfg.set_basic_block(cond_block);
 
-    let cond_expr = expression(condition, contract_no, ns, vartab, cfg, opt);
+    let cond_expr = expression(condition, contract_no, ns, vartab, cfg, opt, target);
 
     let cond_expr = if cond_expr.ty() == Type::Bool {
         cond_expr
@@ -461,7 +521,17 @@ fn process_for_block(
     vartab.new_dirty_tracker();
 
     for stmt in &execution_block.statements {
-        statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+        statement(
+            stmt,
+            contract_no,
+            loops,
+            ns,
+            cfg,
+            vartab,
+            early_return,
+            opt,
+            target,
+        );
     }
 
     if execution_block.is_next_reachable() {
@@ -473,7 +543,17 @@ fn process_for_block(
     cfg.set_basic_block(next_block);
 
     for stmt in &post_block.statements {
-        statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+        statement(
+            stmt,
+            contract_no,
+            loops,
+            ns,
+            cfg,
+            vartab,
+            early_return,
+            opt,
+            target,
+        );
     }
 
     if post_block.is_next_reachable() {
@@ -499,8 +579,9 @@ fn switch(
     cfg: &mut ControlFlowGraph,
     early_return: &Option<Instr>,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
-    let cond = expression(condition, contract_no, ns, vartab, cfg, opt);
+    let cond = expression(condition, contract_no, ns, vartab, cfg, opt, target);
     let end_switch = cfg.new_basic_block("end_switch".to_string());
 
     let current_block = cfg.current_block();
@@ -508,12 +589,22 @@ fn switch(
     vartab.new_dirty_tracker();
     let mut cases_cfg: Vec<(Expression, usize)> = Vec::with_capacity(cases.len());
     for (item_no, item) in cases.iter().enumerate() {
-        let case_cond =
-            expression(&item.condition, contract_no, ns, vartab, cfg, opt).cast(&cond.ty(), ns);
+        let case_cond = expression(&item.condition, contract_no, ns, vartab, cfg, opt, target)
+            .cast(&cond.ty(), ns);
         let case_block = cfg.new_basic_block(format!("case_{item_no}"));
         cfg.set_basic_block(case_block);
         for stmt in &item.block.statements {
-            statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+            statement(
+                stmt,
+                contract_no,
+                loops,
+                ns,
+                cfg,
+                vartab,
+                early_return,
+                opt,
+                target,
+            );
         }
         if item.block.is_next_reachable() {
             cfg.add(vartab, Instr::Branch { block: end_switch });
@@ -525,7 +616,17 @@ fn switch(
         let new_block = cfg.new_basic_block("default".to_string());
         cfg.set_basic_block(new_block);
         for stmt in &default_block.statements {
-            statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+            statement(
+                stmt,
+                contract_no,
+                loops,
+                ns,
+                cfg,
+                vartab,
+                early_return,
+                opt,
+                target,
+            );
         }
         if default_block.is_next_reachable() {
             cfg.add(vartab, Instr::Branch { block: end_switch });

@@ -2,7 +2,7 @@
 
 use std::ffi::CString;
 
-use crate::codegen::polkadot::SCRATCH_SIZE;
+use crate::codegen::targets::polkadot::return_code::SCRATCH_SIZE;
 use crate::codegen::{Options, STORAGE_INITIALIZER};
 use crate::sema::ast::{Contract, Namespace};
 use inkwell::context::Context;
@@ -10,7 +10,7 @@ use inkwell::module::{Linkage, Module};
 use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 
-use crate::codegen::dispatch::polkadot::DispatchType;
+use crate::codegen::targets::polkadot::dispatch::DispatchType;
 use crate::emit::functions::emit_functions;
 use crate::emit::{Binary, TargetRuntime};
 

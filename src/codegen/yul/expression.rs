@@ -2,6 +2,7 @@
 
 use crate::codegen;
 use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy};
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::yul::builtin::process_builtin;
 use crate::codegen::{Builtin, Expression, Options};
@@ -20,6 +21,7 @@ pub(crate) fn expression(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     match expr {
         ast::YulExpression::BoolLiteral(loc, value, ty) => {
@@ -70,6 +72,7 @@ pub(crate) fn expression(
                 ns,
                 vartab,
                 opt,
+                target,
             )
         }
         ast::YulExpression::ConstantVariable(_, _, None, var_no) => codegen::expression(
@@ -80,6 +83,7 @@ pub(crate) fn expression(
             ns,
             vartab,
             opt,
+            target,
         ),
         ast::YulExpression::StorageVariable(..)
         | ast::YulExpression::SolidityLocalVariable(_, _, Some(StorageLocation::Storage(_)), ..) => {
@@ -91,18 +95,34 @@ pub(crate) fn expression(
             var_no: *var_no,
         },
         ast::YulExpression::SuffixAccess(loc, expr, suffix) => {
-            process_suffix_access(loc, expr, suffix, contract_no, vartab, cfg, ns, opt)
+            process_suffix_access(loc, expr, suffix, contract_no, vartab, cfg, ns, opt, target)
         }
         ast::YulExpression::FunctionCall(_, function_no, args, _) => {
-            let mut returns =
-                process_function_call(*function_no, args, contract_no, vartab, cfg, ns, opt);
+            let mut returns = process_function_call(
+                *function_no,
+                args,
+                contract_no,
+                vartab,
+                cfg,
+                ns,
+                opt,
+                target,
+            );
             assert_eq!(returns.len(), 1);
             returns.remove(0)
         }
 
-        ast::YulExpression::BuiltInCall(loc, builtin_ty, args) => {
-            process_builtin(loc, *builtin_ty, args, contract_no, ns, vartab, cfg, opt)
-        }
+        ast::YulExpression::BuiltInCall(loc, builtin_ty, args) => process_builtin(
+            loc,
+            *builtin_ty,
+            args,
+            contract_no,
+            ns,
+            vartab,
+            cfg,
+            opt,
+            target,
+        ),
     }
 }
 
@@ -116,6 +136,7 @@ fn process_suffix_access(
     cfg: &mut ControlFlowGraph,
     ns: &Namespace,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     match suffix {
         YulSuffix::Slot => match expr {
@@ -193,7 +214,7 @@ fn process_suffix_access(
                         loc: *loc,
                         tys: vec![Type::Uint(32)],
                         kind: Builtin::ArrayLength,
-                        args: vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
+                        args: vec![expression(expr, contract_no, ns, vartab, cfg, opt, target)],
                     };
                 }
             }
@@ -203,7 +224,7 @@ fn process_suffix_access(
             if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
                 expr
             {
-                let func_expr = expression(expr, contract_no, ns, vartab, cfg, opt);
+                let func_expr = expression(expr, contract_no, ns, vartab, cfg, opt, target);
                 return func_expr.external_function_address();
             }
         }
@@ -212,7 +233,7 @@ fn process_suffix_access(
             if let ast::YulExpression::SolidityLocalVariable(_, Type::ExternalFunction { .. }, ..) =
                 expr
             {
-                let func_expr = expression(expr, contract_no, ns, vartab, cfg, opt);
+                let func_expr = expression(expr, contract_no, ns, vartab, cfg, opt, target);
                 return func_expr.external_function_selector();
             }
         }
@@ -230,11 +251,13 @@ pub(crate) fn process_function_call(
     cfg: &mut ControlFlowGraph,
     ns: &Namespace,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Vec<Expression> {
     let mut codegen_args: Vec<Expression> = Vec::with_capacity(args.len());
     for (param_no, item) in ns.yul_functions[function_no].params.iter().enumerate() {
         codegen_args.push(
-            expression(&args[param_no], contract_no, ns, vartab, cfg, opt).cast(&item.ty, ns),
+            expression(&args[param_no], contract_no, ns, vartab, cfg, opt, target)
+                .cast(&item.ty, ns),
         );
     }
 

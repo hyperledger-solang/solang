@@ -2,6 +2,7 @@
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::expression::{default_gas, expression};
+use crate::codegen::interface::TargetCodegen;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
 use crate::sema::{
@@ -12,10 +13,9 @@ use crate::Target;
 use num_bigint::{BigInt, Sign};
 use solang_parser::pt::Loc;
 
-use super::encoding::abi_encode;
-
 /// This function encodes the constructor arguments and place an instruction in the CFG to
 /// call the constructor of a contract.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn call_constructor(
     loc: &Loc,
     contract_no: usize,
@@ -30,22 +30,23 @@ pub(super) fn call_constructor(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) {
     let value = call_args
         .value
         .as_ref()
-        .map(|v| expression(v, cfg, callee_contract_no, func, ns, vartab, opt));
+        .map(|v| expression(v, cfg, callee_contract_no, func, ns, vartab, opt, target));
 
     let gas = if let Some(gas) = &call_args.gas {
-        expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+        expression(gas, cfg, callee_contract_no, func, ns, vartab, opt, target)
     } else {
-        default_gas(ns)
+        default_gas(ns, target)
     };
 
     let salt = call_args
         .salt
         .as_ref()
-        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
+        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt, target));
     let address = if ns.target == Target::Solana {
         if let Some(literal_id) = &ns.contracts[contract_no].program_id {
             Some(Expression::NumberLiteral {
@@ -62,6 +63,7 @@ pub(super) fn call_constructor(
                 ns,
                 vartab,
                 opt,
+                target,
             );
             Some(address)
         }
@@ -71,14 +73,14 @@ pub(super) fn call_constructor(
     let seeds = call_args
         .seeds
         .as_ref()
-        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
+        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt, target));
     let accounts = call_args
         .accounts
-        .map(|expr| expression(expr, cfg, contract_no, func, ns, vartab, opt));
+        .map(|expr| expression(expr, cfg, contract_no, func, ns, vartab, opt, target));
 
     let mut constructor_args = constructor_args
         .iter()
-        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt))
+        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt, target))
         .collect::<Vec<Expression>>();
 
     let selector = match constructor_no {
@@ -99,7 +101,7 @@ pub(super) fn call_constructor(
 
     args.append(&mut constructor_args);
 
-    let (encoded_args, _) = abi_encode(loc, args, ns, vartab, cfg, false);
+    let (encoded_args, _) = target.abi_encode(loc, args, ns, vartab, cfg, false);
     cfg.add(
         vartab,
         Instr::Constructor {

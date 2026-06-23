@@ -72,6 +72,13 @@ impl Diagnostics {
             .count()
     }
 
+    pub fn count_errors(&self) -> usize {
+        self.contents
+            .iter()
+            .filter(|&x| x.level == Level::Error)
+            .count()
+    }
+
     pub fn first_warning(&self) -> &Diagnostic {
         self.contents
             .iter()

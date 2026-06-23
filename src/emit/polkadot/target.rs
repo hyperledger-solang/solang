@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::HashTy;
-use crate::codegen::polkadot::SCRATCH_SIZE;
 use crate::codegen::revert::PanicCode;
+use crate::codegen::targets::polkadot::return_code::SCRATCH_SIZE;
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
 use crate::emit::polkadot::PolkadotTarget;

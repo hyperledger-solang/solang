@@ -3,6 +3,7 @@
 use crate::{
     codegen::{
         cfg::{ControlFlowGraph, Instr},
+        interface::TargetCodegen,
         revert::{assert_failure, log_runtime_error, PanicCode, SolidityError},
         vartable::Vartable,
         yul::expression::expression,
@@ -50,15 +51,16 @@ pub(crate) fn process_builtin(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
     match builtin_ty {
         YulBuiltInFunction::Not => {
-            let exp = expression(&args[0], contract_no, ns, vartab, cfg, opt);
+            let exp = expression(&args[0], contract_no, ns, vartab, cfg, opt, target);
             Expression::BitwiseNot { loc: *loc, ty: exp.ty(), expr: Box::new(exp) }
         }
 
         YulBuiltInFunction::IsZero => {
-            let left = expression(&args[0], contract_no, ns, vartab, cfg, opt);
+            let left = expression(&args[0], contract_no, ns, vartab, cfg, opt, target);
             let right = Expression::NumberLiteral { loc: pt::Loc::Codegen, ty: left.ty(), value: BigInt::from(0) };
 
             Expression::Equal { loc: *loc, left: Box::new(left), right: Box::new(right) }
@@ -85,11 +87,11 @@ pub(crate) fn process_builtin(
         | YulBuiltInFunction::Exp
         | YulBuiltInFunction::AddMod
         | YulBuiltInFunction::MulMod => {
-            process_arithmetic(loc, builtin_ty, args, contract_no, ns, vartab, cfg, opt)
+            process_arithmetic(loc, builtin_ty, args, contract_no, ns, vartab, cfg, opt, target)
         }
 
         YulBuiltInFunction::Byte => {
-            byte_builtin(loc, args, contract_no, ns, cfg, vartab, opt)
+            byte_builtin(loc, args, contract_no, ns, cfg, vartab, opt, target)
         }
 
         YulBuiltInFunction::SignExtend
@@ -164,7 +166,7 @@ pub(crate) fn process_builtin(
         }
 
         YulBuiltInFunction::Balance => {
-            let addr = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Address(false), ns);
+            let addr = expression(&args[0], contract_no, ns, vartab, cfg, opt, target).cast(&Type::Address(false), ns);
             Expression::Builtin { loc: *loc, tys: vec![Type::Value], kind: Builtin::Balance, args: vec![addr] }
         }
 
@@ -189,7 +191,7 @@ pub(crate) fn process_builtin(
         }
 
         YulBuiltInFunction::SelfDestruct => {
-            let recipient = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Address(true), ns);
+            let recipient = expression(&args[0], contract_no, ns, vartab, cfg, opt, target).cast(&Type::Address(true), ns);
             cfg.add(vartab, Instr::SelfDestruct { recipient });
             Expression::Poison
         }
@@ -207,12 +209,12 @@ pub(crate) fn process_builtin(
         }
 
         YulBuiltInFunction::ExtCodeSize => {
-            let address = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Address(false), ns);
+            let address = expression(&args[0], contract_no, ns, vartab, cfg, opt, target).cast(&Type::Address(false), ns);
             Expression::Builtin { loc: *loc, tys: vec![Type::Uint(32)], kind: Builtin::ExtCodeSize, args: vec![address] }
         }
 
         YulBuiltInFunction::BlockHash => {
-            let arg = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Uint(64), ns);
+            let arg = expression(&args[0], contract_no, ns, vartab, cfg, opt, target).cast(&Type::Uint(64), ns);
             Expression::Builtin { loc: *loc, tys: vec![Type::Uint(256)], kind: Builtin::BlockHash, args: vec![arg] }
         }
 
@@ -248,9 +250,10 @@ fn process_arithmetic(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
-    let left = expression(&args[0], contract_no, ns, vartab, cfg, opt);
-    let right = expression(&args[1], contract_no, ns, vartab, cfg, opt);
+    let left = expression(&args[0], contract_no, ns, vartab, cfg, opt, target);
+    let right = expression(&args[1], contract_no, ns, vartab, cfg, opt, target);
 
     let left = cast_to_number(left, ns);
     let right = cast_to_number(right, ns);
@@ -392,7 +395,7 @@ fn process_arithmetic(
         },
 
         YulBuiltInFunction::AddMod | YulBuiltInFunction::MulMod => {
-            let modulo_operand = expression(&args[2], contract_no, ns, vartab, cfg, opt);
+            let modulo_operand = expression(&args[2], contract_no, ns, vartab, cfg, opt, target);
             let (_, equalized_modulo) = equalize_types(left.clone(), modulo_operand.clone(), ns);
             let builtin = if builtin_ty == YulBuiltInFunction::AddMod {
                 Builtin::AddMod
@@ -553,8 +556,10 @@ fn byte_builtin(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
     opt: &Options,
+    target: &dyn TargetCodegen,
 ) -> Expression {
-    let offset = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Uint(256), ns);
+    let offset =
+        expression(&args[0], contract_no, ns, vartab, cfg, opt, target).cast(&Type::Uint(256), ns);
     let cond = Expression::MoreEqual {
         loc: *loc,
         signed: false,
@@ -625,7 +630,8 @@ fn byte_builtin(
         loc: *loc,
         ty: Type::Uint(256),
         left: Box::new(
-            expression(&args[1], contract_no, ns, vartab, cfg, opt).cast(&Type::Uint(256), ns),
+            expression(&args[1], contract_no, ns, vartab, cfg, opt, target)
+                .cast(&Type::Uint(256), ns),
         ),
         right: Box::new(op_eight_times),
         signed: false,
