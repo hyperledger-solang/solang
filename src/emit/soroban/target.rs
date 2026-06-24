@@ -1352,19 +1352,21 @@ pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<
 
     // Tag definitions from CAP-0046
     let tag = match ty {
-        Type::Bool => 0,        // Tag::False
-        Type::Uint(32) => 4,    // Tag::U32Val
-        Type::Int(32) => 5,     // Tag::I32Val
-        Type::Enum(_) => 4,     // Tag::U32Val
-        Type::Uint(64) => 6,    // Tag::U64Small
-        Type::Int(64) => 7,     // Tag::I64Small
-        Type::Uint(128) => 10,  // Tag::U128Small
-        Type::Int(128) => 11,   // Tag::I128Small
-        Type::Uint(256) => 12,  // Tag::U256Small
-        Type::Int(256) => 13,   // Tag::I256Small
-        Type::String => 73,     // Tag::StringObject
-        Type::Address(_) => 77, // Tag::AddressObject
-        Type::Void => 2,        // Tag::Void
+        Type::Bool => 0,          // Tag::False
+        Type::Uint(32) => 4,      // Tag::U32Val
+        Type::Int(32) => 5,       // Tag::I32Val
+        Type::Enum(_) => 4,       // Tag::U32Val
+        Type::Uint(64) => 6,      // Tag::U64Small
+        Type::Int(64) => 7,       // Tag::I64Small
+        Type::Uint(128) => 10,    // Tag::U128Small
+        Type::Int(128) => 11,     // Tag::I128Small
+        Type::Uint(256) => 12,    // Tag::U256Small
+        Type::Int(256) => 13,     // Tag::I256Small
+        Type::Bytes(_) => 72,     // Tag::BytesObject
+        Type::String => 73,       // Tag::StringObject
+        Type::DynamicBytes => 72, // Tag::BytesObject
+        Type::Address(_) => 77,   // Tag::AddressObject
+        Type::Void => 2,          // Tag::Void
         _ => {
             // Fallback to Void for unsupported types
             2 // Tag::Void

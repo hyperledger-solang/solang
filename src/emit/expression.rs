@@ -84,7 +84,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
     function: FunctionValue<'a>,
 ) -> BasicValueEnum<'a> {
     emit_context!(bin);
-
+    // eprintln!("expr : {:?}", e);
     match e {
         Expression::FunctionArg { arg_no, .. } => expect_llvm_entity(
             function.get_nth_param(*arg_no as u32),
@@ -1585,15 +1585,28 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     panic!("{}", CodegenError::llvm_builder("emitting expression", err))
                 });
 
-            bin.builder
-                .build_call(
-                    runtime_helper(bin, "vector_new", "creating bytes cast error payload"),
-                    &[size.into(), elem_size.into(), init.into()],
-                    "",
-                )
-                .unwrap_or_else(|err| {
-                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
-                })
+            let allocator = if bin.ns.target == Target::Soroban {
+                bin.builder
+                    .build_call(
+                        bin.module.get_function("soroban_alloc_init").unwrap(),
+                        &[size.into(), init.into()],
+                        "soroban_alloc",
+                    )
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
+            } else {
+                bin.builder
+                    .build_call(
+                        runtime_helper(bin, "vector_new", "creating bytes cast error payload"),
+                        &[size.into(), elem_size.into(), init.into()],
+                        "",
+                    )
+                    .unwrap_or_else(|err| {
+                        panic!("{}", CodegenError::llvm_builder("emitting expression", err))
+                    })
+            };
+            allocator
                 .try_as_basic_value()
                 .left()
                 .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
@@ -2914,7 +2927,7 @@ fn runtime_cast<'a>(
         }
         (Type::Bool, Type::Int(_) | Type::Uint(_)) => bin
             .builder
-            .build_int_cast(
+            .build_int_z_extend(
                 val.into_int_value(),
                 bin.llvm_type(to).into_int_type(),
                 "bool_to_int_cast",

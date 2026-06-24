@@ -13,15 +13,13 @@ use crate::codegen::interface::{EventEmitter, TargetCodegen};
 use crate::codegen::storage::{array_pop, storage_slots_array_push};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
-use crate::codegen::{Builtin, Expression, HostFunctions};
+use crate::codegen::{Expression, HostFunctions};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, RetrieveType, StructType, Type};
-use crate::sema::Recurse;
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
 use solang_parser::helpers::CodeLocation;
 use solang_parser::{diagnostics::Diagnostic, pt};
-use std::collections::BTreeSet;
 
 /// Codegen for the Soroban target. All Soroban-specific lowering lives under this module
 /// (`dispatch`, `encoding`, `events`, plus the validation and storage helpers below).
@@ -113,9 +111,42 @@ impl TargetCodegen for SorobanTarget {
         ns: &Namespace,
     ) -> Option<Expression> {
         match ty {
-            Type::String | Type::DynamicBytes | Type::Slice(_) => {
-                Some(soroban_vec_new(loc, ty, cfg, vartab))
+            // String/DynamicBytes are struct.vector after Phase 1. Emit an empty
+            // struct.vector so prepare_storage_value → soroban_encode_arg can turn it
+            // into a real empty String/Bytes object (b.i / b.3, len 0). If we left
+            // these on soroban_vec_new the slot would hold a Vec object, and any
+            // subsequent read via decode_string/decode_bytes would trap.
+            Type::String | Type::DynamicBytes => {
+                let buf = vartab.temp_name("empty_buf", ty);
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: *loc,
+                        res: buf,
+                        expr: Expression::AllocDynamicBytes {
+                            loc: *loc,
+                            ty: ty.clone(),
+                            size: Box::new(Expression::NumberLiteral {
+                                loc: *loc,
+                                ty: Type::Uint(32),
+                                value: BigInt::from(0u64),
+                            }),
+                            initializer: Some(vec![]),
+                        },
+                    },
+                );
+                Some(Expression::Variable {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    var_no: buf,
+                })
             }
+            Type::Bytes(_) => Some(Expression::NumberLiteral {
+                loc: *loc,
+                ty: ty.clone(),
+                value: BigInt::from(0u64),
+            }),
+            Type::Slice(_) => Some(soroban_vec_new(loc, ty, cfg, vartab)),
             Type::Array(elem_ty, dims)
                 if dims.last() == Some(&ast::ArrayLength::Dynamic)
                     && !elem_ty.is_reference_type(ns) =>
@@ -942,14 +973,11 @@ pub(super) fn validate_abi_types(all_cfg: &[ControlFlowGraph], ns: &mut Namespac
         }
     }
 
-    validate_string_handle_code_paths(all_cfg, ns);
     validate_unsupported_codegen_paths(all_cfg, ns);
 }
 
 fn unsupported_parameter_type(ty: &Type, ns: &Namespace) -> Option<String> {
     match ty {
-        Type::DynamicBytes => Some("bytes memory".to_string()),
-        Type::Bytes(n) => Some(format!("bytes{n}")),
         Type::Struct(_) => Some(format!("{} memory", ty.to_string(ns))),
         Type::Array(elem, _) if has_unsupported_soroban_array_element(elem.as_ref()) => {
             Some(format!("{} memory", ty.to_string(ns)))
@@ -967,8 +995,6 @@ fn is_public_accessor(cfg: &ControlFlowGraph, ns: &Namespace) -> bool {
 
 fn unsupported_accessor_type(ty: &Type, ns: &Namespace) -> Option<String> {
     match ty {
-        Type::DynamicBytes => Some("bytes".to_string()),
-        Type::Bytes(n) => Some(format!("bytes{n}")),
         Type::Mapping(mapping) => unsupported_accessor_type(mapping.value.as_ref(), ns),
         Type::Array(elem, _) => unsupported_accessor_type(elem.as_ref(), ns),
         Type::Struct(struct_ty) => {
@@ -988,8 +1014,6 @@ fn unsupported_accessor_type(ty: &Type, ns: &Namespace) -> Option<String> {
 
 fn unsupported_event_type(ty: &Type, ns: &Namespace) -> Option<String> {
     match ty {
-        Type::DynamicBytes => Some("bytes".to_string()),
-        Type::Bytes(n) => Some(format!("bytes{n}")),
         Type::Struct(_) => Some(ty.to_string(ns)),
         _ => None,
     }
@@ -997,9 +1021,6 @@ fn unsupported_event_type(ty: &Type, ns: &Namespace) -> Option<String> {
 
 fn unsupported_return_type(ty: &Type, ns: &Namespace) -> Option<String> {
     match ty {
-        Type::String => Some("string memory".to_string()),
-        Type::DynamicBytes => Some("bytes memory".to_string()),
-        Type::Bytes(n) => Some(format!("bytes{n}")),
         Type::Struct(_) => Some(format!("{} memory", ty.to_string(ns))),
         Type::Array(_, _) => Some(format!("{} memory", ty.to_string(ns))),
         _ => None,
@@ -1008,7 +1029,7 @@ fn unsupported_return_type(ty: &Type, ns: &Namespace) -> Option<String> {
 
 fn has_unsupported_soroban_array_element(ty: &Type) -> bool {
     match ty {
-        Type::DynamicBytes | Type::Struct(_) => true,
+        Type::DynamicBytes | Type::Bytes(_) | Type::Struct(_) => true,
         Type::Array(elem, _) => has_unsupported_soroban_array_element(elem.as_ref()),
         _ => false,
     }
@@ -1124,19 +1145,9 @@ struct UnsupportedCodegenExprContext {
 }
 
 fn reject_unsupported_codegen_expr(
-    expr: &Expression,
-    cx: &mut UnsupportedCodegenExprContext,
+    _expr: &Expression,
+    _cx: &mut UnsupportedCodegenExprContext,
 ) -> bool {
-    if let Expression::Subscript { loc, array_ty, .. } = expr {
-        if array_ty.is_storage_bytes() {
-            cx.diagnostics
-                .push(CodegenError::unsupported_soroban_operation(
-                    *loc,
-                    "storage bytes subscript load",
-                ));
-        }
-    }
-
     true
 }
 
@@ -1157,208 +1168,6 @@ fn unsupported_soroban_storage_type(ty: &Type, ns: &Namespace) -> Option<String>
 fn push_codegen_error(ns: &mut Namespace, err: CodegenError) {
     if let Some(diagnostic) = err.diagnostic() {
         ns.diagnostics.push(diagnostic);
-    }
-}
-
-fn validate_string_handle_code_paths(all_cfg: &[ControlFlowGraph], ns: &mut Namespace) {
-    for cfg in all_cfg {
-        let mut string_handle_vars = BTreeSet::new();
-
-        for block in &cfg.blocks {
-            for instr in &block.instr {
-                validate_string_handle_uses(instr, &string_handle_vars, ns);
-
-                match instr {
-                    Instr::Set { res, expr, .. } => {
-                        update_string_handle_var(*res, expr, &mut string_handle_vars);
-                    }
-                    Instr::Call {
-                        res,
-                        return_tys,
-                        call: InternalCallTy::Static { cfg_no },
-                        args,
-                    } => {
-                        validate_static_string_call_args(
-                            &all_cfg[*cfg_no],
-                            args,
-                            &string_handle_vars,
-                            ns,
-                        );
-
-                        for (res_no, ty) in res.iter().zip(return_tys.iter()) {
-                            if matches!(ty, Type::String) {
-                                string_handle_vars.insert(*res_no);
-                            } else {
-                                string_handle_vars.remove(res_no);
-                            }
-                        }
-                    }
-                    Instr::Call {
-                        res, return_tys, ..
-                    } => {
-                        for (res_no, ty) in res.iter().zip(return_tys.iter()) {
-                            if matches!(ty, Type::String) {
-                                string_handle_vars.insert(*res_no);
-                            } else {
-                                string_handle_vars.remove(res_no);
-                            }
-                        }
-                    }
-                    _ => (),
-                }
-            }
-        }
-    }
-}
-
-fn update_string_handle_var(
-    res: usize,
-    expr: &Expression,
-    string_handle_vars: &mut BTreeSet<usize>,
-) {
-    if is_soroban_string_handle_expr(expr, string_handle_vars) {
-        string_handle_vars.insert(res);
-    } else {
-        string_handle_vars.remove(&res);
-    }
-}
-
-fn validate_static_string_call_args(
-    callee: &ControlFlowGraph,
-    args: &[Expression],
-    string_handle_vars: &BTreeSet<usize>,
-    ns: &mut Namespace,
-) {
-    for (arg, param) in args.iter().zip(callee.params.iter()) {
-        if matches!(param.ty, Type::String)
-            && !is_soroban_string_handle_expr(arg, string_handle_vars)
-        {
-            ns.diagnostics.push(Diagnostic::error(
-                arg.loc(),
-                "passing string memory values to internal functions is not supported for target soroban"
-                    .to_string(),
-            ));
-        }
-    }
-}
-
-fn validate_string_handle_uses(
-    instr: &Instr,
-    string_handle_vars: &BTreeSet<usize>,
-    ns: &mut Namespace,
-) {
-    let mut cx = StringHandleUseContext {
-        string_handle_vars,
-        diagnostics: Vec::new(),
-    };
-
-    match instr {
-        Instr::Set { expr, .. } => {
-            expr.recurse(&mut cx, reject_string_handle_memory_use);
-        }
-        Instr::Call { args, .. } | Instr::Return { value: args } => {
-            for arg in args {
-                arg.recurse(&mut cx, reject_string_handle_memory_use);
-            }
-        }
-        Instr::BranchCond { cond, .. } | Instr::Print { expr: cond } => {
-            cond.recurse(&mut cx, reject_string_handle_memory_use);
-        }
-        Instr::Store { dest, data } => {
-            dest.recurse(&mut cx, reject_string_handle_memory_use);
-            data.recurse(&mut cx, reject_string_handle_memory_use);
-        }
-        Instr::AssertFailure {
-            encoded_args: Some(expr),
-        } => {
-            expr.recurse(&mut cx, reject_string_handle_memory_use);
-        }
-        Instr::LoadStorage { storage, .. } | Instr::ClearStorage { storage, .. } => {
-            storage.recurse(&mut cx, reject_string_handle_memory_use);
-        }
-        Instr::SetStorage { value, storage, .. } => {
-            value.recurse(&mut cx, reject_string_handle_memory_use);
-            storage.recurse(&mut cx, reject_string_handle_memory_use);
-        }
-        Instr::SetStorageBytes {
-            value,
-            storage,
-            offset,
-        } => {
-            value.recurse(&mut cx, reject_string_handle_memory_use);
-            storage.recurse(&mut cx, reject_string_handle_memory_use);
-            offset.recurse(&mut cx, reject_string_handle_memory_use);
-        }
-        Instr::PushStorage { value, storage, .. } => {
-            if let Some(value) = value {
-                value.recurse(&mut cx, reject_string_handle_memory_use);
-            }
-
-            storage.recurse(&mut cx, reject_string_handle_memory_use);
-        }
-        Instr::PopStorage { storage, .. } => {
-            storage.recurse(&mut cx, reject_string_handle_memory_use);
-        }
-        Instr::PushMemory { array, value, .. } => {
-            Expression::Variable {
-                loc: pt::Loc::Codegen,
-                ty: Type::String,
-                var_no: *array,
-            }
-            .recurse(&mut cx, reject_string_handle_memory_use);
-            value.recurse(&mut cx, reject_string_handle_memory_use);
-        }
-        _ => (),
-    }
-
-    for diagnostic in cx.diagnostics {
-        ns.diagnostics.push(diagnostic);
-    }
-}
-
-struct StringHandleUseContext<'a> {
-    string_handle_vars: &'a BTreeSet<usize>,
-    diagnostics: Vec<Diagnostic>,
-}
-
-fn reject_string_handle_memory_use(expr: &Expression, cx: &mut StringHandleUseContext<'_>) -> bool {
-    if let Expression::Builtin {
-        loc,
-        kind: Builtin::ArrayLength,
-        args,
-        ..
-    } = expr
-    {
-        if args.first().is_some_and(|arg| {
-            matches!(arg.ty(), Type::String)
-                && is_soroban_string_handle_expr(arg, cx.string_handle_vars)
-        }) {
-            cx.diagnostics.push(Diagnostic::error(
-                *loc,
-                "using string memory as bytes is not supported for target soroban".to_string(),
-            ));
-        }
-    }
-
-    true
-}
-
-fn is_soroban_string_handle_expr(expr: &Expression, string_handle_vars: &BTreeSet<usize>) -> bool {
-    match expr {
-        Expression::FunctionArg {
-            ty: Type::String, ..
-        } => true,
-        Expression::Variable {
-            ty: Type::String,
-            var_no,
-            ..
-        } => string_handle_vars.contains(var_no),
-        Expression::Cast {
-            ty: Type::String,
-            expr,
-            ..
-        } => is_soroban_string_handle_expr(expr, string_handle_vars),
-        _ => false,
     }
 }
 

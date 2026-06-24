@@ -68,7 +68,14 @@ pub fn soroban_encode(
     let mut encoded_items = Vec::new();
 
     for (arg_no, item) in args.iter().enumerate() {
-        let var = soroban_encode_arg(item.clone(), cfg, vartab, ns);
+        let var = if matches!(
+            item,
+            Expression::AllocDynamicBytes { .. } | Expression::BytesLiteral { .. }
+        ) {
+            encode_as_symbol(item.clone(), cfg, vartab, ns)
+        } else {
+            soroban_encode_arg(item.clone(), cfg, vartab, ns)
+        };
 
         encoded_items.push(var.clone());
 
@@ -143,7 +150,18 @@ pub fn soroban_decode_arg(
         },
         Type::Uint(64) => decode_u64(wrapper_cfg, vartab, arg),
 
-        Type::Address(_) | Type::String => arg.clone(),
+        Type::Address(_) => arg.clone(),
+        Type::String => decode_string(arg, wrapper_cfg, vartab),
+        Type::DynamicBytes => decode_bytes(arg, wrapper_cfg, vartab),
+        Type::Bytes(n) => {
+            let as_dyn = decode_bytes(arg, wrapper_cfg, vartab);
+            Expression::BytesCast {
+                loc: Loc::Codegen,
+                ty: Type::Bytes(n),
+                from: Type::DynamicBytes,
+                expr: Box::new(as_dyn),
+            }
+        }
 
         Type::Enum(enum_no) => {
             let decoded = soroban_decode_arg(arg, wrapper_cfg, vartab, ns, Some(Type::Uint(32)));
@@ -227,6 +245,16 @@ pub fn soroban_encode_arg(
     vartab: &mut Vartable,
     ns: &Namespace,
 ) -> Expression {
+    if let Type::Bytes(n) = item.ty() {
+        let as_dyn = Expression::BytesCast {
+            loc: item.loc(),
+            ty: Type::DynamicBytes,
+            from: Type::Bytes(n),
+            expr: Box::new(item),
+        };
+        return soroban_encode_arg(as_dyn, cfg, vartab, ns);
+    }
+
     let obj = vartab.temp_name("obj_".to_string().as_str(), &Type::Uint(64));
 
     let ret = match item.ty() {
@@ -246,118 +274,61 @@ pub fn soroban_encode_arg(
                 expr: encoded,
             }
         }
-        Type::String => {
-            if let Expression::Variable {
-                loc: _,
-                ty: _,
-                var_no: _,
-            } = item.clone()
-            {
-                Instr::Set {
-                    loc: Loc::Codegen,
-                    res: obj,
-                    expr: item.clone(),
-                }
+        Type::String | Type::DynamicBytes => {
+            let loc = item.loc();
+
+            let item_var = if matches!(item, Expression::Variable { .. }) {
+                item.clone()
             } else {
-                let inp = Expression::VectorData {
-                    pointer: Box::new(item.clone()),
-                };
-
-                let inp_extend = Expression::ZeroExt {
-                    loc: Loc::Codegen,
-                    ty: Type::Uint(64),
-                    expr: Box::new(inp),
-                };
-
-                let encoded = Expression::ShiftLeft {
-                    loc: Loc::Codegen,
-                    ty: Uint(64),
-                    left: Box::new(inp_extend),
-                    right: Box::new(Expression::NumberLiteral {
-                        loc: Loc::Codegen,
-                        ty: Type::Uint(64),
-                        value: BigInt::from(32),
-                    }),
-                };
-
-                let encoded = Expression::Add {
-                    loc: Loc::Codegen,
-                    ty: Type::Uint(64),
-                    overflowing: true,
-                    left: Box::new(encoded),
-                    right: Box::new(Expression::NumberLiteral {
-                        loc: Loc::Codegen,
-                        ty: Type::Uint(64),
-                        value: BigInt::from(4),
-                    }),
-                };
-
-                let len = match item.clone() {
-                    Expression::AllocDynamicBytes { size, .. } => {
-                        let sesa = Expression::ShiftLeft {
-                            loc: Loc::Codegen,
-                            ty: Uint(64),
-                            left: Box::new(size.clone().cast(&Type::Uint(64), ns)),
-                            right: Box::new(Expression::NumberLiteral {
-                                loc: Loc::Codegen,
-                                ty: Type::Uint(64),
-                                value: BigInt::from(32),
-                            }),
-                        };
-
-                        Expression::Add {
-                            loc: Loc::Codegen,
-                            ty: Type::Uint(64),
-                            overflowing: true,
-                            left: Box::new(sesa),
-                            right: Box::new(Expression::NumberLiteral {
-                                loc: Loc::Codegen,
-                                ty: Type::Uint(64),
-                                value: BigInt::from(4),
-                            }),
-                        }
-                    }
-                    Expression::BytesLiteral { loc, ty: _, value } => {
-                        let len = Expression::NumberLiteral {
-                            loc,
-                            ty: Type::Uint(64),
-                            value: BigInt::from(value.len() as u64),
-                        };
-
-                        let len = Expression::ShiftLeft {
-                            loc,
-                            ty: Type::Uint(64),
-                            left: Box::new(len),
-                            right: Box::new(Expression::NumberLiteral {
-                                loc,
-                                ty: Type::Uint(64),
-                                value: BigInt::from(32),
-                            }),
-                        };
-
-                        Expression::Add {
-                            loc,
-                            ty: Type::Uint(64),
-                            left: Box::new(len),
-                            right: Box::new(Expression::NumberLiteral {
-                                loc,
-                                ty: Type::Uint(64),
-                                value: BigInt::from(4),
-                            }),
-                            overflowing: false,
-                        }
-                    }
-                    _ => unreachable!(),
-                };
-
-                Instr::Call {
-                    res: vec![obj],
-                    return_tys: vec![Type::Uint(64)],
-                    call: crate::codegen::cfg::InternalCallTy::HostFunction {
-                        name: HostFunctions::SymbolNewFromLinearMemory.name().to_string(),
+                let tmp = vartab.temp_name("vec_tmp", &item.ty());
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc,
+                        res: tmp,
+                        expr: item.clone(),
                     },
-                    args: vec![encoded, len],
+                );
+                Expression::Variable {
+                    loc,
+                    ty: item.ty(),
+                    var_no: tmp,
                 }
+            };
+
+            let ptr_u32val = encode_object(
+                loc,
+                Expression::VectorData {
+                    pointer: Box::new(item_var.clone()),
+                },
+                32,
+                4,
+            );
+            let len_u32val = encode_object(
+                loc,
+                Expression::Builtin {
+                    loc,
+                    tys: vec![Type::Uint(32)],
+                    kind: Builtin::ArrayLength,
+                    args: vec![item_var],
+                },
+                32,
+                4,
+            );
+
+            let host_fn = if matches!(item.ty(), Type::String) {
+                HostFunctions::StringNewFromLinearMemory // b.i
+            } else {
+                HostFunctions::BytesNewFromLinearMemory // b.3
+            };
+
+            Instr::Call {
+                res: vec![obj],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: host_fn.name().to_string(),
+                },
+                args: vec![ptr_u32val, len_u32val],
             }
         }
         Type::Uint(32) | Type::Int(32) => {
@@ -1710,8 +1681,8 @@ fn encode_vector(
     };
 
     // VectorNewFromLinearMemory expects (ptr_u32val, len_u32val).
-    let encoded_ptr = zext_shift_add(item.loc(), data_ptr, 32, 4);
-    let encoded_len = zext_shift_add(item.loc(), len, 32, 4);
+    let encoded_ptr = encode_object(item.loc(), data_ptr, 32, 4);
+    let encoded_len = encode_object(item.loc(), len, 32, 4);
 
     let obj = vartab.temp_name("vec_obj", &Type::Uint(64));
     cfg.add(
@@ -1778,7 +1749,128 @@ fn decode_struct(
     }
 }
 
-fn zext_shift_add(loc: pt::Loc, value: Expression, shift: u64, tag: u64) -> Expression {
+/// Encode a `BytesLiteral` as a Soroban Symbol (b.j / `symbol_new_from_linear_memory`).
+/// Use ONLY for auth map keys, event topics, and Soroban enum tags — never for Solidity
+/// `string`/`bytes` data (those go through `soroban_encode_arg` after Phase 2).
+pub(crate) fn encode_as_symbol(
+    item: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) -> Expression {
+    let loc = item.loc();
+
+    let (ptr_u32val, len_u32val) = match &item {
+        Expression::BytesLiteral { value, .. } => {
+            let ptr = encode_object(
+                loc,
+                Expression::VectorData {
+                    pointer: Box::new(item.clone()),
+                },
+                32,
+                4,
+            );
+            let len = encode_object(
+                loc,
+                Expression::NumberLiteral {
+                    loc,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(value.len()),
+                },
+                32,
+                4,
+            );
+            (ptr, len)
+        }
+        Expression::AllocDynamicBytes { size, .. } => {
+            let inp = Expression::VectorData {
+                pointer: Box::new(item.clone()),
+            };
+
+            let inp_extend = Expression::ZeroExt {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                expr: Box::new(inp),
+            };
+
+            let encoded = Expression::ShiftLeft {
+                loc: Loc::Codegen,
+                ty: Uint(64),
+                left: Box::new(inp_extend),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(32),
+                }),
+            };
+
+            let encoded = Expression::Add {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                overflowing: true,
+                left: Box::new(encoded),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(4),
+                }),
+            };
+
+            let sesa = Expression::ShiftLeft {
+                loc: Loc::Codegen,
+                ty: Uint(64),
+                left: Box::new(size.clone().cast(&Type::Uint(64), ns)),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(32),
+                }),
+            };
+
+            let len = Expression::Add {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                overflowing: true,
+                left: Box::new(sesa),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(4),
+                }),
+            };
+            (encoded, len)
+        }
+        _ => {
+            unreachable!(
+                "encode_as_symbol only accepts BytesLiteral :- {:?}",
+                item.clone()
+            );
+        }
+    };
+
+    let sym_var = vartab.temp_name("symbol_obj", &Type::Uint(64));
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![sym_var],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::SymbolNewFromLinearMemory.name().to_string(),
+            },
+            args: vec![ptr_u32val, len_u32val],
+        },
+    );
+
+    Expression::Variable {
+        loc,
+        ty: Type::Uint(64),
+        var_no: sym_var,
+    }
+}
+
+/// Encode a value as a Soroban tagged small-value (e.g. U32Val: `value << 32 | 4`).
+/// Replaces the private `zext_shift_add` helper — same body, now `pub(crate)`.
+pub(crate) fn encode_object(loc: pt::Loc, value: Expression, shift: u64, tag: u64) -> Expression {
     let shifted = Expression::ShiftLeft {
         loc,
         ty: Type::Uint(64),
@@ -1806,6 +1898,194 @@ fn zext_shift_add(loc: pt::Loc, value: Expression, shift: u64, tag: u64) -> Expr
         overflowing: false,
     }
 }
+
+/// Decode a Soroban tagged small-value back to its payload as `u32`.
+/// Inverse of `encode_object`: `(tagged >> shift) as u32`.
+pub(crate) fn decode_object(loc: pt::Loc, tagged: Expression, shift: u64) -> Expression {
+    Expression::Trunc {
+        loc,
+        ty: Type::Uint(32),
+        expr: Box::new(Expression::ShiftRight {
+            loc,
+            ty: Type::Uint(64),
+            left: Box::new(tagged),
+            right: Box::new(Expression::NumberLiteral {
+                loc,
+                ty: Type::Uint(64),
+                value: BigInt::from(shift),
+            }),
+            signed: false,
+        }),
+    }
+}
+/// Decode a Soroban `StringObject` (i64 handle) → WASM `struct.vector` (Type::String).
+/// Pattern: `StringLen` (b.k) → decode length → `AllocDynamicBytes` → `StringCopyToLinearMemory` (b.g).
+pub(crate) fn decode_string(
+    handle: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let loc = Loc::Codegen;
+
+    // 1. raw_len = string_len(handle) — returns U32Val (tagged i64)
+    let raw_len_var = vartab.temp_name("str_len_raw", &Type::Uint(64));
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![raw_len_var],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::StringLen.name().to_string(),
+            },
+            args: vec![handle.clone()],
+        },
+    );
+    let raw_len = Expression::Variable {
+        loc,
+        ty: Type::Uint(64),
+        var_no: raw_len_var,
+    };
+
+    // 2. Decode U32Val payload → plain u32 length
+    let len_u32 = decode_object(loc, raw_len, 32);
+
+    // 3. Allocate a WASM buffer of that length
+    let buf_var = vartab.temp_name("str_buf", &Type::String);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc,
+            res: buf_var,
+            expr: Expression::AllocDynamicBytes {
+                loc,
+                ty: Type::String,
+                size: Box::new(len_u32.clone()),
+                initializer: None,
+            },
+        },
+    );
+    let buf = Expression::Variable {
+        loc,
+        ty: Type::String,
+        var_no: buf_var,
+    };
+
+    // 4. lm_pos = U32Val of the buffer's data pointer
+    let lm_pos = encode_object(
+        loc,
+        Expression::VectorData {
+            pointer: Box::new(buf.clone()),
+        },
+        32,
+        4,
+    );
+
+    // s_pos = U32Val(0): offset within the StringObject to start copying from
+    let src_pos = Expression::NumberLiteral {
+        loc,
+        ty: Type::Uint(64),
+        value: BigInt::from(4u64), // 0 << 32 | 4
+    };
+
+    // Re-encode len as U32Val for the copy call
+    let len_u32val = encode_object(loc, len_u32, 32, 4);
+
+    // 5. string_copy_to_linear_memory(handle, s_pos, lm_pos, len)
+    let unused = vartab.temp_name("str_copy_ret", &Type::Uint(64));
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![unused],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::StringCopyToLinearMemory.name().to_string(),
+            },
+            args: vec![handle, src_pos, lm_pos, len_u32val],
+        },
+    );
+
+    buf
+}
+
+/// Decode a Soroban `BytesObject` (i64 handle) => WASM `struct.vector` (Type::DynamicBytes).
+pub(crate) fn decode_bytes(
+    handle: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let loc = Loc::Codegen;
+
+    let raw_len_var = vartab.temp_name("bytes_len_raw", &Type::Uint(64));
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![raw_len_var],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::BytesLen.name().to_string(),
+            },
+            args: vec![handle.clone()],
+        },
+    );
+    let raw_len = Expression::Variable {
+        loc,
+        ty: Type::Uint(64),
+        var_no: raw_len_var,
+    };
+
+    let len_u32 = decode_object(loc, raw_len, 32);
+
+    let buf_var = vartab.temp_name("bytes_buf", &Type::DynamicBytes);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc,
+            res: buf_var,
+            expr: Expression::AllocDynamicBytes {
+                loc,
+                ty: Type::DynamicBytes,
+                size: Box::new(len_u32.clone()),
+                initializer: None,
+            },
+        },
+    );
+    let buf = Expression::Variable {
+        loc,
+        ty: Type::DynamicBytes,
+        var_no: buf_var,
+    };
+
+    let lm_pos = encode_object(
+        loc,
+        Expression::VectorData {
+            pointer: Box::new(buf.clone()),
+        },
+        32,
+        4,
+    );
+    let src_pos = Expression::NumberLiteral {
+        loc,
+        ty: Type::Uint(64),
+        value: BigInt::from(4u64), // U32Val(0)
+    };
+    let len_u32val = encode_object(loc, len_u32, 32, 4);
+
+    let unused = vartab.temp_name("bytes_copy_ret", &Type::Uint(64));
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![unused],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::BytesCopyToLinearMemory.name().to_string(),
+            },
+            args: vec![handle, src_pos, lm_pos, len_u32val],
+        },
+    );
+
+    buf
+}
+
 fn decode_vector(
     vec_object: Expression,
     elem_ty: &Type,
@@ -1881,7 +2161,7 @@ fn decode_vector(
         pointer: decoded_buffer.clone().into(),
     };
 
-    let data_location = zext_shift_add(Loc::Codegen, data_location, 32, 4);
+    let data_location = encode_object(Loc::Codegen, data_location, 32, 4);
     let unused = vartab.temp_name("unused_void_return", &Type::Uint(64));
     // VecUnpack expects vector object, output pointer (U32Val), and element count (U32Val).
     let unpack_instr = Instr::Call {

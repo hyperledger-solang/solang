@@ -813,7 +813,7 @@ impl<'a> Binary<'a> {
 
         if self.ns.target == Target::Soroban {
             match returns.iter().next() {
-                Some(ret) => return self.llvm_type(ret).fn_type(&args, false),
+                Some(ret) => return self.llvm_var_ty(ret).fn_type(&args, false),
                 None => return self.context.void_type().fn_type(&args, false),
             }
         }
@@ -887,14 +887,14 @@ impl<'a> Binary<'a> {
     }
 
     fn var_ty_uses_pointer_storage(&self, ty: &Type) -> bool {
-        match ty.deref_memory() {
+        matches!(
+            ty.deref_memory(),
             Type::Struct(_)
-            | Type::Array(..)
-            | Type::DynamicBytes
-            | Type::ExternalFunction { .. } => true,
-            Type::String => self.ns.target != Target::Soroban,
-            _ => false,
-        }
+                | Type::Array(..)
+                | Type::DynamicBytes
+                | Type::String
+                | Type::ExternalFunction { .. }
+        )
     }
 
     /// Return the llvm type for a variable holding the type, not the type itself
@@ -967,11 +967,7 @@ impl<'a> Binary<'a> {
                 }
                 Type::Enum(n) => self.llvm_type(&self.ns.enums[*n].ty),
                 Type::String | Type::DynamicBytes => {
-                    if self.ns.target == Target::Soroban {
-                        BasicTypeEnum::IntType(self.context.i64_type())
-                    } else {
-                        self.module.get_struct_type("struct.vector").unwrap().into()
-                    }
+                    self.module.get_struct_type("struct.vector").unwrap().into()
                 }
                 Type::Array(base_ty, dims) => {
                     dims.iter()

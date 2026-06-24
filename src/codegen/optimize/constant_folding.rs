@@ -712,6 +712,21 @@ fn bigint_to_expression(
                 value
             }
         }
+        Type::Bytes(n) => {
+            // Bytes(n) is a fixed-width integer (same layout as Uint(n*8)); truncate to n bytes.
+            let bits = *n as usize * 8;
+            if value.sign() == Sign::Minus {
+                let mut bs = value.to_signed_bytes_le();
+                bs.resize(bits / 8, 0xff);
+                BigInt::from_bytes_le(Sign::Plus, &bs)
+            } else if value.bits() > bits as u64 {
+                let (_, mut bs) = value.to_bytes_le();
+                bs.truncate(bits / 8);
+                BigInt::from_bytes_le(Sign::Plus, &bs)
+            } else {
+                value
+            }
+        }
         Type::StorageRef(..) => value,
         _ => unreachable!(),
     };

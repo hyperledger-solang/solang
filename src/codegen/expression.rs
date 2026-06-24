@@ -44,6 +44,7 @@ pub fn expression(
     opt: &Options,
     target: &dyn TargetCodegen,
 ) -> Expression {
+    // eprintln!("expr : {:?}", expr);
     let evaluated = eval_constants_in_expression(expr, &mut Diagnostics::default());
     let expr = evaluated.0.as_ref().unwrap_or(expr);
 

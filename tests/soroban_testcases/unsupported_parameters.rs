@@ -3,7 +3,6 @@
 use solang::codegen::Options;
 use solang::file_resolver::FileResolver;
 use solang::sema::ast::Namespace;
-use solang::sema::file::PathDisplay;
 use solang::{compile, Target};
 use solang_parser::diagnostics::Level;
 use std::ffi::OsStr;
@@ -39,7 +38,7 @@ fn compile_soroban(src: &str) -> Namespace {
 }
 
 #[test]
-fn dynamic_bytes_external_parameters_are_rejected() {
+fn dynamic_bytes_external_parameters_are_supported() {
     let ns = compile_soroban(
         r#"contract test {
     function public_len(bytes memory data) public returns (uint64) {
@@ -58,47 +57,33 @@ fn dynamic_bytes_external_parameters_are_rejected() {
         .filter(|diagnostic| diagnostic.level == Level::Error)
         .collect::<Vec<_>>();
 
-    assert_eq!(errors.len(), 2);
-    assert!(errors.iter().all(|diagnostic| diagnostic.message
-        == "type 'bytes memory' is not supported as a Soroban external function parameter"));
-
-    let locations = errors
-        .iter()
-        .map(|diagnostic| ns.loc_to_string(PathDisplay::None, &diagnostic.loc))
-        .collect::<Vec<_>>();
-
-    assert!(locations.iter().any(|loc| loc.starts_with("2:")));
-    assert!(locations.iter().any(|loc| loc.starts_with("6:")));
+    assert_eq!(
+        errors.len(),
+        0,
+        "bytes memory parameters should now be supported"
+    );
 }
 
 #[test]
-fn static_bytes_external_parameters_are_rejected() {
+fn static_bytes_external_parameters_are_supported() {
+    // Phase 1: bytesN params and returns are now supported.
+    // Runtime coverage is in tests/soroban_testcases/bytes_pass.rs.
     let ns = compile_soroban(
         r#"contract test {
-    function len(bytes32 data) public returns (uint64) {
-        return uint64(data.length);
-    }
+    function echo(bytes32 data) public pure returns (bytes32) { return data; }
+    function echo1(bytes1  data) public pure returns (bytes1)  { return data; }
+    function echo4(bytes4  data) public pure returns (bytes4)  { return data; }
 }"#,
     );
 
-    let errors = ns
-        .diagnostics
-        .iter()
-        .filter(|diagnostic| diagnostic.level == Level::Error)
-        .collect::<Vec<_>>();
-
-    assert_eq!(errors.len(), 1);
-    assert_eq!(
-        errors[0].message,
-        "type 'bytes32' is not supported as a Soroban external function parameter"
+    assert!(
+        !ns.diagnostics.any_errors(),
+        "bytesN params and returns must compile without errors"
     );
-    assert!(ns
-        .loc_to_string(PathDisplay::None, &errors[0].loc)
-        .starts_with("2:"));
 }
 
 #[test]
-fn string_external_returns_are_rejected() {
+fn string_external_returns_are_supported() {
     let ns = compile_soroban(
         r#"contract test {
     function public_make() public returns (string memory) {
@@ -117,52 +102,32 @@ fn string_external_returns_are_rejected() {
         .filter(|diagnostic| diagnostic.level == Level::Error)
         .collect::<Vec<_>>();
 
-    assert_eq!(errors.len(), 2);
-    assert!(errors.iter().all(|diagnostic| diagnostic.message
-        == "type 'string memory' is not supported as a Soroban external function return value"));
-
-    let locations = errors
-        .iter()
-        .map(|diagnostic| ns.loc_to_string(PathDisplay::None, &diagnostic.loc))
-        .collect::<Vec<_>>();
-
-    assert!(locations.iter().any(|loc| loc.starts_with("2:")));
-    assert!(locations.iter().any(|loc| loc.starts_with("6:")));
+    assert_eq!(
+        errors.len(),
+        0,
+        "string memory returns should now be supported"
+    );
 }
 
 #[test]
-fn bytes_external_returns_are_rejected() {
+fn bytes_external_returns_are_supported() {
+    // Phase 1: both bytes memory and bytes32 returns are now supported.
     let ns = compile_soroban(
         r#"contract test {
-    function public_make() public returns (bytes memory) {
+    function public_make() public pure returns (bytes memory) {
         return hex"01";
     }
 
-    function external_make() external returns (bytes32) {
+    function external_make() external pure returns (bytes32) {
         return bytes32(uint256(1));
     }
 }"#,
     );
 
-    let errors = ns
-        .diagnostics
-        .iter()
-        .filter(|diagnostic| diagnostic.level == Level::Error)
-        .collect::<Vec<_>>();
-
-    assert_eq!(errors.len(), 2);
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "type 'bytes memory' is not supported as a Soroban external function return value"));
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "type 'bytes32' is not supported as a Soroban external function return value"));
-
-    let locations = errors
-        .iter()
-        .map(|diagnostic| ns.loc_to_string(PathDisplay::None, &diagnostic.loc))
-        .collect::<Vec<_>>();
-
-    assert!(locations.iter().any(|loc| loc.starts_with("2:")));
-    assert!(locations.iter().any(|loc| loc.starts_with("6:")));
+    assert!(
+        !ns.diagnostics.any_errors(),
+        "bytes memory and bytes32 returns must compile without errors"
+    );
 }
 
 #[test]
@@ -217,18 +182,11 @@ fn nested_and_struct_function_abi_types_are_rejected() {
 }
 
 #[test]
-fn bytes_public_accessors_are_rejected() {
+fn struct_public_accessor_is_rejected() {
+    // bytes/bytesN are now supported (Phase 3). Only multi-field struct accessors remain rejected.
     let ns = compile_soroban(
         r#"contract test {
-    struct Pair {
-        uint64 first;
-        uint64 second;
-    }
-
-    bytes public dynamic_data;
-    bytes32 public fixed_data;
-    bytes1 public tiny_data;
-    mapping(address => bytes) public keyed_data;
+    struct Pair { uint64 first; uint64 second; }
     Pair public pair;
 }"#,
     );
@@ -239,46 +197,19 @@ fn bytes_public_accessors_are_rejected() {
         .filter(|diagnostic| diagnostic.level == Level::Error)
         .collect::<Vec<_>>();
 
-    assert_eq!(errors.len(), 5);
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "type 'bytes' is not supported as a Soroban public variable accessor return value"));
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "type 'bytes32' is not supported as a Soroban public variable accessor return value"));
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "type 'bytes1' is not supported as a Soroban public variable accessor return value"));
+    assert_eq!(errors.len(), 1);
     assert!(errors.iter().any(|diagnostic| diagnostic.message
         == "type 'struct test.Pair' is not supported as a Soroban public variable accessor return value"));
-
-    let locations = errors
-        .iter()
-        .map(|diagnostic| ns.loc_to_string(PathDisplay::None, &diagnostic.loc))
-        .collect::<Vec<_>>();
-
-    assert!(locations.iter().any(|loc| loc.starts_with("7:")));
-    assert!(locations.iter().any(|loc| loc.starts_with("8:")));
-    assert!(locations.iter().any(|loc| loc.starts_with("9:")));
-    assert!(locations.iter().any(|loc| loc.starts_with("10:")));
-    assert!(locations.iter().any(|loc| loc.starts_with("11:")));
 }
 
 #[test]
 fn unsupported_event_parameters_are_rejected() {
+    // bytes/bytesN events are now supported (Phase 3). Only struct event params remain rejected.
     let ns = compile_soroban(
         r#"contract test {
-    event Dynamic(bytes data);
-    event Fixed(bytes32 data);
     event Struct(Item data);
-
-    struct Item {
-        uint64 value;
-    }
-
-    function emit_events() public {
-        bytes memory data = hex"01";
-        emit Dynamic(data);
-        emit Fixed(bytes32(uint256(1)));
-        emit Struct(Item({ value: 1 }));
-    }
+    struct Item { uint64 value; }
+    function go() public { emit Struct(Item({ value: 1 })); }
 }"#,
     );
 
@@ -288,11 +219,7 @@ fn unsupported_event_parameters_are_rejected() {
         .filter(|diagnostic| diagnostic.level == Level::Error)
         .collect::<Vec<_>>();
 
-    assert_eq!(errors.len(), 3);
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "type 'bytes' is not supported as a Soroban event parameter"));
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "type 'bytes32' is not supported as a Soroban event parameter"));
+    assert_eq!(errors.len(), 1);
     assert!(errors.iter().any(|diagnostic| diagnostic.message
         == "type 'struct test.Item' is not supported as a Soroban event parameter"));
 }
@@ -366,7 +293,9 @@ fn unsupported_soroban_storage_codegen_paths_are_rejected_before_emit() {
 }
 
 #[test]
-fn unsafe_soroban_string_helper_paths_are_rejected() {
+fn soroban_string_helper_patterns_are_supported() {
+    // All of these patterns were previously rejected; they now compile correctly because
+    // strings are struct.vector (same as DynamicBytes) and can be passed/cast freely.
     let ns = compile_soroban(
         r#"contract test {
     function helper(string memory data) internal returns (uint64) {
@@ -398,24 +327,7 @@ fn unsafe_soroban_string_helper_paths_are_rejected() {
         .filter(|diagnostic| diagnostic.level == Level::Error)
         .collect::<Vec<_>>();
 
-    assert_eq!(errors.len(), 3);
-    assert!(errors.iter().any(|diagnostic| {
-        diagnostic.message
-        == "passing string memory values to internal functions is not supported for target soroban"
-    }));
-    assert_eq!(
-        errors
-            .iter()
-            .filter(|diagnostic| diagnostic.message
-                == "using string memory as bytes is not supported for target soroban")
-            .count(),
-        2
-    );
-    assert!(errors.iter().all(|diagnostic| ns
-        .loc_to_string(PathDisplay::None, &diagnostic.loc)
-        .split(':')
-        .next()
-        .is_some_and(|line| line.parse::<usize>().is_ok())));
+    assert_eq!(errors.len(), 0, "string helper patterns should now compile");
 }
 
 #[test]
