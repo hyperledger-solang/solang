@@ -1,53 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-
-//! Passing runtime tests for Soroban `bytes` (dynamic) and `bytesN` (fixed-size).
-//!
-//! Test coverage:
-//!
-//! **bytesN body ops** (no ABI crossing — guards Solidity semantics of fixed bytes in the body)
-//! - bytesn_index_read_literal: `bytes4 x = 0xDEADBEEF; x[0] == 0xDE`, MSB is index 0
-//! - bytesn_length_is_constant: `bytes32 x; x.length == 32`
-//! - bytesn_bitwise_ops: `& | ^ ~` on `bytes4` literals
-//! - bytesn_shift_ops: `<< 8` and `>> 8` on `bytes4`
-//! - bytesn_compare_and_whole_value_assign: `==`, `!=`, `<` and copy-assign `b = a`
-//! - bytesn_casts: `bytes32(uint256(v))`, `uint256(b)`, truncating `bytes4(b32)`
-//!
-//! **bytesN ABI round-trips** (Phase 1 — host BytesN↔guest iN via `BytesCast` + `b.3`/`b.1`)
-//! - bytes1_abi_round_trip: `bytes1` echo: `[0xAB]` → guest → `[0xAB]`
-//! - bytes4_abi_round_trip: `bytes4` echo: `[0xDE,0xAD,0xBE,0xEF]` → guest → same
-//! - bytes32_abi_round_trip: `bytes32` echo: `[0x00..0x1F]` → guest → same
-//! - bytesn_byte_order_index_zero_is_first_wire_byte: wire byte 0 == Solidity `x[0]` (MSB)
-//! - bytesn_abi_edge_values: all-`0x00` and all-`0xFF` `bytes32` round-trip
-//! - bytesn_literal_init_returned: `bytes4 x = 0xAABBCCDD; return x;` encodes `[AA,BB,CC,DD]`
-//!
-//! **dynamic bytes host↔guest round-trips** (Phase 1 — `bytes memory` ABI codec end-to-end)
-//! - bytes_abi_echo_with_embedded_zeros: interior `0x00` bytes survive encode/decode
-//! - bytes_abi_empty_echo: empty `bytes memory` round-trips as zero-length `BytesObject`
-//! - bytes_abi_mutate_then_return: host→guest decode, XOR mutation, re-encode observed by host
-//! - bytesn_reinterpret_as_uint_across_abi: host `BytesN<4>` → `uint32(bytes4)` value check
-//! - mixed_bytesn_and_dynamic_params: one call with both `bytes4` and `bytes memory` params
-//!
-//! **bytesN storage** (Phase 2 — `default_storage_value` + `type_to_tagged_zero_val`)
-//! - bytes32_storage_round_trip_and_overwrite: set → get → overwrite → get on `bytes32`
-//! - bytes4_storage_read_before_write_is_zero: unwritten `bytes4` state var reads as `0x00000000`
-//! - bytes4_state_var_literal_initializer: `bytes4 m = 0x12345678;` persists across calls
-//! - bytes32_mapping_round_trip_written_key: `mapping(uint64 => bytes32)` set → get on written key
-//!
-//! **accessor & event consistency** (Phase 3 — Gap B gates removed)
-//! - bytes32_public_accessor: `bytes32 public h;` auto-getter returns correct value
-//! - bytes_public_accessor: `bytes public data;` auto-getter returns correct value
-//! - bytes32_event: `event H(bytes32)` emits with correct byte order
-//! - bytes_event: `event B(bytes)` emits correct dynamic bytes payload
-
 use crate::build_solidity;
 use soroban_sdk::testutils::Events as _;
-use soroban_sdk::{Bytes, BytesN, FromVal, IntoVal, Val};
+use soroban_sdk::{Bytes, BytesN, FromVal, IntoVal, U256, Val};
 
 fn bytes_eq(env: &soroban_sdk::Env, result: &Val, expected: &[u8]) -> bool {
     Bytes::from_val(env, result) == Bytes::from_slice(env, expected)
 }
-
-// ─── Phase 1: bytesN body ops (no ABI bytesN crossing) ──────────────────────
 
 #[test]
 fn bytesn_index_read_literal() {
@@ -148,8 +106,6 @@ fn bytesn_casts() {
     let expected: Val = true.into_val(&src.env);
     assert!(expected.shallow_eq(&result));
 }
-
-// ─── Phase 1: bytesN ABI round-trips ─────────────────────────────────────────
 
 #[test]
 fn bytes1_abi_round_trip() {
@@ -253,8 +209,6 @@ fn bytesn_literal_init_returned() {
     assert!(bytes_eq(&src.env, &result, &[0xAA, 0xBB, 0xCC, 0xDD]));
 }
 
-// ─── Phase 1: dynamic bytes host↔guest round-trips ────────────────────────────
-
 #[test]
 fn bytes_abi_echo_with_embedded_zeros() {
     let src = build_solidity(
@@ -338,8 +292,6 @@ fn mixed_bytesn_and_dynamic_params() {
     assert!(expected.shallow_eq(&result));
 }
 
-// ─── Phase 2: bytesN storage ──────────────────────────────────────────────────
-
 #[test]
 fn bytes32_storage_round_trip_and_overwrite() {
     let src = build_solidity(
@@ -416,7 +368,73 @@ fn bytes32_mapping_round_trip_written_key() {
     ));
 }
 
-// ─── Phase 3: accessor & event consistency (Gap B) ────────────────────────────
+#[test]
+fn bytes_storage_subscript_write() {
+    // Initialize storage bytes, write one byte via direct subscript, verify with whole-array read.
+    let src = build_solidity(
+        r#"contract T {
+            bytes data;
+            function setData(bytes memory d) public { data = d; }
+            function getData() public view returns (bytes memory) { return data; }
+            function writeAt() public { data[0] = 0x42; }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+    src.invoke_contract(
+        addr,
+        "setData",
+        vec![soroban_sdk::Bytes::from_array(&src.env, &[0xAA, 0xBB, 0xCC]).into_val(&src.env)],
+    );
+    src.invoke_contract(addr, "writeAt", vec![]);
+    let result = src.invoke_contract(addr, "getData", vec![]);
+    assert!(bytes_eq(&src.env, &result, &[0x42, 0xBB, 0xCC]));
+}
+
+#[test]
+fn bytes_storage_subscript_read() {
+    // setData → readAt each index → writeAt each index → readAt each index again.
+    let src = build_solidity(
+        r#"contract T {
+            bytes data;
+            function setData(bytes memory d) public { data = d; }
+            function readAt(uint32 i) public view returns (bytes1) { return data[i]; }
+            function writeAt(uint32 i, bytes1 v) public { data[i] = v; }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let initial: [u8; 5] = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE];
+    let overwrite: [u8; 5] = [0x11, 0x22, 0x33, 0x44, 0x55];
+
+    src.invoke_contract(
+        addr,
+        "setData",
+        vec![soroban_sdk::Bytes::from_array(&src.env, &initial).into_val(&src.env)],
+    );
+
+    for (i, &byte) in initial.iter().enumerate() {
+        let result = src.invoke_contract(addr, "readAt", vec![(i as u32).into_val(&src.env)]);
+        assert!(bytes_eq(&src.env, &result, &[byte]), "initial read at {i}: expected {byte:#04x}");
+    }
+
+    for (i, &byte) in overwrite.iter().enumerate() {
+        src.invoke_contract(
+            addr,
+            "writeAt",
+            vec![
+                (i as u32).into_val(&src.env),
+                BytesN::from_array(&src.env, &[byte]).into_val(&src.env),
+            ],
+        );
+    }
+
+    for (i, &byte) in overwrite.iter().enumerate() {
+        let result = src.invoke_contract(addr, "readAt", vec![(i as u32).into_val(&src.env)]);
+        assert!(bytes_eq(&src.env, &result, &[byte]), "post-write read at {i}: expected {byte:#04x}");
+    }
+}
 
 #[test]
 fn bytes32_public_accessor() {
@@ -466,7 +484,6 @@ fn bytes32_event() {
     assert_eq!(events.len(), 1);
     let (_, topics, data) = events.get(0).unwrap();
     assert_eq!(topics.len(), 0);
-    // bytes32(uint256(0xAB)) → byte 0 is MSB = 0x00, byte 31 = 0xAB
     let mut expected = [0u8; 32];
     expected[31] = 0xAB;
     assert!(bytes_eq(&src.env, &data, &expected));
@@ -485,4 +502,343 @@ fn bytes_event() {
     src.invoke_contract(addr, "go", vec![]);
     let (_, _topics, data) = src.env.events().all().get(0).unwrap();
     assert!(bytes_eq(&src.env, &data, &[1, 2, 3]));
+}
+
+#[test]
+fn bytes_storage_set_get_length() {
+    let src = build_solidity(
+        r#"contract T {
+            bytes h;
+            function setH(bytes calldata x) public { h = x; }
+            function getH() public view returns (bytes memory) { return h; }
+            function getL() public view returns (uint256) { return h.length; }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let payload: [u8; 5] = [0x11, 0x22, 0x33, 0x44, 0x55];
+    src.invoke_contract(
+        addr,
+        "setH",
+        vec![soroban_sdk::Bytes::from_array(&src.env, &payload).into_val(&src.env)],
+    );
+
+    assert!(
+        bytes_eq(&src.env, &src.invoke_contract(addr, "getH", vec![]), &payload),
+        "getH must return the stored bytes"
+    );
+
+    let len_val = src.invoke_contract(addr, "getL", vec![]);
+    assert_eq!(
+        U256::from_val(&src.env, &len_val),
+        U256::from_u32(&src.env, 5),
+        "getL() must return the byte length as uint256"
+    );
+
+    let payload2: [u8; 3] = [0xAA, 0xBB, 0xCC];
+    src.invoke_contract(
+        addr,
+        "setH",
+        vec![soroban_sdk::Bytes::from_array(&src.env, &payload2).into_val(&src.env)],
+    );
+    assert!(
+        bytes_eq(&src.env, &src.invoke_contract(addr, "getH", vec![]), &payload2),
+        "getH must reflect overwritten bytes"
+    );
+    let len_val2 = src.invoke_contract(addr, "getL", vec![]);
+    assert_eq!(
+        U256::from_val(&src.env, &len_val2),
+        U256::from_u32(&src.env, 3),
+        "getL() must reflect overwritten length"
+    );
+}
+
+#[test]
+fn bytes_storage_compound_ops() {
+    let src = build_solidity(
+        r#"contract T {
+            bytes data;
+            function setData(bytes memory d) public { data = d; }
+            function getData() public view returns (bytes memory) { return data; }
+            function orAt(uint32 i, bytes1 mask)  public { data[i] |= mask; }
+            function andAt(uint32 i, bytes1 mask) public { data[i] &= mask; }
+            function xorAt(uint32 i, bytes1 mask) public { data[i] ^= mask; }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    src.invoke_contract(
+        addr,
+        "setData",
+        vec![soroban_sdk::Bytes::from_array(&src.env, &[0xF0, 0xFF, 0xAA]).into_val(&src.env)],
+    );
+
+    src.invoke_contract(addr, "orAt",  vec![0_u32.into_val(&src.env), BytesN::from_array(&src.env, &[0x0F]).into_val(&src.env)]);
+    src.invoke_contract(addr, "andAt", vec![1_u32.into_val(&src.env), BytesN::from_array(&src.env, &[0x0F]).into_val(&src.env)]);
+    src.invoke_contract(addr, "xorAt", vec![2_u32.into_val(&src.env), BytesN::from_array(&src.env, &[0xFF]).into_val(&src.env)]);
+
+    assert!(
+        bytes_eq(&src.env, &src.invoke_contract(addr, "getData", vec![]), &[0xFF, 0x0F, 0x55]),
+        "compound ops |= &= ^= must update storage bytes in place"
+    );
+}
+
+#[test]
+fn bytes_equal() {
+    let src = build_solidity(
+        r#"contract T {
+            function eq(bytes memory a, bytes memory b) public pure returns (bool) { return a == b; }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let same_a: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x01, 0x02, 0x03]).into_val(&src.env);
+    let same_b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x01, 0x02, 0x03]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "eq", vec![same_a, same_b]);
+    let t: Val = true.into_val(&src.env);
+    assert!(t.shallow_eq(&result), "equal bytes must return true");
+
+    let diff_a: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x01, 0x02, 0x03]).into_val(&src.env);
+    let diff_b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x01, 0x02, 0xFF]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "eq", vec![diff_a, diff_b]);
+    let f: Val = false.into_val(&src.env);
+    assert!(f.shallow_eq(&result), "different bytes must return false");
+
+    let empty_a: Val = soroban_sdk::Bytes::from_array(&src.env, &[]).into_val(&src.env);
+    let empty_b: Val = soroban_sdk::Bytes::from_array(&src.env, &[]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "eq", vec![empty_a, empty_b]);
+    let t: Val = true.into_val(&src.env);
+    assert!(t.shallow_eq(&result), "two empty bytes must be equal");
+}
+
+#[test]
+fn bytes_not_equal() {
+    let src = build_solidity(
+        r#"contract T {
+            function neq(bytes memory a, bytes memory b) public pure returns (bool) { return a != b; }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let diff_a: Val = soroban_sdk::Bytes::from_array(&src.env, &[0xAA, 0xBB]).into_val(&src.env);
+    let diff_b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0xAA, 0xCC]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "neq", vec![diff_a, diff_b]);
+    let t: Val = true.into_val(&src.env);
+    assert!(t.shallow_eq(&result), "different bytes must return true for !=");
+
+    let same_a: Val = soroban_sdk::Bytes::from_array(&src.env, &[0xAA, 0xBB]).into_val(&src.env);
+    let same_b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0xAA, 0xBB]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "neq", vec![same_a, same_b]);
+    let f: Val = false.into_val(&src.env);
+    assert!(f.shallow_eq(&result), "equal bytes must return false for !=");
+
+    let short: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x01]).into_val(&src.env);
+    let long:  Val = soroban_sdk::Bytes::from_array(&src.env, &[0x01, 0x02]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "neq", vec![short, long]);
+    let t: Val = true.into_val(&src.env);
+    assert!(t.shallow_eq(&result), "different-length bytes must return true for !=");
+}
+
+#[test]
+fn bytesn_to_dynamic_cast() {
+    let src = build_solidity(
+        r#"contract T {
+            function to_dyn(bytes4 x) public pure returns (bytes memory) { return bytes(x); }
+            function to_n(bytes memory x) public pure returns (bytes4) { return bytes4(x); }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let arg: Val = BytesN::from_array(&src.env, &[0xDE, 0xAD, 0xBE, 0xEF]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "to_dyn", vec![arg]);
+    assert!(bytes_eq(&src.env, &result, &[0xDE, 0xAD, 0xBE, 0xEF]), "bytes(bytes4) must preserve big-endian byte order");
+
+    let payload: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x11, 0x22, 0x33, 0x44]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "to_n", vec![payload]);
+    assert!(bytes_eq(&src.env, &result, &[0x11, 0x22, 0x33, 0x44]), "bytes4(bytes memory) must round-trip via beNtoleN");
+}
+
+#[test]
+fn new_bytes_runtime_size() {
+    let src = build_solidity(
+        r#"contract T {
+            function alloc(uint32 n) public pure returns (bytes memory) {
+                bytes memory b = new bytes(n);
+                for (uint32 i = 0; i < n; i++) {
+                    b[i] = 0x42;
+                }
+                return b;
+            }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let result = src.invoke_contract(addr, "alloc", vec![0_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &[]), "alloc(0) must return empty bytes");
+
+    let result = src.invoke_contract(addr, "alloc", vec![3_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &[0x42, 0x42, 0x42]), "alloc(3) must fill 0x42");
+
+    let result = src.invoke_contract(addr, "alloc", vec![5_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &[0x42; 5]), "alloc(5) must fill 0x42");
+}
+
+#[test]
+fn bytes_memory_push() {
+    let src = build_solidity(
+        r#"contract T {
+            function push_one(bytes memory b, bytes1 v) public pure returns (bytes memory) {
+                b.push(v);
+                return b;
+            }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x01, 0x02]).into_val(&src.env);
+    let v: Val = BytesN::from_array(&src.env, &[0x03]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "push_one", vec![b, v]);
+    assert!(bytes_eq(&src.env, &result, &[0x01, 0x02, 0x03]), "push 0x03 onto [0x01,0x02] must give [0x01,0x02,0x03]");
+
+    let empty: Val = soroban_sdk::Bytes::from_array(&src.env, &[]).into_val(&src.env);
+    let v2: Val = BytesN::from_array(&src.env, &[0xAA]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "push_one", vec![empty, v2]);
+    assert!(bytes_eq(&src.env, &result, &[0xAA]), "push 0xAA onto [] must give [0xAA]");
+}
+
+#[test]
+fn bytes_memory_push_loop() {
+    let src = build_solidity(
+        r#"contract T {
+            function build(bytes1 v, uint32 n) public pure returns (bytes memory) {
+                bytes memory b = new bytes(0);
+                for (uint32 i = 0; i < n; i++) {
+                    b.push(v);
+                }
+                return b;
+            }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let v: Val = BytesN::from_array(&src.env, &[0x42]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "build", vec![v, 0_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &[]), "push loop n=0 must give empty bytes");
+
+    let v: Val = BytesN::from_array(&src.env, &[0x42]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "build", vec![v, 4_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &[0x42; 4]), "push loop n=4 must give [0x42;4]");
+
+    let v: Val = BytesN::from_array(&src.env, &[0xBE]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "build", vec![v, 6_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &[0xBE; 6]), "push loop n=6 must give [0xBE;6]");
+}
+
+#[test]
+fn bytes_memory_pop() {
+    let src = build_solidity(
+        r#"contract T {
+            function pop_one(bytes memory b) public pure returns (bytes memory) {
+                b.pop();
+                return b;
+            }
+            function pop_two(bytes memory b) public pure returns (bytes memory) {
+                b.pop();
+                b.pop();
+                return b;
+            }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0xAA, 0xBB, 0xCC]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "pop_one", vec![b]);
+    assert!(bytes_eq(&src.env, &result, &[0xAA, 0xBB]), "pop_one must remove last byte");
+
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x11, 0x22, 0x33, 0x44]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "pop_two", vec![b]);
+    assert!(bytes_eq(&src.env, &result, &[0x11, 0x22]), "pop_two must remove last two bytes");
+
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0xFF]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "pop_one", vec![b]);
+    assert!(bytes_eq(&src.env, &result, &[]), "pop_one on single-byte must give empty");
+}
+
+#[test]
+fn bytes_memory_pop_loop() {
+    let src = build_solidity(
+        r#"contract T {
+            function trim(bytes memory b, uint32 n) public pure returns (bytes memory) {
+                for (uint32 i = 0; i < n; i++) {
+                    b.pop();
+                }
+                return b;
+            }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let initial = [0x10u8, 0x20, 0x30, 0x40, 0x50];
+
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &initial).into_val(&src.env);
+    let result = src.invoke_contract(addr, "trim", vec![b, 0_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &initial), "trim 0 must leave bytes unchanged");
+
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &initial).into_val(&src.env);
+    let result = src.invoke_contract(addr, "trim", vec![b, 1_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &initial[..4]), "trim 1 must remove last byte");
+
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &initial).into_val(&src.env);
+    let result = src.invoke_contract(addr, "trim", vec![b, 3_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &initial[..2]), "trim 3 must leave first two bytes");
+
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &initial).into_val(&src.env);
+    let result = src.invoke_contract(addr, "trim", vec![b, 5_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &[]), "trim all must give empty bytes");
+}
+
+#[test]
+fn bytes_memory_push_pop_roundtrip() {
+    let src = build_solidity(
+        r#"contract T {
+            function roundtrip(bytes memory b, bytes1 v, uint32 n) public pure returns (bytes memory) {
+                for (uint32 i = 0; i < n; i++) {
+                    b.push(v);
+                }
+                for (uint32 i = 0; i < n; i++) {
+                    b.pop();
+                }
+                return b;
+            }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let original = [0xCAu8, 0xFE, 0xBA, 0xBE];
+
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &original).into_val(&src.env);
+    let v: Val = BytesN::from_array(&src.env, &[0x00]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "roundtrip", vec![b, v, 0_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &original), "roundtrip n=0 must be identity");
+
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &original).into_val(&src.env);
+    let v: Val = BytesN::from_array(&src.env, &[0xFF]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "roundtrip", vec![b, v, 3_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &original), "roundtrip n=3 must restore original");
+
+    let empty: Val = soroban_sdk::Bytes::from_array(&src.env, &[]).into_val(&src.env);
+    let v: Val = BytesN::from_array(&src.env, &[0xAB]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "roundtrip", vec![empty, v, 5_u32.into_val(&src.env)]);
+    assert!(bytes_eq(&src.env, &result, &[]), "roundtrip on empty n=5 must give empty");
 }

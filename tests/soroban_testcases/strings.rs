@@ -1,30 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! String and bytes tests for Soroban
-//!
-//! Test coverage:
-//! - returns_string_literal: Returns a hardcoded string literal "hello"
-//! - string_length: Gets the length of a string using bytes(s).length
-//! - string_storage_set_get: Stores and retrieves a string from contract storage
-//! - string_storage_overwrite: Overwrites a stored string with a new value
-//! - bytes_length: Gets the length of bytes memory
-//! - returns_string_from_var: Returns a string assigned to a local variable
-//! - bytes_first_element: Accesses and returns the first element of bytes
-//! - bytes_storage_round_trip: Stores and retrieves bytes from contract storage
-//! - string_storage_read_before_write: Reads an uninitialized string storage (empty)
-//! - bytes_memory_subscript_write: Writes a single byte at a specific index in memory
-//! - bytes_memory_compound_or: Compound OR assignment (|=) on bytes memory element
-//! - bytes_memory_compound_and: Compound AND assignment (&=) on bytes memory element
-//! - bytes_memory_compound_xor: Compound XOR assignment (^=) on bytes memory element
-//! - string_char_at_via_bytes_cast: Extracts a character from a string via bytes cast
-//! - string_equal: Equality comparison (==) of two strings
-//! - string_not_equal: Inequality comparison (!=) of two strings
-//! - string_storage_indexed_byte_access: Accesses individual bytes of a storage string by index (0-9)
-//! - bytes_storage_indexed_byte_access: Accesses individual bytes of storage bytes by index (0-9)
-//! - bytes_memory_indexed_byte_access: Accesses individual bytes of memory bytes by index (0-9)
-
 use crate::build_solidity;
-use soroban_sdk::{Bytes, FromVal, IntoVal, String, Val};
+use soroban_sdk::{Bytes, FromVal, IntoVal, String, U256, Val};
 
 fn bytes_eq(env: &soroban_sdk::Env, result: &Val, expected: &[u8]) -> bool {
     Bytes::from_val(env, result) == Bytes::from_slice(env, expected)
@@ -216,8 +193,6 @@ fn string_storage_read_before_write() {
     );
 }
 
-// ─── Memory bytes subscript write ────────────────────────────────────────────
-
 #[test]
 fn bytes_memory_subscript_write() {
     let src = build_solidity(
@@ -238,8 +213,6 @@ fn bytes_memory_subscript_write() {
         &[0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff]
     ));
 }
-
-// ─── Memory bytes compound assignment ────────────────────────────────────────
 
 #[test]
 fn bytes_memory_compound_or() {
@@ -424,4 +397,89 @@ fn bytes_memory_indexed_byte_access() {
         let result: u32 = FromVal::from_val(&src.env, &result_val);
         assert_eq!(expected_byte, result, "byte at index {i}");
     }
+}
+
+#[test]
+fn string_storage_length() {
+    let src = build_solidity(
+        r#"contract T {
+            string name;
+            function setName(string memory n) public { name = n; }
+            function getLen() public view returns (uint256) { return name.length; }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    src.invoke_contract(
+        addr,
+        "setName",
+        vec![String::from_str(&src.env, "Solang").into_val(&src.env)],
+    );
+    let len = src.invoke_contract(addr, "getLen", vec![]);
+    assert_eq!(
+        U256::from_val(&src.env, &len),
+        U256::from_u32(&src.env, 6),
+        "getLen() must return 6 for \"Solang\""
+    );
+
+    src.invoke_contract(
+        addr,
+        "setName",
+        vec![String::from_str(&src.env, "Hi").into_val(&src.env)],
+    );
+    let len2 = src.invoke_contract(addr, "getLen", vec![]);
+    assert_eq!(
+        U256::from_val(&src.env, &len2),
+        U256::from_u32(&src.env, 2),
+        "getLen() must reflect overwritten length"
+    );
+}
+
+#[test]
+fn bytes_storage_read_before_write() {
+    let src = build_solidity(
+        r#"contract T {
+            bytes data;
+            function getData() public view returns (bytes memory) { return data; }
+            function getLen() public view returns (uint256) { return data.length; }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    assert!(
+        bytes_eq(&src.env, &src.invoke_contract(addr, "getData", vec![]), &[]),
+        "getData() before any write must return empty bytes"
+    );
+    assert_eq!(
+        U256::from_val(&src.env, &src.invoke_contract(addr, "getLen", vec![])),
+        U256::from_u32(&src.env, 0),
+        "getLen() before any write must return 0"
+    );
+}
+
+#[test]
+fn string_bytes_cast() {
+    let src = build_solidity(
+        r#"contract T {
+            function to_string(bytes memory b) public pure returns (string memory) { return string(b); }
+            function to_bytes(string memory s) public pure returns (bytes memory) { return bytes(s); }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let payload = [b'h', b'e', b'l', b'l', b'o'];
+    let b: Val = Bytes::from_array(&src.env, &payload).into_val(&src.env);
+    let result = src.invoke_contract(addr, "to_string", vec![b]);
+    assert_eq!(
+        String::from_val(&src.env, &result),
+        String::from_str(&src.env, "hello"),
+        "string(bytes) must produce the matching StringObject"
+    );
+
+    let s: Val = String::from_str(&src.env, "hello").into_val(&src.env);
+    let result = src.invoke_contract(addr, "to_bytes", vec![s]);
+    assert!(bytes_eq(&src.env, &result, &payload), "bytes(string) must produce raw UTF-8 bytes");
 }

@@ -771,11 +771,17 @@ pub fn expression(
                     .unwrap();
                     expression(&ast_expr, cfg, contract_no, func, ns, vartab, opt, target)
                 }
-                Type::DynamicBytes | Type::String => Expression::StorageArrayLength {
+                Type::DynamicBytes => Expression::StorageArrayLength {
                     loc: *loc,
                     ty: ty.clone(),
                     array: Box::new(array),
-                    elem_ty: elem_ty.clone(),
+                    elem_ty: elem_ty.clone(), // Bytes(1) → BytesObject in Soroban
+                },
+                Type::String => Expression::StorageArrayLength {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    array: Box::new(array),
+                    elem_ty: Type::String, // sentinel: StringObject in Soroban
                 },
                 Type::Array(_, dim) => match dim.last().unwrap() {
                     ArrayLength::Dynamic => {

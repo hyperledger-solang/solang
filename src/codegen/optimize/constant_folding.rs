@@ -1343,7 +1343,13 @@ fn reference_variable(
                 // There must be at least one definition, and all should evaluate to the same value
                 let mut v = None;
 
-                for def in defs.keys() {
+                for (def, modified) in defs {
+                    // A modified definition means the variable was mutated after its initial
+                    // assignment (e.g. by PushMemory/PopMemory realloc). Do not substitute.
+                    if *modified {
+                        v = None;
+                        break;
+                    }
                     if let Some(expr) = get_definition(def, cfg) {
                         let expr = expression(expr, None, cfg, ns);
 

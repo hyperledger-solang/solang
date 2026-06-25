@@ -271,7 +271,7 @@ fn public_string_accessors_are_allowed() {
 }
 
 #[test]
-fn unsupported_soroban_storage_codegen_paths_are_rejected_before_emit() {
+fn bytes_storage_subscript_assignment_compiles() {
     let ns = compile_soroban(
         r#"contract test {
     bytes data;
@@ -282,14 +282,10 @@ fn unsupported_soroban_storage_codegen_paths_are_rejected_before_emit() {
 }"#,
     );
 
-    let errors = ns
-        .diagnostics
-        .iter()
-        .filter(|diagnostic| diagnostic.level == Level::Error)
-        .collect::<Vec<_>>();
-
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "storage bytes subscript assignment is not supported for target soroban"));
+    assert!(
+        !ns.diagnostics.any_errors(),
+        "storage bytes subscript assignment must now compile without errors"
+    );
 }
 
 #[test]

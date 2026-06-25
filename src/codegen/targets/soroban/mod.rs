@@ -1073,15 +1073,6 @@ fn validate_unsupported_codegen_instr(instr: &Instr, ns: &mut Namespace) {
                 );
             }
         }
-        Instr::SetStorageBytes { offset, .. } => {
-            push_codegen_error(
-                ns,
-                CodegenError::unsupported_soroban_operation(
-                    offset.loc(),
-                    "storage bytes subscript assignment",
-                ),
-            );
-        }
         Instr::PushStorage { ty, storage, .. } => {
             if let Some(unsupported_type) = unsupported_soroban_storage_type(ty, ns) {
                 push_codegen_error(

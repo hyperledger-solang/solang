@@ -156,6 +156,14 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::BytesGet => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::BytesPut => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
             HostFunctions::StringLen => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::StringCopyToLinearMemory => bin
                 .context
@@ -392,6 +400,12 @@ impl SorobanTarget {
                             ast::Type::String => ScSpecTypeDef::String,
                             ast::Type::Void => ScSpecTypeDef::Void,
                             ast::Type::Struct(_) => ScSpecTypeDef::Void, // TODO: Map struct types.
+                            ast::Type::Array(elem, _) => {
+                                let element = Self::vec_spec_type(elem.as_ref());
+                                ScSpecTypeDef::Vec(Box::new(ScSpecTypeVec {
+                                    element_type: Box::new(element),
+                                }))
+                            }
                             _ => panic!("unsupported return type {ty:?}"),
                         }
                     }) // TODO: Map type.
@@ -478,6 +492,8 @@ impl SorobanTarget {
             HostFunctions::BytesNewFromLinearMemory,
             HostFunctions::BytesCopyToLinearMemory,
             HostFunctions::BytesLen,
+            HostFunctions::BytesGet,
+            HostFunctions::BytesPut,
             HostFunctions::StringLen,
             HostFunctions::StringCopyToLinearMemory,
             HostFunctions::VecLen,

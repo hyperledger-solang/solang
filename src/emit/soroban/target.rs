@@ -326,9 +326,42 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue,
         slot: IntValue<'a>,
         index: IntValue<'a>,
-        loc: Loc,
+        _loc: Loc,
     ) -> IntValue<'a> {
-        unsupported_soroban(loc, "storage bytes subscript loads")
+        emit_context!(bin);
+
+        // Load BytesObject handle from persistent storage.
+        let bytes_obj = call!(
+            HostFunctions::GetContractData.name(),
+            &[slot.into(), i64_const!(1).into()],
+            "bytes_load"
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
+
+        let idx_encoded = encode_value(index, 32, 4, bin);
+
+        // bytes_get(handle, U32Val(i)) → U32Val(byte)
+        let raw = call!(
+            HostFunctions::BytesGet.name(),
+            &[bytes_obj.into(), idx_encoded.into()],
+            "bytes_get"
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
+
+        // Decode U32Val: shift right 32 and truncate to i8 (bytes1).
+        let shifted = bin
+            .builder
+            .build_right_shift(raw, i64_const!(32), false, "byte_raw")
+            .unwrap();
+        bin.builder
+            .build_int_truncate(shifted, bin.context.i8_type(), "byte_val")
+            .unwrap()
     }
 
     fn set_storage_bytes_subscript(
@@ -338,9 +371,50 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: IntValue<'a>,
         value: IntValue<'a>,
-        loc: Loc,
+        _loc: Loc,
     ) {
-        unsupported_soroban(loc, "storage bytes subscript stores")
+        emit_context!(bin);
+
+        // Load existing BytesObject handle from persistent storage.
+        let bytes_obj = call!(
+            HostFunctions::GetContractData.name(),
+            &[slot.into(), i64_const!(1).into()],
+            "bytes_load"
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
+
+        let idx_encoded = encode_value(index, 32, 4, bin);
+
+        // bytes1 value is i8; zero-extend to i32 for U32Val encoding.
+        let value = if value.get_type().get_bit_width() != 32 {
+            bin.builder
+                .build_int_z_extend(value, bin.context.i32_type(), "byte32")
+                .unwrap()
+        } else {
+            value
+        };
+        let val_encoded = encode_value(value, 32, 4, bin);
+
+        // bytes_put(handle, U32Val(i), U32Val(byte)) → new BytesObject
+        let new_obj = call!(
+            HostFunctions::BytesPut.name(),
+            &[bytes_obj.into(), idx_encoded.into(), val_encoded.into()],
+            "bytes_put"
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
+
+        // Write the new handle back to persistent storage.
+        call!(
+            HostFunctions::PutContractData.name(),
+            &[slot.into(), new_obj.into(), i64_const!(1).into()],
+            "bytes_store"
+        );
     }
 
     fn storage_subscript(
@@ -486,42 +560,30 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         elem_ty: &Type,
     ) -> IntValue<'a> {
-        if !is_reference_type(elem_ty) {
-            // Native arrays use VecObject layout: load vec object then call VecLen.
-            let load_storage = bin
-                .builder
-                .build_call(
-                    bin.module
-                        .get_function(HostFunctions::GetContractData.name())
-                        .unwrap(),
-                    &[
-                        slot.into(),
-                        bin.context.i64_type().const_int(1, false).into(), // persistent storage
-                    ],
-                    "load_storage",
-                )
-                .unwrap()
+        if !is_reference_type(elem_ty) || matches!(elem_ty, Type::String) {
+            emit_context!(bin);
+            let obj = call!(
+                HostFunctions::GetContractData.name(),
+                &[slot.into(), i64_const!(1).into()],
+                "load_storage"
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+            let len_fn = match elem_ty {
+                Type::String => HostFunctions::StringLen.name(),
+                Type::Bytes(1) => HostFunctions::BytesLen.name(),
+                _ => HostFunctions::VecLen.name(),
+            };
+            let u32_val = call!(len_fn, &[obj.into()], "len_val")
                 .try_as_basic_value()
                 .left()
                 .unwrap()
                 .into_int_value();
 
-            let u32_val = bin
-                .builder
-                .build_call(
-                    bin.module
-                        .get_function(HostFunctions::VecLen.name())
-                        .unwrap(),
-                    &[load_storage.into()],
-                    "vec_len",
-                )
-                .unwrap()
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value();
-
-            // VecLen returns U32Val => payload in top 32 bits.
+            // Both BytesLen and VecLen return U32Val: payload in top 32 bits.
             return bin
                 .builder
                 .build_right_shift(
