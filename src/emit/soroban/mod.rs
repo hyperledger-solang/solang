@@ -164,6 +164,11 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::BytesPush => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::BytesPop => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::StringLen => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::StringCopyToLinearMemory => bin
                 .context
@@ -494,6 +499,8 @@ impl SorobanTarget {
             HostFunctions::BytesLen,
             HostFunctions::BytesGet,
             HostFunctions::BytesPut,
+            HostFunctions::BytesPush,
+            HostFunctions::BytesPop,
             HostFunctions::StringLen,
             HostFunctions::StringCopyToLinearMemory,
             HostFunctions::VecLen,

@@ -80,7 +80,10 @@ fn nested_bytesn_array_abi_is_rejected() {
         .filter(|d| d.level == Level::Error)
         .collect::<Vec<_>>();
 
-    assert!(!errors.is_empty(), "bytes32[] memory param must be rejected");
+    assert!(
+        !errors.is_empty(),
+        "bytes32[] memory param must be rejected"
+    );
 }
 
 #[test]

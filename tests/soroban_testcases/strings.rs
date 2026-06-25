@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use soroban_sdk::{Bytes, FromVal, IntoVal, String, U256, Val};
+use soroban_sdk::{Bytes, FromVal, IntoVal, String, Val, U256};
 
 fn bytes_eq(env: &soroban_sdk::Env, result: &Val, expected: &[u8]) -> bool {
     Bytes::from_val(env, result) == Bytes::from_slice(env, expected)
@@ -481,5 +481,8 @@ fn string_bytes_cast() {
 
     let s: Val = String::from_str(&src.env, "hello").into_val(&src.env);
     let result = src.invoke_contract(addr, "to_bytes", vec![s]);
-    assert!(bytes_eq(&src.env, &result, &payload), "bytes(string) must produce raw UTF-8 bytes");
+    assert!(
+        bytes_eq(&src.env, &result, &payload),
+        "bytes(string) must produce raw UTF-8 bytes"
+    );
 }
