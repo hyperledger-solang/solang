@@ -2228,12 +2228,24 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
         }
         Expression::ReturnData { .. } => target.return_data(bin, function).into(),
-        Expression::StorageArrayLength { array, elem_ty, .. } => {
+        Expression::StorageArrayLength {
+            ty, array, elem_ty, ..
+        } => {
             let slot = expression(target, bin, array, vartab, function).into_int_value();
-
-            target
-                .storage_array_length(bin, function, slot, elem_ty)
-                .into()
+            let len = target.storage_array_length(bin, function, slot, elem_ty);
+            let want = bin.llvm_type(ty).into_int_type();
+            let len = match len.get_type().get_bit_width().cmp(&want.get_bit_width()) {
+                std::cmp::Ordering::Greater => bin
+                    .builder
+                    .build_int_truncate(len, want, "arr_len")
+                    .unwrap(),
+                std::cmp::Ordering::Less => bin
+                    .builder
+                    .build_int_z_extend(len, want, "arr_len")
+                    .unwrap(),
+                std::cmp::Ordering::Equal => len,
+            };
+            len.into()
         }
         Expression::Builtin {
             kind: Builtin::Signature,

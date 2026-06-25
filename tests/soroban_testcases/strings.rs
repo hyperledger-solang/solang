@@ -280,7 +280,7 @@ fn string_char_at_via_bytes_cast() {
     let addr = src.contracts.last().unwrap();
     let arg: Val = String::from_str(&src.env, "abcdef").into_val(&src.env);
     let result = src.invoke_contract(addr, "char_at", vec![arg]);
-    assert!(bytes_eq(&src.env, &result, &[b'c']));
+    assert!(bytes_eq(&src.env, &result, b"c"));
 }
 
 #[test]

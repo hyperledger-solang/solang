@@ -692,6 +692,269 @@ fn bytes_storage_pop_empty_traps() {
 }
 
 #[test]
+fn bytes_storage_search_replace() {
+    let src = build_solidity(
+        r#"contract BytesSearchReplace {
+            bytes public data;
+
+            function pushByte(bytes1 x) public { data.push(x); }
+            function popByte() public { data.pop(); }
+
+            // find first index of a byte, returns type(uint32).max if not found
+            function indexOf(bytes1 target) public view returns (uint32) {
+                for (uint32 i = 0; i < data.length; i++) {
+                    if (data[i] == target) return i;
+                }
+                return type(uint32).max;
+            }
+
+            // count how many times a byte appears
+            function count(bytes1 target) public view returns (uint32 total) {
+                for (uint32 i = 0; i < data.length; i++) {
+                    if (data[i] == target) total++;
+                }
+            }
+
+            // replace all occurrences in memory, does not modify storage
+            function replaceAll(bytes1 from, bytes1 to) public view returns (bytes memory) {
+                bytes memory result = new bytes(data.length);
+                for (uint32 i = 0; i < data.length; i++) {
+                    result[i] = data[i] == from ? to : data[i];
+                }
+                return result;
+            }
+
+            // replace all occurrences in storage
+            function replaceAllInStorage(bytes1 from, bytes1 to) public {
+                for (uint32 i = 0; i < data.length; i++) {
+                    if (data[i] == from) data[i] = to;
+                }
+            }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let push = |b: u8| {
+        src.invoke_contract(
+            addr,
+            "pushByte",
+            vec![BytesN::from_array(&src.env, &[b]).into_val(&src.env)],
+        );
+    };
+    for b in [0x01u8, 0x02, 0x03, 0x02] {
+        push(b);
+    }
+
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "data", vec![]),
+            &[0x01, 0x02, 0x03, 0x02]
+        ),
+        "pushed bytes must accumulate in storage"
+    );
+
+    let one_byte = |name: &str, b: u8| {
+        src.invoke_contract(
+            addr,
+            name,
+            vec![BytesN::from_array(&src.env, &[b]).into_val(&src.env)],
+        )
+    };
+
+    let idx = one_byte("indexOf", 0x02);
+    let one: Val = 1u32.into_val(&src.env);
+    assert!(one.shallow_eq(&idx), "first 0x02 is at index 1");
+    let two: Val = 2u32.into_val(&src.env);
+    assert!(
+        two.shallow_eq(&one_byte("count", 0x02)),
+        "0x02 appears twice"
+    );
+    let not_found: Val = u32::MAX.into_val(&src.env);
+    assert!(
+        not_found.shallow_eq(&one_byte("indexOf", 0xFF)),
+        "missing byte returns type(uint32).max"
+    );
+
+    // replaceAll works on a memory copy and leaves storage untouched.
+    let replaced = src.invoke_contract(
+        addr,
+        "replaceAll",
+        vec![
+            BytesN::from_array(&src.env, &[0x02]).into_val(&src.env),
+            BytesN::from_array(&src.env, &[0xAA]).into_val(&src.env),
+        ],
+    );
+    assert!(
+        bytes_eq(&src.env, &replaced, &[0x01, 0xAA, 0x03, 0xAA]),
+        "replaceAll must substitute every 0x02 with 0xAA in the returned copy"
+    );
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "data", vec![]),
+            &[0x01, 0x02, 0x03, 0x02]
+        ),
+        "replaceAll must not mutate storage"
+    );
+
+    // replaceAllInStorage mutates the stored bytes in place via subscript writes.
+    src.invoke_contract(
+        addr,
+        "replaceAllInStorage",
+        vec![
+            BytesN::from_array(&src.env, &[0x02]).into_val(&src.env),
+            BytesN::from_array(&src.env, &[0xAA]).into_val(&src.env),
+        ],
+    );
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "data", vec![]),
+            &[0x01, 0xAA, 0x03, 0xAA]
+        ),
+        "replaceAllInStorage must mutate the stored bytes"
+    );
+
+    // pop the last byte and confirm.
+    src.invoke_contract(addr, "popByte", vec![]);
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "data", vec![]),
+            &[0x01, 0xAA, 0x03]
+        ),
+        "popByte must remove the last stored byte"
+    );
+}
+
+#[test]
+fn bytes_storage_queue() {
+    let src = build_solidity(
+        r#"contract BytesQueue {
+            bytes public data;
+            uint32 public head; // index of the front
+
+            function enqueue(bytes1 x) public { data.push(x); }
+
+            function dequeue() public returns (bytes1) {
+                require(head < data.length, "queue empty");
+                bytes1 front = data[head];
+                head++;
+                return front;
+            }
+
+            // read only the unprocessed part into memory
+            function pending() public view returns (bytes memory) {
+                uint32 len = data.length - head;
+                bytes memory result = new bytes(len);
+                for (uint32 i = 0; i < len; i++) {
+                    result[i] = data[head + i];
+                }
+                return result;
+            }
+
+            function pendingLength() public view returns (uint32) {
+                return data.length - head;
+            }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let enqueue = |b: u8| {
+        src.invoke_contract(
+            addr,
+            "enqueue",
+            vec![BytesN::from_array(&src.env, &[b]).into_val(&src.env)],
+        );
+    };
+    for b in [0x0Au8, 0x0B, 0x0C, 0x0D] {
+        enqueue(b);
+    }
+
+    // The full backing buffer holds everything enqueued.
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "data", vec![]),
+            &[0x0A, 0x0B, 0x0C, 0x0D]
+        ),
+        "enqueue must append to the backing bytes"
+    );
+    let four: Val = 4u32.into_val(&src.env);
+    assert!(
+        four.shallow_eq(&src.invoke_contract(addr, "pendingLength", vec![])),
+        "all four bytes pending before any dequeue"
+    );
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "pending", vec![]),
+            &[0x0A, 0x0B, 0x0C, 0x0D]
+        ),
+        "pending must return the whole buffer before any dequeue"
+    );
+
+    // dequeue returns the front byte (FIFO) and advances head, without popping.
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "dequeue", vec![]),
+            &[0x0A]
+        ),
+        "first dequeue must return the front byte"
+    );
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "dequeue", vec![]),
+            &[0x0B]
+        ),
+        "second dequeue must return the next byte"
+    );
+    let two: Val = 2u32.into_val(&src.env);
+    assert!(
+        two.shallow_eq(&src.invoke_contract(addr, "head", vec![])),
+        "head must advance to 2 after two dequeues"
+    );
+    assert!(
+        two.shallow_eq(&src.invoke_contract(addr, "pendingLength", vec![])),
+        "two bytes remain pending"
+    );
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "pending", vec![]),
+            &[0x0C, 0x0D]
+        ),
+        "pending must skip the dequeued prefix"
+    );
+
+    // The backing buffer is unchanged by dequeue (head-based queue, no pop).
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "data", vec![]),
+            &[0x0A, 0x0B, 0x0C, 0x0D]
+        ),
+        "dequeue must not mutate the backing bytes"
+    );
+
+    // Enqueue after dequeue keeps FIFO order in the pending view.
+    enqueue(0x0E);
+    assert!(
+        bytes_eq(
+            &src.env,
+            &src.invoke_contract(addr, "pending", vec![]),
+            &[0x0C, 0x0D, 0x0E]
+        ),
+        "a newly enqueued byte must append to the pending tail"
+    );
+}
+
+#[test]
 fn bytes32_public_accessor() {
     let src = build_solidity(
         r#"contract T {
