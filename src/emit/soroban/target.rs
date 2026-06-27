@@ -560,30 +560,42 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         elem_ty: &Type,
     ) -> IntValue<'a> {
-        if !is_reference_type(elem_ty) || matches!(elem_ty, Type::String) {
-            emit_context!(bin);
-            let obj = call!(
-                HostFunctions::GetContractData.name(),
-                &[slot.into(), i64_const!(1).into()],
-                "load_storage"
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
-            let len_fn = match elem_ty {
-                Type::String => HostFunctions::StringLen.name(),
-                Type::Bytes(1) => HostFunctions::BytesLen.name(),
-                _ => HostFunctions::VecLen.name(),
-            };
-            let u32_val = call!(len_fn, &[obj.into()], "len_val")
+        if !is_reference_type(elem_ty) {
+            // Native arrays use VecObject layout: load vec object then call VecLen.
+            let load_storage = bin
+                .builder
+                .build_call(
+                    bin.module
+                        .get_function(HostFunctions::GetContractData.name())
+                        .unwrap(),
+                    &[
+                        slot.into(),
+                        bin.context.i64_type().const_int(1, false).into(), // persistent storage
+                    ],
+                    "load_storage",
+                )
+                .unwrap()
                 .try_as_basic_value()
                 .left()
                 .unwrap()
                 .into_int_value();
 
-            // Both BytesLen and VecLen return U32Val: payload in top 32 bits.
+            let u32_val = bin
+                .builder
+                .build_call(
+                    bin.module
+                        .get_function(HostFunctions::VecLen.name())
+                        .unwrap(),
+                    &[load_storage.into()],
+                    "vec_len",
+                )
+                .unwrap()
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            // VecLen returns U32Val => payload in top 32 bits.
             return bin
                 .builder
                 .build_right_shift(
@@ -852,6 +864,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         emit_context!(bin);
 
         match expr {
+            // TODO: a good chance to move timestamp implementation to codegen
+            // and use the CFG instead of llvm-ir
             Expression::Builtin {
                 kind: Builtin::Timestamp,
                 args,
@@ -979,6 +993,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 args,
                 ..
             } => {
+                // TODO: a good chance to move ExtendTtl implementation to codegen
+                // and use CFG instead of llvm-ir
                 // Get arguments
                 // (func $extend_contract_data_ttl (param $k_val i64) (param $t_storage_type i64) (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
                 assert_eq!(args.len(), 4, "extendTtl expects 4 arguments");

@@ -65,6 +65,7 @@ impl HostFunctions {
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
             HostFunctions::VectorNew => bin.context.i64_type().fn_type(&[], false),
+            HostFunctions::BytesNew => bin.context.i64_type().fn_type(&[], false),
             HostFunctions::VecPopBack => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::VecGet => bin
                 .context
@@ -460,6 +461,7 @@ impl SorobanTarget {
             HostFunctions::LogFromLinearMemory,
             HostFunctions::SymbolNewFromLinearMemory,
             HostFunctions::VectorNew,
+            HostFunctions::BytesNew,
             HostFunctions::Call,
             HostFunctions::VectorNewFromLinearMemory,
             HostFunctions::VecUnpackToLinearMemory,

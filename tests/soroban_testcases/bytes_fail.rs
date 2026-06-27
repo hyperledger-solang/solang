@@ -1,11 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Compile-time / sema rejection tests for Soroban bytes.
-//! These verify that illegal operations are rejected at compile time
-//! rather than silently emitting broken code.
-//!
-//! Tests will be added one by one as Phase 3 and the coverage backfill land.
-
 use solang::codegen::Options;
 use solang::file_resolver::FileResolver;
 use solang::sema::ast::Namespace;
@@ -41,7 +35,6 @@ fn compile_soroban(src: &str) -> Namespace {
 
 #[test]
 fn fixed_bytes_index_assignment_is_rejected() {
-    // bytesN[i] = x is illegal in Solidity (fixed bytes are value types).
     let ns = compile_soroban(
         r#"contract T {
     function bad(bytes4 b) public pure returns (bytes4) {
@@ -65,7 +58,6 @@ fn fixed_bytes_index_assignment_is_rejected() {
 
 #[test]
 fn nested_bytesn_array_abi_is_rejected() {
-    // Gap E: bytes32[] as ABI type is not yet supported (nested bytes in array).
     let ns = compile_soroban(
         r#"contract T {
     function f(bytes32[] memory data) public pure returns (uint64) {
@@ -88,7 +80,6 @@ fn nested_bytesn_array_abi_is_rejected() {
 
 #[test]
 fn nested_bytes_array_abi_is_rejected() {
-    // Gap E: bytes[] as ABI type is not yet supported (nested bytes in array).
     let ns = compile_soroban(
         r#"contract T {
     function f(bytes[] memory data) public pure returns (uint64) {

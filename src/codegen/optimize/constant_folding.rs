@@ -713,7 +713,6 @@ fn bigint_to_expression(
             }
         }
         Type::Bytes(n) => {
-            // Bytes(n) is a fixed-width integer (same layout as Uint(n*8)); truncate to n bytes.
             let bits = *n as usize * 8;
             if value.sign() == Sign::Minus {
                 let mut bs = value.to_signed_bytes_le();
@@ -1344,8 +1343,6 @@ fn reference_variable(
                 let mut v = None;
 
                 for (def, modified) in defs {
-                    // A modified definition means the variable was mutated after its initial
-                    // assignment (e.g. by PushMemory/PopMemory realloc). Do not substitute.
                     if *modified {
                         v = None;
                         break;

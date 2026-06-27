@@ -530,6 +530,14 @@ impl<'a> Binary<'a> {
         }
     }
 
+    pub(crate) fn alloc(&self) -> &'static str {
+        if self.ns.target == crate::Target::Soroban {
+            "soroban_malloc"
+        } else {
+            "__malloc"
+        }
+    }
+
     /// Wrapper for alloca. Ensures that the alloca is done on the first basic block.
     /// If alloca is not on the first basic block, llvm will get to llvm_unreachable
     /// for the BPF target.

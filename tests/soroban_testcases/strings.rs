@@ -481,8 +481,62 @@ fn string_bytes_cast() {
 
     let s: Val = String::from_str(&src.env, "hello").into_val(&src.env);
     let result = src.invoke_contract(addr, "to_bytes", vec![s]);
-    assert!(
-        bytes_eq(&src.env, &result, &payload),
-        "bytes(string) must produce raw UTF-8 bytes"
+    assert!(bytes_eq(&src.env, &result, &payload));
+}
+
+#[test]
+fn string_concat() {
+    let src = build_solidity(
+        r#"contract T {
+            function concat2(string memory a, string memory b) public pure returns (string memory) {
+                return string.concat(a, b);
+            }
+            function concat3(string memory a, string memory b, string memory c) public pure returns (string memory) {
+                return string.concat(a, b, c);
+            }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let a: Val = String::from_str(&src.env, "hello").into_val(&src.env);
+    let b: Val = String::from_str(&src.env, " world").into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat2", vec![a, b]);
+    assert_eq!(
+        String::from_val(&src.env, &result),
+        String::from_str(&src.env, "hello world")
+    );
+
+    let a: Val = String::from_str(&src.env, "").into_val(&src.env);
+    let b: Val = String::from_str(&src.env, "right").into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat2", vec![a, b]);
+    assert_eq!(
+        String::from_val(&src.env, &result),
+        String::from_str(&src.env, "right")
+    );
+
+    let a: Val = String::from_str(&src.env, "left").into_val(&src.env);
+    let b: Val = String::from_str(&src.env, "").into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat2", vec![a, b]);
+    assert_eq!(
+        String::from_val(&src.env, &result),
+        String::from_str(&src.env, "left")
+    );
+
+    let a: Val = String::from_str(&src.env, "").into_val(&src.env);
+    let b: Val = String::from_str(&src.env, "").into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat2", vec![a, b]);
+    assert_eq!(
+        String::from_val(&src.env, &result),
+        String::from_str(&src.env, "")
+    );
+
+    let a: Val = String::from_str(&src.env, "foo").into_val(&src.env);
+    let b: Val = String::from_str(&src.env, "-").into_val(&src.env);
+    let c: Val = String::from_str(&src.env, "bar").into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat3", vec![a, b, c]);
+    assert_eq!(
+        String::from_val(&src.env, &result),
+        String::from_str(&src.env, "foo-bar")
     );
 }

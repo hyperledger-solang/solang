@@ -111,12 +111,8 @@ impl TargetCodegen for SorobanTarget {
         ns: &Namespace,
     ) -> Option<Expression> {
         match ty {
-            // String/DynamicBytes are struct.vector after Phase 1. Emit an empty
-            // struct.vector so prepare_storage_value → soroban_encode_arg can turn it
-            // into a real empty String/Bytes object (b.i / b.3, len 0). If we left
-            // these on soroban_vec_new the slot would hold a Vec object, and any
-            // subsequent read via decode_string/decode_bytes would trap.
-            Type::String | Type::DynamicBytes => {
+            Type::DynamicBytes => Some(soroban_bytes_new(loc, cfg, vartab)),
+            Type::String => {
                 let buf = vartab.temp_name("empty_buf", ty);
                 cfg.add(
                     vartab,
@@ -195,8 +191,6 @@ impl TargetCodegen for SorobanTarget {
         vartab: &mut Vartable,
         opt: &Options,
     ) -> Expression {
-        // `bytes` in storage is a host BytesObject (not a Vec): push via the dedicated
-        // host `bytes_push`, read-modify-write on the stored handle.
         if args[0].ty().is_storage_bytes() {
             return soroban_bytes_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self);
         }
@@ -1052,8 +1046,6 @@ fn validate_unsupported_codegen_paths(all_cfg: &[ControlFlowGraph], ns: &mut Nam
 }
 
 fn validate_unsupported_codegen_instr(instr: &Instr, ns: &mut Namespace) {
-    validate_unsupported_codegen_instr_expressions(instr, ns);
-
     match instr {
         Instr::LoadStorage { ty, storage, .. } => {
             if let Some(unsupported_type) = unsupported_soroban_storage_type(ty, ns) {
@@ -1123,29 +1115,6 @@ fn validate_unsupported_codegen_instr(instr: &Instr, ns: &mut Namespace) {
         }
         _ => (),
     }
-}
-
-fn validate_unsupported_codegen_instr_expressions(instr: &Instr, ns: &mut Namespace) {
-    let mut cx = UnsupportedCodegenExprContext {
-        diagnostics: Vec::new(),
-    };
-
-    instr.recurse_expressions(&mut cx, reject_unsupported_codegen_expr);
-
-    for diagnostic in cx.diagnostics {
-        push_codegen_error(ns, diagnostic);
-    }
-}
-
-struct UnsupportedCodegenExprContext {
-    diagnostics: Vec<CodegenError>,
-}
-
-fn reject_unsupported_codegen_expr(
-    _expr: &Expression,
-    _cx: &mut UnsupportedCodegenExprContext,
-) -> bool {
-    true
 }
 
 fn unsupported_soroban_storage_type(ty: &Type, ns: &Namespace) -> Option<String> {
@@ -1376,6 +1345,12 @@ pub(crate) fn soroban_bytes_push(
     opt: &Options,
     target: &dyn TargetCodegen,
 ) -> Expression {
+    /*
+     * old_handle : BytesObject = BytesObject(args[0]);
+     * element    : U32Val = U32Val(args[1]);
+     * new_handle : BytesObject = bytes_push(old_handle, element);
+     * args[0] = new_handle;
+     * */
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target);
     let bytes_ty = args[0].ty();
@@ -1430,6 +1405,11 @@ pub(crate) fn soroban_bytes_pop(
     opt: &Options,
     target: &dyn TargetCodegen,
 ) -> Expression {
+    /*
+     * old_handle : BytesObject = BytesObject(args[0]);
+     * new_handle : BytesObject = bytes_pop(old_handle);
+     * args[0] = new_handle;
+     * */
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     let bytes_ty = args[0].ty();
 
@@ -1465,6 +1445,92 @@ pub(crate) fn soroban_bytes_pop(
 
     Expression::Undefined {
         ty: return_ty.clone(),
+    }
+}
+
+pub(crate) fn soroban_bytes_length(
+    loc: &pt::Loc,
+    bytes_var: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) -> Expression {
+    /*
+     * bytes_handle : BytesObject = BytesObject(bytes_var);
+     * length       : U32Val      = BytesLength(bytes_handle);
+     * encoded_len  : u32         = soroban_decode_arg(length);
+     * */
+    let bytes_handle = soroban_load_storage_handle(loc, bytes_var, cfg, vartab);
+    let var_no = vartab.temp_name("bytes_obj_length", &Type::Uint(64));
+    let var = Expression::Variable {
+        loc: *loc,
+        ty: Type::Uint(64),
+        var_no,
+    };
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![var_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::BytesLen.name().to_string(),
+            },
+            args: vec![bytes_handle],
+        },
+    );
+    soroban_decode_arg(var, cfg, vartab, ns, Some(Type::Uint(32)))
+}
+
+pub(crate) fn soroban_strings_length(
+    loc: &pt::Loc,
+    bytes_var: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) -> Expression {
+    let string_handle = soroban_load_storage_handle(loc, bytes_var, cfg, vartab);
+    let var_no = vartab.temp_name("string_obj_length", &Type::Uint(64));
+    let var = Expression::Variable {
+        loc: *loc,
+        ty: Type::Uint(64),
+        var_no,
+    };
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![var_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::StringLen.name().to_string(),
+            },
+            args: vec![string_handle],
+        },
+    );
+    soroban_decode_arg(var, cfg, vartab, ns, Some(Type::Uint(32)))
+}
+
+pub(crate) fn soroban_bytes_new(
+    loc: &pt::Loc,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let ty = Type::SorobanHandle(Box::new(Type::DynamicBytes));
+    let bytes_no = vartab.temp_name("bytes_obj_new", &ty);
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![bytes_no],
+            return_tys: vec![ty.clone()],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::BytesNew.name().to_string(),
+            },
+            args: vec![],
+        },
+    );
+    Expression::Variable {
+        loc: *loc,
+        ty,
+        var_no: bytes_no,
     }
 }
 

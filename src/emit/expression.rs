@@ -84,7 +84,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
     function: FunctionValue<'a>,
 ) -> BasicValueEnum<'a> {
     emit_context!(bin);
-    // eprintln!("expr : {:?}", e);
     match e {
         Expression::FunctionArg { arg_no, .. } => expect_llvm_entity(
             function.get_nth_param(*arg_no as u32),
@@ -133,17 +132,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             ty, values: fields, ..
         } => {
             let struct_ty = bin.llvm_type(ty);
-
-            let allocator = if bin.ns.target == Target::Soroban {
-                "soroban_malloc"
-            } else {
-                "__malloc"
-            };
-
             let s = bin
                 .builder
                 .build_call(
-                    runtime_helper(bin, allocator, "allocating struct literal"),
+                    runtime_helper(bin, bin.alloc(), "allocating struct literal"),
                     &[struct_ty
                         .size_of()
                         .unwrap_or_else(|| {
@@ -1426,7 +1418,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let new_struct = bin
                     .builder
                     .build_call(
-                        runtime_helper(bin, "__malloc", "allocating lazy reference load"),
+                        runtime_helper(bin, bin.alloc(), "allocating lazy reference load"),
                         &[llvm_ty
                             .size_of()
                             .unwrap_or_else(|| {
@@ -1932,7 +1924,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let p = bin
                 .builder
                 .build_call(
-                    runtime_helper(bin, "__malloc", "allocating array literal"),
+                    runtime_helper(bin, bin.alloc(), "allocating array literal"),
                     &[ty.size_of()
                         .unwrap_or_else(|| {
                             panic!(
@@ -2228,24 +2220,11 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))
         }
         Expression::ReturnData { .. } => target.return_data(bin, function).into(),
-        Expression::StorageArrayLength {
-            ty, array, elem_ty, ..
-        } => {
+        Expression::StorageArrayLength { array, elem_ty, .. } => {
             let slot = expression(target, bin, array, vartab, function).into_int_value();
-            let len = target.storage_array_length(bin, function, slot, elem_ty);
-            let want = bin.llvm_type(ty).into_int_type();
-            let len = match len.get_type().get_bit_width().cmp(&want.get_bit_width()) {
-                std::cmp::Ordering::Greater => bin
-                    .builder
-                    .build_int_truncate(len, want, "arr_len")
-                    .unwrap(),
-                std::cmp::Ordering::Less => bin
-                    .builder
-                    .build_int_z_extend(len, want, "arr_len")
-                    .unwrap(),
-                std::cmp::Ordering::Equal => len,
-            };
-            len.into()
+            target
+                .storage_array_length(bin, function, slot, elem_ty)
+                .into()
         }
         Expression::Builtin {
             kind: Builtin::Signature,
@@ -2658,7 +2637,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let v = bin
                 .builder
                 .build_call(
-                    runtime_helper(bin, "__malloc", "allocating concat result"),
+                    runtime_helper(bin, bin.alloc(), "allocating concat result"),
                     &[size.into()],
                     "",
                 )
@@ -3267,7 +3246,7 @@ fn basic_value_to_slice<'a>(
         }
         Type::Address(_) => {
             let address = call!(
-                "__malloc",
+                bin.alloc(),
                 &[i32_const!(bin.ns.address_length as u64).into()]
             )
             .try_as_basic_value()
@@ -3365,7 +3344,7 @@ fn basic_value_to_slice<'a>(
                     panic!("{}", CodegenError::llvm_builder("emitting expression", err))
                 });
 
-            let output = call!("__malloc", &[size.into()])
+            let output = call!(bin.alloc(), &[size.into()])
                 .try_as_basic_value()
                 .left()
                 .unwrap_or_else(|| expect_return_value(None, "reading LLVM call return value"))

@@ -43,7 +43,8 @@ fn bytesn_bitwise_ops() {
     let src = build_solidity(
         r#"contract T {
             function f() public pure returns (bool) {
-                bytes4 a = 0xF0F0F0F0; bytes4 b = 0x0FF00FF0;
+                bytes4 a = 0xF0F0F0F0; 
+                bytes4 b = 0x0FF00FF0;
                 return (a & b) == 0x00F000F0 && (a | b) == 0xFFF0FFF0
                     && (a ^ b) == 0xFF00FF00 && (~a)    == 0x0F0F0F0F;
             }
@@ -78,7 +79,9 @@ fn bytesn_compare_and_whole_value_assign() {
     let src = build_solidity(
         r#"contract T {
             function f() public pure returns (bool) {
-                bytes4 a = 0x11223344; bytes4 b = a; bytes4 c = 0x11223345;
+                bytes4 a = 0x11223344; 
+                bytes4 b = a; 
+                bytes4 c = 0x11223345;
                 return a == b && a != c && a < c;
             }
         }"#,
@@ -155,8 +158,6 @@ fn bytes32_abi_round_trip() {
 
 #[test]
 fn bytesn_byte_order_index_zero_is_first_wire_byte() {
-    // bytes4 x = 0xAABBCCDD → x[0] == 0xAA (most-significant byte).
-    // On the wire the BytesObject must be [0xAA, 0xBB, 0xCC, 0xDD].
     let src = build_solidity(
         r#"contract T {
             function first_byte(bytes4 b) public pure returns (bytes1) {
@@ -177,7 +178,6 @@ fn bytesn_byte_order_index_zero_is_first_wire_byte() {
 
 #[test]
 fn bytesn_abi_edge_values() {
-    // all-zero and all-0xFF must round-trip cleanly
     let src = build_solidity(
         r#"contract T {
             function echo(bytes4 b) public pure returns (bytes4) { return b; }
@@ -197,7 +197,6 @@ fn bytesn_abi_edge_values() {
 
 #[test]
 fn bytesn_literal_init_returned() {
-    // bytes4 x = 0xAABBCCDD as a constant literal returned directly.
     let src = build_solidity(
         r#"contract T {
             function get() public pure returns (bytes4) {
@@ -243,7 +242,6 @@ fn bytes_abi_empty_echo() {
 
 #[test]
 fn bytes_abi_mutate_then_return() {
-    // host→guest decode, mutate in place via XOR (avoids uint8/uint32 sema issue), re-encode.
     let src = build_solidity(
         r#"contract T {
             function flip(bytes memory x) public pure returns (bytes memory) {
@@ -261,7 +259,6 @@ fn bytes_abi_mutate_then_return() {
 
 #[test]
 fn bytesn_reinterpret_as_uint_across_abi() {
-    // host BytesN<4> → guest bytes4 → uint32: verifies the decode reversal end-to-end.
     let src = build_solidity(
         r#"contract T {
             function asUint(bytes4 x) public pure returns (uint32) { return uint32(x); }
@@ -277,8 +274,6 @@ fn bytesn_reinterpret_as_uint_across_abi() {
 
 #[test]
 fn mixed_bytesn_and_dynamic_params() {
-    // One call carrying both a static bytes4 and a dynamic bytes argument.
-    // Uses bytes4→uint32 cast (not uint8) to avoid the Soroban uint8→uint32 sema rejection.
     let src = build_solidity(
         r#"contract T {
             function combine(bytes4 tag, bytes memory data) public pure returns (uint32) {
@@ -371,7 +366,6 @@ fn bytes4_state_var_literal_initializer() {
 
 #[test]
 fn bytes32_mapping_round_trip_written_key() {
-    // Gap D: unwritten keys trap; only test a written key.
     let src = build_solidity(
         r#"contract T {
             mapping(uint64 => bytes32) m;
@@ -397,7 +391,6 @@ fn bytes32_mapping_round_trip_written_key() {
 
 #[test]
 fn bytes_storage_subscript_write() {
-    // Initialize storage bytes, write one byte via direct subscript, verify with whole-array read.
     let src = build_solidity(
         r#"contract T {
             bytes data;
@@ -420,7 +413,6 @@ fn bytes_storage_subscript_write() {
 
 #[test]
 fn bytes_storage_subscript_read() {
-    // setData → readAt each index → writeAt each index → readAt each index again.
     let src = build_solidity(
         r#"contract T {
             bytes data;
@@ -471,7 +463,6 @@ fn bytes_storage_subscript_read() {
 
 #[test]
 fn bytes_storage_push() {
-    // Initialize storage bytes, push one byte, verify with whole-array read.
     let src = build_solidity(
         r#"contract T {
             bytes data;
@@ -499,7 +490,6 @@ fn bytes_storage_push() {
         "push 0x03 onto [0x01,0x02] must give [0x01,0x02,0x03]"
     );
 
-    // Push onto empty storage bytes.
     src.invoke_contract(
         addr,
         "setData",
@@ -519,7 +509,6 @@ fn bytes_storage_push() {
 
 #[test]
 fn bytes_storage_pop() {
-    // Initialize storage bytes, pop the last byte, verify with whole-array read.
     let src = build_solidity(
         r#"contract T {
             bytes data;
@@ -563,7 +552,6 @@ fn bytes_storage_pop() {
 
 #[test]
 fn bytes_storage_push_loop() {
-    // Push N bytes in a loop onto initially-empty storage bytes.
     let src = build_solidity(
         r#"contract T {
             bytes data;
@@ -600,7 +588,6 @@ fn bytes_storage_push_loop() {
 
 #[test]
 fn bytes_storage_push_pop_roundtrip() {
-    // Push n bytes then pop n bytes must restore the original storage bytes.
     let src = build_solidity(
         r#"contract T {
             bytes data;
@@ -641,7 +628,6 @@ fn bytes_storage_push_pop_roundtrip() {
 
 #[test]
 fn bytes_storage_pop_loop() {
-    // Pop N bytes in a loop from storage bytes.
     let src = build_solidity(
         r#"contract T {
             bytes data;
@@ -673,7 +659,6 @@ fn bytes_storage_pop_loop() {
 #[test]
 #[should_panic]
 fn bytes_storage_pop_empty_traps() {
-    // Popping from empty storage bytes must trap (host-side bounds check).
     let src = build_solidity(
         r#"contract T {
             bytes data;
@@ -777,7 +762,6 @@ fn bytes_storage_search_replace() {
         "missing byte returns type(uint32).max"
     );
 
-    // replaceAll works on a memory copy and leaves storage untouched.
     let replaced = src.invoke_contract(
         addr,
         "replaceAll",
@@ -799,7 +783,6 @@ fn bytes_storage_search_replace() {
         "replaceAll must not mutate storage"
     );
 
-    // replaceAllInStorage mutates the stored bytes in place via subscript writes.
     src.invoke_contract(
         addr,
         "replaceAllInStorage",
@@ -817,7 +800,6 @@ fn bytes_storage_search_replace() {
         "replaceAllInStorage must mutate the stored bytes"
     );
 
-    // pop the last byte and confirm.
     src.invoke_contract(addr, "popByte", vec![]);
     assert!(
         bytes_eq(
@@ -874,7 +856,6 @@ fn bytes_storage_queue() {
         enqueue(b);
     }
 
-    // The full backing buffer holds everything enqueued.
     assert!(
         bytes_eq(
             &src.env,
@@ -897,7 +878,6 @@ fn bytes_storage_queue() {
         "pending must return the whole buffer before any dequeue"
     );
 
-    // dequeue returns the front byte (FIFO) and advances head, without popping.
     assert!(
         bytes_eq(
             &src.env,
@@ -932,7 +912,6 @@ fn bytes_storage_queue() {
         "pending must skip the dequeued prefix"
     );
 
-    // The backing buffer is unchanged by dequeue (head-based queue, no pop).
     assert!(
         bytes_eq(
             &src.env,
@@ -942,7 +921,6 @@ fn bytes_storage_queue() {
         "dequeue must not mutate the backing bytes"
     );
 
-    // Enqueue after dequeue keeps FIFO order in the pending view.
     enqueue(0x0E);
     assert!(
         bytes_eq(
@@ -1478,5 +1456,73 @@ fn bytes_memory_push_pop_roundtrip() {
     assert!(
         bytes_eq(&src.env, &result, &[]),
         "roundtrip on empty n=5 must give empty"
+    );
+}
+
+#[test]
+fn bytes_concat() {
+    let src = build_solidity(
+        r#"contract T {
+            function concat2(bytes memory a, bytes memory b) public pure returns (bytes memory) {
+                return bytes.concat(a, b);
+            }
+            function concat3(bytes memory a, bytes memory b, bytes memory c) public pure returns (bytes memory) {
+                return bytes.concat(a, b, c);
+            }
+            function concat_fixed(bytes4 tag, bytes memory rest) public pure returns (bytes memory) {
+                return bytes.concat(tag, rest);
+            }
+        }"#,
+        |_| {},
+    );
+    let addr = src.contracts.last().unwrap();
+
+    let a: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x01, 0x02]).into_val(&src.env);
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x03, 0x04]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat2", vec![a, b]);
+    assert!(
+        bytes_eq(&src.env, &result, &[0x01, 0x02, 0x03, 0x04]),
+        "concat2([01,02], [03,04]) must produce [01,02,03,04]"
+    );
+
+    let a: Val = soroban_sdk::Bytes::from_array(&src.env, &[]).into_val(&src.env);
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0xAA, 0xBB]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat2", vec![a, b]);
+    assert!(
+        bytes_eq(&src.env, &result, &[0xAA, 0xBB]),
+        "concat2([], [AA,BB]) must produce [AA,BB]"
+    );
+
+    let a: Val = soroban_sdk::Bytes::from_array(&src.env, &[0xCC, 0xDD]).into_val(&src.env);
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &[]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat2", vec![a, b]);
+    assert!(
+        bytes_eq(&src.env, &result, &[0xCC, 0xDD]),
+        "concat2([CC,DD], []) must produce [CC,DD]"
+    );
+
+    let a: Val = soroban_sdk::Bytes::from_array(&src.env, &[]).into_val(&src.env);
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &[]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat2", vec![a, b]);
+    assert!(
+        bytes_eq(&src.env, &result, &[]),
+        "concat2([], []) must produce []"
+    );
+
+    let a: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x01]).into_val(&src.env);
+    let b: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x02]).into_val(&src.env);
+    let c: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x03]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat3", vec![a, b, c]);
+    assert!(
+        bytes_eq(&src.env, &result, &[0x01, 0x02, 0x03]),
+        "concat3([01], [02], [03]) must produce [01,02,03]"
+    );
+
+    let tag: Val = BytesN::from_array(&src.env, &[0xDE, 0xAD, 0xBE, 0xEF]).into_val(&src.env);
+    let rest: Val = soroban_sdk::Bytes::from_array(&src.env, &[0x01, 0x02]).into_val(&src.env);
+    let result = src.invoke_contract(addr, "concat_fixed", vec![tag, rest]);
+    assert!(
+        bytes_eq(&src.env, &result, &[0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02]),
+        "concat_fixed(0xDEADBEEF, [01,02]) must produce [DE,AD,BE,EF,01,02]"
     );
 }

@@ -14,10 +14,37 @@ use solang_parser::helpers::CodeLocation;
 use solang_parser::pt;
 use solang_parser::pt::Loc;
 
-/// Soroban encoder works a little differently than the other encoders.
-/// For an external call, Soroban first needs to convert values into Soroban ScVals.
-/// Each ScVal is 64 bits long, and encoded either via a host function or shifting bits.
-/// For this reason, the soroban encoder is implemented as separate from the other encoders.
+#[allow(unused)]
+mod tags {
+    // Inline / small-value tags (CAP-0046-01 §ScVal bit layout, bits 0-7)
+    pub const FALSE: u64 = 0;
+    pub const TRUE: u64 = 1;
+    pub const VOID: u64 = 2;
+    pub const ERROR: u64 = 3;
+    pub const U32: u64 = 4;
+    pub const I32: u64 = 5;
+    pub const U64_SML: u64 = 6;
+    pub const I64_SML: u64 = 7;
+    pub const U128_SML: u64 = 10;
+    pub const I128_SML: u64 = 11;
+    pub const U256_SML: u64 = 12;
+    pub const I256_SML: u64 = 13;
+
+    // Object-handle tags (host allocates; handle stored in bits 32-63)
+    pub const U64_OBJ: u64 = 64;
+    pub const I64_OBJ: u64 = 65;
+    pub const U128_OBJ: u64 = 68;
+    pub const I128_OBJ: u64 = 69;
+    pub const U256_OBJ: u64 = 70;
+    pub const I256_OBJ: u64 = 71;
+    pub const BYTES_OBJ: u64 = 72;
+    pub const STRING_OBJ: u64 = 73;
+    pub const SYMBOL_OBJ: u64 = 74;
+    pub const VEC_OBJ: u64 = 75;
+    pub const MAP_OBJ: u64 = 76;
+    pub const ADDR_OBJ: u64 = 77;
+}
+
 pub fn soroban_encode(
     loc: &Loc,
     args: Vec<Expression>,
@@ -302,7 +329,7 @@ pub fn soroban_encode_arg(
                     pointer: Box::new(item_var.clone()),
                 },
                 32,
-                4,
+                tags::U32,
             );
             let len_u32val = encode_object(
                 loc,
@@ -313,7 +340,7 @@ pub fn soroban_encode_arg(
                     args: vec![item_var],
                 },
                 32,
-                4,
+                tags::U32,
             );
 
             let host_fn = if matches!(item.ty(), Type::String) {
@@ -408,7 +435,7 @@ pub fn soroban_encode_arg(
                     right: Box::new(Expression::NumberLiteral {
                         loc: item.loc(),
                         ty: Type::Uint(64),
-                        value: 4u64.into(),
+                        value: tags::I32.into(),
                     }),
                     overflowing: false,
                 },
@@ -434,7 +461,7 @@ pub fn soroban_encode_arg(
                 }),
             };
 
-            let tag = 7;
+            let tag = tags::I64_SML;
 
             let added = Expression::Add {
                 loc: item.loc(),
@@ -493,7 +520,7 @@ pub fn soroban_encode_arg(
                         right: Box::new(Expression::NumberLiteral {
                             loc,
                             ty: Type::Uint(64),
-                            value: BigInt::from(4),
+                            value: BigInt::from(tags::U32),
                         }),
                     };
 
@@ -521,7 +548,7 @@ pub fn soroban_encode_arg(
                         right: Box::new(Expression::NumberLiteral {
                             loc,
                             ty: Type::Uint(64),
-                            value: BigInt::from(4),
+                            value: BigInt::from(tags::U32),
                         }),
                         overflowing: false,
                     };
@@ -786,8 +813,8 @@ fn encode_i128(
         }),
     };
     let tag = match int128_ty {
-        Type::Int(128) => 11,
-        Type::Uint(128) => 10,
+        Type::Int(128) => tags::I128_SML,
+        Type::Uint(128) => tags::U128_SML,
         _ => unreachable!(),
     };
 
@@ -923,7 +950,7 @@ fn encode_u64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, value: Expressi
         right: Expression::NumberLiteral {
             loc: Loc::Codegen,
             ty: Type::Uint(64),
-            value: BigInt::from(6_u64),
+            value: BigInt::from(tags::U64_SML),
         }
         .into(),
         overflowing: false,
@@ -1042,8 +1069,8 @@ fn decode_i128(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expressio
     let return_block = cfg.new_basic_block("finish".to_string());
 
     let predicate = match ty {
-        Type::Int(128) => 11,
-        Type::Uint(128) => 10,
+        Type::Int(128) => tags::I128_SML,
+        Type::Uint(128) => tags::U128_SML,
         _ => unreachable!(),
     };
     let is_in_obj = Expression::Equal {
@@ -1487,7 +1514,7 @@ fn decode_u64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expression
         right: Expression::NumberLiteral {
             loc: pt::Loc::Codegen,
             ty: Type::Uint(64),
-            value: BigInt::from(6_u64),
+            value: BigInt::from(tags::U64_SML),
         }
         .into(),
     };
@@ -1542,7 +1569,7 @@ fn decode_u64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expression
         right: Expression::NumberLiteral {
             loc: pt::Loc::Codegen,
             ty: Type::Uint(64),
-            value: BigInt::from(4_u64),
+            value: BigInt::from(tags::U32),
         }
         .into(),
     };
@@ -1681,8 +1708,8 @@ fn encode_vector(
     };
 
     // VectorNewFromLinearMemory expects (ptr_u32val, len_u32val).
-    let encoded_ptr = encode_object(item.loc(), data_ptr, 32, 4);
-    let encoded_len = encode_object(item.loc(), len, 32, 4);
+    let encoded_ptr = encode_object(item.loc(), data_ptr, 32, tags::U32);
+    let encoded_len = encode_object(item.loc(), len, 32, tags::U32);
 
     let obj = vartab.temp_name("vec_obj", &Type::Uint(64));
     cfg.add(
@@ -1749,9 +1776,6 @@ fn decode_struct(
     }
 }
 
-/// Encode a `BytesLiteral` as a Soroban Symbol (b.j / `symbol_new_from_linear_memory`).
-/// Use ONLY for auth map keys, event topics, and Soroban enum tags — never for Solidity
-/// `string`/`bytes` data (those go through `soroban_encode_arg` after Phase 2).
 pub(crate) fn encode_as_symbol(
     item: Expression,
     cfg: &mut ControlFlowGraph,
@@ -1768,7 +1792,7 @@ pub(crate) fn encode_as_symbol(
                     pointer: Box::new(item.clone()),
                 },
                 32,
-                4,
+                tags::U32,
             );
             let len = encode_object(
                 loc,
@@ -1778,7 +1802,7 @@ pub(crate) fn encode_as_symbol(
                     value: BigInt::from(value.len()),
                 },
                 32,
-                4,
+                tags::U32,
             );
             (ptr, len)
         }
@@ -1868,8 +1892,6 @@ pub(crate) fn encode_as_symbol(
     }
 }
 
-/// Encode a value as a Soroban tagged small-value (e.g. U32Val: `value << 32 | 4`).
-/// Replaces the private `zext_shift_add` helper — same body, now `pub(crate)`.
 pub(crate) fn encode_object(loc: pt::Loc, value: Expression, shift: u64, tag: u64) -> Expression {
     let shifted = Expression::ShiftLeft {
         loc,
@@ -1899,8 +1921,6 @@ pub(crate) fn encode_object(loc: pt::Loc, value: Expression, shift: u64, tag: u6
     }
 }
 
-/// Decode a Soroban tagged small-value back to its payload as `u32`.
-/// Inverse of `encode_object`: `(tagged >> shift) as u32`.
 pub(crate) fn decode_object(loc: pt::Loc, tagged: Expression, shift: u64) -> Expression {
     Expression::Trunc {
         loc,
@@ -1918,8 +1938,7 @@ pub(crate) fn decode_object(loc: pt::Loc, tagged: Expression, shift: u64) -> Exp
         }),
     }
 }
-/// Decode a Soroban `StringObject` (i64 handle) → WASM `struct.vector` (Type::String).
-/// Pattern: `StringLen` (b.k) → decode length → `AllocDynamicBytes` → `StringCopyToLinearMemory` (b.g).
+
 pub(crate) fn decode_string(
     handle: Expression,
     cfg: &mut ControlFlowGraph,
@@ -1927,7 +1946,6 @@ pub(crate) fn decode_string(
 ) -> Expression {
     let loc = Loc::Codegen;
 
-    // 1. raw_len = string_len(handle) — returns U32Val (tagged i64)
     let raw_len_var = vartab.temp_name("str_len_raw", &Type::Uint(64));
     cfg.add(
         vartab,
@@ -1946,10 +1964,8 @@ pub(crate) fn decode_string(
         var_no: raw_len_var,
     };
 
-    // 2. Decode U32Val payload → plain u32 length
     let len_u32 = decode_object(loc, raw_len, 32);
 
-    // 3. Allocate a WASM buffer of that length
     let buf_var = vartab.temp_name("str_buf", &Type::String);
     cfg.add(
         vartab,
@@ -1970,27 +1986,23 @@ pub(crate) fn decode_string(
         var_no: buf_var,
     };
 
-    // 4. lm_pos = U32Val of the buffer's data pointer
     let lm_pos = encode_object(
         loc,
         Expression::VectorData {
             pointer: Box::new(buf.clone()),
         },
         32,
-        4,
+        tags::U32,
     );
 
-    // s_pos = U32Val(0): offset within the StringObject to start copying from
     let src_pos = Expression::NumberLiteral {
         loc,
         ty: Type::Uint(64),
-        value: BigInt::from(4u64), // 0 << 32 | 4
+        value: BigInt::from(tags::U32),
     };
 
-    // Re-encode len as U32Val for the copy call
-    let len_u32val = encode_object(loc, len_u32, 32, 4);
+    let len_u32val = encode_object(loc, len_u32, 32, tags::U32);
 
-    // 5. string_copy_to_linear_memory(handle, s_pos, lm_pos, len)
     let unused = vartab.temp_name("str_copy_ret", &Type::Uint(64));
     cfg.add(
         vartab,
@@ -2007,7 +2019,6 @@ pub(crate) fn decode_string(
     buf
 }
 
-/// Decode a Soroban `BytesObject` (i64 handle) => WASM `struct.vector` (Type::DynamicBytes).
 pub(crate) fn decode_bytes(
     handle: Expression,
     cfg: &mut ControlFlowGraph,
@@ -2061,14 +2072,14 @@ pub(crate) fn decode_bytes(
             pointer: Box::new(buf.clone()),
         },
         32,
-        4,
+        tags::U32,
     );
     let src_pos = Expression::NumberLiteral {
         loc,
         ty: Type::Uint(64),
-        value: BigInt::from(4u64), // U32Val(0)
+        value: BigInt::from(tags::U32), // U32Val(0)
     };
-    let len_u32val = encode_object(loc, len_u32, 32, 4);
+    let len_u32val = encode_object(loc, len_u32, 32, tags::U32);
 
     let unused = vartab.temp_name("bytes_copy_ret", &Type::Uint(64));
     cfg.add(
@@ -2095,7 +2106,6 @@ fn decode_vector(
 ) -> Expression {
     let vec_len = vartab.temp_name("vec_len", &Type::Uint(64));
 
-    // Get the length of the vector by VecLen (returns U32Val in a 64-bit host object).
     let get_len_instr = Instr::Call {
         res: vec![vec_len],
         return_tys: vec![Type::Uint(64)],
@@ -2113,7 +2123,6 @@ fn decode_vector(
         var_no: vec_len,
     };
 
-    // Decode vector length from U32Val payload.
     let decoded_len_u64 = Expression::ShiftRight {
         loc: pt::Loc::Codegen,
         ty: Type::Uint(64),
@@ -2161,9 +2170,8 @@ fn decode_vector(
         pointer: decoded_buffer.clone().into(),
     };
 
-    let data_location = encode_object(Loc::Codegen, data_location, 32, 4);
+    let data_location = encode_object(Loc::Codegen, data_location, 32, tags::U32);
     let unused = vartab.temp_name("unused_void_return", &Type::Uint(64));
-    // VecUnpack expects vector object, output pointer (U32Val), and element count (U32Val).
     let unpack_instr = Instr::Call {
         res: vec![unused],
         return_tys: vec![Type::Uint(64)],
