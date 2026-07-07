@@ -14,6 +14,7 @@ use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::polkadot::return_code as polkadot;
+use crate::codegen::targets::soroban::{soroban_bytes_length, soroban_strings_length};
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::ExternalCallAccounts;
@@ -754,6 +755,10 @@ pub fn expression(
             array,
             elem_ty,
         } => {
+            // TODO-refactor : a good change to move the implementation of storage array length
+            // to CFG instead of llvm-ir.
+            // right now for bytes and strings we simply use a host function
+            // to get the length.
             let array_ty = array.ty().deref_into();
             let array = expression(array, cfg, contract_no, func, ns, vartab, opt, target);
 
@@ -770,12 +775,8 @@ pub fn expression(
                     .unwrap();
                     expression(&ast_expr, cfg, contract_no, func, ns, vartab, opt, target)
                 }
-                Type::DynamicBytes | Type::String => Expression::StorageArrayLength {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    array: Box::new(array),
-                    elem_ty: elem_ty.clone(),
-                },
+                Type::DynamicBytes => soroban_bytes_length(loc, array, cfg, vartab, ns),
+                Type::String => soroban_strings_length(loc, array, cfg, vartab, ns),
                 Type::Array(_, dim) => match dim.last().unwrap() {
                     ArrayLength::Dynamic => {
                         target.lower_storage_array_length(loc, ty, array, elem_ty, cfg, vartab, ns)
@@ -1183,6 +1184,8 @@ pub fn expression(
             kind: ast::Builtin::ArrayPush,
             args,
         } => {
+            // TODO: since array push is builtin i suggest to movt it to
+            // targets/target/mod.rs
             if args[0].ty().is_contract_storage() {
                 target.storage_array_push(loc, args, cfg, contract_no, func, ns, vartab, opt)
             } else {
@@ -1212,6 +1215,8 @@ pub fn expression(
             kind: ast::Builtin::ArrayPop,
             args,
         } => {
+            // TODO: since array pop is builtin i suggest moving it to
+            // targets/target/mod.rs in lower_builtin
             if args[0].ty().is_contract_storage() {
                 target.storage_array_pop(loc, args, &ty[0], cfg, contract_no, func, ns, vartab, opt)
             } else {
@@ -3589,6 +3594,11 @@ fn array_subscript(
     opt: &Options,
     target: &dyn TargetCodegen,
 ) -> Expression {
+    // TODO: the function handling many subscript
+    // e.g array - bytes - map - ...
+    // i prefer to split it and dispatch to separte functions
+    // TODO: for bytes storage subscript we can write it in CFG
+    // instead of llvm-ir.
     if array_ty.is_storage_bytes() {
         return Expression::Subscript {
             loc: *loc,

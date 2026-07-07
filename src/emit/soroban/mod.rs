@@ -65,6 +65,7 @@ impl HostFunctions {
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
             HostFunctions::VectorNew => bin.context.i64_type().fn_type(&[], false),
+            HostFunctions::BytesNew => bin.context.i64_type().fn_type(&[], false),
             HostFunctions::VecPopBack => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::VecGet => bin
                 .context
@@ -153,6 +154,24 @@ impl HostFunctions {
                 .fn_type(&[ty.into(), ty.into()], false),
             HostFunctions::BytesLen => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::BytesCopyToLinearMemory => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::BytesGet => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::BytesPut => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::BytesPush => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::BytesPop => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::StringLen => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::StringCopyToLinearMemory => bin
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into(), ty.into(), ty.into()], false),
@@ -342,7 +361,9 @@ impl SorobanTarget {
                                 ast::Type::Uint(256) => ScSpecTypeDef::U256,
                                 ast::Type::Bool => ScSpecTypeDef::Bool,
                                 ast::Type::Address(_) => ScSpecTypeDef::Address,
-                                ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
+                                ast::Type::Bytes(_) | ast::Type::DynamicBytes => {
+                                    ScSpecTypeDef::Bytes
+                                }
                                 ast::Type::String => ScSpecTypeDef::String,
                                 ast::Type::Array(ty, _) => {
                                     let element = Self::vec_spec_type(ty.as_ref());
@@ -381,10 +402,16 @@ impl SorobanTarget {
                             ast::Type::Int(_) => ScSpecTypeDef::I32,
                             ast::Type::Bool => ScSpecTypeDef::Bool,
                             ast::Type::Address(_) => ScSpecTypeDef::Address,
-                            ast::Type::Bytes(_) => ScSpecTypeDef::Bytes,
+                            ast::Type::Bytes(_) | ast::Type::DynamicBytes => ScSpecTypeDef::Bytes,
                             ast::Type::String => ScSpecTypeDef::String,
                             ast::Type::Void => ScSpecTypeDef::Void,
                             ast::Type::Struct(_) => ScSpecTypeDef::Void, // TODO: Map struct types.
+                            ast::Type::Array(elem, _) => {
+                                let element = Self::vec_spec_type(elem.as_ref());
+                                ScSpecTypeDef::Vec(Box::new(ScSpecTypeVec {
+                                    element_type: Box::new(element),
+                                }))
+                            }
                             _ => panic!("unsupported return type {ty:?}"),
                         }
                     }) // TODO: Map type.
@@ -434,6 +461,7 @@ impl SorobanTarget {
             HostFunctions::LogFromLinearMemory,
             HostFunctions::SymbolNewFromLinearMemory,
             HostFunctions::VectorNew,
+            HostFunctions::BytesNew,
             HostFunctions::Call,
             HostFunctions::VectorNewFromLinearMemory,
             HostFunctions::VecUnpackToLinearMemory,
@@ -470,6 +498,13 @@ impl SorobanTarget {
             HostFunctions::GetCurrentContractAddress,
             HostFunctions::BytesNewFromLinearMemory,
             HostFunctions::BytesCopyToLinearMemory,
+            HostFunctions::BytesLen,
+            HostFunctions::BytesGet,
+            HostFunctions::BytesPut,
+            HostFunctions::BytesPush,
+            HostFunctions::BytesPop,
+            HostFunctions::StringLen,
+            HostFunctions::StringCopyToLinearMemory,
             HostFunctions::VecLen,
             HostFunctions::VecPopBack,
             HostFunctions::ContractEvent,

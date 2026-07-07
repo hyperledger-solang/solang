@@ -712,6 +712,20 @@ fn bigint_to_expression(
                 value
             }
         }
+        Type::Bytes(n) => {
+            let bits = *n as usize * 8;
+            if value.sign() == Sign::Minus {
+                let mut bs = value.to_signed_bytes_le();
+                bs.resize(bits / 8, 0xff);
+                BigInt::from_bytes_le(Sign::Plus, &bs)
+            } else if value.bits() > bits as u64 {
+                let (_, mut bs) = value.to_bytes_le();
+                bs.truncate(bits / 8);
+                BigInt::from_bytes_le(Sign::Plus, &bs)
+            } else {
+                value
+            }
+        }
         Type::StorageRef(..) => value,
         _ => unreachable!(),
     };
@@ -1328,7 +1342,11 @@ fn reference_variable(
                 // There must be at least one definition, and all should evaluate to the same value
                 let mut v = None;
 
-                for def in defs.keys() {
+                for (def, modified) in defs {
+                    if *modified {
+                        v = None;
+                        break;
+                    }
                     if let Some(expr) = get_definition(def, cfg) {
                         let expr = expression(expr, None, cfg, ns);
 

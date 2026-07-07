@@ -326,9 +326,42 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue,
         slot: IntValue<'a>,
         index: IntValue<'a>,
-        loc: Loc,
+        _loc: Loc,
     ) -> IntValue<'a> {
-        unsupported_soroban(loc, "storage bytes subscript loads")
+        emit_context!(bin);
+
+        // Load BytesObject handle from persistent storage.
+        let bytes_obj = call!(
+            HostFunctions::GetContractData.name(),
+            &[slot.into(), i64_const!(1).into()],
+            "bytes_load"
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
+
+        let idx_encoded = encode_value(index, 32, 4, bin);
+
+        // bytes_get(handle, U32Val(i)) → U32Val(byte)
+        let raw = call!(
+            HostFunctions::BytesGet.name(),
+            &[bytes_obj.into(), idx_encoded.into()],
+            "bytes_get"
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
+
+        // Decode U32Val: shift right 32 and truncate to i8 (bytes1).
+        let shifted = bin
+            .builder
+            .build_right_shift(raw, i64_const!(32), false, "byte_raw")
+            .unwrap();
+        bin.builder
+            .build_int_truncate(shifted, bin.context.i8_type(), "byte_val")
+            .unwrap()
     }
 
     fn set_storage_bytes_subscript(
@@ -338,9 +371,50 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         index: IntValue<'a>,
         value: IntValue<'a>,
-        loc: Loc,
+        _loc: Loc,
     ) {
-        unsupported_soroban(loc, "storage bytes subscript stores")
+        emit_context!(bin);
+
+        // Load existing BytesObject handle from persistent storage.
+        let bytes_obj = call!(
+            HostFunctions::GetContractData.name(),
+            &[slot.into(), i64_const!(1).into()],
+            "bytes_load"
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
+
+        let idx_encoded = encode_value(index, 32, 4, bin);
+
+        // bytes1 value is i8; zero-extend to i32 for U32Val encoding.
+        let value = if value.get_type().get_bit_width() != 32 {
+            bin.builder
+                .build_int_z_extend(value, bin.context.i32_type(), "byte32")
+                .unwrap()
+        } else {
+            value
+        };
+        let val_encoded = encode_value(value, 32, 4, bin);
+
+        // bytes_put(handle, U32Val(i), U32Val(byte)) → new BytesObject
+        let new_obj = call!(
+            HostFunctions::BytesPut.name(),
+            &[bytes_obj.into(), idx_encoded.into(), val_encoded.into()],
+            "bytes_put"
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
+
+        // Write the new handle back to persistent storage.
+        call!(
+            HostFunctions::PutContractData.name(),
+            &[slot.into(), new_obj.into(), i64_const!(1).into()],
+            "bytes_store"
+        );
     }
 
     fn storage_subscript(
@@ -790,6 +864,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         emit_context!(bin);
 
         match expr {
+            // TODO: a good chance to move timestamp implementation to codegen
+            // and use the CFG instead of llvm-ir
             Expression::Builtin {
                 kind: Builtin::Timestamp,
                 args,
@@ -917,6 +993,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
                 args,
                 ..
             } => {
+                // TODO: a good chance to move ExtendTtl implementation to codegen
+                // and use CFG instead of llvm-ir
                 // Get arguments
                 // (func $extend_contract_data_ttl (param $k_val i64) (param $t_storage_type i64) (param $threshold_u32_val i64) (param $extend_to_u32_val i64) (result i64))
                 assert_eq!(args.len(), 4, "extendTtl expects 4 arguments");
@@ -1352,19 +1430,21 @@ pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<
 
     // Tag definitions from CAP-0046
     let tag = match ty {
-        Type::Bool => 0,        // Tag::False
-        Type::Uint(32) => 4,    // Tag::U32Val
-        Type::Int(32) => 5,     // Tag::I32Val
-        Type::Enum(_) => 4,     // Tag::U32Val
-        Type::Uint(64) => 6,    // Tag::U64Small
-        Type::Int(64) => 7,     // Tag::I64Small
-        Type::Uint(128) => 10,  // Tag::U128Small
-        Type::Int(128) => 11,   // Tag::I128Small
-        Type::Uint(256) => 12,  // Tag::U256Small
-        Type::Int(256) => 13,   // Tag::I256Small
-        Type::String => 73,     // Tag::StringObject
-        Type::Address(_) => 77, // Tag::AddressObject
-        Type::Void => 2,        // Tag::Void
+        Type::Bool => 0,          // Tag::False
+        Type::Uint(32) => 4,      // Tag::U32Val
+        Type::Int(32) => 5,       // Tag::I32Val
+        Type::Enum(_) => 4,       // Tag::U32Val
+        Type::Uint(64) => 6,      // Tag::U64Small
+        Type::Int(64) => 7,       // Tag::I64Small
+        Type::Uint(128) => 10,    // Tag::U128Small
+        Type::Int(128) => 11,     // Tag::I128Small
+        Type::Uint(256) => 12,    // Tag::U256Small
+        Type::Int(256) => 13,     // Tag::I256Small
+        Type::Bytes(_) => 72,     // Tag::BytesObject
+        Type::String => 73,       // Tag::StringObject
+        Type::DynamicBytes => 72, // Tag::BytesObject
+        Type::Address(_) => 77,   // Tag::AddressObject
+        Type::Void => 2,          // Tag::Void
         _ => {
             // Fallback to Void for unsupported types
             2 // Tag::Void
