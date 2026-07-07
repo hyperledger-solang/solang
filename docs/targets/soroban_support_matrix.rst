@@ -35,13 +35,16 @@ Language Features
      - Constructors with arguments, public functions, and public getters. Examples: `token.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/token.sol>`_, `timelock.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/timelock/timelock.sol>`_, and `storage_types.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/storage_types.sol>`_.
    * - Core types and collections
      - Supported
-     - Primitive types, ``uint256`` and ``int256``, documented struct shapes, mappings and nested mappings, and memory/storage arrays. Examples: `token.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/token.sol>`_, `timelock.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/timelock/timelock.sol>`_, `liquidity_pool.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/liquidity_pool/liquidity_pool.sol>`_, `atomic_swap <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/atomic_swap>`_, and `liquidity_pool <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/liquidity_pool>`_.
+     - Primitive types, ``uint256`` and ``int256``, ``string``, ``bytes``, ``bytesN``, mappings and nested mappings, and memory/storage arrays. Examples: `token.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/token.sol>`_, `timelock.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/timelock/timelock.sol>`_, `liquidity_pool.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/liquidity_pool/liquidity_pool.sol>`_, `atomic_swap <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/atomic_swap>`_, and `liquidity_pool <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/liquidity_pool>`_.
    * - Events and logs
      - Supported
      - Solidity ``event`` declarations and ``emit`` statements are supported. Indexed fields map to Soroban event topics and non-indexed fields map to event data. ``print()`` and runtime error logging are also available. Example: `error.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/error.sol>`_.
-   * - Complex user-defined and composite types
+   * - Structs
      - Partial support
-     - Coverage is still limited. More complex user-defined types and deeper composite values, such as nested structs, might not compile in some cases.
+     - Structs work as ABI function parameters and return values, and can be read from and written to contract storage. Fields of any scalar or reference type are supported, including ``string``, ``bytes``, ``bytesN``, nested structs, and integers up to 256-bit. Array fields inside structs, arrays of structs (``S[]``), and structs in ``event`` declarations are not yet supported.
+   * - Other complex user-defined and composite types
+     - Partial support
+     - Coverage is still limited. Deeper composite values may not compile in some cases.
    * - Yul and inline assembly
      - Unsupported
      - Not supported on the Soroban target.

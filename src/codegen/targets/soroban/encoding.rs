@@ -1741,7 +1741,6 @@ fn extract_tag(arg: Expression) -> Expression {
     }
 }
 
-#[allow(dead_code)]
 fn struct_field_key(
     name: &str,
     loc: pt::Loc,
@@ -1768,7 +1767,60 @@ fn encode_struct_map(
     ns: &Namespace,
     struct_no: usize,
 ) -> Expression {
-    encode_struct_storage(item, cfg, vartab, ns, struct_no)
+    let loc = item.loc();
+    let map_var = vartab.temp_name("struct_map", &Type::Uint(64));
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![map_var],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::MapNew.name().to_string(),
+            },
+            args: vec![],
+        },
+    );
+    let map_expr = Expression::Variable {
+        loc,
+        ty: Type::Uint(64),
+        var_no: map_var,
+    };
+
+    let fields = &ns.structs[struct_no].fields;
+    for (index, field) in fields.iter().enumerate() {
+        let name = field
+            .id
+            .as_ref()
+            .map(|id| id.name.clone())
+            .unwrap_or_else(|| index.to_string());
+        let key = struct_field_key(&name, loc, cfg, vartab, ns);
+
+        let member = Expression::StructMember {
+            loc,
+            ty: field.ty.clone(),
+            expr: Box::new(item.clone()),
+            member: index,
+        };
+        let value = Expression::Load {
+            loc: Loc::Codegen,
+            ty: field.ty.clone(),
+            expr: Box::new(member),
+        };
+        let value = soroban_encode_arg(value, cfg, vartab, ns);
+        cfg.add(
+            vartab,
+            Instr::Call {
+                res: vec![map_var],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::MapPut.name().to_string(),
+                },
+                args: vec![map_expr.clone(), key, value],
+            },
+        );
+    }
+
+    map_expr
 }
 
 fn encode_struct_storage(
@@ -1944,7 +1996,45 @@ fn decode_struct_map(
     ns: &Namespace,
     struct_ty: Type,
 ) -> Expression {
-    decode_struct_storage(arg, cfg, vartab, struct_no, ns, struct_ty)
+    let loc = arg.loc();
+    let fields = &ns.structs[struct_no].fields;
+    let mut members = Vec::with_capacity(fields.len());
+
+    for (index, field) in fields.iter().enumerate() {
+        let name = field
+            .id
+            .as_ref()
+            .map(|id| id.name.clone())
+            .unwrap_or_else(|| index.to_string());
+        let key = struct_field_key(&name, loc, cfg, vartab, ns);
+
+        let val_var = vartab.temp_name("map_val", &Type::Uint(64));
+        cfg.add(
+            vartab,
+            Instr::Call {
+                res: vec![val_var],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::MapGet.name().to_string(),
+                },
+                args: vec![arg.clone(), key],
+            },
+        );
+        let val = Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: val_var,
+        };
+
+        let decoded = soroban_decode_arg(val, cfg, vartab, ns, Some(field.ty.clone()));
+        members.push(decoded);
+    }
+
+    Expression::StructLiteral {
+        loc,
+        ty: struct_ty,
+        values: members,
+    }
 }
 
 pub(crate) fn encode_as_symbol(

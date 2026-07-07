@@ -978,9 +978,23 @@ pub(super) fn validate_abi_types(all_cfg: &[ControlFlowGraph], ns: &mut Namespac
     validate_unsupported_codegen_paths(all_cfg, ns);
 }
 
+fn soroban_struct_field_unsupported(ty: &Type, ns: &Namespace) -> Option<String> {
+    match ty {
+        Type::Array(..) => Some(ty.to_string(ns)),
+        Type::Struct(struct_ty) => struct_ty
+            .definition(ns)
+            .fields
+            .iter()
+            .find_map(|field| soroban_struct_field_unsupported(&field.ty, ns)),
+        _ => None,
+    }
+}
+
 fn unsupported_parameter_type(ty: &Type, ns: &Namespace) -> Option<String> {
     match ty {
-        Type::Struct(_) => Some(format!("{} memory", ty.to_string(ns))),
+        Type::Struct(_) => {
+            soroban_struct_field_unsupported(ty, ns).map(|_| format!("{} memory", ty.to_string(ns)))
+        }
         Type::Array(elem, _) if has_unsupported_soroban_array_element(elem.as_ref()) => {
             Some(format!("{} memory", ty.to_string(ns)))
         }
@@ -1023,7 +1037,9 @@ fn unsupported_event_type(ty: &Type, ns: &Namespace) -> Option<String> {
 
 fn unsupported_return_type(ty: &Type, ns: &Namespace) -> Option<String> {
     match ty {
-        Type::Struct(_) => Some(format!("{} memory", ty.to_string(ns))),
+        Type::Struct(_) => {
+            soroban_struct_field_unsupported(ty, ns).map(|_| format!("{} memory", ty.to_string(ns)))
+        }
         Type::Array(_, _) => Some(format!("{} memory", ty.to_string(ns))),
         _ => None,
     }
