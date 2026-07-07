@@ -9,7 +9,7 @@
 		"Govardhan G D <chioni1620@gmail.com>",
 		"Sean Young <sean@mess.org>"
 	],
-	"version": "0.3.4",
+	"version": "0.3.5",
 	"repository": "github.com/hyperledger/solang",
 	"engines": {
 		"vscode": "^1.43.0"

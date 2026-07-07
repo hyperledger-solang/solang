@@ -4,6 +4,45 @@ will be documented here.
 
 ## Unreleased
 
+## v0.3.5 Luxor
+
+### Added
+- **Soroban** Support for `string`, `bytes` and `bytesN` types. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** Support for structs. [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- **Soroban** Support for (u)int256. [Pratyksh Gupta](https://github.com/Pratyksh-Gupta)
+- **Soroban** Support for dynamic memory arrays. [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- **Soroban** Vectors are represented in storage as `VecObject`s. [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- **Soroban** Integer width rounding for unsupported integer widths. [Pratyksh Gupta](https://github.com/Pratyksh-Gupta)
+- **Soroban** Events are emitted via the `contract_event` host function. [0xull](https://github.com/0xull)
+- **Soroban** Added a `pause` example. [Amit Singhmar](https://github.com/Amit5601)
+
+### Changed
+- **codegen** Large internal refactor: introduced a `TargetCodegen` trait and moved
+  the Solana, Polkadot and Soroban backends under `src/codegen/targets/`, threading the
+  target through the lowering call graph and routing target-specific hooks (abi
+  encode/decode, storage arrays, events, builtins, load/store) through the trait. Added
+  an `EvmTarget` scaffold. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** Updated the Soroban protocol version to match testnet. [Ahmad Sameh](https://github.com/ahmadsamehh)
+- Bumped the inkwell crate to 0.5.0. [seanyoung](https://github.com/seanyoung)
+- Migrated the toolchain to Rust 1.90 (via 1.88). [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- Expanded the Soroban integration tests and examples, and reorganized the docs to
+  clarify Soroban support status. [salaheldinsoliman](https://github.com/salaheldinsoliman), [Mohamed Basuony](https://github.com/mohamedbasuony)
+- Binaries are uploaded on every push to the main branch. [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- Moved Lucas and Xermicus to Emeritus Maintainers. [seanyoung](https://github.com/seanyoung)
+
+### Fixed
+- Committed `Cargo.lock` (pinning `ed25519-dalek` to 2.2.0) so CI and release builds are
+  reproducible and no longer break on semver-compatible upstream dependency drift; the
+  lock is un-ignored in both `.gitignore` and `.dockerignore`. [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- The VS Code extension test runner no longer collects stray `*.test.js` files from
+  `node_modules`. [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- **Soroban** Improved error reporting. [mohamedbasuony](https://github.com/mohamedbasuony)
+- **Soroban** Use the instance storage modifier to match upstream. [Amit Singhmar](https://github.com/Amit5601)
+- **Soroban** Propagate `strict_soroban_types` and re-enable the Soroban testcases. [Pratyksh Gupta](https://github.com/Pratyksh-Gupta)
+- Silenced the `mismatched_lifetime_syntaxes` lint. [Samuel Moelius](https://github.com/smoelius)
+- Fixed clippy warnings for Rust 1.86 and 1.88, and fixed the docs test. [seanyoung](https://github.com/seanyoung)
+- Fixed typos in the documentation. [Pratyksh Gupta](https://github.com/Pratyksh-Gupta), [John Wick](https://github.com/johnwick)
+
 ## v0.3.4 London
 
 ### Added

@@ -4633,7 +4633,7 @@ dependencies = [
 
 [[package]]
 name = "solang"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anchor-syn",
  "assert_cmd",
