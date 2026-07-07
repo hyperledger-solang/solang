@@ -2,6 +2,11 @@
 
 All notable changes to the "solang" extension will be documented in this file.
 
+## [0.3.5]
+
+- Fixed the extension test runner collecting stray `*.test.js` files from `node_modules`. [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- Updated dependencies.
+
 ## [0.3.4]
 
 - Language server code completion is fully implemented. [chioni16](https://github.com/chioni16)
