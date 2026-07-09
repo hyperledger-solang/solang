@@ -14,7 +14,10 @@ use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::polkadot::return_code as polkadot;
-use crate::codegen::targets::soroban::{soroban_bytes_length, soroban_strings_length};
+use crate::codegen::targets::soroban::{
+    soroban_bytes_length, soroban_strings_length, soroban_struct_load, soroban_struct_member_load,
+    soroban_struct_member_store,
+};
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::ExternalCallAccounts;
@@ -59,6 +62,40 @@ pub fn expression(
             ns.contracts[contract_no].get_storage_slot(*loc, *var_contract_no, *var_no, ns, None)
         }
         ast::Expression::StorageLoad { loc, ty, expr } => {
+            if ns.target == Target::Soroban {
+                if let ast::Expression::StructMember {
+                    expr: var, field, ..
+                } = expr.as_ref()
+                {
+                    return soroban_struct_member_load(
+                        loc,
+                        var,
+                        *field,
+                        cfg,
+                        contract_no,
+                        func,
+                        ns,
+                        vartab,
+                        opt,
+                        target,
+                    );
+                }
+                if matches!(ty, Type::Struct(_)) {
+                    return soroban_struct_load(
+                        loc,
+                        expr,
+                        ty,
+                        cfg,
+                        contract_no,
+                        func,
+                        ns,
+                        vartab,
+                        opt,
+                        target,
+                    );
+                }
+            }
+
             let storage_type = storage_type(expr, ns);
             let storage = expression(expr, cfg, contract_no, func, ns, vartab, opt, target);
 
@@ -2949,6 +2986,34 @@ pub fn assign_single(
             }
         }
         _ => {
+            if ns.target == Target::Soroban {
+                if let ast::Expression::StructMember {
+                    expr: var,
+                    field,
+                    ty: member_ty,
+                    ..
+                } = left
+                {
+                    if member_ty.is_contract_storage()
+                        && matches!(var.ty().deref_any(), Type::Struct(_))
+                    {
+                        return soroban_struct_member_store(
+                            &left.loc(),
+                            var,
+                            *field,
+                            cfg_right,
+                            cfg,
+                            contract_no,
+                            func,
+                            ns,
+                            vartab,
+                            opt,
+                            target,
+                        );
+                    }
+                }
+            }
+
             let left_ty = left.ty();
             let ty = cfg_right.ty();
 

@@ -14,8 +14,8 @@ use solang_parser::helpers::CodeLocation;
 use solang_parser::pt;
 use solang_parser::pt::Loc;
 
-#[allow(unused)]
-mod tags {
+#[allow(dead_code)]
+pub(super) mod tags {
     // Inline / small-value tags (CAP-0046-01 §ScVal bit layout, bits 0-7)
     pub const FALSE: u64 = 0;
     pub const TRUE: u64 = 1;
@@ -195,9 +195,9 @@ pub fn soroban_decode_arg(
             decoded.cast(&Type::Enum(enum_no), ns)
         }
 
-        Type::Int(128) | Type::Uint(128) => decode_i128(wrapper_cfg, vartab, arg),
+        Type::Int(128) | Type::Uint(128) => decode_i128(wrapper_cfg, vartab, arg, &ty),
 
-        Type::Int(256) | Type::Uint(256) => decode_i256(wrapper_cfg, vartab, arg),
+        Type::Int(256) | Type::Uint(256) => decode_i256(wrapper_cfg, vartab, arg, &ty),
 
         Type::Uint(32) => {
             // get payload out of major bits then truncate to 32‑bit
@@ -245,7 +245,7 @@ pub fn soroban_decode_arg(
             signed: true,
         },
         Type::Struct(StructType::UserDefined(n)) => {
-            decode_struct(arg, wrapper_cfg, vartab, n, ns, ty)
+            decode_struct_map(arg, wrapper_cfg, vartab, n, ns, ty)
         }
         Type::Array(elem_ty, _) => {
             if let Type::StorageRef(_, _) = arg.ty() {
@@ -263,6 +263,43 @@ pub fn soroban_decode_arg(
                 ty.to_string(ns),
             )
         ),
+    }
+}
+
+pub fn soroban_storage_decode_arg(
+    arg: Expression,
+    wrapper_cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+    decode_as: Option<Type>,
+) -> Expression {
+    let ty = match &decode_as {
+        Some(ty) => ty.clone(),
+        None => match arg.ty() {
+            Type::Ref(inner) => *inner,
+            Type::StorageRef(_, inner) => *inner,
+            Type::SorobanHandle(inner) => *inner,
+            other => other,
+        },
+    };
+
+    match ty {
+        Type::Struct(StructType::UserDefined(n)) => {
+            decode_struct_storage(arg, wrapper_cfg, vartab, n, ns, ty)
+        }
+        _ => soroban_decode_arg(arg, wrapper_cfg, vartab, ns, decode_as),
+    }
+}
+
+pub fn soroban_storage_encode_arg(
+    item: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) -> Expression {
+    match item.ty() {
+        Type::Struct(StructType::UserDefined(n)) => encode_struct_storage(item, cfg, vartab, ns, n),
+        _ => soroban_encode_arg(item, cfg, vartab, ns),
     }
 }
 
@@ -709,12 +746,11 @@ pub fn soroban_encode_arg(
             }
         }
         Type::Struct(StructType::UserDefined(n)) => {
-            let buf = encode_struct(item.clone(), cfg, vartab, ns, n);
-
+            let map = encode_struct_map(item.clone(), cfg, vartab, ns, n);
             Instr::Set {
                 loc: Loc::Codegen,
                 res: obj,
-                expr: buf,
+                expr: map,
             }
         }
         Type::SorobanHandle(_) => Instr::Set {
@@ -1078,12 +1114,13 @@ fn encode_i256(
     ret
 }
 
-fn decode_i128(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expression) -> Expression {
-    let ty = match arg.ty() {
-        Type::Ref(inner_ty) => *inner_ty.clone(),
-        Type::SorobanHandle(inner_ty) => *inner_ty.clone(),
-        _ => arg.ty(),
-    };
+fn decode_i128(
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    arg: Expression,
+    ty: &Type,
+) -> Expression {
+    let ty: Type = ty.clone();
 
     let ret_var = vartab.temp_anonymous(&ty);
 
@@ -1291,12 +1328,13 @@ fn decode_i128(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expressio
 /// Decodes a 256-bit integer (signed or unsigned) from a Soroban ScVal.
 /// This function handles both Int256 and Uint256 types by retrieving
 /// the four 64-bit pieces from the host object.
-fn decode_i256(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expression) -> Expression {
-    let ty = match arg.ty() {
-        Type::Ref(inner_ty) => *inner_ty.clone(),
-        Type::SorobanHandle(inner_ty) => *inner_ty.clone(),
-        _ => arg.ty(),
-    };
+fn decode_i256(
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    arg: Expression,
+    ty: &Type,
+) -> Expression {
+    let ty: Type = ty.clone();
 
     let ret_var = vartab.temp_anonymous(&ty);
 
@@ -1703,41 +1741,104 @@ fn extract_tag(arg: Expression) -> Expression {
     }
 }
 
-/// encode a struct into a buffer where each field is 64 bits long soroban Val.
-fn encode_struct(
+#[allow(dead_code)]
+fn struct_field_key(
+    name: &str,
+    loc: pt::Loc,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) -> Expression {
+    encode_as_symbol(
+        Expression::BytesLiteral {
+            loc,
+            ty: Type::String,
+            value: name.as_bytes().to_vec(),
+        },
+        cfg,
+        vartab,
+        ns,
+    )
+}
+
+fn encode_struct_map(
     item: Expression,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
     ns: &Namespace,
     struct_no: usize,
 ) -> Expression {
-    let fields = &ns.structs[struct_no].fields;
-    let mut fields_vars = Vec::new();
+    encode_struct_storage(item, cfg, vartab, ns, struct_no)
+}
 
-    for (index, field) in fields.iter().enumerate() {
-        let field = Expression::StructMember {
-            loc: item.loc(),
-            ty: field.ty.clone(),
+fn encode_struct_storage(
+    item: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+    struct_no: usize,
+) -> Expression {
+    let loc = item.loc();
+    let field_tys: Vec<Type> = ns.structs[struct_no]
+        .fields
+        .iter()
+        .map(|f| f.ty.clone())
+        .collect();
+
+    let mut vec_no = vartab.temp_name("struct_vec", &Type::Uint(64));
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![vec_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::VectorNew.name().to_string(),
+            },
+            args: vec![],
+        },
+    );
+
+    for (index, field_ty) in field_tys.iter().enumerate() {
+        let member = Expression::StructMember {
+            loc,
+            ty: field_ty.clone(),
             expr: Box::new(item.clone()),
             member: index,
         };
-
-        let actual_loaded_field = Expression::Load {
+        let loaded = Expression::Load {
             loc: Loc::Codegen,
-            ty: field.ty(),
-            expr: field.into(),
+            ty: field_ty.clone(),
+            expr: Box::new(member),
         };
+        let encoded = soroban_encode_arg(loaded, cfg, vartab, ns);
 
-        fields_vars.push(actual_loaded_field);
+        let prev_vec = Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: vec_no,
+        };
+        let next_vec = vartab.temp_name("struct_vec", &Type::Uint(64));
+        cfg.add(
+            vartab,
+            Instr::Call {
+                res: vec![next_vec],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::VecPushBack.name().to_string(),
+                },
+                args: vec![prev_vec, encoded],
+            },
+        );
+        vec_no = next_vec;
     }
 
-    // now call soroban_encode for all fields
-    let ret = soroban_encode(&item.loc(), fields_vars, ns, vartab, cfg, false);
-
-    ret.0
+    Expression::Variable {
+        loc,
+        ty: Type::Uint(64),
+        var_no: vec_no,
+    }
 }
 
-/// Encode a linear-memory array into a Soroban VecObject using `VectorNewFromLinearMemory`.
 fn encode_vector(
     item: Expression,
     cfg: &mut ControlFlowGraph,
@@ -1778,42 +1879,54 @@ fn encode_vector(
     }
 }
 
-/// Decode a struct from soroban encoding. Struct fields are laid out sequentially in a buffer, where each field is 64 bits long.
-fn decode_struct(
-    mut item: Expression,
+fn decode_struct_storage(
+    vec_object: Expression,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
     struct_no: usize,
     ns: &Namespace,
     struct_ty: Type,
 ) -> Expression {
-    let tys = &ns.structs[struct_no]
+    let field_tys: Vec<Type> = ns.structs[struct_no]
         .fields
         .iter()
         .map(|f| f.ty.clone())
-        .collect::<Vec<_>>();
+        .collect();
 
     let mut members = Vec::new();
 
-    for ty in tys {
-        let loaded_val = Expression::Load {
-            loc: Loc::Codegen,
-            ty: Uint(64),
-            expr: Box::new(item.clone()),
-        };
-
-        let decode_val = soroban_decode_arg(loaded_val, cfg, vartab, ns, Some(ty.clone()));
-
-        members.push(decode_val);
-
-        item = Expression::AdvancePointer {
-            pointer: Box::new(item),
-            bytes_offset: Box::new(Expression::NumberLiteral {
+    for (index, ty) in field_tys.iter().enumerate() {
+        let idx_val = encode_object(
+            Loc::Codegen,
+            Expression::NumberLiteral {
                 loc: Loc::Codegen,
-                ty: Uint(32),
-                value: BigInt::from(8),
-            }),
+                ty: Type::Uint(32),
+                value: BigInt::from(index),
+            },
+            32,
+            tags::U32,
+        );
+
+        let elem_no = vartab.temp_name("struct_field_val", &Type::Uint(64));
+        cfg.add(
+            vartab,
+            Instr::Call {
+                res: vec![elem_no],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::VecGet.name().to_string(),
+                },
+                args: vec![vec_object.clone(), idx_val],
+            },
+        );
+        let elem = Expression::Variable {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            var_no: elem_no,
         };
+
+        let decoded = soroban_decode_arg(elem, cfg, vartab, ns, Some(ty.clone()));
+        members.push(decoded);
     }
 
     Expression::StructLiteral {
@@ -1821,6 +1934,17 @@ fn decode_struct(
         ty: struct_ty,
         values: members,
     }
+}
+
+fn decode_struct_map(
+    arg: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    struct_no: usize,
+    ns: &Namespace,
+    struct_ty: Type,
+) -> Expression {
+    decode_struct_storage(arg, cfg, vartab, struct_no, ns, struct_ty)
 }
 
 pub(crate) fn encode_as_symbol(
