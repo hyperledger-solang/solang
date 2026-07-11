@@ -382,14 +382,7 @@ pub fn soroban_encode_arg(
                 HostFunctions::BytesNewFromLinearMemory // b.3
             };
 
-            Instr::Call {
-                res: vec![obj],
-                return_tys: vec![Type::Uint(64)],
-                call: InternalCallTy::HostFunction {
-                    name: host_fn.name().to_string(),
-                },
-                args: vec![ptr_u32val, len_u32val],
-            }
+            host_call(vec![obj], host_fn, vec![ptr_u32val, len_u32val])
         }
         Type::Uint(32) | Type::Int(32) => {
             // widen to 64 bits so we can shift
@@ -491,7 +484,7 @@ pub fn soroban_encode_arg(
             }
         }
         Type::Address(_) => {
-            let instr = if let Expression::Cast {
+            if let Expression::Cast {
                 loc: _,
                 ty: _,
                 expr,
@@ -569,25 +562,16 @@ pub fn soroban_encode_arg(
                         var_no: str_key_temp,
                     };
 
-                    let soroban_str_key = Instr::Call {
-                        res: vec![str_key_temp],
-                        return_tys: vec![Type::Uint(64)],
-                        call: crate::codegen::cfg::InternalCallTy::HostFunction {
-                            name: HostFunctions::StringNewFromLinearMemory.name().to_string(),
-                        },
-                        args: vec![encoded.clone(), len.clone()],
-                    };
+                    cfg.add(
+                        vartab,
+                        host_call(
+                            vec![str_key_temp],
+                            HostFunctions::StringNewFromLinearMemory,
+                            vec![encoded.clone(), len.clone()],
+                        ),
+                    );
 
-                    cfg.add(vartab, soroban_str_key);
-
-                    Instr::Call {
-                        res: vec![obj],
-                        return_tys: vec![Type::Uint(64)],
-                        call: crate::codegen::cfg::InternalCallTy::HostFunction {
-                            name: HostFunctions::StrKeyToAddr.name().to_string(),
-                        },
-                        args: vec![str_key_var],
-                    }
+                    host_call(vec![obj], HostFunctions::StrKeyToAddr, vec![str_key_var])
                 } else {
                     Instr::Set {
                         loc: Loc::Codegen,
@@ -601,9 +585,7 @@ pub fn soroban_encode_arg(
                     res: obj,
                     expr: item.clone(),
                 }
-            };
-
-            instr
+            }
         }
         Type::Int(128) | Type::Uint(128) => {
             let low = Expression::Trunc {
@@ -638,79 +620,7 @@ pub fn soroban_encode_arg(
             }
         }
         Type::Int(256) | Type::Uint(256) => {
-            // For 256-bit integers, we need to split into four 64-bit pieces
-            // lo_lo: bits 0-63
-            // lo_hi: bits 64-127
-            // hi_lo: bits 128-191
-            // hi_hi: bits 192-255
-
-            let is_signed = matches!(item.ty(), Type::Int(256));
-
-            // Extract lo_lo (bits 0-63)
-            let lo_lo = Expression::Trunc {
-                loc: Loc::Codegen,
-                ty: Type::Int(64),
-                expr: Box::new(item.clone()),
-            };
-
-            // Extract lo_hi (bits 64-127)
-            let lo_hi_shift = Expression::ShiftRight {
-                loc: Loc::Codegen,
-                ty: Type::Int(256),
-                left: Box::new(item.clone()),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: Loc::Codegen,
-                    ty: Type::Int(256),
-                    value: BigInt::from(64),
-                }),
-                signed: is_signed,
-            };
-
-            let lo_hi = Expression::Trunc {
-                loc: Loc::Codegen,
-                ty: Type::Int(64),
-                expr: Box::new(lo_hi_shift),
-            };
-
-            // Extract hi_lo (bits 128-191)
-            let hi_lo_shift = Expression::ShiftRight {
-                loc: Loc::Codegen,
-                ty: Type::Int(256),
-                left: Box::new(item.clone()),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: Loc::Codegen,
-                    ty: Type::Int(256),
-                    value: BigInt::from(128),
-                }),
-                signed: is_signed,
-            };
-
-            let hi_lo = Expression::Trunc {
-                loc: Loc::Codegen,
-                ty: Type::Int(64),
-                expr: Box::new(hi_lo_shift),
-            };
-
-            // Extract hi_hi (bits 192-255)
-            let hi_hi_shift = Expression::ShiftRight {
-                loc: Loc::Codegen,
-                ty: Type::Int(256),
-                left: Box::new(item.clone()),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: Loc::Codegen,
-                    ty: Type::Int(256),
-                    value: BigInt::from(192),
-                }),
-                signed: is_signed,
-            };
-
-            let hi_hi = Expression::Trunc {
-                loc: Loc::Codegen,
-                ty: Type::Int(64),
-                expr: Box::new(hi_hi_shift),
-            };
-
-            let encoded = encode_i256(cfg, vartab, lo_lo, lo_hi, hi_lo, hi_hi, item.ty());
+            let encoded = encode_i256(cfg, vartab, item.clone());
             Instr::Set {
                 loc: item.loc(),
                 res: obj,
@@ -889,22 +799,16 @@ fn encode_i128(
     cfg.set_basic_block(should_be_in_host);
 
     let instr = match int128_ty {
-        Type::Int(128) => Instr::Call {
-            res: vec![ret_var],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjFromI128Pieces.name().to_string(),
-            },
-            args: vec![high, lo],
-        },
-        Type::Uint(128) => Instr::Call {
-            res: vec![ret_var],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjFromU128Pieces.name().to_string(),
-            },
-            args: vec![high, lo],
-        },
+        Type::Int(128) => host_call(
+            vec![ret_var],
+            HostFunctions::ObjFromI128Pieces,
+            vec![high, lo],
+        ),
+        Type::Uint(128) => host_call(
+            vec![ret_var],
+            HostFunctions::ObjFromU128Pieces,
+            vec![high, lo],
+        ),
         _ => unreachable!(),
     };
 
@@ -1017,14 +921,7 @@ fn encode_u64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, value: Expressi
 
     cfg.add(
         vartab,
-        Instr::Call {
-            res: vec![ret_var],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjFromU64.name().to_string(),
-            },
-            args: vec![value],
-        },
+        host_call(vec![ret_var], HostFunctions::ObjFromU64, vec![value]),
     );
 
     cfg.add(
@@ -1167,49 +1064,158 @@ fn encode_i64(
     ret
 }
 
-/// Encodes a 256-bit integer (signed or unsigned) into a Soroban ScVal.
-/// This function handles both Int256 and Uint256 types by splitting them into
-/// four 64-bit pieces and using the appropriate host functions.
-fn encode_i256(
+const SMALL_BODY_BITS: u64 = 56;
+
+fn i256_extract_limb(item: &Expression, shift: u64, is_signed: bool) -> Expression {
+    let source = if shift == 0 {
+        item.clone()
+    } else {
+        Expression::ShiftRight {
+            loc: Loc::Codegen,
+            ty: item.ty(),
+            left: Box::new(item.clone()),
+            right: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: item.ty(),
+                value: BigInt::from(shift),
+            }),
+            signed: is_signed,
+        }
+    };
+
+    Expression::Trunc {
+        loc: Loc::Codegen,
+        ty: Type::Int(64),
+        expr: Box::new(source),
+    }
+}
+
+fn i256_recompose_limb(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
-    lo_lo: Expression,
-    lo_hi: Expression,
-    hi_lo: Expression,
-    hi_hi: Expression,
-    int256_ty: Type,
+    arg: &Expression,
+    host_fn: HostFunctions,
+    shift: u64,
+    ty: &Type,
 ) -> Expression {
-    let ret_var = vartab.temp_anonymous(&lo_lo.ty());
+    let limb_var = vartab.temp_anonymous(&Type::Uint(64));
+    cfg.add(
+        vartab,
+        host_call(vec![limb_var], host_fn, vec![arg.clone()]),
+    );
 
+    let limb = Expression::ZeroExt {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        expr: Box::new(Expression::Variable {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            var_no: limb_var,
+        }),
+    };
+
+    if shift == 0 {
+        limb
+    } else {
+        Expression::ShiftLeft {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            left: Box::new(limb),
+            right: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: ty.clone(),
+                value: BigInt::from(shift),
+            }),
+        }
+    }
+}
+
+fn encode_i256(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, item: Expression) -> Expression {
+    let ret_var = vartab.temp_name("encoded_i256", &Type::Uint(64));
     let ret = Expression::Variable {
         loc: pt::Loc::Codegen,
-        ty: lo_lo.ty().clone(),
+        ty: Type::Uint(64),
         var_no: ret_var,
     };
 
-    // For 256-bit integers, we always use the host functions since they can't fit in a 64-bit ScVal
-    let instr = match int256_ty {
-        Type::Int(256) => Instr::Call {
-            res: vec![ret_var],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjFromI256Pieces.name().to_string(),
-            },
-            args: vec![hi_hi, hi_lo, lo_hi, lo_lo],
-        },
-        Type::Uint(256) => Instr::Call {
-            res: vec![ret_var],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjFromU256Pieces.name().to_string(),
-            },
-            args: vec![hi_hi, hi_lo, lo_hi, lo_lo],
-        },
-        _ => unreachable!(),
+    let ty = item.ty();
+    let is_signed = matches!(ty, Type::Int(256));
+    let small_tag = if is_signed {
+        tags::I256_SML
+    } else {
+        tags::U256_SML
     };
 
-    cfg.add(vartab, instr);
+    vartab.new_dirty_tracker();
+    let small_obj = cfg.new_basic_block("i256_small_obj".to_string());
+    let host_obj = cfg.new_basic_block("i256_host_obj".to_string());
+    let merge_block = cfg.new_basic_block("i256_merge".to_string());
 
+    let high_bits = 256 - SMALL_BODY_BITS;
+    let round_trip = Expression::ShiftRight {
+        loc: Loc::Codegen,
+        ty: ty.clone(),
+        left: Box::new(Expression::ShiftLeft {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            left: Box::new(item.clone()),
+            right: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: ty.clone(),
+                value: BigInt::from(high_bits),
+            }),
+        }),
+        right: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            value: BigInt::from(high_bits),
+        }),
+        signed: is_signed,
+    };
+    let cond = Expression::Equal {
+        loc: Loc::Codegen,
+        left: Box::new(round_trip),
+        right: Box::new(item.clone()),
+    };
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond,
+            true_block: small_obj,
+            false_block: host_obj,
+        },
+    );
+
+    cfg.set_basic_block(small_obj);
+    let body = i256_extract_limb(&item, 0, is_signed);
+    let encoded_val = encode_object(Loc::Codegen, body, 8, small_tag);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Loc::Codegen,
+            res: ret_var,
+            expr: encoded_val,
+        },
+    );
+    cfg.add(vartab, Instr::Branch { block: merge_block });
+
+    cfg.set_basic_block(host_obj);
+    let host_fn = if is_signed {
+        HostFunctions::ObjFromI256Pieces
+    } else {
+        HostFunctions::ObjFromU256Pieces
+    };
+    let pieces = vec![
+        i256_extract_limb(&item, 192, is_signed),
+        i256_extract_limb(&item, 128, is_signed),
+        i256_extract_limb(&item, 64, is_signed),
+        i256_extract_limb(&item, 0, is_signed),
+    ];
+    cfg.add(vartab, host_call(vec![ret_var], host_fn, pieces));
+    cfg.add(vartab, Instr::Branch { block: merge_block });
+
+    cfg.set_basic_block(merge_block);
+    cfg.set_phis(merge_block, vartab.pop_dirty_tracker());
     ret
 }
 
@@ -1322,22 +1328,16 @@ fn decode_i128(
     };
 
     let get_lo_instr = match ty {
-        Type::Int(128) => Instr::Call {
-            res: vec![low_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToI128Lo64.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
-        Type::Uint(128) => Instr::Call {
-            res: vec![low_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToU128Lo64.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
+        Type::Int(128) => host_call(
+            vec![low_var_no],
+            HostFunctions::ObjToI128Lo64,
+            vec![arg.clone()],
+        ),
+        Type::Uint(128) => host_call(
+            vec![low_var_no],
+            HostFunctions::ObjToU128Lo64,
+            vec![arg.clone()],
+        ),
         _ => unreachable!(),
     };
 
@@ -1357,22 +1357,16 @@ fn decode_i128(
     };
 
     let get_hi_instr = match ty {
-        Type::Int(128) => Instr::Call {
-            res: vec![high_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToI128Hi64.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
-        Type::Uint(128) => Instr::Call {
-            res: vec![high_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToU128Hi64.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
+        Type::Int(128) => host_call(
+            vec![high_var_no],
+            HostFunctions::ObjToI128Hi64,
+            vec![arg.clone()],
+        ),
+        Type::Uint(128) => host_call(
+            vec![high_var_no],
+            HostFunctions::ObjToU128Hi64,
+            vec![arg.clone()],
+        ),
         _ => unreachable!(),
     };
 
@@ -1424,246 +1418,127 @@ fn decode_i128(
     ret
 }
 
-/// Decodes a 256-bit integer (signed or unsigned) from a Soroban ScVal.
-/// This function handles both Int256 and Uint256 types by retrieving
-/// the four 64-bit pieces from the host object.
 fn decode_i256(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
     arg: Expression,
     ty: &Type,
 ) -> Expression {
-    let ty: Type = ty.clone();
-
-    let ret_var = vartab.temp_anonymous(&ty);
-
+    let ret_var = vartab.temp_name("decoded_i256", ty);
     let ret = Expression::Variable {
         loc: pt::Loc::Codegen,
         ty: ty.clone(),
         var_no: ret_var,
     };
 
-    // For 256-bit integers, we need to extract all four 64-bit pieces
-    // lo_lo: bits 0-63
-    // lo_hi: bits 64-127
-    // hi_lo: bits 128-191
-    // hi_hi: bits 192-255
-
-    // Extract lo_lo (bits 0-63)
-    let lo_lo_var_no = vartab.temp_anonymous(&Type::Uint(64));
-    let lo_lo_var = Expression::Variable {
-        loc: pt::Loc::Codegen,
-        ty: Type::Uint(64),
-        var_no: lo_lo_var_no,
+    let is_signed = matches!(ty, Type::Int(256));
+    let small_tag = if is_signed {
+        tags::I256_SML
+    } else {
+        tags::U256_SML
     };
 
-    let get_lo_lo_instr = match ty {
-        Type::Int(256) => Instr::Call {
-            res: vec![lo_lo_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToI256LoLo.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
-        Type::Uint(256) => Instr::Call {
-            res: vec![lo_lo_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToU256LoLo.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
-        _ => unreachable!(),
-    };
+    vartab.new_dirty_tracker();
+    let small_obj = cfg.new_basic_block("i256_small_obj".to_string());
+    let host_obj = cfg.new_basic_block("i256_host_obj".to_string());
+    let merge_block = cfg.new_basic_block("i256_merge".to_string());
 
-    cfg.add(vartab, get_lo_lo_instr);
-
-    // Extract lo_hi (bits 64-127)
-    let lo_hi_var_no = vartab.temp_anonymous(&Type::Uint(64));
-    let lo_hi_var = Expression::Variable {
-        loc: pt::Loc::Codegen,
-        ty: Type::Uint(64),
-        var_no: lo_hi_var_no,
-    };
-
-    let get_lo_hi_instr = match ty {
-        Type::Int(256) => Instr::Call {
-            res: vec![lo_hi_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToI256LoHi.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
-        Type::Uint(256) => Instr::Call {
-            res: vec![lo_hi_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToU256LoHi.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
-        _ => unreachable!(),
-    };
-
-    cfg.add(vartab, get_lo_hi_instr);
-
-    // Extract hi_lo (bits 128-191)
-    let hi_lo_var_no = vartab.temp_anonymous(&Type::Uint(64));
-    let hi_lo_var = Expression::Variable {
-        loc: pt::Loc::Codegen,
-        ty: Type::Uint(64),
-        var_no: hi_lo_var_no,
-    };
-
-    let get_hi_lo_instr = match ty {
-        Type::Int(256) => Instr::Call {
-            res: vec![hi_lo_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToI256HiLo.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
-        Type::Uint(256) => Instr::Call {
-            res: vec![hi_lo_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToU256HiLo.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
-        _ => unreachable!(),
-    };
-
-    cfg.add(vartab, get_hi_lo_instr);
-
-    // Extract hi_hi (bits 192-255)
-    let hi_hi_var_no = vartab.temp_anonymous(&Type::Uint(64));
-    let hi_hi_var = Expression::Variable {
-        loc: pt::Loc::Codegen,
-        ty: Type::Uint(64),
-        var_no: hi_hi_var_no,
-    };
-
-    let get_hi_hi_instr = match ty {
-        Type::Int(256) => Instr::Call {
-            res: vec![hi_hi_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToI256HiHi.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
-        Type::Uint(256) => Instr::Call {
-            res: vec![hi_hi_var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToU256HiHi.name().to_string(),
-            },
-            args: vec![arg.clone()],
-        },
-        _ => unreachable!(),
-    };
-
-    cfg.add(vartab, get_hi_hi_instr);
-
-    // Now combine all pieces to form the 256-bit value
-    // Start with hi_hi (bits 192-255)
-    let mut combined = Expression::ZeroExt {
+    let tag = extract_tag(arg.clone());
+    let cond = Expression::Equal {
         loc: Loc::Codegen,
-        ty: ty.clone(),
-        expr: Box::new(hi_hi_var),
-    };
-
-    // Shift left by 64 and add hi_lo (bits 128-191)
-    combined = Expression::ShiftLeft {
-        loc: Loc::Codegen,
-        ty: ty.clone(),
-        left: Box::new(combined),
+        left: Box::new(tag),
         right: Box::new(Expression::NumberLiteral {
             loc: Loc::Codegen,
-            ty: ty.clone(),
-            value: BigInt::from(64),
+            ty: Type::Uint(64),
+            value: BigInt::from(small_tag),
         }),
     };
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond,
+            true_block: small_obj,
+            false_block: host_obj,
+        },
+    );
 
-    let hi_lo_extended = Expression::ZeroExt {
-        loc: Loc::Codegen,
-        ty: ty.clone(),
-        expr: Box::new(hi_lo_var),
-    };
-
-    combined = Expression::Add {
-        loc: Loc::Codegen,
-        ty: ty.clone(),
-        overflowing: false,
-        left: Box::new(combined),
-        right: Box::new(hi_lo_extended),
-    };
-
-    // Shift left by 64 and add lo_hi (bits 64-127)
-    combined = Expression::ShiftLeft {
-        loc: Loc::Codegen,
-        ty: ty.clone(),
-        left: Box::new(combined),
-        right: Box::new(Expression::NumberLiteral {
-            loc: Loc::Codegen,
-            ty: ty.clone(),
-            value: BigInt::from(64),
-        }),
-    };
-
-    let lo_hi_extended = Expression::ZeroExt {
-        loc: Loc::Codegen,
-        ty: ty.clone(),
-        expr: Box::new(lo_hi_var),
-    };
-
-    combined = Expression::Add {
-        loc: Loc::Codegen,
-        ty: ty.clone(),
-        overflowing: false,
-        left: Box::new(combined),
-        right: Box::new(lo_hi_extended),
-    };
-
-    // Shift left by 64 and add lo_lo (bits 0-63)
-    combined = Expression::ShiftLeft {
-        loc: Loc::Codegen,
-        ty: ty.clone(),
-        left: Box::new(combined),
-        right: Box::new(Expression::NumberLiteral {
-            loc: Loc::Codegen,
-            ty: ty.clone(),
-            value: BigInt::from(64),
-        }),
-    };
-
-    let lo_lo_extended = Expression::ZeroExt {
-        loc: Loc::Codegen,
-        ty: ty.clone(),
-        expr: Box::new(lo_lo_var),
-    };
-
-    combined = Expression::Add {
-        loc: Loc::Codegen,
-        ty: ty.clone(),
-        overflowing: false,
-        left: Box::new(combined),
-        right: Box::new(lo_lo_extended),
-    };
-
-    // Set the final combined value
-    let set_instr = Instr::Set {
+    cfg.set_basic_block(small_obj);
+    let body = Expression::ShiftRight {
         loc: pt::Loc::Codegen,
-        res: ret_var,
-        expr: combined,
+        ty: Type::Int(64),
+        left: arg.clone().into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Int(64),
+            value: BigInt::from(8_u64),
+        }
+        .into(),
+        signed: is_signed,
     };
+    let extended = if is_signed {
+        Expression::SignExt {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            expr: Box::new(body),
+        }
+    } else {
+        Expression::ZeroExt {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            expr: Box::new(body),
+        }
+    };
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: pt::Loc::Codegen,
+            res: ret_var,
+            expr: extended,
+        },
+    );
+    cfg.add(vartab, Instr::Branch { block: merge_block });
 
-    cfg.add(vartab, set_instr);
+    cfg.set_basic_block(host_obj);
+    let (lolo_fn, lohi_fn, hilo_fn, hihi_fn) = if is_signed {
+        (
+            HostFunctions::ObjToI256LoLo,
+            HostFunctions::ObjToI256LoHi,
+            HostFunctions::ObjToI256HiLo,
+            HostFunctions::ObjToI256HiHi,
+        )
+    } else {
+        (
+            HostFunctions::ObjToU256LoLo,
+            HostFunctions::ObjToU256LoHi,
+            HostFunctions::ObjToU256HiLo,
+            HostFunctions::ObjToU256HiHi,
+        )
+    };
+    let limb_000 = i256_recompose_limb(cfg, vartab, &arg, lolo_fn, 0, ty);
+    let limb_064 = i256_recompose_limb(cfg, vartab, &arg, lohi_fn, 64, ty);
+    let limb_128 = i256_recompose_limb(cfg, vartab, &arg, hilo_fn, 128, ty);
+    let limb_192 = i256_recompose_limb(cfg, vartab, &arg, hihi_fn, 192, ty);
 
+    let recomposed = [limb_064, limb_128, limb_192]
+        .into_iter()
+        .fold(limb_000, |acc, limb| Expression::BitwiseOr {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            left: Box::new(acc),
+            right: Box::new(limb),
+        });
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Loc::Codegen,
+            res: ret_var,
+            expr: recomposed,
+        },
+    );
+    cfg.add(vartab, Instr::Branch { block: merge_block });
+    cfg.set_basic_block(merge_block);
+    cfg.set_phis(merge_block, vartab.pop_dirty_tracker());
     ret
 }
 
@@ -1802,14 +1677,7 @@ fn decode_u64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expression
 
     cfg.add(
         vartab,
-        Instr::Call {
-            res: vec![ret_var],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::ObjToU64.name().to_string(),
-            },
-            args: vec![arg],
-        },
+        host_call(vec![ret_var], HostFunctions::ObjToU64, vec![arg]),
     );
 
     cfg.add(
@@ -2107,14 +1975,11 @@ fn encode_vector(
     let obj = vartab.temp_name("vec_obj", &Type::Uint(64));
     cfg.add(
         vartab,
-        Instr::Call {
-            res: vec![obj],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::VectorNewFromLinearMemory.name().to_string(),
-            },
-            args: vec![encoded_ptr, encoded_len],
-        },
+        host_call(
+            vec![obj],
+            HostFunctions::VectorNewFromLinearMemory,
+            vec![encoded_ptr, encoded_len],
+        ),
     );
 
     Expression::Variable {
@@ -2329,14 +2194,11 @@ pub(crate) fn encode_as_symbol(
     let sym_var = vartab.temp_name("symbol_obj", &Type::Uint(64));
     cfg.add(
         vartab,
-        Instr::Call {
-            res: vec![sym_var],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::SymbolNewFromLinearMemory.name().to_string(),
-            },
-            args: vec![ptr_u32val, len_u32val],
-        },
+        host_call(
+            vec![sym_var],
+            HostFunctions::SymbolNewFromLinearMemory,
+            vec![ptr_u32val, len_u32val],
+        ),
     );
 
     Expression::Variable {
@@ -2375,6 +2237,17 @@ pub(crate) fn encode_object(loc: pt::Loc, value: Expression, shift: u64, tag: u6
     }
 }
 
+fn host_call(res: Vec<usize>, host_fn: HostFunctions, args: Vec<Expression>) -> Instr {
+    Instr::Call {
+        res,
+        return_tys: vec![Type::Uint(64)],
+        call: InternalCallTy::HostFunction {
+            name: host_fn.name().to_string(),
+        },
+        args,
+    }
+}
+
 pub(crate) fn decode_object(loc: pt::Loc, tagged: Expression, shift: u64) -> Expression {
     Expression::Trunc {
         loc,
@@ -2403,14 +2276,11 @@ pub(crate) fn decode_string(
     let raw_len_var = vartab.temp_name("str_len_raw", &Type::Uint(64));
     cfg.add(
         vartab,
-        Instr::Call {
-            res: vec![raw_len_var],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::StringLen.name().to_string(),
-            },
-            args: vec![handle.clone()],
-        },
+        host_call(
+            vec![raw_len_var],
+            HostFunctions::StringLen,
+            vec![handle.clone()],
+        ),
     );
     let raw_len = Expression::Variable {
         loc,
@@ -2460,14 +2330,11 @@ pub(crate) fn decode_string(
     let unused = vartab.temp_name("str_copy_ret", &Type::Uint(64));
     cfg.add(
         vartab,
-        Instr::Call {
-            res: vec![unused],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::StringCopyToLinearMemory.name().to_string(),
-            },
-            args: vec![handle, src_pos, lm_pos, len_u32val],
-        },
+        host_call(
+            vec![unused],
+            HostFunctions::StringCopyToLinearMemory,
+            vec![handle, src_pos, lm_pos, len_u32val],
+        ),
     );
 
     buf
@@ -2483,14 +2350,11 @@ pub(crate) fn decode_bytes(
     let raw_len_var = vartab.temp_name("bytes_len_raw", &Type::Uint(64));
     cfg.add(
         vartab,
-        Instr::Call {
-            res: vec![raw_len_var],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::BytesLen.name().to_string(),
-            },
-            args: vec![handle.clone()],
-        },
+        host_call(
+            vec![raw_len_var],
+            HostFunctions::BytesLen,
+            vec![handle.clone()],
+        ),
     );
     let raw_len = Expression::Variable {
         loc,
@@ -2538,14 +2402,11 @@ pub(crate) fn decode_bytes(
     let unused = vartab.temp_name("bytes_copy_ret", &Type::Uint(64));
     cfg.add(
         vartab,
-        Instr::Call {
-            res: vec![unused],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::BytesCopyToLinearMemory.name().to_string(),
-            },
-            args: vec![handle, src_pos, lm_pos, len_u32val],
-        },
+        host_call(
+            vec![unused],
+            HostFunctions::BytesCopyToLinearMemory,
+            vec![handle, src_pos, lm_pos, len_u32val],
+        ),
     );
 
     buf
@@ -2560,16 +2421,14 @@ fn decode_vector(
 ) -> Expression {
     let vec_len = vartab.temp_name("vec_len", &Type::Uint(64));
 
-    let get_len_instr = Instr::Call {
-        res: vec![vec_len],
-        return_tys: vec![Type::Uint(64)],
-        call: crate::codegen::cfg::InternalCallTy::HostFunction {
-            name: HostFunctions::VecLen.name().to_string(),
-        },
-        args: vec![vec_object.clone()],
-    };
-
-    cfg.add(vartab, get_len_instr);
+    cfg.add(
+        vartab,
+        host_call(
+            vec![vec_len],
+            HostFunctions::VecLen,
+            vec![vec_object.clone()],
+        ),
+    );
 
     let len_var = Expression::Variable {
         loc: pt::Loc::Codegen,
@@ -2626,16 +2485,14 @@ fn decode_vector(
 
     let data_location = encode_object(Loc::Codegen, data_location, 32, tags::U32);
     let unused = vartab.temp_name("unused_void_return", &Type::Uint(64));
-    let unpack_instr = Instr::Call {
-        res: vec![unused],
-        return_tys: vec![Type::Uint(64)],
-        call: crate::codegen::cfg::InternalCallTy::HostFunction {
-            name: HostFunctions::VecUnpackToLinearMemory.name().to_string(),
-        },
-        args: vec![vec_object.clone(), data_location, len_var],
-    };
-
-    cfg.add(vartab, unpack_instr);
+    cfg.add(
+        vartab,
+        host_call(
+            vec![unused],
+            HostFunctions::VecUnpackToLinearMemory,
+            vec![vec_object.clone(), data_location, len_var],
+        ),
+    );
 
     decoded_buffer
 }
