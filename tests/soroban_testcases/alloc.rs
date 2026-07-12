@@ -3,7 +3,6 @@
 use crate::build_solidity;
 use soroban_sdk::{IntoVal, Val};
 
-
 #[test]
 fn arrays_basic_ops_test() {
     let runtime = build_solidity(
