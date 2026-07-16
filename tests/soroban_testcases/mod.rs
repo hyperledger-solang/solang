@@ -3,6 +3,7 @@ mod alloc;
 mod array_args;
 mod atomic_swap;
 mod auth;
+mod block_number;
 mod bytes_fail;
 mod bytes_pass;
 mod constructor;
