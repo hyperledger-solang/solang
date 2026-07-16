@@ -763,26 +763,15 @@ fn encode_i128(
     };
 
     vartab.new_dirty_tracker();
+
+    let check_lo = cfg.new_basic_block("check_lo".to_string());
     let fits_in_56_bits = cfg.new_basic_block("fits_in_56_bits".to_string());
     let should_be_in_host = cfg.new_basic_block("should_be_in_host".to_string());
     let return_block = cfg.new_basic_block("finish".to_string());
 
-    let high_8_bits = Expression::ShiftRight {
+    let high_is_zero = Expression::Equal {
         loc: pt::Loc::Codegen,
-        ty: Type::Uint(64),
-        left: lo.clone().into(),
-        right: Expression::NumberLiteral {
-            loc: pt::Loc::Codegen,
-            ty: Type::Uint(64),
-            value: BigInt::from(56_u64),
-        }
-        .into(),
-        signed: false,
-    };
-
-    let cond = Expression::Equal {
-        loc: pt::Loc::Codegen,
-        left: high_8_bits.clone().into(),
+        left: high.clone().into(),
         right: Expression::NumberLiteral {
             loc: pt::Loc::Codegen,
             ty: Type::Uint(64),
@@ -794,7 +783,51 @@ fn encode_i128(
     cfg.add(
         vartab,
         Instr::BranchCond {
-            cond,
+            cond: high_is_zero,
+            true_block: check_lo,
+            false_block: should_be_in_host,
+        },
+    );
+
+    cfg.set_basic_block(check_lo);
+
+    // check if the low limb fits within the small representation limit
+    // signed positive must stay under 55 bits to avoid sign-extension confusion.
+    // unsigned can use up to 56 bits
+    let shift_amount = match int128_ty {
+        Type::Uint(128) => 56_u64,
+        Type::Int(128) => 55_u64,
+        _ => unreachable!(),
+    };
+
+    let lo_shifted = Expression::ShiftRight {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
+        left: lo.clone().into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(shift_amount),
+        }
+        .into(),
+        signed: false,
+    };
+
+    let lo_is_small = Expression::Equal {
+        loc: pt::Loc::Codegen,
+        left: lo_shifted.into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(0_u64),
+        }
+        .into(),
+    };
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: lo_is_small,
             true_block: fits_in_56_bits,
             false_block: should_be_in_host,
         },
@@ -1095,9 +1128,15 @@ fn decode_i128(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expressio
 
     cfg.set_basic_block(val_in_obj);
 
+    let is_signed = matches!(ty, Type::Int(128));
+
     let value = Expression::ShiftRight {
         loc: pt::Loc::Codegen,
-        ty: Type::Int(64),
+        ty: if is_signed {
+            Type::Int(64)
+        } else {
+            Type::Uint(64)
+        },
         left: arg.clone().into(),
         right: Expression::NumberLiteral {
             loc: pt::Loc::Codegen,
@@ -1105,13 +1144,21 @@ fn decode_i128(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expressio
             value: BigInt::from(8_u64),
         }
         .into(),
-        signed: false,
+        signed: is_signed,
     };
 
-    let extend = Expression::ZeroExt {
-        loc: Loc::Codegen,
-        ty: ty.clone(),
-        expr: Box::new(value.clone()),
+    let extend = match ty {
+        Type::Int(128) => Expression::SignExt {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            expr: Box::new(value.clone()),
+        },
+        Type::Uint(128) => Expression::ZeroExt {
+            loc: Loc::Codegen,
+            ty: ty.clone(),
+            expr: Box::new(value.clone()),
+        },
+        _ => unreachable!(),
     };
 
     let set_instr = Instr::Set {
