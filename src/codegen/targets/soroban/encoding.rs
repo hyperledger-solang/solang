@@ -774,7 +774,7 @@ fn encode_i128(
         left: high.clone().into(),
         right: Expression::NumberLiteral {
             loc: pt::Loc::Codegen,
-            ty: Type::Uint(64),
+            ty: high.ty(),
             value: BigInt::from(0_u64),
         }
         .into(),
@@ -1140,7 +1140,7 @@ fn decode_i128(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expressio
         left: arg.clone().into(),
         right: Expression::NumberLiteral {
             loc: pt::Loc::Codegen,
-            ty: Type::Int(64),
+            ty: Type::Uint(64),
             value: BigInt::from(8_u64),
         }
         .into(),
