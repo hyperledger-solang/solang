@@ -326,6 +326,32 @@ impl TargetCodegen for SorobanTarget {
                 );
                 Some(address_var)
             }
+            ast::Builtin::BlockNumber => {
+                let block_var_no = vartab.temp_name("block_number", &Type::Uint(64));
+                let block_var = Expression::Variable {
+                    loc: *loc,
+                    ty: Type::Uint(64),
+                    var_no: block_var_no,
+                };
+                cfg.add(
+                    vartab,
+                    Instr::Call {
+                        res: vec![block_var_no],
+                        return_tys: vec![Type::Uint(64)],
+                        call: InternalCallTy::HostFunction {
+                            name: HostFunctions::GetLedgerSequence.name().to_string(),
+                        },
+                        args: vec![],
+                    },
+                );
+                Some(soroban_decode_arg(
+                    block_var,
+                    cfg,
+                    vartab,
+                    ns,
+                    Some(Type::Uint(64)),
+                ))
+            }
             ast::Builtin::RequireAuth => {
                 let var_temp = vartab.temp(
                     &pt::Identifier {
