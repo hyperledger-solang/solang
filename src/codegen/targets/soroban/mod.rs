@@ -327,7 +327,7 @@ impl TargetCodegen for SorobanTarget {
                 Some(address_var)
             }
             ast::Builtin::BlockNumber => {
-                let block_var_no = vartab.temp_anonymous(&Type::Uint(64));
+                let block_var_no = vartab.temp_name("block_number", &Type::Uint(64));
                 let block_var = Expression::Variable {
                     loc: *loc,
                     ty: Type::Uint(64),
@@ -344,10 +344,7 @@ impl TargetCodegen for SorobanTarget {
                         args: vec![],
                     },
                 );
-                //decoding to uint64 since get_ledger_sequence returns
-                let decoded_block_number =
-                    soroban_decode_arg(block_var, cfg, vartab, ns, Some(Type::Uint(64)));
-                Some(decoded_block_number)
+                Some(soroban_decode_arg(block_var, cfg, vartab, ns, Some(Type::Uint(64))))
             }
             ast::Builtin::RequireAuth => {
                 let var_temp = vartab.temp(
