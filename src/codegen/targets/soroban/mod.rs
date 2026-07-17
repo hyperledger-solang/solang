@@ -344,7 +344,13 @@ impl TargetCodegen for SorobanTarget {
                         args: vec![],
                     },
                 );
-                Some(soroban_decode_arg(block_var, cfg, vartab, ns, Some(Type::Uint(64))))
+                Some(soroban_decode_arg(
+                    block_var,
+                    cfg,
+                    vartab,
+                    ns,
+                    Some(Type::Uint(64)),
+                ))
             }
             ast::Builtin::RequireAuth => {
                 let var_temp = vartab.temp(
