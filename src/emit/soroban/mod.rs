@@ -299,6 +299,9 @@ impl SorobanTarget {
             .add_function("storage_initializer", init_type, None);
 
         for (func_decl, cfg) in defines {
+            if cfg.is_placeholder() {
+                continue;
+            }
             emit_cfg(&mut SorobanTarget, bin, contract, cfg, func_decl);
         }
     }

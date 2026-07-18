@@ -17,6 +17,7 @@ mod integer_width_warnings;
 mod liquidity_pool;
 mod mappings;
 mod math;
+mod modifiers;
 mod print;
 mod storage;
 mod storage_array;
