@@ -38,7 +38,7 @@ fn compile_soroban(src: &str) -> Namespace {
 }
 
 #[test]
-fn nested_and_struct_function_abi_types_are_rejected() {
+fn array_and_multiple_return_abi_types_are_rejected() {
     let ns = compile_soroban(
         r#"contract test {
     struct Item {
@@ -75,13 +75,9 @@ fn nested_and_struct_function_abi_types_are_rejected() {
         .filter(|diagnostic| diagnostic.level == Level::Error)
         .collect::<Vec<_>>();
 
-    assert_eq!(errors.len(), 5);
+    assert_eq!(errors.len(), 3);
     assert!(errors.iter().any(|diagnostic| diagnostic.message
         == "type 'bytes[] memory' is not supported as a Soroban external function parameter"));
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "type 'struct test.Item memory' is not supported as a Soroban external function parameter"));
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "type 'struct test.Item memory' is not supported as a Soroban external function return value"));
     assert!(errors.iter().any(|diagnostic| diagnostic.message
         == "type 'uint64[] memory' is not supported as a Soroban external function return value"));
     assert!(errors.iter().any(|diagnostic| diagnostic.message

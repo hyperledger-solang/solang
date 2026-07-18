@@ -2,7 +2,59 @@
 
 use crate::build_solidity;
 use indexmap::Equivalent;
-use soroban_sdk::{testutils::Address as _, Address, FromVal, IntoVal, Val};
+use soroban_sdk::{
+    contracttype, testutils::Address as _, Address, Bytes, FromVal, IntoVal, Val, U256,
+};
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Rec {
+    pub zebra: u64,
+    pub apple: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct IntRec {
+    pub a: i32,
+    pub b: i64,
+    pub c: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ValRec {
+    pub a: bool,
+    pub b: u32,
+    pub c: Bytes,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Point {
+    pub x: u64,
+    pub y: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Line {
+    pub a: Point,
+    pub b: Point,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct Wide {
+    pub big: u128,
+    pub neg: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct Big256 {
+    pub v: U256,
+}
 
 #[test]
 fn get_fields_via_dot() {
@@ -231,4 +283,155 @@ fn get_whole_struct() {
     assert_eq!(rt, 42);
     assert!(ben.equivalent(&user));
     assert_eq!(amt, 7);
+}
+
+#[test]
+fn abi_struct_return_encodes_as_map() {
+    let runtime = build_solidity(
+        r#"
+        contract test {
+            struct Rec {
+                uint64 zebra;
+                uint64 apple;
+            }
+
+            function make(uint64 z, uint64 a) public pure returns (Rec memory) {
+                return Rec({ zebra: z, apple: a });
+            }
+        }
+        "#,
+        |_| {},
+    );
+    let addr = runtime.contracts.last().unwrap();
+    let z: Val = 7_u64.into_val(&runtime.env);
+    let a: Val = 9_u64.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "make", vec![z, a]);
+    let got = Rec::from_val(&runtime.env, &res);
+    assert_eq!(got, Rec { zebra: 7, apple: 9 });
+}
+
+#[test]
+fn abi_struct_return_mixed_integers() {
+    let runtime = build_solidity(
+        r#"
+        contract test {
+            struct S {
+                int64 b;
+                int128 c;
+                int32 a;
+            }
+
+            function make(int32 a, int64 b, int128 c) public pure returns (S memory) {
+                return S({ a: a, b: b, c: c });
+            }
+        }
+        "#,
+        |_| {},
+    );
+    let addr = runtime.contracts.last().unwrap();
+    let a: Val = (-7i32).into_val(&runtime.env);
+    let b: Val = (-9000i64).into_val(&runtime.env);
+    let c: Val = 100_000_000_000_000_000_000i128.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "make", vec![a, b, c]);
+
+    let got = IntRec::from_val(&runtime.env, &res);
+    assert_eq!(
+        got,
+        IntRec {
+            a: -7,
+            b: -9000,
+            c: 100_000_000_000_000_000_000i128,
+        }
+    );
+}
+
+#[test]
+fn abi_struct_return_value_types() {
+    let runtime = build_solidity(
+        r#"
+        contract test {
+            struct S {
+                bytes4 c;
+                bool a;
+                uint32 b;
+            }
+
+            function make() public pure returns (S memory) {
+                bool a = true;
+                uint32 b = 42;
+                bytes4 c = 0xDEADBEEF;
+                return S({ a: a, b: b, c: c });
+            }
+        }
+        "#,
+        |_| {},
+    );
+    let addr = runtime.contracts.last().unwrap();
+    let res = runtime.invoke_contract(addr, "make", vec![]);
+    let got = ValRec::from_val(&runtime.env, &res);
+
+    assert!(got.a);
+    assert_eq!(got.b, 42);
+    assert_eq!(
+        got.c,
+        Bytes::from_array(&runtime.env, &[0xDE, 0xAD, 0xBE, 0xEF])
+    );
+}
+
+#[test]
+fn abi_struct_decode_param_sum() {
+    let runtime = build_solidity(
+        r#"
+        contract test {
+            struct P {
+                uint64 y;
+                uint64 x;
+            }
+
+            function sum(P memory p) public pure returns (uint64) {
+                return p.x + p.y;
+            }
+        }
+        "#,
+        |_| {},
+    );
+    let addr = runtime.contracts.last().unwrap();
+    let arg: Val = Point { x: 3, y: 4 }.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "sum", vec![arg]);
+
+    let got: u64 = FromVal::from_val(&runtime.env, &res);
+    assert_eq!(got, 7);
+}
+
+#[test]
+fn abi_struct_decode_nested() {
+    let runtime = build_solidity(
+        r#"
+        contract test {
+            struct Point {
+                uint64 y;
+                uint64 x;
+            }
+
+            struct Line {
+                Point a;
+                Point b;
+            }
+
+            function span(Line memory l) public pure returns (uint64) {
+                return l.a.x + l.b.y;
+            }
+        }
+        "#,
+        |_| {},
+    );
+    let addr = runtime.contracts.last().unwrap();
+    let input = Line {
+        a: Point { x: 3, y: 7 },
+        b: Point { x: 13, y: 6 },
+    };
+    let res = runtime.invoke_contract(addr, "span", vec![input.into_val(&runtime.env)]);
+
+    let got: u64 = FromVal::from_val(&runtime.env, &res);
+    assert_eq!(got, 9);
 }

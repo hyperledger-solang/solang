@@ -21,6 +21,8 @@ mod print;
 mod storage;
 mod storage_array;
 mod strings;
+mod struct_abi_member_count;
+mod struct_abi_single_field;
 mod struct_member_count;
 mod struct_single_field;
 mod struct_whole_rw;
