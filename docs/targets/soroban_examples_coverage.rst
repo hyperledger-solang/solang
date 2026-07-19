@@ -55,6 +55,9 @@ Documented Counterparts
    * - `events <https://github.com/stellar/soroban-examples/tree/main/events>`_
      - `tests/soroban_testcases/events.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/events.rs>`_
      - Solidity ``event`` declarations and ``emit`` statements, with indexed fields mapping to Soroban topics and non-indexed fields mapping to event data.
+   * - `pause <https://github.com/stellar/soroban-examples/tree/main/pause>`_
+     - `examples/soroban/pause.sol <https://github.com/hyperledger-solang/solang/blob/main/examples/soroban/pause.sol>`_ and `tests/soroban_testcases/example_pause.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_pause.rs>`_
+     - Simple pause-flag contract: a single ``bool`` in instance storage, readable via ``paused()`` and writable via ``set(bool)``. Tested via ``example_pause_*`` test cases.
    * - `ttl <https://github.com/stellar/soroban-examples/tree/main/ttl>`_
      - `docs/examples/soroban/ttl_storage.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/ttl_storage.sol>`_
      - Extending TTL on stored contract data.
@@ -63,6 +66,28 @@ Solidity Translations
 +++++++++++++++++++++
 
 The following abridged snippets show how selected upstream Soroban examples are expressed in Solang Solidity.
+
+pause
+^^^^^
+
+Upstream Soroban example: `pause <https://github.com/stellar/soroban-examples/tree/main/pause>`_
+
+Solang Solidity example: `examples/soroban/pause.sol <https://github.com/hyperledger-solang/solang/blob/main/examples/soroban/pause.sol>`_
+
+.. code-block:: solidity
+
+    contract Pause {
+        bool instance paused_flag = false;
+
+        function paused() public view returns (bool) {
+            return paused_flag;
+        }
+
+        function set(bool paused) public {
+            paused_flag = paused;
+        }
+    }
+
 
 auth
 ^^^^
