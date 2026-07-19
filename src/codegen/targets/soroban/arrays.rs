@@ -116,7 +116,7 @@ pub(crate) fn soroban_storage_array_length(
     vartab: &mut Vartable,
     ns: &Namespace,
 ) -> Expression {
-    let vec_obj = load_raw_handle(loc, array, cfg, vartab);
+    let vec_obj = load_raw_handle(loc, array, None, cfg, vartab);
     soroban_vec_len(loc, ty, vec_obj, cfg, vartab, ns)
 }
 

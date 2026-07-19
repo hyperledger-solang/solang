@@ -161,7 +161,7 @@ pub(crate) fn soroban_bytes_length(
     vartab: &mut Vartable,
     ns: &Namespace,
 ) -> Expression {
-    let handle = load_raw_handle(loc, bytes_var, cfg, vartab);
+    let handle = load_raw_handle(loc, bytes_var, None, cfg, vartab);
     soroban_obj_length(loc, handle, HostFunctions::BytesLen, cfg, vartab, ns)
 }
 
@@ -172,7 +172,7 @@ pub(crate) fn soroban_strings_length(
     vartab: &mut Vartable,
     ns: &Namespace,
 ) -> Expression {
-    let handle = load_raw_handle(loc, string_var, cfg, vartab);
+    let handle = load_raw_handle(loc, string_var, None, cfg, vartab);
     soroban_obj_length(loc, handle, HostFunctions::StringLen, cfg, vartab, ns)
 }
 

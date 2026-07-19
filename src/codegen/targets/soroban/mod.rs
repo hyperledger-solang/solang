@@ -15,7 +15,7 @@ use self::events::SorobanEventEmitter;
 use self::storage_path::{is_descent_storage_expr, lower_storage_path, path_load, path_store};
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::error::CodegenError;
-use crate::codegen::expression::expression;
+use crate::codegen::expression::{expression, load_storage, storage_type};
 use crate::codegen::interface::{EventEmitter, TargetCodegen};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
@@ -399,28 +399,21 @@ impl TargetCodegen for SorobanTarget {
                     ty: Type::Address(false),
                     var_no: var_temp,
                 };
-                let expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, self);
-
                 let expr = if let Type::StorageRef(_, _) = args[0].ty() {
-                    let expr_no = vartab.temp_anonymous(&Type::Address(false));
-                    let expr = Expression::Variable {
-                        loc: pt::Loc::Codegen,
-                        ty: Type::Address(false),
-                        var_no: expr_no,
-                    };
-
-                    let storage_load = Instr::LoadStorage {
-                        res: expr_no,
-                        ty: Type::Address(false),
-                        storage: expr.clone(),
-                        storage_type: None,
-                    };
-
-                    cfg.add(vartab, storage_load);
-
-                    expr
+                    soroban_storage_load(
+                        loc,
+                        &args[0],
+                        &Type::Address(false),
+                        cfg,
+                        contract_no,
+                        func,
+                        ns,
+                        vartab,
+                        opt,
+                        self,
+                    )
                 } else {
-                    expr
+                    expression(&args[0], cfg, contract_no, func, ns, vartab, opt, self)
                 };
 
                 let instr = Instr::Call {
@@ -1103,36 +1096,29 @@ pub(crate) fn soroban_storage_load(
     vartab: &mut Vartable,
     opt: &Options,
     target: &dyn TargetCodegen,
-) -> Option<Expression> {
+) -> Expression {
     let is_bytes_subscript = matches!(base,
         ast::Expression::Subscript { array_ty, .. } if array_ty.is_storage_bytes());
 
+    // Struct member / array element: descend the single VecObject ledger entry
+    // (load root handle, vec_get each index) then decode the value.
     if !is_bytes_subscript && is_descent_storage_expr(base) {
         let (_, path, storage_type) =
             lower_storage_path(base, cfg, contract_no, func, ns, vartab, opt, target);
         let handle = path_load(&path, &storage_type, cfg, vartab, ns);
-        return Some(soroban_storage_decode_arg(
-            handle,
-            cfg,
-            vartab,
-            ns,
-            Some(ty.clone()),
-        ));
+        return soroban_storage_decode_arg(handle, cfg, vartab, ns, Some(ty.clone()));
     }
 
     if matches!(ty, Type::Struct(_)) {
+        let storage_ty = storage_type(base, ns);
         let storage = expression(base, cfg, contract_no, func, ns, vartab, opt, target);
-        let handle = load_raw_handle(loc, storage, cfg, vartab);
-        return Some(soroban_storage_decode_arg(
-            handle,
-            cfg,
-            vartab,
-            ns,
-            Some(ty.clone()),
-        ));
+        let handle = load_raw_handle(loc, storage, storage_ty, cfg, vartab);
+        return soroban_storage_decode_arg(handle, cfg, vartab, ns, Some(ty.clone()));
     }
 
-    None
+    let storage_type = storage_type(base, ns);
+    let storage = expression(base, cfg, contract_no, func, ns, vartab, opt, target);
+    load_storage(loc, ty, storage, cfg, vartab, storage_type, ns, target)
 }
 
 pub(crate) fn soroban_storage_incdec(
@@ -1800,6 +1786,7 @@ pub(crate) fn soroban_default_handle(
 pub(crate) fn load_raw_handle(
     loc: &pt::Loc,
     storage: Expression,
+    storage_type: Option<pt::StorageType>,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) -> Expression {
@@ -1810,7 +1797,7 @@ pub(crate) fn load_raw_handle(
             res: handle_no,
             ty: Type::Uint(64),
             storage,
-            storage_type: None,
+            storage_type,
         },
     );
     Expression::Variable {
