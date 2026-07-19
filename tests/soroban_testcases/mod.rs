@@ -9,6 +9,7 @@ mod bytes_pass;
 mod constructor;
 mod cross_contract_calls;
 mod events;
+mod example_events;
 mod hello_world;
 mod i128_u128;
 mod i256_u256;
