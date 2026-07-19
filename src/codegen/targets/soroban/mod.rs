@@ -11,7 +11,7 @@ use self::encoding::{
 use self::events::SorobanEventEmitter;
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::error::CodegenError;
-use crate::codegen::expression::{expression, load_storage};
+use crate::codegen::expression::{expression, load_storage, storage_type};
 use crate::codegen::interface::{EventEmitter, TargetCodegen};
 use crate::codegen::storage::storage_slots_array_push;
 use crate::codegen::vartable::Vartable;
@@ -356,7 +356,7 @@ impl TargetCodegen for SorobanTarget {
                         res: expr_no,
                         ty: Type::Address(false),
                         storage: expr.clone(),
-                        storage_type: None,
+                        storage_type: storage_type(&args[0], ns),
                     };
 
                     cfg.add(vartab, storage_load);
@@ -1271,6 +1271,7 @@ pub(crate) fn soroban_storage_push(
     target: &dyn TargetCodegen,
 ) -> Expression {
     // Storage wrapper: evaluate storage key/value and load vec object from storage.
+    let storage_ty = storage_type(&args[0], ns);
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target);
     let vec_ty = args[0].ty();
@@ -1281,7 +1282,7 @@ pub(crate) fn soroban_storage_push(
         var_expr.clone(),
         cfg,
         vartab,
-        None,
+        storage_ty.clone(),
         ns,
         target,
     );
@@ -1292,7 +1293,7 @@ pub(crate) fn soroban_storage_push(
         ty: vec_ty,
         value: new_vec_var.clone(),
         storage: var_expr.clone(),
-        storage_type: None,
+        storage_type: storage_ty,
     };
 
     cfg.add(vartab, store_instr);
@@ -1313,6 +1314,7 @@ pub(crate) fn soroban_storage_pop(
     target: &dyn TargetCodegen,
 ) -> Expression {
     // Storage wrapper: evaluate storage key and load vec object from storage.
+    let storage_ty = storage_type(&args[0], ns);
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     let vec_ty = args[0].ty();
 
@@ -1322,7 +1324,7 @@ pub(crate) fn soroban_storage_pop(
         var_expr.clone(),
         cfg,
         vartab,
-        None,
+        storage_ty.clone(),
         ns,
         target,
     );
@@ -1337,7 +1339,7 @@ pub(crate) fn soroban_storage_pop(
         ty: vec_ty,
         value: new_vec_var.clone(),
         storage: var_expr.clone(),
-        storage_type: None,
+        storage_type: storage_ty,
     };
 
     cfg.add(vartab, store_instr);
@@ -1485,7 +1487,7 @@ pub(crate) fn soroban_struct_member_store(
             ty: struct_ty,
             value: new_vec,
             storage: base_slot,
-            storage_type: None,
+            storage_type: storage_type(var, ns),
         },
     );
     val
@@ -1511,11 +1513,12 @@ pub(crate) fn soroban_bytes_push(
      * new_handle : BytesObject = bytes_push(old_handle, element);
      * args[0] = new_handle;
      * */
+    let storage_ty = storage_type(&args[0], ns);
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target);
     let bytes_ty = args[0].ty();
 
-    let handle = load_raw_handle(loc, var_expr.clone(), cfg, vartab);
+    let handle = load_raw_handle(loc, var_expr.clone(), storage_ty.clone(), cfg, vartab);
 
     let byte_u32 = value.cast(&Type::Uint(8), ns).cast(&Type::Uint(32), ns);
     let value_encoded = soroban_encode_arg(byte_u32, cfg, vartab, ns);
@@ -1544,7 +1547,7 @@ pub(crate) fn soroban_bytes_push(
             ty: bytes_ty,
             value: new_handle,
             storage: var_expr.clone(),
-            storage_type: None,
+            storage_type: storage_ty,
         },
     );
 
@@ -1570,10 +1573,11 @@ pub(crate) fn soroban_bytes_pop(
      * new_handle : BytesObject = bytes_pop(old_handle);
      * args[0] = new_handle;
      * */
+    let storage_ty = storage_type(&args[0], ns);
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
     let bytes_ty = args[0].ty();
 
-    let handle = load_raw_handle(loc, var_expr.clone(), cfg, vartab);
+    let handle = load_raw_handle(loc, var_expr.clone(), storage_ty.clone(), cfg, vartab);
 
     let new_no = vartab.temp_name("bytes_pop", &Type::Uint(64));
     cfg.add(
@@ -1599,7 +1603,7 @@ pub(crate) fn soroban_bytes_pop(
             ty: bytes_ty,
             value: new_handle,
             storage: var_expr,
-            storage_type: None,
+            storage_type: storage_ty,
         },
     );
 
@@ -1620,7 +1624,7 @@ pub(crate) fn soroban_bytes_length(
      * length       : U32Val      = BytesLength(bytes_handle);
      * encoded_len  : u32         = soroban_decode_arg(length);
      * */
-    let bytes_handle = load_raw_handle(loc, bytes_var, cfg, vartab);
+    let bytes_handle = load_raw_handle(loc, bytes_var, None, cfg, vartab);
     let var_no = vartab.temp_name("bytes_obj_length", &Type::Uint(64));
     let var = Expression::Variable {
         loc: *loc,
@@ -1648,7 +1652,7 @@ pub(crate) fn soroban_strings_length(
     vartab: &mut Vartable,
     ns: &Namespace,
 ) -> Expression {
-    let string_handle = load_raw_handle(loc, bytes_var, cfg, vartab);
+    let string_handle = load_raw_handle(loc, bytes_var, None, cfg, vartab);
     let var_no = vartab.temp_name("string_obj_length", &Type::Uint(64));
     let var = Expression::Variable {
         loc: *loc,
@@ -1868,6 +1872,7 @@ pub(crate) fn soroban_default_handle(
 fn load_raw_handle(
     loc: &pt::Loc,
     storage: Expression,
+    storage_type: Option<pt::StorageType>,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) -> Expression {
@@ -1878,7 +1883,7 @@ fn load_raw_handle(
             res: handle_no,
             ty: Type::Uint(64),
             storage,
-            storage_type: None,
+            storage_type,
         },
     );
     Expression::Variable {
@@ -1899,6 +1904,7 @@ fn soroban_load_storage_handle(
     opt: &Options,
     target: &dyn TargetCodegen,
 ) -> Expression {
+    let storage_type = storage_type(var, ns);
     let storage = expression(var, cfg, contract_no, func, ns, vartab, opt, target);
-    load_raw_handle(loc, storage, cfg, vartab)
+    load_raw_handle(loc, storage, storage_type, cfg, vartab)
 }
