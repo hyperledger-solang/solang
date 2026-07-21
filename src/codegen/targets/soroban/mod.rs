@@ -302,6 +302,32 @@ impl TargetCodegen for SorobanTarget {
                 );
                 Some(address_var)
             }
+            ast::Builtin::Timestamp => {
+                let timestamp_var_no = vartab.temp_name("block_number", &Type::Uint(64));
+                let timestamp_var = Expression::Variable {
+                    loc: *loc,
+                    ty: Type::Uint(64),
+                    var_no: timestamp_var_no,
+                };
+                cfg.add(
+                    vartab,
+                    Instr::Call {
+                        res: vec![timestamp_var_no],
+                        return_tys: vec![Type::Uint(64)],
+                        call: InternalCallTy::HostFunction {
+                            name: HostFunctions::GetLedgerTimestamp.name().to_string(),
+                        },
+                        args: vec![],
+                    },
+                );
+                Some(soroban_decode_arg(
+                    timestamp_var,
+                    cfg,
+                    vartab,
+                    ns,
+                    Some(Type::Uint(64)),
+                ))
+            }
             ast::Builtin::BlockNumber => {
                 let block_var_no = vartab.temp_name("block_number", &Type::Uint(64));
                 let block_var = Expression::Variable {
@@ -328,6 +354,7 @@ impl TargetCodegen for SorobanTarget {
                     Some(Type::Uint(64)),
                 ))
             }
+
             ast::Builtin::RequireAuth => {
                 let var_temp = vartab.temp(
                     &pt::Identifier {
