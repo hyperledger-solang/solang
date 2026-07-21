@@ -91,6 +91,8 @@ impl HostFunctions {
                 .fn_type(&[ty.into(), ty.into(), ty.into()], false),
             HostFunctions::ObjToU64 => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::ObjFromU64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjToI64 => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::ObjFromI64 => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::RequireAuth => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::AuthAsCurrContract => {
                 bin.context.i64_type().fn_type(&[ty.into()], false)
@@ -507,6 +509,8 @@ impl SorobanTarget {
             HostFunctions::VecUnpackToLinearMemory,
             HostFunctions::ObjToU64,
             HostFunctions::ObjFromU64,
+            HostFunctions::ObjToI64,
+            HostFunctions::ObjFromI64,
             HostFunctions::PutContractData,
             HostFunctions::ObjToI128Lo64,
             HostFunctions::ObjToI128Hi64,

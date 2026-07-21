@@ -62,11 +62,11 @@ pub fn soroban_encode(
         ty: Uint(32),
         value: size.into(),
     };
-    let encoded_bytes = vartab.temp_name("abi_encoded", &Type::Bytes(size as u8));
+    let encoded_bytes = vartab.temp_name("abi_encoded", &Type::DynamicBytes);
 
     let expr = Expression::AllocDynamicBytes {
         loc: *loc,
-        ty: Type::Bytes(size as u8),
+        ty: Type::DynamicBytes,
         size: size_expr.clone().into(),
         initializer: None,
     };
@@ -88,7 +88,7 @@ pub fn soroban_encode(
 
     let buffer = Expression::Variable {
         loc: *loc,
-        ty: Type::Bytes(size as u8),
+        ty: Type::DynamicBytes,
         var_no: encoded_bytes,
     };
 
@@ -122,24 +122,30 @@ pub fn soroban_encode(
 pub fn soroban_decode(
     _loc: &Loc,
     buffer: &Expression,
-    _types: &[Type],
+    types: &[Type],
     ns: &Namespace,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     _buffer_size_expr: Option<Expression>,
 ) -> Vec<Expression> {
-    let mut returns = Vec::new();
-
-    let loaded_val = Expression::Load {
-        loc: Loc::Codegen,
-        ty: Type::Uint(64),
-        expr: Box::new(buffer.clone()),
-    };
-
-    let decoded_val = soroban_decode_arg(loaded_val, cfg, vartab, ns, None);
-
-    returns.push(decoded_val);
-
+    let mut returns = Vec::with_capacity(types.len());
+    for (i, ty) in types.iter().enumerate() {
+        let loaded_val = Expression::Builtin {
+            loc: Loc::Codegen,
+            tys: vec![Type::Uint(64)],
+            kind: Builtin::ReadFromBuffer,
+            args: vec![
+                buffer.clone(),
+                Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(8 * i),
+                },
+            ],
+        };
+        let decoded_val = soroban_decode_arg(loaded_val, cfg, vartab, ns, Some(ty.clone()));
+        returns.push(decoded_val);
+    }
     returns
 }
 
@@ -233,17 +239,7 @@ pub fn soroban_decode_arg(
                 signed: true,
             }),
         },
-        Type::Int(64) => Expression::ShiftRight {
-            loc: Loc::Codegen,
-            ty: Type::Int(64),
-            left: arg.into(),
-            right: Box::new(Expression::NumberLiteral {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                value: BigInt::from(8u64),
-            }),
-            signed: true,
-        },
+        Type::Int(64) => decode_i64(wrapper_cfg, vartab, arg),
         Type::Struct(StructType::UserDefined(n)) => {
             decode_struct_map(arg, wrapper_cfg, vartab, n, ns, ty)
         }
@@ -487,35 +483,11 @@ pub fn soroban_encode_arg(
             }
         }
         Type::Int(64) => {
-            let shift_left = Expression::ShiftLeft {
-                loc: item.loc(),
-                ty: Type::Uint(64),
-                left: Box::new(item.clone()),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: item.loc(),
-                    ty: Type::Uint(64),
-                    value: BigInt::from(8),
-                }),
-            };
-
-            let tag = tags::I64_SML;
-
-            let added = Expression::Add {
-                loc: item.loc(),
-                ty: Type::Uint(64),
-                left: Box::new(shift_left),
-                right: Box::new(Expression::NumberLiteral {
-                    loc: item.loc(),
-                    ty: Type::Uint(64),
-                    value: BigInt::from(tag),
-                }),
-                overflowing: false,
-            };
-
+            let encoded = encode_i64(cfg, vartab, item.clone(), ns);
             Instr::Set {
                 loc: item.loc(),
                 res: obj,
-                expr: added,
+                expr: encoded,
             }
         }
         Type::Address(_) => {
@@ -1050,6 +1022,133 @@ fn encode_u64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, value: Expressi
             return_tys: vec![Type::Uint(64)],
             call: InternalCallTy::HostFunction {
                 name: HostFunctions::ObjFromU64.name().to_string(),
+            },
+            args: vec![value],
+        },
+    );
+
+    cfg.add(
+        vartab,
+        Instr::Branch {
+            block: return_block,
+        },
+    );
+
+    cfg.set_basic_block(return_block);
+    cfg.set_phis(return_block, vartab.pop_dirty_tracker());
+
+    ret
+}
+
+fn encode_i64(
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    value: Expression,
+    ns: &Namespace,
+) -> Expression {
+    let ret_var = vartab.temp_anonymous(&Type::Uint(64));
+
+    let ret = Expression::Variable {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
+        var_no: ret_var,
+    };
+
+    vartab.new_dirty_tracker();
+
+    let fits_small = cfg.new_basic_block("i64_fits_small".to_string());
+    let should_be_in_host = cfg.new_basic_block("i64_should_be_in_host".to_string());
+    let return_block = cfg.new_basic_block("i64_finish".to_string());
+
+    let shifted_left = Expression::ShiftLeft {
+        loc: Loc::Codegen,
+        ty: Type::Int(64),
+        left: Box::new(value.clone()),
+        right: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(8_u64),
+        }),
+    };
+
+    let round_trip = Expression::ShiftRight {
+        loc: Loc::Codegen,
+        ty: Type::Int(64),
+        left: Box::new(shifted_left),
+        right: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(8_u64),
+        }),
+        signed: true,
+    };
+
+    let fits = Expression::Equal {
+        loc: Loc::Codegen,
+        left: Box::new(round_trip),
+        right: Box::new(value.clone()),
+    };
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: fits,
+            true_block: fits_small,
+            false_block: should_be_in_host,
+        },
+    );
+
+    cfg.set_basic_block(fits_small);
+
+    let value_bits = value.clone().cast(&Type::Uint(64), ns);
+    let small_value = Expression::ShiftLeft {
+        loc: Loc::Codegen,
+        ty: Type::Uint(64),
+        left: Box::new(value_bits),
+        right: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(8_u64),
+        }),
+    };
+
+    let small_value = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Uint(64),
+        left: Box::new(small_value),
+        right: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(tags::I64_SML),
+        }),
+        overflowing: false,
+    };
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: pt::Loc::Codegen,
+            res: ret_var,
+            expr: small_value,
+        },
+    );
+
+    cfg.add(
+        vartab,
+        Instr::Branch {
+            block: return_block,
+        },
+    );
+
+    cfg.set_basic_block(should_be_in_host);
+
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![ret_var],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjFromI64.name().to_string(),
             },
             args: vec![value],
         },
@@ -1708,6 +1807,100 @@ fn decode_u64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expression
             return_tys: vec![Type::Uint(64)],
             call: InternalCallTy::HostFunction {
                 name: HostFunctions::ObjToU64.name().to_string(),
+            },
+            args: vec![arg],
+        },
+    );
+
+    cfg.add(
+        vartab,
+        Instr::Branch {
+            block: return_block,
+        },
+    );
+
+    cfg.set_basic_block(return_block);
+    cfg.set_phis(return_block, vartab.pop_dirty_tracker());
+
+    ret
+}
+
+fn decode_i64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expression) -> Expression {
+    let ret_var = vartab.temp_anonymous(&Type::Int(64));
+    let ret = Expression::Variable {
+        loc: pt::Loc::Codegen,
+        ty: Type::Int(64),
+        var_no: ret_var,
+    };
+
+    vartab.new_dirty_tracker();
+
+    let tag = extract_tag(arg.clone());
+
+    let val_is_small = cfg.new_basic_block("i64_val_is_small".to_string());
+    let val_in_host = cfg.new_basic_block("i64_val_is_host".to_string());
+    let return_block = cfg.new_basic_block("i64_decode_finish".to_string());
+
+    let is_small = Expression::Equal {
+        loc: pt::Loc::Codegen,
+        left: tag.into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(tags::I64_SML),
+        }
+        .into(),
+    };
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: is_small,
+            true_block: val_is_small,
+            false_block: val_in_host,
+        },
+    );
+
+    cfg.set_basic_block(val_is_small);
+
+    let small_value = Expression::ShiftRight {
+        loc: pt::Loc::Codegen,
+        ty: Type::Int(64),
+        left: arg.clone().into(),
+        right: Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(8_u64),
+        }
+        .into(),
+        signed: true,
+    };
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: pt::Loc::Codegen,
+            res: ret_var,
+            expr: small_value,
+        },
+    );
+
+    cfg.add(
+        vartab,
+        Instr::Branch {
+            block: return_block,
+        },
+    );
+
+    cfg.set_basic_block(val_in_host);
+
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![ret_var],
+            return_tys: vec![Type::Int(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::ObjToI64.name().to_string(),
             },
             args: vec![arg],
         },
