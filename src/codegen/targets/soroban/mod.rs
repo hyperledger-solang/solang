@@ -303,9 +303,10 @@ impl TargetCodegen for SorobanTarget {
                 Some(address_var)
             }
             ast::Builtin::Sha256 => {
+                assert_eq!(args.len(), 1, "sha256 takes exactly one argument");
                 let input = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, self);
                 let bytes_obj = soroban_encode_arg(input, cfg, vartab, ns);
-                let hash_obj = vartab.temp_anonymous(&Type::Uint(64));
+                let hash_obj = vartab.temp_name("sha256_hash", &Type::Uint(64));
                 cfg.add(
                     vartab,
                     Instr::Call {

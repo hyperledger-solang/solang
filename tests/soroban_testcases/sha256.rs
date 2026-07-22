@@ -20,11 +20,6 @@ fn sha256_basic() {
 
     let result_bytes = BytesN::<32>::try_from_val(&runtime.env, &result).unwrap();
 
-    // let expected = BytesN::<32>::from_array(
-    //     &runtime.env,
-    //     &hex_literal::hex!("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
-    // );
-
     let expected = BytesN::<32>::from_array(
         &runtime.env,
         &[
