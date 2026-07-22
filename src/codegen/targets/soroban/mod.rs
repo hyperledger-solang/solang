@@ -302,6 +302,34 @@ impl TargetCodegen for SorobanTarget {
                 );
                 Some(address_var)
             }
+            ast::Builtin::Sha256 => {
+                let input = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, self);
+                let bytes_obj = soroban_encode_arg(input, cfg, vartab, ns);
+                let hash_obj = vartab.temp_anonymous(&Type::Uint(64));
+                cfg.add(
+                    vartab,
+                    Instr::Call {
+                        res: vec![hash_obj],
+                        call: InternalCallTy::HostFunction {
+                            name: HostFunctions::ComputeHashSha256.name().to_string(),
+                        },
+                        args: vec![bytes_obj],
+                        return_tys: vec![Type::Uint(64)],
+                    },
+                );
+                let hash_expr = Expression::Variable {
+                    loc: pt::Loc::Codegen,
+                    ty: Type::Uint(64),
+                    var_no: hash_obj,
+                };
+                Some(soroban_decode_arg(
+                    hash_expr,
+                    cfg,
+                    vartab,
+                    ns,
+                    Some(Type::Bytes(32)),
+                ))
+            }
             ast::Builtin::Timestamp => {
                 assert_eq!(args.len(), 0, "timestamp expects no arguments");
                 let timestamp_var_no = vartab.temp_name("timestamp", &Type::Uint(64));
