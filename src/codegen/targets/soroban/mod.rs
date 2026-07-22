@@ -303,7 +303,8 @@ impl TargetCodegen for SorobanTarget {
                 Some(address_var)
             }
             ast::Builtin::Timestamp => {
-                let timestamp_var_no = vartab.temp_name("block_number", &Type::Uint(64));
+                assert_eq!(args.len(), 0, "timestamp expects no arguments");
+                let timestamp_var_no = vartab.temp_name("timestamp", &Type::Uint(64));
                 let timestamp_var = Expression::Variable {
                     loc: *loc,
                     ty: Type::Uint(64),
@@ -329,6 +330,7 @@ impl TargetCodegen for SorobanTarget {
                 ))
             }
             ast::Builtin::BlockNumber => {
+                assert_eq!(args.len(), 0, "Block Number expects no arguments");
                 let block_var_no = vartab.temp_name("block_number", &Type::Uint(64));
                 let block_var = Expression::Variable {
                     loc: *loc,
