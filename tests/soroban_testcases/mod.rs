@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+mod abi_encode;
 mod alloc;
 mod array_args;
 mod atomic_swap;

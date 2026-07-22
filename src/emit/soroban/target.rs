@@ -791,14 +791,14 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
             .unwrap_or_else(|| expect_return_value(None, "emitting Soroban external call"))
             .into_int_value();
 
-        let allocate_i64 = bin
-            .builder
-            .build_alloca(bin.context.i64_type(), "allocate_i64")
-            .unwrap();
-
-        bin.builder.build_store(allocate_i64, call_res).unwrap();
-
-        *bin.return_data.borrow_mut() = Some(allocate_i64);
+        let ret_vector = bin.vector_new(
+            bin.context.i32_type().const_int(8, false),
+            bin.context.i32_type().const_int(1, false),
+            None,
+        );
+        let ret_data = bin.vector_bytes(ret_vector);
+        bin.builder.build_store(ret_data, call_res).unwrap();
+        *bin.return_data.borrow_mut() = Some(ret_vector.into_pointer_value());
     }
 
     /// send value to address
