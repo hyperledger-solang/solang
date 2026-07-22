@@ -19,6 +19,7 @@ mod liquidity_pool;
 mod mappings;
 mod math;
 mod print;
+mod sha256;
 mod storage;
 mod storage_array;
 mod strings;
