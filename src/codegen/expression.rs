@@ -4330,7 +4330,7 @@ pub(crate) fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Express
     }
 }
 
-fn storage_type(expr: &ast::Expression, ns: &Namespace) -> Option<pt::StorageType> {
+pub(crate) fn storage_type(expr: &ast::Expression, ns: &Namespace) -> Option<pt::StorageType> {
     match expr {
         ast::Expression::StorageVariable {
             loc: _,

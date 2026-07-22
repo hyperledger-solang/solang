@@ -55,6 +55,9 @@ Documented Counterparts
    * - `events <https://github.com/stellar/soroban-examples/tree/main/events>`_
      - `tests/soroban_testcases/events.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/events.rs>`_
      - Solidity ``event`` declarations and ``emit`` statements, with indexed fields mapping to Soroban topics and non-indexed fields mapping to event data.
+   * - `single_offer <https://github.com/stellar/soroban-examples/tree/main/single_offer>`_
+     - `examples/soroban/single_offer.sol <https://github.com/hyperledger-solang/solang/blob/main/examples/soroban/single_offer.sol>`_
+     - Single-offer exchange between a seller and a buyer, using structs, cross-contract token calls, and ``requireAuth()``. Test coverage in `tests/soroban_testcases/example_single_offer.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_single_offer.rs>`_.
    * - `ttl <https://github.com/stellar/soroban-examples/tree/main/ttl>`_
      - `docs/examples/soroban/ttl_storage.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/ttl_storage.sol>`_
      - Extending TTL on stored contract data.
@@ -166,6 +169,86 @@ Solang Solidity example: `docs/examples/soroban/ttl_storage.sol <https://github.
         }
     }
 
+single_offer
+^^^^^^^^^^^^
+
+Upstream Soroban example: `single_offer <https://github.com/stellar/soroban-examples/tree/main/single_offer>`_
+
+Solang Solidity example: `examples/soroban/single_offer.sol <https://github.com/hyperledger-solang/solang/blob/main/examples/soroban/single_offer.sol>`_
+
+.. code-block:: solidity
+
+    contract single_offer {
+        struct Offer {
+            address seller;
+            address sell_token;
+            address buy_token;
+            uint32 sell_price;
+            uint32 buy_price;
+        }
+
+        Offer instance offer;
+        bool instance created = false;
+
+        function create(
+            address seller,
+            address sell_token,
+            address buy_token,
+            uint32 sell_price,
+            uint32 buy_price
+        ) public {
+            require(!created, "offer is already created");
+            require(buy_price != 0 && sell_price != 0, "zero price is not allowed");
+            seller.requireAuth();
+            offer = Offer({
+                seller: seller,
+                sell_token: sell_token,
+                buy_token: buy_token,
+                sell_price: sell_price,
+                buy_price: buy_price
+            });
+            created = true;
+        }
+
+        function trade(
+            address buyer,
+            int128 buy_token_amount,
+            int128 min_sell_token_amount
+        ) public {
+            buyer.requireAuth();
+            Offer memory o = offer;
+            int128 sell_token_amount = (buy_token_amount * int128(o.sell_price)) / int128(o.buy_price);
+            require(sell_token_amount >= min_sell_token_amount, "price is too low");
+            address contract_address = address(this);
+            token_transfer(o.buy_token, buyer, contract_address, buy_token_amount);
+            token_transfer(o.sell_token, contract_address, buyer, sell_token_amount);
+            token_transfer(o.buy_token, contract_address, o.seller, buy_token_amount);
+        }
+
+        function withdraw(address token, int128 amount) public {
+            Offer memory o = offer;
+            o.seller.requireAuth();
+            token_transfer(token, address(this), o.seller, amount);
+        }
+
+        function updt_price(uint32 sell_price, uint32 buy_price) public {
+            require(buy_price != 0 && sell_price != 0, "zero price is not allowed");
+            Offer memory o = offer;
+            o.seller.requireAuth();
+            offer.sell_price = sell_price;
+            offer.buy_price = buy_price;
+        }
+
+        function get_offer() public view returns (Offer memory) {
+            return offer;
+        }
+
+        function token_transfer(address token, address from, address to, int128 amount) internal {
+            bytes memory payload = abi.encode("transfer", from, to, amount);
+            (bool success, bytes memory returndata) = token.call(payload);
+        }
+    }
+
 Upstream Examples Not Yet Documented as Supported
 +++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -181,7 +264,6 @@ The following upstream examples do not currently have a documented Solidity coun
 - `other_custom_types <https://github.com/stellar/soroban-examples/tree/main/other_custom_types>`_
 - `privacy-pools <https://github.com/stellar/soroban-examples/tree/main/privacy-pools>`_
 - `simple_account <https://github.com/stellar/soroban-examples/tree/main/simple_account>`_
-- `single_offer <https://github.com/stellar/soroban-examples/tree/main/single_offer>`_
 - `upgradeable_contract <https://github.com/stellar/soroban-examples/tree/main/upgradeable_contract>`_
 - `workspace <https://github.com/stellar/soroban-examples/tree/main/workspace>`_
 
