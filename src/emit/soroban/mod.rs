@@ -188,6 +188,7 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::ComputeHashSha256 => bin.context.i64_type().fn_type(&[ty.into()], false),
         }
     }
 }
@@ -554,6 +555,7 @@ impl SorobanTarget {
             HostFunctions::VecLen,
             HostFunctions::VecPopBack,
             HostFunctions::ContractEvent,
+            HostFunctions::ComputeHashSha256,
         ];
 
         for func in &host_functions {
