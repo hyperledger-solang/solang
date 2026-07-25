@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use soroban_sdk::{FromVal, IntoVal, TryFromVal, Val, I256, U256};
+use soroban_sdk::{FromVal, IntoVal, String, TryFromVal, Val, I256, U256};
 
 #[test]
 fn storage_array_push_i32_test() {
@@ -624,5 +624,100 @@ fn storage_array_u256_model_test() {
         42,
         |env, s| U256::from_u128(env, s).into_val(env),
         |env, val, s| U256::from_val(env, val) == U256::from_u128(env, s),
+    );
+}
+
+const REF_MODEL_SRC: &str = r#"
+    contract storage_array_ref_model {
+        TYPE[] mylist;
+
+        function push(TYPE memory v) public returns (uint32) {
+            mylist.push(v);
+            return uint32(mylist.length);
+        }
+
+        function pop() public returns (uint32) {
+            mylist.pop();
+            return uint32(mylist.length);
+        }
+
+        function set(uint32 i, TYPE memory v) public returns (TYPE memory) {
+            mylist[i] = v;
+            return mylist[i];
+        }
+
+        function get(uint32 i) public returns (TYPE memory) {
+            return mylist[i];
+        }
+
+        function length() public returns (uint32) {
+            return uint32(mylist.length);
+        }
+    }
+"#;
+
+fn drive_vec_ref_model<Spec: Clone>(
+    src: &str,
+    values: &[Spec],
+    set_val: Spec,
+    to_val: impl Fn(&soroban_sdk::Env, &Spec) -> Val,
+    eq: impl Fn(&soroban_sdk::Env, &Val, &Spec) -> bool,
+) {
+    let runtime = build_solidity(src, |_| {});
+    let addr = runtime.contracts.last().unwrap();
+    let env = &runtime.env;
+    let mut shadow: Vec<Spec> = Vec::new();
+
+    let verify = |shadow: &Vec<Spec>| {
+        let len_exp: Val = (shadow.len() as u32).into_val(env);
+        let len_got = runtime.invoke_contract(addr, "length", vec![]);
+        assert!(len_exp.shallow_eq(&len_got), "length mismatch");
+
+        for (i, v) in shadow.iter().enumerate() {
+            let got = runtime.invoke_contract(addr, "get", vec![(i as u32).into_val(env)]);
+            assert!(eq(env, &got, v), "element {i} mismatch");
+        }
+    };
+
+    for v in values {
+        runtime.invoke_contract(addr, "push", vec![to_val(env, v)]);
+        shadow.push(v.clone());
+        verify(&shadow);
+    }
+
+    let n = shadow.len();
+    for i in (0..n).step_by(2) {
+        runtime.invoke_contract(
+            addr,
+            "set",
+            vec![(i as u32).into_val(env), to_val(env, &set_val)],
+        );
+        shadow[i] = set_val.clone();
+        verify(&shadow);
+    }
+
+    while shadow.len() > n / 2 {
+        runtime.invoke_contract(addr, "pop", vec![]);
+        shadow.pop();
+        verify(&shadow);
+    }
+
+    for v in values.iter().take(2) {
+        runtime.invoke_contract(addr, "push", vec![to_val(env, v)]);
+        shadow.push(v.clone());
+        verify(&shadow);
+    }
+}
+
+#[test]
+fn storage_array_string_test() {
+    let src = REF_MODEL_SRC.replace("TYPE", "string");
+    let values: [&str; 5] = ["hello", "", "solang world", "x", "souka"];
+    drive_vec_ref_model::<&str>(
+        &src,
+        &values,
+        "replaced",
+        |env, s| String::from_str(env, s).into_val(env),
+        |env, val, s| String::from_val(env, val) == String::from_str(env, s),
     );
 }
