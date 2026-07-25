@@ -332,3 +332,107 @@ fn storage_array_u32_test() {
     let res = runtime.invoke_contract(&addr2, "set_get", args);
     assert!(expected.shallow_eq(&res));
 }
+
+#[test]
+fn storage_array_i64_test() {
+    let contract_src = r#"
+        contract storage_array_i64_full {
+            int64[] mylist;
+
+            function churn() public returns (int64) {
+                mylist.push(1_000_000_000_000); // 1e12
+                mylist.push(-500_000_000_000);  // -5e11
+                mylist.push(3);
+                mylist.push(-7);
+                // [1e12, -5e11, 3, -7]
+                mylist[2] = mylist[0] + mylist[1]; // 1e12 + (-5e11) = 5e11
+                mylist[3] = mylist[3] * 100;       // -7 * 100 = -700
+                // [1e12, -5e11, 5e11, -700]
+
+                mylist.pop(); // drop -700 -> [1e12, -5e11, 5e11], length 3
+
+                int64 sum = 0;
+                for (uint32 j = 0; j < mylist.length; j++) {
+                    sum += mylist[j]; // 1e12 - 5e11 + 5e11 = 1e12
+                }
+                return sum + int64(uint32(mylist.length)); // 1e12 + 3
+            }
+
+            function set_get(uint32 i, int64 v) public returns (int64) {
+                mylist.push(10);
+                mylist.push(20);
+                mylist.push(30);
+                mylist[i] = v;
+                return mylist[i];
+            }
+        }
+    "#;
+
+    let mut runtime = build_solidity(contract_src, |_| {});
+
+    let addr = runtime.contracts.last().unwrap();
+    let expected: Val = 1_000_000_000_003_i64.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "churn", vec![]);
+    assert!(expected.shallow_eq(&res));
+
+    let addr2 = runtime.deploy_contract(contract_src);
+    let expected: Val = (-999_i64).into_val(&runtime.env);
+    let args = vec![
+        1_u32.into_val(&runtime.env),
+        (-999_i64).into_val(&runtime.env),
+    ];
+    let res = runtime.invoke_contract(&addr2, "set_get", args);
+    assert!(expected.shallow_eq(&res));
+}
+
+#[test]
+fn storage_array_u64_test() {
+    let contract_src = r#"
+        contract storage_array_u64_full {
+            uint64[] mylist;
+
+            function churn() public returns (uint64) {
+                mylist.push(10_000_000_000); // 1e10
+                mylist.push(20_000_000_000); // 2e10
+                mylist.push(5);
+                mylist.push(7);
+                // [1e10, 2e10, 5, 7]
+                mylist[2] = mylist[0] + mylist[1]; // 3e10
+                mylist[3] = mylist[1] * 2;         // 4e10
+                // [1e10, 2e10, 3e10, 4e10]
+
+                mylist.pop(); // drop 4e10 -> [1e10, 2e10, 3e10], length 3
+
+                uint64 sum = 0;
+                for (uint32 j = 0; j < mylist.length; j++) {
+                    sum += mylist[j]; // 1e10 + 2e10 + 3e10 = 6e10
+                }
+                return sum + uint64(mylist.length); // 6e10 + 3
+            }
+
+            function set_get(uint32 i, uint64 v) public returns (uint64) {
+                mylist.push(100);
+                mylist.push(200);
+                mylist.push(300);
+                mylist[i] = v;
+                return mylist[i];
+            }
+        }
+    "#;
+
+    let mut runtime = build_solidity(contract_src, |_| {});
+
+    let addr = runtime.contracts.last().unwrap();
+    let expected: Val = 60_000_000_003_u64.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "churn", vec![]);
+    assert!(expected.shallow_eq(&res));
+
+    let addr2 = runtime.deploy_contract(contract_src);
+    let expected: Val = 999_888_777_666_u64.into_val(&runtime.env);
+    let args = vec![
+        0_u32.into_val(&runtime.env),
+        999_888_777_666_u64.into_val(&runtime.env),
+    ];
+    let res = runtime.invoke_contract(&addr2, "set_get", args);
+    assert!(expected.shallow_eq(&res));
+}
