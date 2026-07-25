@@ -4153,6 +4153,12 @@ pub fn load_storage(
     ns: &Namespace,
     target: &dyn TargetCodegen,
 ) -> Expression {
+    // Let the target intercept a storage-array subscript load (Soroban does vec_get
+    // in codegen); other targets and untouched cases fall through to LoadStorage.
+    if let Some(loaded) = target.storage_array_subscript_load(loc, ty, &storage, cfg, vartab, ns) {
+        return loaded;
+    }
+
     let res = vartab.temp_anonymous(ty);
 
     cfg.add(

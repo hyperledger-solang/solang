@@ -106,3 +106,33 @@ fn storage_array_length_i32_test() {
     let res = runtime.invoke_contract(&addr3, "subscript_sum", vec![]);
     assert!(expected.shallow_eq(&res));
 }
+
+#[test]
+fn storage_array_subscript_read_i32_test() {
+    let contract_src = r#"
+        contract storage_array_read_i32 {
+            int32[] mylist;
+
+            function read_at(uint32 i) public returns (int32) {
+                mylist.push(5);
+                mylist.push(10);
+                mylist.push(15);
+                return mylist[i];
+            }
+        }
+    "#;
+
+    let mut runtime = build_solidity(contract_src, |_| {});
+
+    let addr = runtime.contracts.last().unwrap();
+    let expected: Val = 5_i32.into_val(&runtime.env);
+    let args = vec![0_u32.into_val(&runtime.env)];
+    let res = runtime.invoke_contract(addr, "read_at", args);
+    assert!(expected.shallow_eq(&res));
+
+    let addr2 = runtime.deploy_contract(contract_src);
+    let expected: Val = 15_i32.into_val(&runtime.env);
+    let args = vec![2_u32.into_val(&runtime.env)];
+    let res = runtime.invoke_contract(&addr2, "read_at", args);
+    assert!(expected.shallow_eq(&res));
+}

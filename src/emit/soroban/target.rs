@@ -81,13 +81,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
-        if let Some(Type::StorageRef(_, inner)) = slot_ty {
-            if let Type::Array(inner_ty, _) = inner.as_ref() {
-                if !is_reference_type(inner_ty) {
-                    return get_storage_vec_subscript(bin, function, *slot);
-                }
-            }
-        }
+        // Scalar-element storage-array subscript reads are handled in codegen now
+        // (arrays.rs, vec_get); this path only serves other storage loads.
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(bin);
 
@@ -929,52 +924,6 @@ fn load_slot_index_from_key_ptr<'a>(
         .unwrap()
         .into_int_value(); // index loaded from key array
     (slot_val, index_val)
-}
-
-fn get_storage_vec_subscript<'a>(
-    bin: &Binary<'a>,
-    _function: FunctionValue<'a>,
-    key_vec: IntValue<'a>,
-) -> BasicValueEnum<'a> {
-    let key_ptr = bin
-        .builder
-        .build_int_to_ptr(key_vec, bin.context.ptr_type(Default::default()), "key_ptr")
-        .unwrap(); // pointer to key array
-    let (slot_val, index_val) = load_slot_index_from_key_ptr(bin, key_ptr); // slot/index from key array
-
-    let vec_obj = bin
-        .builder
-        .build_call(
-            bin.module
-                .get_function(HostFunctions::GetContractData.name())
-                .unwrap(),
-            &[
-                slot_val.into(),
-                bin.context.i64_type().const_int(1, false).into(),
-            ],
-            "load_storage",
-        )
-        .unwrap()
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value(); // vec object from storage
-    let index_val = encode_value(index_val, 32, 4, bin); // index encoded as u32 val
-    let elem_val = bin
-        .builder
-        .build_call(
-            bin.module
-                .get_function(HostFunctions::VecGet.name())
-                .unwrap(),
-            &[vec_obj.into(), index_val.into()],
-            "vec_get",
-        )
-        .unwrap()
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value(); // element from vec
-    elem_val.as_basic_value_enum()
 }
 
 fn set_storage_vec_subscript<'a>(

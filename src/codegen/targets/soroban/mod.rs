@@ -75,6 +75,41 @@ impl TargetCodegen for SorobanTarget {
         }
     }
 
+    fn storage_array_subscript_load(
+        &self,
+        loc: &pt::Loc,
+        elem_ty: &Type,
+        storage: &Expression,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> Option<Expression> {
+        // Only a subscript place on a storage array is a vec_get read; scalar-element
+        // reads go into arrays.rs. Reference elements keep their current path (Phase 6),
+        // and whole-array / scalar-var loads (not a Subscript) fall through.
+        if let Expression::Subscript {
+            array_ty, expr, index, ..
+        } = storage
+        {
+            if let Type::StorageRef(_, inner) = array_ty {
+                if let Type::Array(elem, _) = inner.as_ref() {
+                    if !elem.is_reference_type(ns) {
+                        return Some(arrays::soroban_storage_subscript_read(
+                            loc,
+                            elem_ty,
+                            (**expr).clone(),
+                            (**index).clone(),
+                            cfg,
+                            vartab,
+                            ns,
+                        ));
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// Soroban lazy decode path: if memory contains encoded handles, decode on demand.
     fn lower_load(
         &self,

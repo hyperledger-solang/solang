@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::encoding::{soroban_decode_arg, soroban_storage_encode_arg};
+use super::encoding::{
+    soroban_decode_arg, soroban_encode_arg, soroban_storage_decode_arg, soroban_storage_encode_arg,
+};
 use super::{load_raw_handle, soroban_vec_handle_ty};
 use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::expression::expression;
@@ -159,4 +161,35 @@ pub(crate) fn soroban_storage_array_length(
 
     let len_u32 = soroban_decode_arg(len_var, cfg, vartab, ns, Some(Type::Uint(32)));
     len_u32.cast(ty, ns)
+}
+
+pub(crate) fn soroban_storage_subscript_read(
+    loc: &pt::Loc,
+    elem_ty: &Type,
+    base: Expression,
+    index: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) -> Expression {
+    let vec_obj = load_raw_handle(loc, base, cfg, vartab);
+    let index_val = soroban_encode_arg(index.cast(&Type::Uint(32), ns), cfg, vartab, ns);
+    let elem_no = vartab.temp_name("soroban_vec_get", &Type::Uint(64));
+    let elem_var = Expression::Variable {
+        loc: *loc,
+        ty: Type::Uint(64),
+        var_no: elem_no,
+    };
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![elem_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::VecGet.name().to_string(),
+            },
+            args: vec![vec_obj, index_val],
+        },
+    );
+    soroban_storage_decode_arg(elem_var, cfg, vartab, ns, Some(elem_ty.clone()))
 }

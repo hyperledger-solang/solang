@@ -237,4 +237,20 @@ pub(crate) trait TargetCodegen {
     ) -> Expression {
         value
     }
+
+    /// Intercept a load of a storage-array subscript place before it lowers to a
+    /// generic `Instr::LoadStorage`. Soroban reads scalar-element subscripts here
+    /// (host `vec_get`); the default returns `None` so other targets and untouched
+    /// element kinds keep the generic path.
+    fn storage_array_subscript_load(
+        &self,
+        _loc: &Loc,
+        _elem_ty: &Type,
+        _storage: &Expression,
+        _cfg: &mut ControlFlowGraph,
+        _vartab: &mut Vartable,
+        _ns: &Namespace,
+    ) -> Option<Expression> {
+        None
+    }
 }
