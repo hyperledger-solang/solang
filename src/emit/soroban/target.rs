@@ -518,52 +518,9 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         slot: IntValue<'a>,
         elem_ty: &Type,
     ) -> IntValue<'a> {
-        if !is_reference_type(elem_ty) {
-            // Native arrays use VecObject layout: load vec object then call VecLen.
-            let load_storage = bin
-                .builder
-                .build_call(
-                    bin.module
-                        .get_function(HostFunctions::GetContractData.name())
-                        .unwrap(),
-                    &[
-                        slot.into(),
-                        bin.context.i64_type().const_int(1, false).into(), // persistent storage
-                    ],
-                    "load_storage",
-                )
-                .unwrap()
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value();
-
-            let u32_val = bin
-                .builder
-                .build_call(
-                    bin.module
-                        .get_function(HostFunctions::VecLen.name())
-                        .unwrap(),
-                    &[load_storage.into()],
-                    "vec_len",
-                )
-                .unwrap()
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value();
-
-            // VecLen returns U32Val => payload in top 32 bits.
-            return bin
-                .builder
-                .build_right_shift(
-                    u32_val,
-                    bin.context.i64_type().const_int(32, false),
-                    false,
-                    "length",
-                )
-                .unwrap();
-        }
+        // Scalar-element arrays get their length in codegen now (arrays.rs, VecLen),
+        // so this emit path is only reached for reference elements until Phase 6.
+        debug_assert!(is_reference_type(elem_ty));
         // Reference arrays keep old layout: length encoded in slot as U64Small.
         let storage_ty = bin.context.i64_type().const_int(1, false);
         let loaded_len = bin

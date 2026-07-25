@@ -12,7 +12,7 @@ use self::encoding::{
 use self::events::SorobanEventEmitter;
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::error::CodegenError;
-use crate::codegen::expression::{expression, load_storage};
+use crate::codegen::expression::expression;
 use crate::codegen::interface::{EventEmitter, TargetCodegen};
 use crate::codegen::storage::storage_slots_array_push;
 use crate::codegen::vartable::Vartable;
@@ -58,10 +58,15 @@ impl TargetCodegen for SorobanTarget {
         ty: &Type,
         array: Expression,
         elem_ty: &Type,
-        _cfg: &mut ControlFlowGraph,
-        _vartab: &mut Vartable,
-        _ns: &Namespace,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
     ) -> Expression {
+        // Scalar-element arrays use the host VecObject: length is vec_len (arrays.rs).
+        // Reference elements keep the old StorageArrayLength path until Phase 6.
+        if !elem_ty.is_reference_type(ns) {
+            return arrays::soroban_storage_array_length(loc, ty, array, cfg, vartab, ns);
+        }
         Expression::StorageArrayLength {
             loc: *loc,
             ty: ty.clone(),
@@ -215,7 +220,7 @@ impl TargetCodegen for SorobanTarget {
                 self,
             )
         } else {
-            soroban_storage_pop(
+            arrays::soroban_storage_pop(
                 loc,
                 args,
                 return_ty,
@@ -1336,85 +1341,6 @@ pub(crate) fn soroban_vec_new(
     );
 
     empty_vec_var
-}
-
-fn soroban_vec_pop_back(
-    loc: &pt::Loc,
-    vec_obj: Expression,
-    vec_ty: &Type,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-) -> Expression {
-    let handle_ty = soroban_vec_handle_ty(vec_ty);
-    let new_vec_no = vartab.temp_name("soroban_vec_pop", &handle_ty);
-
-    let new_vec_var = Expression::Variable {
-        loc: *loc,
-        ty: handle_ty.clone(),
-        var_no: new_vec_no,
-    };
-
-    let instr = Instr::Call {
-        res: vec![new_vec_no],
-        return_tys: vec![handle_ty],
-        call: InternalCallTy::HostFunction {
-            name: HostFunctions::VecPopBack.name().to_string(),
-        },
-        args: vec![vec_obj],
-    };
-
-    cfg.add(vartab, instr);
-
-    new_vec_var
-}
-
-pub(crate) fn soroban_storage_pop(
-    loc: &pt::Loc,
-    args: &[ast::Expression],
-    return_ty: &Type,
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    target: &dyn TargetCodegen,
-) -> Expression {
-    // Storage wrapper: evaluate storage key and load vec object from storage.
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
-    let vec_ty = args[0].ty();
-
-    let old_vec_obj = load_storage(
-        loc,
-        &vec_ty,
-        var_expr.clone(),
-        cfg,
-        vartab,
-        None,
-        ns,
-        target,
-    );
-    let new_vec_var = soroban_vec_pop_back(loc, old_vec_obj, &vec_ty, cfg, vartab);
-    let new_vec_no = match &new_vec_var {
-        Expression::Variable { var_no, .. } => *var_no,
-        _ => unreachable!(),
-    };
-
-    // Storage wrapper: store updated vec object.
-    let store_instr = Instr::SetStorage {
-        ty: vec_ty,
-        value: new_vec_var.clone(),
-        storage: var_expr.clone(),
-        storage_type: None,
-    };
-
-    cfg.add(vartab, store_instr);
-
-    Expression::Variable {
-        loc: *loc,
-        ty: return_ty.clone(),
-        var_no: new_vec_no,
-    }
 }
 
 fn soroban_field_index_val(

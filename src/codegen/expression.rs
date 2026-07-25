@@ -3723,11 +3723,27 @@ fn array_subscript(
             None => {
                 if let Type::StorageRef(..) = array_ty {
                     if ns.target == Target::Solana || ns.target == Target::Soroban {
-                        Expression::StorageArrayLength {
-                            loc: *loc,
-                            ty: ns.storage_type(),
-                            array: Box::new(array.clone()),
-                            elem_ty: array_ty.storage_array_elem().deref_into(),
+                        let elem_ty = array_ty.storage_array_elem().deref_into();
+                        // On Soroban, scalar-element arrays get their length from the
+                        // host VecObject via the hook (arrays.rs); reference elements
+                        // keep the StorageArrayLength path until Phase 6.
+                        if ns.target == Target::Soroban && !elem_ty.is_reference_type(ns) {
+                            target.lower_storage_array_length(
+                                loc,
+                                &ns.storage_type(),
+                                array.clone(),
+                                &elem_ty,
+                                cfg,
+                                vartab,
+                                ns,
+                            )
+                        } else {
+                            Expression::StorageArrayLength {
+                                loc: *loc,
+                                ty: ns.storage_type(),
+                                array: Box::new(array.clone()),
+                                elem_ty,
+                            }
                         }
                     } else {
                         let ty = if ns.target == Target::Soroban {
