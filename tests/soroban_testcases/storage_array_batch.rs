@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use soroban_sdk::{IntoVal, Val};
+use soroban_sdk::{IntoVal, TryFromVal, Val};
 
 #[test]
 fn storage_array_push_i32_test() {
@@ -435,4 +435,138 @@ fn storage_array_u64_test() {
     ];
     let res = runtime.invoke_contract(&addr2, "set_get", args);
     assert!(expected.shallow_eq(&res));
+}
+
+const MODEL_SRC: &str = r#"
+    contract storage_array_model {
+        TYPE[] mylist;
+
+        function push(TYPE v) public returns (uint32) {
+            mylist.push(v);
+            return uint32(mylist.length);
+        }
+
+        function pop() public returns (uint32) {
+            mylist.pop();
+            return uint32(mylist.length);
+        }
+
+        function set(uint32 i, TYPE v) public returns (TYPE) {
+            mylist[i] = v;
+            return mylist[i];
+        }
+
+        function get(uint32 i) public returns (TYPE) {
+            return mylist[i];
+        }
+
+        function length() public returns (uint32) {
+            return uint32(mylist.length);
+        }
+
+        // Count elements within the inclusive range [lo, hi] — a full read scan.
+        function check_in_range(TYPE lo, TYPE hi) public returns (uint32) {
+            uint32 c = 0;
+            for (uint32 i = 0; i < mylist.length; i++) {
+                if (mylist[i] >= lo && mylist[i] <= hi) {
+                    c++;
+                }
+            }
+            return c;
+        }
+    }
+"#;
+
+fn drive_vec_model<V>(src: &str, values: &[V], set_val: V, lo: V, hi: V)
+where
+    V: Copy + Ord + std::fmt::Debug + IntoVal<soroban_sdk::Env, Val>,
+    V: TryFromVal<soroban_sdk::Env, Val>,
+{
+    let runtime = build_solidity(src, |_| {});
+    let addr = runtime.contracts.last().unwrap();
+    let mut shadow: Vec<V> = Vec::new();
+
+    let decode = |v: &Val| -> V {
+        V::try_from_val(&runtime.env, v).unwrap_or_else(|_| panic!("failed to decode return value"))
+    };
+
+    let verify = |shadow: &Vec<V>| {
+        let len_exp: Val = (shadow.len() as u32).into_val(&runtime.env);
+        let len_got = runtime.invoke_contract(addr, "length", vec![]);
+        assert!(len_exp.shallow_eq(&len_got), "length mismatch");
+
+        for (i, v) in shadow.iter().enumerate() {
+            let got = runtime.invoke_contract(addr, "get", vec![(i as u32).into_val(&runtime.env)]);
+            assert_eq!(decode(&got), *v, "element {i} mismatch");
+        }
+
+        let count = shadow.iter().filter(|&&e| e >= lo && e <= hi).count() as u32;
+        let cexp: Val = count.into_val(&runtime.env);
+        let cgot = runtime.invoke_contract(
+            addr,
+            "check_in_range",
+            vec![lo.into_val(&runtime.env), hi.into_val(&runtime.env)],
+        );
+        assert!(cexp.shallow_eq(&cgot), "check_in_range mismatch");
+    };
+
+    for v in values {
+        runtime.invoke_contract(addr, "push", vec![(*v).into_val(&runtime.env)]);
+        shadow.push(*v);
+        verify(&shadow);
+    }
+
+    let n = shadow.len();
+    for i in (0..n).step_by(2) {
+        runtime.invoke_contract(
+            addr,
+            "set",
+            vec![
+                (i as u32).into_val(&runtime.env),
+                set_val.into_val(&runtime.env),
+            ],
+        );
+        shadow[i] = set_val;
+        verify(&shadow);
+    }
+
+    while shadow.len() > n / 2 {
+        runtime.invoke_contract(addr, "pop", vec![]);
+        shadow.pop();
+        verify(&shadow);
+    }
+
+    for v in values.iter().take(2) {
+        runtime.invoke_contract(addr, "push", vec![(*v).into_val(&runtime.env)]);
+        shadow.push(*v);
+        verify(&shadow);
+    }
+}
+
+#[test]
+fn storage_array_i128_model_test() {
+    let src = MODEL_SRC.replace("TYPE", "int128");
+    let values: [i128; 6] = [
+        1_000_000_000_000_000_000_000, // 1e21, beyond 64-bit
+        -500_000_000_000_000_000_000,  // -5e20
+        7,
+        -3,
+        42,
+        0,
+    ];
+    drive_vec_model::<i128>(&src, &values, 5, -3, 42);
+}
+
+#[test]
+fn storage_array_u128_model_test() {
+    let src = MODEL_SRC.replace("TYPE", "uint128");
+    let values: [u128; 6] = [
+        1_000_000_000_000_000_000_000, // 1e21
+        2_000_000_000_000_000_000_000, // 2e21
+        7,
+        3,
+        42,
+        0,
+    ];
+    drive_vec_model::<u128>(&src, &values, 5, 0, 42);
 }
