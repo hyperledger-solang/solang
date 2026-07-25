@@ -31,6 +31,9 @@ Documented Counterparts
    * - `cross_contract <https://github.com/stellar/soroban-examples/tree/main/cross_contract>`_
      - `integration/soroban/caller.sol <https://github.com/hyperledger-solang/solang/blob/main/integration/soroban/caller.sol>`_ and `integration/soroban/callee.sol <https://github.com/hyperledger-solang/solang/blob/main/integration/soroban/callee.sol>`_
      - Covered in `cross_contract.spec.js <https://github.com/hyperledger-solang/solang/blob/main/integration/soroban/cross_contract.spec.js>`_.
+   * - `custom_types <https://github.com/stellar/soroban-examples/tree/main/custom_types>`_
+     - `docs/examples/soroban/custom_types.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/custom_types.sol>`_ and `tests/soroban_testcases/example_custom_types.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_custom_types.rs>`_
+     - Struct stored in contract state (``State`` with ``count`` and ``last_incr`` fields). Demonstrates struct storage (VecObject path) and struct ABI return (named-field MAP object). Tested via ``example_custom_types_*`` test cases.
    * - `deep_contract_auth <https://github.com/stellar/soroban-examples/tree/main/deep_contract_auth>`_
      - `docs/examples/soroban/deep_auth <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/deep_auth>`_
      - Nested contract authorization via ``authAsCurrContract(...)``.
@@ -83,6 +86,33 @@ Solang Solidity example: `docs/examples/soroban/auth.sol <https://github.com/hyp
             owner.requireAuth();
             counter = counter + 1;
             return counter;
+        }
+    }
+
+custom_types
+^^^^^^^^^^^^
+
+Upstream Soroban example: `custom_types <https://github.com/stellar/soroban-examples/tree/main/custom_types>`_
+
+Solang Solidity example: `docs/examples/soroban/custom_types.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/custom_types.sol>`_
+
+.. code-block:: solidity
+
+    contract CustomTypes {
+        struct State {
+            uint32 count;
+            uint32 last_incr;
+        }
+        State state;
+
+        function increment(uint32 incr) public returns (uint32) {
+            state.count += incr;
+            state.last_incr = incr;
+            return state.count;
+        }
+
+        function get_state() public view returns (State memory) {
+            return state;
         }
     }
 
@@ -171,7 +201,6 @@ Upstream Examples Not Yet Documented as Supported
 
 The following upstream examples do not currently have a documented Solidity counterpart, as some needed Soroban features are not yet supported.
 - `bls_signature <https://github.com/stellar/soroban-examples/tree/main/bls_signature>`_
-- `custom_types <https://github.com/stellar/soroban-examples/tree/main/custom_types>`_
 - `deployer <https://github.com/stellar/soroban-examples/tree/main/deployer>`_
 - `errors <https://github.com/stellar/soroban-examples/tree/main/errors>`_
 - `eth_abi <https://github.com/stellar/soroban-examples/tree/main/eth_abi>`_
