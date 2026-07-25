@@ -367,14 +367,14 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     fn storage_subscript(
         &self,
         bin: &Binary<'a>,
-        function: FunctionValue<'a>,
-        ty: &Type,
+        _function: FunctionValue<'a>,
+        _ty: &Type,
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
-        // Scalar-element storage-array subscripts are read/written in codegen now
-        // (arrays.rs); only reference elements still reach this emit path (Phase 6),
-        // where the key is a VecObject of [slot, index].
+        // Storage arrays are read/written in codegen now (arrays.rs, vec_get/vec_put).
+        // This path still serves other subscript storage (e.g. mappings): the key is a
+        // VecObject of [slot, index].
         let vec_new = bin
             .builder
             .build_call(
@@ -461,40 +461,13 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     fn storage_array_length(
         &self,
-        bin: &Binary<'a>,
+        _bin: &Binary<'a>,
         _function: FunctionValue,
-        slot: IntValue<'a>,
-        elem_ty: &Type,
+        _slot: IntValue<'a>,
+        _elem_ty: &Type,
     ) -> IntValue<'a> {
-        // Scalar-element arrays get their length in codegen now (arrays.rs, VecLen),
-        // so this emit path is only reached for reference elements until Phase 6.
-        debug_assert!(is_reference_type(elem_ty));
-        // Reference arrays keep old layout: length encoded in slot as U64Small.
-        let storage_ty = bin.context.i64_type().const_int(1, false);
-        let loaded_len = bin
-            .builder
-            .build_call(
-                bin.module
-                    .get_function(HostFunctions::GetContractData.name())
-                    .unwrap(),
-                &[slot.into(), storage_ty.into()],
-                "get_len",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
-        // U64Small payload is shifted by 8 bits.
-        bin.builder
-            .build_right_shift(
-                loaded_len,
-                bin.context.i64_type().const_int(8, false),
-                false,
-                "length",
-            )
-            .unwrap()
+        // Every storage array length is computed in codegen now (arrays.rs, vec_len).
+        unsupported_soroban(Loc::Codegen, "storage array length")
     }
 
     /// keccak256 hash
@@ -899,22 +872,3 @@ pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<
     i64_type.const_int(tag_val, false)
 }
 
-fn is_reference_type(ty: &Type) -> bool {
-    match ty {
-        Type::Bool => false,
-        Type::Address(_) => false,
-        Type::Int(_) => false,
-        Type::Uint(_) => false,
-        Type::Rational => false,
-        Type::Bytes(_) => false,
-        Type::Enum(_) => false,
-        Type::Struct(_) => true,
-        Type::Array(..) => true,
-        Type::DynamicBytes => true,
-        Type::String => true,
-        Type::Mapping(..) => true,
-        Type::Contract(_) => false,
-        Type::InternalFunction { .. } => false,
-        _ => false,
-    }
-}

@@ -14,7 +14,6 @@ use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::error::CodegenError;
 use crate::codegen::expression::expression;
 use crate::codegen::interface::{EventEmitter, TargetCodegen};
-use crate::codegen::storage::storage_slots_array_push;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
 use crate::codegen::{Expression, HostFunctions};
@@ -57,22 +56,13 @@ impl TargetCodegen for SorobanTarget {
         loc: &pt::Loc,
         ty: &Type,
         array: Expression,
-        elem_ty: &Type,
+        _elem_ty: &Type,
         cfg: &mut ControlFlowGraph,
         vartab: &mut Vartable,
         ns: &Namespace,
     ) -> Expression {
-        // Scalar-element arrays use the host VecObject: length is vec_len (arrays.rs).
-        // Reference elements keep the old StorageArrayLength path until Phase 6.
-        if !elem_ty.is_reference_type(ns) {
-            return arrays::soroban_storage_array_length(loc, ty, array, cfg, vartab, ns);
-        }
-        Expression::StorageArrayLength {
-            loc: *loc,
-            ty: ty.clone(),
-            array: Box::new(array),
-            elem_ty: elem_ty.clone(),
-        }
+        // Every array is one host VecObject: length is vec_len (arrays.rs).
+        arrays::soroban_storage_array_length(loc, ty, array, cfg, vartab, ns)
     }
 
     fn storage_array_subscript_load(
@@ -84,9 +74,9 @@ impl TargetCodegen for SorobanTarget {
         vartab: &mut Vartable,
         ns: &Namespace,
     ) -> Option<Expression> {
-        // Only a subscript place on a storage array is a vec_get read; scalar-element
-        // reads go into arrays.rs. Reference elements keep their current path (Phase 6),
-        // and whole-array / scalar-var loads (not a Subscript) fall through.
+        // Only a subscript place on a storage array is a vec_get read (all element
+        // kinds go into arrays.rs). Whole-array / scalar-var loads (not a Subscript)
+        // and non-array subscripts (e.g. mappings) fall through to the generic path.
         if let Expression::Subscript {
             array_ty,
             expr,
@@ -95,18 +85,16 @@ impl TargetCodegen for SorobanTarget {
         } = storage
         {
             if let Type::StorageRef(_, inner) = array_ty {
-                if let Type::Array(elem, _) = inner.as_ref() {
-                    if !elem.is_reference_type(ns) {
-                        return Some(arrays::soroban_storage_subscript_read(
-                            loc,
-                            elem_ty,
-                            (**expr).clone(),
-                            (**index).clone(),
-                            cfg,
-                            vartab,
-                            ns,
-                        ));
-                    }
+                if matches!(inner.as_ref(), Type::Array(..)) {
+                    return Some(arrays::soroban_storage_subscript_read(
+                        loc,
+                        elem_ty,
+                        (**expr).clone(),
+                        (**index).clone(),
+                        cfg,
+                        vartab,
+                        ns,
+                    ));
                 }
             }
         }
@@ -122,9 +110,9 @@ impl TargetCodegen for SorobanTarget {
         vartab: &mut Vartable,
         ns: &Namespace,
     ) -> bool {
-        // Mirror the read hook: only a subscript place on a storage array with a
-        // NON-reference element becomes a vec_put write in arrays.rs. Reference
-        // elements keep their current path (Phase 6); other stores fall through.
+        // Mirror the read hook: a subscript place on a storage array becomes a vec_put
+        // write in arrays.rs (all element kinds). Non-array subscripts (e.g. mappings)
+        // and other stores fall through to the generic SetStorage path.
         if let Expression::Subscript {
             array_ty,
             expr,
@@ -133,19 +121,17 @@ impl TargetCodegen for SorobanTarget {
         } = storage
         {
             if let Type::StorageRef(_, inner) = array_ty {
-                if let Type::Array(elem, _) = inner.as_ref() {
-                    if !elem.is_reference_type(ns) {
-                        arrays::soroban_storage_subscript_write(
-                            loc,
-                            value,
-                            (**expr).clone(),
-                            (**index).clone(),
-                            cfg,
-                            vartab,
-                            ns,
-                        );
-                        return true;
-                    }
+                if matches!(inner.as_ref(), Type::Array(..)) {
+                    arrays::soroban_storage_subscript_write(
+                        loc,
+                        value,
+                        (**expr).clone(),
+                        (**index).clone(),
+                        cfg,
+                        vartab,
+                        ns,
+                    );
+                    return true;
                 }
             }
         }
@@ -199,10 +185,7 @@ impl TargetCodegen for SorobanTarget {
             Type::DynamicBytes | Type::String | Type::Bytes(_) | Type::Slice(_) => {
                 Some(soroban_default_handle(loc, ty, cfg, vartab, ns))
             }
-            Type::Array(elem_ty, dims)
-                if dims.last() == Some(&ast::ArrayLength::Dynamic)
-                    && !elem_ty.is_reference_type(ns) =>
-            {
+            Type::Array(_, dims) if dims.last() == Some(&ast::ArrayLength::Dynamic) => {
                 Some(soroban_default_handle(loc, ty, cfg, vartab, ns))
             }
             Type::Struct(StructType::UserDefined(_)) => {
@@ -253,20 +236,8 @@ impl TargetCodegen for SorobanTarget {
         if args[0].ty().is_storage_bytes() {
             return soroban_bytes_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self);
         }
-        // Arrays whose elements are reference types use the shared hashed-slots path (the
-        // entry offset and value encoding are routed back through this target); everything
-        // else (scalars) goes through the dedicated host-vector push.
-        let elem_is_ref = matches!(
-            args[0].ty(),
-            Type::StorageRef(_, inner)
-                if matches!(inner.deref_any(), Type::Array(elem_ty, _)
-                    if elem_ty.is_reference_type(ns))
-        );
-        if elem_is_ref {
-            storage_slots_array_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
-        } else {
-            arrays::soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
-        }
+        // Every array (scalar and reference elements alike) is one host VecObject.
+        arrays::soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
     }
 
     fn storage_array_pop(
@@ -309,28 +280,6 @@ impl TargetCodegen for SorobanTarget {
                 opt,
                 self,
             )
-        }
-    }
-
-    fn storage_array_entry_offset(
-        &self,
-        loc: &pt::Loc,
-        var_expr: &Expression,
-        index: Expression,
-        elem_ty: &Type,
-        _slot_ty: &Type,
-        cfg: &mut ControlFlowGraph,
-        vartab: &mut Vartable,
-        ns: &Namespace,
-    ) -> Expression {
-        // Soroban indexes its host vector by an encoded key rather than a hashed slot.
-        let index_encoded = soroban_encode_arg(index, cfg, vartab, ns);
-        Expression::Subscript {
-            loc: *loc,
-            ty: elem_ty.clone(),
-            array_ty: Type::StorageRef(false, Box::new(elem_ty.clone())),
-            expr: Box::new(var_expr.clone()),
-            index: Box::new(index_encoded),
         }
     }
 
@@ -1926,10 +1875,7 @@ pub(crate) fn soroban_default_handle(
             soroban_struct_default_vec(loc, *n, ty, cfg, vartab, ns)
         }
         Type::Slice(_) => soroban_vec_new(loc, ty, cfg, vartab),
-        Type::Array(elem_ty, dims)
-            if dims.last() == Some(&ast::ArrayLength::Dynamic)
-                && !elem_ty.is_reference_type(ns) =>
-        {
+        Type::Array(_, dims) if dims.last() == Some(&ast::ArrayLength::Dynamic) => {
             soroban_vec_new(loc, ty, cfg, vartab)
         }
         _ => unreachable!("Type has no default storage value"),
@@ -1971,5 +1917,25 @@ fn soroban_load_storage_handle(
     target: &dyn TargetCodegen,
 ) -> Expression {
     let storage = expression(var, cfg, contract_no, func, ns, vartab, opt, target);
+    if let Expression::Subscript {
+        array_ty,
+        expr,
+        index,
+        ..
+    } = &storage
+    {
+        if let Type::StorageRef(_, inner) = array_ty {
+            if matches!(inner.as_ref(), Type::Array(..)) {
+                return arrays::soroban_storage_subscript_handle(
+                    loc,
+                    (**expr).clone(),
+                    (**index).clone(),
+                    cfg,
+                    vartab,
+                    ns,
+                );
+            }
+        }
+    }
     load_raw_handle(loc, storage, cfg, vartab)
 }

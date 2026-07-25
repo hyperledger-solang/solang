@@ -58,8 +58,15 @@ pub(crate) fn soroban_storage_push(
     target: &dyn TargetCodegen,
 ) -> Expression {
     let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
-    let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target);
     let vec_ty = args[0].ty();
+
+    // `arr.push()` with no argument appends a default-valued element.
+    let value = if args.len() > 1 {
+        expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target)
+    } else {
+        let elem_ty = vec_ty.storage_array_elem().deref_into();
+        elem_ty.default(ns).unwrap()
+    };
 
     let old_vec_obj = load_raw_handle(loc, var_expr.clone(), cfg, vartab);
     let new_vec_var = soroban_vec_push_back(loc, old_vec_obj, &vec_ty, value, cfg, ns, vartab);
@@ -163,9 +170,11 @@ pub(crate) fn soroban_storage_array_length(
     len_u32.cast(ty, ns)
 }
 
-pub(crate) fn soroban_storage_subscript_read(
+// Load the raw element handle (u64 Val) at `index` of a storage array VecObject:
+// load the array handle, then vec_get. The caller decodes (scalar/composite) or, for
+// composite elements, keeps the handle to read a field.
+pub(crate) fn soroban_storage_subscript_handle(
     loc: &pt::Loc,
-    elem_ty: &Type,
     base: Expression,
     index: Expression,
     cfg: &mut ControlFlowGraph,
@@ -191,6 +200,19 @@ pub(crate) fn soroban_storage_subscript_read(
             args: vec![vec_obj, index_val],
         },
     );
+    elem_var
+}
+
+pub(crate) fn soroban_storage_subscript_read(
+    loc: &pt::Loc,
+    elem_ty: &Type,
+    base: Expression,
+    index: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) -> Expression {
+    let elem_var = soroban_storage_subscript_handle(loc, base, index, cfg, vartab, ns);
     soroban_storage_decode_arg(elem_var, cfg, vartab, ns, Some(elem_ty.clone()))
 }
 

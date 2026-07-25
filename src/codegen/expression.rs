@@ -4,7 +4,6 @@ use super::revert::{
     assert_failure, expr_assert, log_runtime_error, require, PanicCode, SolidityError,
 };
 use super::storage::array_offset;
-use super::targets::soroban::encoding::soroban_encode_arg;
 use super::Options;
 use super::{
     cfg::{ControlFlowGraph, Instr, InternalCallTy},
@@ -3731,10 +3730,9 @@ fn array_subscript(
                 if let Type::StorageRef(..) = array_ty {
                     if ns.target == Target::Solana || ns.target == Target::Soroban {
                         let elem_ty = array_ty.storage_array_elem().deref_into();
-                        // On Soroban, scalar-element arrays get their length from the
-                        // host VecObject via the hook (arrays.rs); reference elements
-                        // keep the StorageArrayLength path until Phase 6.
-                        if ns.target == Target::Soroban && !elem_ty.is_reference_type(ns) {
+                        // On Soroban every array is a host VecObject: get the length via
+                        // the hook (arrays.rs, vec_len). Solana keeps StorageArrayLength.
+                        if ns.target == Target::Soroban {
                             target.lower_storage_array_length(
                                 loc,
                                 &ns.storage_type(),
@@ -3959,12 +3957,6 @@ fn array_subscript(
 
         if ns.target == Target::Soroban {
             let index = index.cast(&Type::Uint(64), ns);
-
-            let index = if elem_ty.is_reference_type(ns) {
-                soroban_encode_arg(index, cfg, vartab, ns)
-            } else {
-                index
-            };
 
             let val = Expression::Subscript {
                 loc: *loc,
