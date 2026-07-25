@@ -174,3 +174,62 @@ fn storage_array_subscript_write_i32_test() {
     let res = runtime.invoke_contract(&addr2, "write_at", args);
     assert!(expected.shallow_eq(&res));
 }
+
+#[test]
+fn storage_array_bool_test() {
+    let contract_src = r#"
+        contract storage_array_bool {
+            bool[] mylist;
+
+            function push_read() public returns (bool) {
+                mylist.push(true);
+                mylist.push(false);
+                mylist.push(true);
+                return mylist[0] && !mylist[1] && mylist[2];
+            }
+
+            function len_after_push() public returns (uint32) {
+                mylist.push(true);
+                mylist.push(false);
+                return uint32(mylist.length);
+            }
+
+            function write_read() public returns (bool) {
+                mylist.push(false);
+                mylist.push(false);
+                mylist[1] = true;
+                return mylist[1];
+            }
+
+            function pop_len() public returns (uint32) {
+                mylist.push(true);
+                mylist.push(false);
+                mylist.push(true);
+                mylist.pop();
+                return uint32(mylist.length);
+            }
+        }
+    "#;
+
+    let mut runtime = build_solidity(contract_src, |_| {});
+
+    let addr = runtime.contracts.last().unwrap();
+    let expected: Val = true.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "push_read", vec![]);
+    assert!(expected.shallow_eq(&res));
+
+    let addr2 = runtime.deploy_contract(contract_src);
+    let expected: Val = 2_u32.into_val(&runtime.env);
+    let res = runtime.invoke_contract(&addr2, "len_after_push", vec![]);
+    assert!(expected.shallow_eq(&res));
+
+    let addr3 = runtime.deploy_contract(contract_src);
+    let expected: Val = true.into_val(&runtime.env);
+    let res = runtime.invoke_contract(&addr3, "write_read", vec![]);
+    assert!(expected.shallow_eq(&res));
+
+    let addr4 = runtime.deploy_contract(contract_src);
+    let expected: Val = 2_u32.into_val(&runtime.env);
+    let res = runtime.invoke_contract(&addr4, "pop_len", vec![]);
+    assert!(expected.shallow_eq(&res));
+}
