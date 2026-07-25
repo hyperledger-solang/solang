@@ -61,7 +61,6 @@ impl TargetCodegen for SorobanTarget {
         vartab: &mut Vartable,
         ns: &Namespace,
     ) -> Expression {
-        // Every array is one host VecObject: length is vec_len (arrays.rs).
         arrays::soroban_storage_array_length(loc, ty, array, cfg, vartab, ns)
     }
 
@@ -74,9 +73,6 @@ impl TargetCodegen for SorobanTarget {
         vartab: &mut Vartable,
         ns: &Namespace,
     ) -> Option<Expression> {
-        // Only a subscript place on a storage array is a vec_get read (all element
-        // kinds go into arrays.rs). Whole-array / scalar-var loads (not a Subscript)
-        // and non-array subscripts (e.g. mappings) fall through to the generic path.
         if let Expression::Subscript {
             array_ty,
             expr,
@@ -110,9 +106,6 @@ impl TargetCodegen for SorobanTarget {
         vartab: &mut Vartable,
         ns: &Namespace,
     ) -> bool {
-        // Mirror the read hook: a subscript place on a storage array becomes a vec_put
-        // write in arrays.rs (all element kinds). Non-array subscripts (e.g. mappings)
-        // and other stores fall through to the generic SetStorage path.
         if let Expression::Subscript {
             array_ty,
             expr,
@@ -236,7 +229,6 @@ impl TargetCodegen for SorobanTarget {
         if args[0].ty().is_storage_bytes() {
             return soroban_bytes_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self);
         }
-        // Every array (scalar and reference elements alike) is one host VecObject.
         arrays::soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
     }
 

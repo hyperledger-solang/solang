@@ -157,7 +157,7 @@ fn block_reduce(
                 *storage = expression_reduce(storage, &vars, ns);
             }
             Instr::PushMemory { value, .. } => {
-                *value = Box::new(expression_reduce(value, &vars, ns));
+                **value = expression_reduce(value, &vars, ns);
             }
             Instr::Constructor {
                 encoded_args,

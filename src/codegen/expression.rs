@@ -3078,9 +3078,6 @@ pub fn assign_single(
                         ty: ty.clone(),
                         var_no: pos,
                     };
-                    // Let the target intercept a storage-array subscript store (Soroban
-                    // does a vec_put read-modify-write in codegen); otherwise fall
-                    // through to the generic SetStorage-to-element.
                     if !target.storage_array_subscript_store(
                         &left.loc(),
                         value.clone(),

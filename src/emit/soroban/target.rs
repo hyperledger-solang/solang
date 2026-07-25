@@ -871,4 +871,3 @@ pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<
     let tag_val: u64 = tag;
     i64_type.const_int(tag_val, false)
 }
-

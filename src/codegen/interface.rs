@@ -238,10 +238,6 @@ pub(crate) trait TargetCodegen {
         value
     }
 
-    /// Intercept a load of a storage-array subscript place before it lowers to a
-    /// generic `Instr::LoadStorage`. Soroban reads scalar-element subscripts here
-    /// (host `vec_get`); the default returns `None` so other targets and untouched
-    /// element kinds keep the generic path.
     fn storage_array_subscript_load(
         &self,
         _loc: &Loc,
@@ -254,10 +250,6 @@ pub(crate) trait TargetCodegen {
         None
     }
 
-    /// Intercept a store to a storage-array subscript place before it lowers to a
-    /// generic `Instr::SetStorage`. Soroban writes scalar-element subscripts here
-    /// (host `vec_put` read-modify-write); the default returns `false` so other
-    /// targets and untouched element kinds keep the generic path.
     fn storage_array_subscript_store(
         &self,
         _loc: &Loc,

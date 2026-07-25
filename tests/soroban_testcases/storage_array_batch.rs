@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use soroban_sdk::{Bytes, BytesN, FromVal, IntoVal, String, TryFromVal, Val, I256, U256};
+use soroban_sdk::{
+    contracttype, Bytes, BytesN, FromVal, IntoVal, String, TryFromVal, Val, I256, U256,
+};
 
 #[test]
 fn storage_array_push_i32_test() {
@@ -815,5 +817,144 @@ fn storage_array_bytes32_test() {
         [0xCD; 32],
         |env, b| BytesN::from_array(env, b).into_val(env),
         |env, val, b| BytesN::<32>::from_val(env, val) == BytesN::from_array(env, b),
+    );
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ArrScalar {
+    pub a: u64,
+    pub b: i32,
+    pub c: bool,
+}
+
+#[test]
+fn storage_array_struct_scalar_test() {
+    let src = r#"
+        contract storage_array_struct_scalar {
+            struct S { uint64 a; int32 b; bool c; }
+            S[] mylist;
+
+            function push(S memory v) public returns (uint32) {
+                mylist.push(v);
+                return uint32(mylist.length);
+            }
+            function pop() public returns (uint32) {
+                mylist.pop();
+                return uint32(mylist.length);
+            }
+            function set(uint32 i, S memory v) public returns (S memory) {
+                mylist[i] = v;
+                return mylist[i];
+            }
+            function get(uint32 i) public returns (S memory) {
+                return mylist[i];
+            }
+            function length() public returns (uint32) {
+                return uint32(mylist.length);
+            }
+        }
+    "#;
+
+    let values: [ArrScalar; 4] = [
+        ArrScalar {
+            a: 1_000_000_000_000,
+            b: -5,
+            c: true,
+        },
+        ArrScalar {
+            a: 0,
+            b: 0,
+            c: false,
+        },
+        ArrScalar {
+            a: u64::MAX,
+            b: i32::MIN,
+            c: true,
+        },
+        ArrScalar {
+            a: 42,
+            b: 7,
+            c: false,
+        },
+    ];
+    drive_vec_ref_model::<ArrScalar>(
+        src,
+        &values,
+        ArrScalar {
+            a: 99,
+            b: -1,
+            c: true,
+        },
+        |env, r| r.clone().into_val(env),
+        |env, val, r| ArrScalar::from_val(env, val) == *r,
+    );
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ArrDoc {
+    pub name: String,
+    pub data: Bytes,
+    pub tag: BytesN<4>,
+    pub id: u32,
+}
+
+type DocSpec = (&'static str, &'static [u8], [u8; 4], u32);
+
+fn make_doc(env: &soroban_sdk::Env, s: &DocSpec) -> ArrDoc {
+    ArrDoc {
+        name: String::from_str(env, s.0),
+        data: Bytes::from_slice(env, s.1),
+        tag: BytesN::from_array(env, &s.2),
+        id: s.3,
+    }
+}
+
+#[test]
+fn storage_array_struct_ref_test() {
+    let src = r#"
+        contract storage_array_struct_ref {
+            struct S { string name; bytes data; bytes4 tag; uint32 id; }
+            S[] mylist;
+
+            function push(S memory v) public returns (uint32) {
+                mylist.push(v);
+                return uint32(mylist.length);
+            }
+            function pop() public returns (uint32) {
+                mylist.pop();
+                return uint32(mylist.length);
+            }
+            function set(uint32 i, S memory v) public returns (S memory) {
+                mylist[i] = v;
+                return mylist[i];
+            }
+            function get(uint32 i) public returns (S memory) {
+                return mylist[i];
+            }
+            function length() public returns (uint32) {
+                return uint32(mylist.length);
+            }
+        }
+    "#;
+
+    let values: [DocSpec; 4] = [
+        ("hello", &[0xAA, 0xBB], [0x01, 0x02, 0x03, 0x04], 7),
+        ("", &[], [0, 0, 0, 0], 0),
+        (
+            "solang world",
+            &[1, 2, 3, 4, 5],
+            [0xFF, 0xFF, 0xFF, 0xFF],
+            u32::MAX,
+        ),
+        ("x", &[0x10], [0xDE, 0xAD, 0xBE, 0xEF], 42),
+    ];
+    drive_vec_ref_model::<DocSpec>(
+        src,
+        &values,
+        ("replaced", &[0x99, 0x88], [0xCA, 0xFE, 0xBA, 0xBE], 123),
+        |env, s| make_doc(env, s).into_val(env),
+        |env, val, s| ArrDoc::from_val(env, val) == make_doc(env, s),
     );
 }
