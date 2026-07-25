@@ -136,3 +136,41 @@ fn storage_array_subscript_read_i32_test() {
     let res = runtime.invoke_contract(&addr2, "read_at", args);
     assert!(expected.shallow_eq(&res));
 }
+
+#[test]
+fn storage_array_subscript_write_i32_test() {
+    let contract_src = r#"
+        contract storage_array_write_i32 {
+            int32[] mylist;
+
+            function build_and_overwrite() public returns (int32) {
+                mylist.push(5);
+                mylist.push(10);
+                mylist.push(15);
+                mylist[1] = 100;
+                return mylist[0] + mylist[1] + mylist[2];
+            }
+
+            function write_at(uint32 i, int32 v) public returns (int32) {
+                mylist.push(1);
+                mylist.push(2);
+                mylist.push(3);
+                mylist[i] = v;
+                return mylist[i];
+            }
+        }
+    "#;
+
+    let mut runtime = build_solidity(contract_src, |_| {});
+
+    let addr = runtime.contracts.last().unwrap();
+    let expected: Val = 120_i32.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "build_and_overwrite", vec![]);
+    assert!(expected.shallow_eq(&res));
+
+    let addr2 = runtime.deploy_contract(contract_src);
+    let expected: Val = 42_i32.into_val(&runtime.env);
+    let args = vec![2_u32.into_val(&runtime.env), 42_i32.into_val(&runtime.env)];
+    let res = runtime.invoke_contract(&addr2, "write_at", args);
+    assert!(expected.shallow_eq(&res));
+}

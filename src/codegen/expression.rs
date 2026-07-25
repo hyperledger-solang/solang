@@ -3074,26 +3074,33 @@ pub fn assign_single(
                     }
                 }
                 Type::StorageRef(..) => {
-                    let value = target.prepare_storage_value(
-                        Expression::Variable {
-                            loc: left.loc(),
-                            ty: ty.clone(),
-                            var_no: pos,
-                        },
+                    let value = Expression::Variable {
+                        loc: left.loc(),
+                        ty: ty.clone(),
+                        var_no: pos,
+                    };
+                    // Let the target intercept a storage-array subscript store (Soroban
+                    // does a vec_put read-modify-write in codegen); otherwise fall
+                    // through to the generic SetStorage-to-element.
+                    if !target.storage_array_subscript_store(
+                        &left.loc(),
+                        value.clone(),
                         &dest,
                         cfg,
                         vartab,
                         ns,
-                    );
-                    cfg.add(
-                        vartab,
-                        Instr::SetStorage {
-                            value,
-                            ty: ty.deref_any().clone(),
-                            storage: dest,
-                            storage_type,
-                        },
-                    );
+                    ) {
+                        let value = target.prepare_storage_value(value, &dest, cfg, vartab, ns);
+                        cfg.add(
+                            vartab,
+                            Instr::SetStorage {
+                                value,
+                                ty: ty.deref_any().clone(),
+                                storage: dest,
+                                storage_type,
+                            },
+                        );
+                    }
                 }
                 Type::Ref(_) => {
                     let data = target.prepare_storage_value(

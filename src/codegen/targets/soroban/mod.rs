@@ -88,7 +88,10 @@ impl TargetCodegen for SorobanTarget {
         // reads go into arrays.rs. Reference elements keep their current path (Phase 6),
         // and whole-array / scalar-var loads (not a Subscript) fall through.
         if let Expression::Subscript {
-            array_ty, expr, index, ..
+            array_ty,
+            expr,
+            index,
+            ..
         } = storage
         {
             if let Type::StorageRef(_, inner) = array_ty {
@@ -108,6 +111,45 @@ impl TargetCodegen for SorobanTarget {
             }
         }
         None
+    }
+
+    fn storage_array_subscript_store(
+        &self,
+        loc: &pt::Loc,
+        value: Expression,
+        storage: &Expression,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
+    ) -> bool {
+        // Mirror the read hook: only a subscript place on a storage array with a
+        // NON-reference element becomes a vec_put write in arrays.rs. Reference
+        // elements keep their current path (Phase 6); other stores fall through.
+        if let Expression::Subscript {
+            array_ty,
+            expr,
+            index,
+            ..
+        } = storage
+        {
+            if let Type::StorageRef(_, inner) = array_ty {
+                if let Type::Array(elem, _) = inner.as_ref() {
+                    if !elem.is_reference_type(ns) {
+                        arrays::soroban_storage_subscript_write(
+                            loc,
+                            value,
+                            (**expr).clone(),
+                            (**index).clone(),
+                            cfg,
+                            vartab,
+                            ns,
+                        );
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// Soroban lazy decode path: if memory contains encoded handles, decode on demand.

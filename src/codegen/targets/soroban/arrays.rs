@@ -193,3 +193,47 @@ pub(crate) fn soroban_storage_subscript_read(
     );
     soroban_storage_decode_arg(elem_var, cfg, vartab, ns, Some(elem_ty.clone()))
 }
+
+pub(crate) fn soroban_storage_subscript_write(
+    loc: &pt::Loc,
+    value: Expression,
+    base: Expression,
+    index: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) {
+    let vec_ty = base.ty();
+    let vec_obj = load_raw_handle(loc, base.clone(), cfg, vartab);
+
+    let index_val = soroban_encode_arg(index.cast(&Type::Uint(32), ns), cfg, vartab, ns);
+    let value_encoded = soroban_storage_encode_arg(value, cfg, vartab, ns);
+
+    let new_vec_no = vartab.temp_name("soroban_vec_put", &Type::Uint(64));
+    let new_vec_var = Expression::Variable {
+        loc: *loc,
+        ty: Type::Uint(64),
+        var_no: new_vec_no,
+    };
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![new_vec_no],
+            return_tys: vec![Type::Uint(64)],
+            call: InternalCallTy::HostFunction {
+                name: HostFunctions::VecPut.name().to_string(),
+            },
+            args: vec![vec_obj, index_val, value_encoded],
+        },
+    );
+
+    cfg.add(
+        vartab,
+        Instr::SetStorage {
+            ty: vec_ty,
+            value: new_vec_var,
+            storage: base,
+            storage_type: None,
+        },
+    );
+}
