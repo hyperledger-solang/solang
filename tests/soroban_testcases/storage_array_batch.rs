@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use soroban_sdk::{FromVal, IntoVal, String, TryFromVal, Val, I256, U256};
+use soroban_sdk::{Bytes, BytesN, FromVal, IntoVal, String, TryFromVal, Val, I256, U256};
 
 #[test]
 fn storage_array_push_i32_test() {
@@ -719,5 +719,101 @@ fn storage_array_string_test() {
         "replaced",
         |env, s| String::from_str(env, s).into_val(env),
         |env, val, s| String::from_val(env, val) == String::from_str(env, s),
+    );
+}
+
+#[test]
+fn storage_array_bytes_test() {
+    let src = REF_MODEL_SRC.replace("TYPE", "bytes");
+    let values: [&[u8]; 5] = [
+        &[0xAA, 0xBB, 0xCC],
+        &[],
+        &[1, 2, 3, 4, 5, 6, 7, 8],
+        &[0xFF],
+        &[0x00, 0x10, 0x20],
+    ];
+    drive_vec_ref_model::<&[u8]>(
+        &src,
+        &values,
+        &[0xDE, 0xAD, 0xBE, 0xEF],
+        |env, b| Bytes::from_slice(env, b).into_val(env),
+        |env, val, b| Bytes::from_val(env, val) == Bytes::from_slice(env, b),
+    );
+}
+
+const BYTESN_MODEL_SRC: &str = r#"
+    contract storage_array_bytesn_model {
+        TYPE[] mylist;
+
+        function push(TYPE v) public returns (uint32) {
+            mylist.push(v);
+            return uint32(mylist.length);
+        }
+
+        function pop() public returns (uint32) {
+            mylist.pop();
+            return uint32(mylist.length);
+        }
+
+        function set(uint32 i, TYPE v) public returns (TYPE) {
+            mylist[i] = v;
+            return mylist[i];
+        }
+
+        function get(uint32 i) public returns (TYPE) {
+            return mylist[i];
+        }
+
+        function length() public returns (uint32) {
+            return uint32(mylist.length);
+        }
+    }
+"#;
+
+#[test]
+fn storage_array_bytes1_test() {
+    let src = BYTESN_MODEL_SRC.replace("TYPE", "bytes1");
+    let values: [[u8; 1]; 5] = [[0xAA], [0x00], [0xFF], [0x01], [0x7F]];
+    drive_vec_ref_model::<[u8; 1]>(
+        &src,
+        &values,
+        [0x42],
+        |env, b| BytesN::from_array(env, b).into_val(env),
+        |env, val, b| BytesN::<1>::from_val(env, val) == BytesN::from_array(env, b),
+    );
+}
+
+#[test]
+fn storage_array_bytes16_test() {
+    let src = BYTESN_MODEL_SRC.replace("TYPE", "bytes16");
+    let values: [[u8; 16]; 4] = [
+        [0x11; 16],
+        [0x00; 16],
+        [0xFF; 16],
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    ];
+    drive_vec_ref_model::<[u8; 16]>(
+        &src,
+        &values,
+        [0xAB; 16],
+        |env, b| BytesN::from_array(env, b).into_val(env),
+        |env, val, b| BytesN::<16>::from_val(env, val) == BytesN::from_array(env, b),
+    );
+}
+
+#[test]
+fn storage_array_bytes32_test() {
+    let src = BYTESN_MODEL_SRC.replace("TYPE", "bytes32");
+    let mut ramp = [0u8; 32];
+    for (i, b) in ramp.iter_mut().enumerate() {
+        *b = i as u8;
+    }
+    let values: [[u8; 32]; 4] = [[0x22; 32], [0x00; 32], [0xFF; 32], ramp];
+    drive_vec_ref_model::<[u8; 32]>(
+        &src,
+        &values,
+        [0xCD; 32],
+        |env, b| BytesN::from_array(env, b).into_val(env),
+        |env, val, b| BytesN::<32>::from_val(env, val) == BytesN::from_array(env, b),
     );
 }
