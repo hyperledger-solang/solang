@@ -286,3 +286,49 @@ fn storage_array_i32_test() {
     let res = runtime.invoke_contract(&addr2, "swap_ends", args);
     assert!(expected.shallow_eq(&res));
 }
+
+#[test]
+fn storage_array_u32_test() {
+    let contract_src = r#"
+        contract storage_array_u32_full {
+            uint32[] mylist;
+
+            function churn() public returns (uint32) {
+                for (uint32 i = 0; i < 5; i++) {
+                    mylist.push((i + 1) * 10); // 10,20,30,40,50
+                }
+                mylist[0] = mylist[4] + mylist[1]; // 50 + 20 = 70 -> [70,20,30,40,50]
+                mylist[2] = mylist[2] * 3;         // 30 * 3  = 90 -> [70,20,90,40,50]
+
+                mylist.pop(); // drop 50 -> [70,20,90,40], length 4
+
+                uint32 sum = 0;
+                for (uint32 j = 0; j < mylist.length; j++) {
+                    sum += mylist[j]; // 70 + 20 + 90 + 40 = 220
+                }
+                return sum + uint32(mylist.length); // 220 + 4 = 224
+            }
+
+            function set_get(uint32 i, uint32 v) public returns (uint32) {
+                for (uint32 k = 0; k < 4; k++) {
+                    mylist.push(k); // 0,1,2,3
+                }
+                mylist[i] = v;
+                return mylist[i] + uint32(mylist.length);
+            }
+        }
+    "#;
+
+    let mut runtime = build_solidity(contract_src, |_| {});
+
+    let addr = runtime.contracts.last().unwrap();
+    let expected: Val = 224_u32.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "churn", vec![]);
+    assert!(expected.shallow_eq(&res));
+
+    let addr2 = runtime.deploy_contract(contract_src);
+    let expected: Val = 103_u32.into_val(&runtime.env);
+    let args = vec![2_u32.into_val(&runtime.env), 99_u32.into_val(&runtime.env)];
+    let res = runtime.invoke_contract(&addr2, "set_get", args);
+    assert!(expected.shallow_eq(&res));
+}
