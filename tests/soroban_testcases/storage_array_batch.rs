@@ -233,3 +233,56 @@ fn storage_array_bool_test() {
     let res = runtime.invoke_contract(&addr4, "pop_len", vec![]);
     assert!(expected.shallow_eq(&res));
 }
+
+#[test]
+fn storage_array_i32_test() {
+    let contract_src = r#"
+        contract storage_array_i32_full {
+            int32[] mylist;
+
+            // Build [-5,-3,-1,1,3,5], mutate via subscripts, pop twice, loop-sum.
+            function churn() public returns (int32) {
+                for (int32 i = 0; i < 6; i++) {
+                    mylist.push(i * 2 - 5); // -5,-3,-1,1,3,5
+                }
+                // read-driven writes (binary ops)
+                mylist[0] = mylist[5] + mylist[1]; // 5 + (-3) = 2 -> [2,-3,-1,1,3,5]
+                mylist[4] = mylist[0] * mylist[3]; // 2 * 1   = 2 -> [2,-3,-1,1,2,5]
+
+                mylist.pop(); // drop 5 -> [2,-3,-1,1,2]
+                mylist.pop(); // drop 2 -> [2,-3,-1,1], length 4
+
+                int32 sum = 0;
+                for (uint32 j = 0; j < mylist.length; j++) {
+                    sum += mylist[j]; // 2 + (-3) + (-1) + 1 = -1
+                }
+                return sum * 100 + int32(uint32(mylist.length)); // -1*100 + 4 = -96
+            }
+
+            // Push 1..n, swap first and last via a temp, return their difference.
+            function swap_ends(uint32 n) public returns (int32) {
+                for (uint32 k = 0; k < n; k++) {
+                    mylist.push(int32(k) + 1); // 1,2,...,n
+                }
+                uint32 last = uint32(mylist.length) - 1;
+                int32 tmp = mylist[0];
+                mylist[0] = mylist[last];
+                mylist[last] = tmp;
+                return mylist[0] - mylist[last]; // n - 1
+            }
+        }
+    "#;
+
+    let mut runtime = build_solidity(contract_src, |_| {});
+
+    let addr = runtime.contracts.last().unwrap();
+    let expected: Val = (-96_i32).into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "churn", vec![]);
+    assert!(expected.shallow_eq(&res));
+
+    let addr2 = runtime.deploy_contract(contract_src);
+    let expected: Val = 3_i32.into_val(&runtime.env);
+    let args = vec![4_u32.into_val(&runtime.env)];
+    let res = runtime.invoke_contract(&addr2, "swap_ends", args);
+    assert!(expected.shallow_eq(&res));
+}
