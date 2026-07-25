@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use soroban_sdk::{IntoVal, TryFromVal, Val};
+use soroban_sdk::{FromVal, IntoVal, TryFromVal, Val, I256, U256};
 
 #[test]
 fn storage_array_push_i32_test() {
@@ -477,27 +477,29 @@ const MODEL_SRC: &str = r#"
     }
 "#;
 
-fn drive_vec_model<V>(src: &str, values: &[V], set_val: V, lo: V, hi: V)
-where
-    V: Copy + Ord + std::fmt::Debug + IntoVal<soroban_sdk::Env, Val>,
-    V: TryFromVal<soroban_sdk::Env, Val>,
+fn drive_vec_model<S>(
+    src: &str,
+    values: &[S],
+    set_val: S,
+    lo: S,
+    hi: S,
+    to_val: impl Fn(&soroban_sdk::Env, S) -> Val,
+    ret_eq: impl Fn(&soroban_sdk::Env, &Val, S) -> bool,
+) where
+    S: Copy + Ord,
 {
     let runtime = build_solidity(src, |_| {});
     let addr = runtime.contracts.last().unwrap();
-    let mut shadow: Vec<V> = Vec::new();
+    let mut shadow: Vec<S> = Vec::new();
 
-    let decode = |v: &Val| -> V {
-        V::try_from_val(&runtime.env, v).unwrap_or_else(|_| panic!("failed to decode return value"))
-    };
-
-    let verify = |shadow: &Vec<V>| {
+    let verify = |shadow: &Vec<S>| {
         let len_exp: Val = (shadow.len() as u32).into_val(&runtime.env);
         let len_got = runtime.invoke_contract(addr, "length", vec![]);
         assert!(len_exp.shallow_eq(&len_got), "length mismatch");
 
         for (i, v) in shadow.iter().enumerate() {
             let got = runtime.invoke_contract(addr, "get", vec![(i as u32).into_val(&runtime.env)]);
-            assert_eq!(decode(&got), *v, "element {i} mismatch");
+            assert!(ret_eq(&runtime.env, &got, *v), "element {i} mismatch");
         }
 
         let count = shadow.iter().filter(|&&e| e >= lo && e <= hi).count() as u32;
@@ -505,13 +507,13 @@ where
         let cgot = runtime.invoke_contract(
             addr,
             "check_in_range",
-            vec![lo.into_val(&runtime.env), hi.into_val(&runtime.env)],
+            vec![to_val(&runtime.env, lo), to_val(&runtime.env, hi)],
         );
         assert!(cexp.shallow_eq(&cgot), "check_in_range mismatch");
     };
 
     for v in values {
-        runtime.invoke_contract(addr, "push", vec![(*v).into_val(&runtime.env)]);
+        runtime.invoke_contract(addr, "push", vec![to_val(&runtime.env, *v)]);
         shadow.push(*v);
         verify(&shadow);
     }
@@ -523,7 +525,7 @@ where
             "set",
             vec![
                 (i as u32).into_val(&runtime.env),
-                set_val.into_val(&runtime.env),
+                to_val(&runtime.env, set_val),
             ],
         );
         shadow[i] = set_val;
@@ -537,7 +539,7 @@ where
     }
 
     for v in values.iter().take(2) {
-        runtime.invoke_contract(addr, "push", vec![(*v).into_val(&runtime.env)]);
+        runtime.invoke_contract(addr, "push", vec![to_val(&runtime.env, *v)]);
         shadow.push(*v);
         verify(&shadow);
     }
@@ -547,26 +549,80 @@ where
 fn storage_array_i128_model_test() {
     let src = MODEL_SRC.replace("TYPE", "int128");
     let values: [i128; 6] = [
-        1_000_000_000_000_000_000_000, // 1e21, beyond 64-bit
-        -500_000_000_000_000_000_000,  // -5e20
+        1_000_000_000_000_000_000_000,
+        -500_000_000_000_000_000_000,
         7,
         -3,
         42,
         0,
     ];
-    drive_vec_model::<i128>(&src, &values, 5, -3, 42);
+    drive_vec_model::<i128>(
+        &src,
+        &values,
+        5,
+        -3,
+        42,
+        |env, s| s.into_val(env),
+        |env, val, s| {
+            i128::try_from_val(env, val)
+                .map(|d| d == s)
+                .unwrap_or(false)
+        },
+    );
 }
 
 #[test]
 fn storage_array_u128_model_test() {
     let src = MODEL_SRC.replace("TYPE", "uint128");
     let values: [u128; 6] = [
-        1_000_000_000_000_000_000_000, // 1e21
-        2_000_000_000_000_000_000_000, // 2e21
+        1_000_000_000_000_000_000_000,
+        2_000_000_000_000_000_000_000,
         7,
         3,
         42,
         0,
     ];
-    drive_vec_model::<u128>(&src, &values, 5, 0, 42);
+    drive_vec_model::<u128>(
+        &src,
+        &values,
+        5,
+        0,
+        42,
+        |env, s| s.into_val(env),
+        |env, val, s| {
+            u128::try_from_val(env, val)
+                .map(|d| d == s)
+                .unwrap_or(false)
+        },
+    );
+}
+
+#[test]
+fn storage_array_i256_model_test() {
+    let src = MODEL_SRC.replace("TYPE", "int256");
+    let values: [i128; 6] = [2i128.pow(90), -(2i128.pow(80)), 7, -3, 42, 0];
+    drive_vec_model::<i128>(
+        &src,
+        &values,
+        5,
+        -3,
+        42,
+        |env, s| I256::from_i128(env, s).into_val(env),
+        |env, val, s| I256::from_val(env, val) == I256::from_i128(env, s),
+    );
+}
+
+#[test]
+fn storage_array_u256_model_test() {
+    let src = MODEL_SRC.replace("TYPE", "uint256");
+    let values: [u128; 6] = [2u128.pow(100), 2u128.pow(90), 7, 3, 42, 0];
+    drive_vec_model::<u128>(
+        &src,
+        &values,
+        5,
+        0,
+        42,
+        |env, s| U256::from_u128(env, s).into_val(env),
+        |env, val, s| U256::from_val(env, val) == U256::from_u128(env, s),
+    );
 }
