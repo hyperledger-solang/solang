@@ -811,13 +811,12 @@ pub fn expression(
                     .unwrap();
                     expression(&ast_expr, cfg, contract_no, func, ns, vartab, opt, target)
                 }
-                Type::DynamicBytes | Type::String => {
-                    target.lower_storage_array_length(loc, ty, array, elem_ty, cfg, vartab, ns)
-                }
-                Type::Array(_, dim) => match dim.last().unwrap() {
-                    ArrayLength::Dynamic => {
-                        target.lower_storage_array_length(loc, ty, array, elem_ty, cfg, vartab, ns)
-                    }
+                Type::DynamicBytes | Type::String => target
+                    .lower_storage_array_length(loc, ty, &array_ty, array, elem_ty, cfg, vartab, ns),
+                Type::Array(_, ref dim) => match dim.last().unwrap() {
+                    ArrayLength::Dynamic => target.lower_storage_array_length(
+                        loc, ty, &array_ty, array, elem_ty, cfg, vartab, ns,
+                    ),
                     ArrayLength::Fixed(length) => {
                         let ast_expr = bigint_to_expression(
                             loc,

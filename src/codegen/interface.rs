@@ -48,6 +48,7 @@ pub(crate) trait TargetCodegen {
         &self,
         loc: &Loc,
         ty: &Type,
+        array_ty: &Type,
         array: Expression,
         elem_ty: &Type,
         cfg: &mut ControlFlowGraph,
