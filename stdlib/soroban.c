@@ -3,10 +3,10 @@
 // Exports:
 //   soroban_alloc(size)                -> void*
 //   soroban_alloc_align(size, align)   -> void*
-//   soroban_alloc_init(size, init_ptr) -> struct vector*
-//       Returns a pointer to a `struct vector` (see stdlib.h),
-//       with `len` and `size` set to `size` and `data` initialized
-//       from `init_ptr` if provided.
+//   soroban_alloc_init(members, elem_size, init_ptr) -> struct vector*
+//       Returns a pointer to a `struct vector` (see stdlib.h), with `len`
+//       and `size` set to `members` (element count) and a `members*elem_size`
+//       byte payload initialized from `init_ptr` if provided.
 //   soroban_malloc(size)               -> void*
 //   soroban_realloc(ptr, new_size)     -> void*   (COPY using header)
 //   soroban_realloc_with_old(ptr, old_size, new_size) -> void* (explicit copy)
@@ -118,21 +118,24 @@ static void *alloc_impl(uint32_t bytes, uint32_t align)
 
 // -------------------- exported API --------------------
 // Forward declare so soroban_alloc can delegate to it
-struct vector *soroban_alloc_init(uint32_t members, const void *init_ptr);
+struct vector *soroban_alloc_init(uint32_t members, uint32_t elem_size, const void *init_ptr);
 
 __attribute__((export_name("soroban_alloc"))) struct vector *soroban_alloc(uint32_t members)
 {
-    // Delegate to soroban_alloc_init with empty initializer
-    return soroban_alloc_init(members, (const void *)0);
+    // Delegate to soroban_alloc_init with byte-sized members and no initializer
+    return soroban_alloc_init(members, 1, (const void *)0);
 }
 
 __attribute__((export_name("soroban_alloc_init"))) struct vector *soroban_alloc_init(uint32_t members,
+                                                                                     uint32_t elem_size,
                                                                                      const void *init_ptr)
 {
-    // Emulate stdlib.c:vector_new() but allocate via alloc_impl.
-    // Note: here `members` is the number of bytes in the vector payload
-    // (element size assumed to be 1 for Soroban at present).
-    uint32_t size_array = members;
+    // Emulate stdlib.c:vector_new(). `members` is the element count and
+    // `elem_size` the size of each element in bytes, so the payload is
+    // `members * elem_size` bytes while `len`/`size` stay in element units.
+    if (elem_size == 0)
+        elem_size = 1;
+    uint32_t size_array = members * elem_size;
 
     struct vector *v = (struct vector *)alloc_impl((uint32_t)sizeof(struct vector) + size_array, 8);
     if (v == (struct vector *)0)
