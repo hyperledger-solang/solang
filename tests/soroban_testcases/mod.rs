@@ -11,6 +11,7 @@ mod constructor;
 mod cross_contract_calls;
 mod events;
 mod example_custom_types;
+mod example_pause;
 mod hello_world;
 mod i128_u128;
 mod i256_u256;
