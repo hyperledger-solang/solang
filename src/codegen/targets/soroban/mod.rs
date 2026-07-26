@@ -1061,7 +1061,7 @@ fn unsupported_parameter_type(ty: &Type, ns: &Namespace) -> Option<String> {
         Type::Struct(_) => {
             soroban_struct_field_unsupported(ty, ns).map(|_| format!("{} memory", ty.to_string(ns)))
         }
-        Type::Array(elem, _) if has_unsupported_soroban_array_element(elem.as_ref()) => {
+        Type::Array(elem, _) if has_unsupported_soroban_array_element(elem.as_ref(), ns) => {
             Some(format!("{} memory", ty.to_string(ns)))
         }
         _ => None,
@@ -1108,11 +1108,11 @@ fn unsupported_return_type(ty: &Type, ns: &Namespace) -> Option<String> {
         }
         // Arrays of scalar elements round-trip (`encode_vector` encodes each element into a
         // `Val` buffer before building the host Vec). Reject arrays whose element type is
-        // unsupported (structs, `bytes`/`bytesN`), and `string` elements, which have no
-        // verified return encoding yet.
+        // unsupported (`bytes`/`bytesN`), plus `string` and struct elements, which have no
+        // verified return encoding yet (struct elements are supported as parameters).
         Type::Array(elem, _)
-            if has_unsupported_soroban_array_element(elem.as_ref())
-                || matches!(elem.as_ref(), Type::String) =>
+            if has_unsupported_soroban_array_element(elem.as_ref(), ns)
+                || matches!(elem.as_ref(), Type::String | Type::Struct(_)) =>
         {
             Some(format!("{} memory", ty.to_string(ns)))
         }
@@ -1120,10 +1120,22 @@ fn unsupported_return_type(ty: &Type, ns: &Namespace) -> Option<String> {
     }
 }
 
-fn has_unsupported_soroban_array_element(ty: &Type) -> bool {
+fn has_unsupported_soroban_array_element(ty: &Type, ns: &Namespace) -> bool {
     match ty {
-        Type::DynamicBytes | Type::Bytes(_) | Type::Struct(_) => true,
-        Type::Array(elem, _) => has_unsupported_soroban_array_element(elem.as_ref()),
+        Type::DynamicBytes | Type::Bytes(_) => true,
+        // Flat structs (no struct-typed fields) ride the existing struct map codec per
+        // element: `decode_vector` yields `SorobanHandle` elements which decode through
+        // `decode_struct_map` on load. Structs containing structs stay rejected until
+        // nested-struct lowering is fixed.
+        Type::Struct(struct_ty) => {
+            soroban_struct_field_unsupported(ty, ns).is_some()
+                || struct_ty
+                    .definition(ns)
+                    .fields
+                    .iter()
+                    .any(|field| matches!(field.ty, Type::Struct(_)))
+        }
+        Type::Array(elem, _) => has_unsupported_soroban_array_element(elem.as_ref(), ns),
         _ => false,
     }
 }

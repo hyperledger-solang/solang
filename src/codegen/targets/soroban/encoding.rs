@@ -246,6 +246,8 @@ pub fn soroban_decode_arg(
         Type::Array(elem_ty, _) => {
             if let Type::StorageRef(_, _) = arg.ty() {
                 arg.clone()
+            } else if let Type::Struct(StructType::UserDefined(n)) = elem_ty.as_ref() {
+                decode_struct_vector(arg, elem_ty.as_ref(), *n, ns, wrapper_cfg, vartab)
             } else {
                 decode_vector(arg, &elem_ty, ns, wrapper_cfg, vartab)
             }
@@ -2650,4 +2652,217 @@ fn decode_vector(
     );
 
     decoded_buffer
+}
+
+/// Decode a host `Vec` of struct maps into a memory array of structs.
+///
+/// `decode_vector` leaves the elements as encoded `Val` handles, which is fine for scalar
+/// elements because loads of `SorobanHandle` values decode lazily. Struct elements are
+/// reached through `StructMember` chains that never observe the handle type, so they are
+/// decoded eagerly instead: unpack the handle buffer, then decode every element's map into
+/// the result array field by field (per-field stores follow the LLVM struct layout, which
+/// is not packed).
+fn decode_struct_vector(
+    vec_object: Expression,
+    elem_ty: &Type,
+    struct_no: usize,
+    ns: &Namespace,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let loc = Loc::Codegen;
+    let handle_ty = Type::SorobanHandle(Box::new(elem_ty.clone()));
+    let handles_ty = Type::Array(Box::new(handle_ty.clone()), vec![ArrayLength::Dynamic]);
+
+    // Unpack the host vec into a buffer of encoded element handles.
+    let handles = decode_vector(vec_object, elem_ty, ns, cfg, vartab);
+
+    let len_var = vartab.temp_name("struct_vec_len", &Type::Uint(32));
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc,
+            res: len_var,
+            expr: Expression::Builtin {
+                loc,
+                tys: vec![Type::Uint(32)],
+                kind: Builtin::ArrayLength,
+                args: vec![handles.clone()],
+            },
+        },
+    );
+    let len = Expression::Variable {
+        loc,
+        ty: Type::Uint(32),
+        var_no: len_var,
+    };
+
+    let result_ty = Type::Array(Box::new(elem_ty.clone()), vec![ArrayLength::Dynamic]);
+    let result_var = vartab.temp_name("struct_vec_decoded", &result_ty);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc,
+            res: result_var,
+            expr: Expression::AllocDynamicBytes {
+                loc,
+                ty: result_ty.clone(),
+                size: Box::new(len.clone()),
+                initializer: None,
+            },
+        },
+    );
+    let result = Expression::Variable {
+        loc,
+        ty: result_ty.clone(),
+        var_no: result_var,
+    };
+
+    let i_var = vartab.temp_name("i", &Type::Uint(32));
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc,
+            res: i_var,
+            expr: Expression::NumberLiteral {
+                loc,
+                ty: Type::Uint(32),
+                value: BigInt::from(0_u64),
+            },
+        },
+    );
+    let i = Expression::Variable {
+        loc,
+        ty: Type::Uint(32),
+        var_no: i_var,
+    };
+
+    let cond_block = cfg.new_basic_block("struct_vec_decode_cond".to_string());
+    let body_block = cfg.new_basic_block("struct_vec_decode_body".to_string());
+    let done_block = cfg.new_basic_block("struct_vec_decode_done".to_string());
+
+    // Track the loop counter so a phi node is emitted at the loop header (see encode_vector).
+    vartab.new_dirty_tracker();
+
+    cfg.add(vartab, Instr::Branch { block: cond_block });
+    cfg.set_basic_block(cond_block);
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: Expression::Less {
+                loc,
+                signed: false,
+                left: Box::new(i.clone()),
+                right: Box::new(len.clone()),
+            },
+            true_block: body_block,
+            false_block: done_block,
+        },
+    );
+
+    cfg.set_basic_block(body_block);
+    // Read the encoded map handle for element `i`.
+    let handle_var = vartab.temp_name("elem_handle", &handle_ty);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc,
+            res: handle_var,
+            expr: Expression::Load {
+                loc,
+                ty: handle_ty.clone(),
+                expr: Box::new(Expression::Subscript {
+                    loc,
+                    ty: Type::Ref(Box::new(handle_ty.clone())),
+                    array_ty: handles_ty.clone(),
+                    expr: Box::new(handles.clone()),
+                    index: Box::new(i.clone()),
+                }),
+            },
+        },
+    );
+    let handle = Expression::Variable {
+        loc,
+        ty: Type::Uint(64),
+        var_no: handle_var,
+    };
+
+    // Decode each field out of the element's map straight into the result slot.
+    let elem_slot = Expression::Subscript {
+        loc,
+        ty: Type::Ref(Box::new(elem_ty.clone())),
+        array_ty: result_ty.clone(),
+        expr: Box::new(result.clone()),
+        index: Box::new(i.clone()),
+    };
+    let fields = ns.structs[struct_no].fields.clone();
+    for (field_no, field) in fields.iter().enumerate() {
+        let name = field
+            .id
+            .as_ref()
+            .map(|id| id.name.clone())
+            .unwrap_or_else(|| field_no.to_string());
+        let key = struct_field_key(&name, loc, cfg, vartab, ns);
+
+        let val_var = vartab.temp_name("map_val", &Type::Uint(64));
+        cfg.add(
+            vartab,
+            Instr::Call {
+                res: vec![val_var],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::MapGet.name().to_string(),
+                },
+                args: vec![handle.clone(), key],
+            },
+        );
+        let val = Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: val_var,
+        };
+
+        let decoded = soroban_decode_arg(val, cfg, vartab, ns, Some(field.ty.clone()));
+        cfg.add(
+            vartab,
+            Instr::Store {
+                dest: Expression::StructMember {
+                    loc,
+                    ty: Type::Ref(Box::new(field.ty.clone())),
+                    expr: Box::new(elem_slot.clone()),
+                    member: field_no,
+                },
+                data: decoded,
+            },
+        );
+    }
+
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc,
+            res: i_var,
+            expr: Expression::Add {
+                loc,
+                ty: Type::Uint(32),
+                overflowing: false,
+                left: Box::new(i.clone()),
+                right: Box::new(Expression::NumberLiteral {
+                    loc,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(1_u64),
+                }),
+            },
+        },
+    );
+    cfg.add(vartab, Instr::Branch { block: cond_block });
+
+    cfg.set_basic_block(done_block);
+
+    let phis = vartab.pop_dirty_tracker();
+    cfg.set_phis(cond_block, phis.clone());
+    cfg.set_phis(body_block, phis.clone());
+    cfg.set_phis(done_block, phis);
+
+    result
 }
