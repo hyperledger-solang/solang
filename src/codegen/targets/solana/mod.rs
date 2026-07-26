@@ -57,6 +57,7 @@ impl TargetCodegen for SolanaTarget {
         &self,
         loc: &Loc,
         ty: &Type,
+        _array_ty: &Type,
         array: Expression,
         elem_ty: &Type,
         _cfg: &mut ControlFlowGraph,

@@ -55,17 +55,25 @@ impl TargetCodegen for SorobanTarget {
         &self,
         loc: &pt::Loc,
         ty: &Type,
+        array_ty: &Type,
         array: Expression,
         elem_ty: &Type,
-        _cfg: &mut ControlFlowGraph,
-        _vartab: &mut Vartable,
-        _ns: &Namespace,
+        cfg: &mut ControlFlowGraph,
+        vartab: &mut Vartable,
+        ns: &Namespace,
     ) -> Expression {
-        Expression::StorageArrayLength {
-            loc: *loc,
-            ty: ty.clone(),
-            array: Box::new(array),
-            elem_ty: elem_ty.clone(),
+        // Storage `bytes`/`string` live in host objects, so their length is a host call.
+        // Dispatch on the declared array type: the lowered expression's own type is the
+        // storage slot, not the array.
+        match array_ty.deref_any() {
+            Type::DynamicBytes => soroban_bytes_length(loc, array, cfg, vartab, ns),
+            Type::String => soroban_strings_length(loc, array, cfg, vartab, ns),
+            _ => Expression::StorageArrayLength {
+                loc: *loc,
+                ty: ty.clone(),
+                array: Box::new(array),
+                elem_ty: elem_ty.clone(),
+            },
         }
     }
 
