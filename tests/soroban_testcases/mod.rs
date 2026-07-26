@@ -28,6 +28,7 @@ mod storage;
 mod storage_array;
 mod strings;
 mod struct_abi_member_count;
+mod struct_array_args;
 mod struct_abi_single_field;
 mod struct_member_count;
 mod struct_single_field;

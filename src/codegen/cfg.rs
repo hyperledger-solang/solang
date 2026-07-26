@@ -1892,7 +1892,14 @@ pub(crate) fn populate_arguments<T: FunctionAttributes>(
 
 fn soroban_runtime_arg_ty(ty: &Type) -> Type {
     match ty {
-        Type::Array(elem_ty, dims) if dims.last() == Some(&ast::ArrayLength::Dynamic) => {
+        // Scalar-element arrays arrive as buffers of encoded handles that decode lazily on
+        // load. Struct elements are decoded eagerly in the dispatch wrapper (their fields
+        // are accessed through StructMember chains that never see the handle type), so
+        // those parameters keep their plain memory type.
+        Type::Array(elem_ty, dims)
+            if dims.last() == Some(&ast::ArrayLength::Dynamic)
+                && !matches!(elem_ty.as_ref(), Type::Struct(_)) =>
+        {
             Type::Array(
                 Box::new(Type::SorobanHandle(Box::new(elem_ty.as_ref().clone()))),
                 dims.clone(),
