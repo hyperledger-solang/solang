@@ -20,6 +20,7 @@ mod integer_width_warnings;
 mod liquidity_pool;
 mod mappings;
 mod math;
+mod mint_lock;
 mod print;
 mod sha256;
 mod storage;
