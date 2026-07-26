@@ -183,14 +183,24 @@ impl TargetCodegen for PolkadotTarget {
     fn lower_storage_array_length(
         &self,
         loc: &Loc,
-        _ty: &Type,
+        ty: &Type,
         array: Expression,
-        _elem_ty: &Type,
+        elem_ty: &Type,
         cfg: &mut ControlFlowGraph,
         vartab: &mut Vartable,
         ns: &Namespace,
     ) -> Expression {
-        load_storage(loc, &ns.storage_type(), array, cfg, vartab, None, ns, self)
+        match array.ty().deref_into() {
+            // `bytes`/`string` length is lowered in emit.
+            Type::DynamicBytes | Type::String => Expression::StorageArrayLength {
+                loc: *loc,
+                ty: ty.clone(),
+                array: Box::new(array),
+                elem_ty: elem_ty.clone(),
+            },
+            // Dynamic arrays keep their length in the storage slot.
+            _ => load_storage(loc, &ns.storage_type(), array, cfg, vartab, None, ns, self),
+        }
     }
 }
 

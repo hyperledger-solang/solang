@@ -15,8 +15,7 @@ use crate::codegen::constructor::call_constructor;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::polkadot::return_code as polkadot;
 use crate::codegen::targets::soroban::{
-    soroban_bytes_length, soroban_strings_length, soroban_struct_load, soroban_struct_member_load,
-    soroban_struct_member_store,
+    soroban_struct_load, soroban_struct_member_load, soroban_struct_member_store,
 };
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
@@ -812,8 +811,9 @@ pub fn expression(
                     .unwrap();
                     expression(&ast_expr, cfg, contract_no, func, ns, vartab, opt, target)
                 }
-                Type::DynamicBytes => soroban_bytes_length(loc, array, cfg, vartab, ns),
-                Type::String => soroban_strings_length(loc, array, cfg, vartab, ns),
+                Type::DynamicBytes | Type::String => {
+                    target.lower_storage_array_length(loc, ty, array, elem_ty, cfg, vartab, ns)
+                }
                 Type::Array(_, dim) => match dim.last().unwrap() {
                     ArrayLength::Dynamic => {
                         target.lower_storage_array_length(loc, ty, array, elem_ty, cfg, vartab, ns)
