@@ -461,7 +461,9 @@ pub fn soroban_encode_arg(
                     right: Box::new(Expression::NumberLiteral {
                         loc: item.loc(),
                         ty: Type::Uint(64),
-                        value: tags::I32.into(),
+                        // Enum discriminants are unsigned and decoded as `Uint(32)`, so they must
+                        // be encoded with the U32 `Val` tag (not the signed I32 tag).
+                        value: tags::U32.into(),
                     }),
                     overflowing: false,
                 },
@@ -643,7 +645,7 @@ pub fn soroban_encode_arg(
         Type::Array(_, _) => Instr::Set {
             loc: Loc::Codegen,
             res: obj,
-            expr: encode_vector(item.clone(), cfg, vartab),
+            expr: encode_vector(item.clone(), cfg, vartab, ns),
         },
 
         _ => panic!(
@@ -1956,21 +1958,174 @@ fn encode_vector(
     item: Expression,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
+    ns: &Namespace,
 ) -> Expression {
-    let len = Expression::Builtin {
-        loc: item.loc(),
-        tys: vec![Type::Uint(32)],
-        kind: Builtin::ArrayLength,
-        args: vec![item.clone()],
+    let loc = item.loc();
+    let item_ty = item.ty();
+
+    // Length of the source array (held in a variable so it survives the encode loop below).
+    let len_var = vartab.temp_name("vec_len", &Type::Uint(32));
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc,
+            res: len_var,
+            expr: Expression::Builtin {
+                loc,
+                tys: vec![Type::Uint(32)],
+                kind: Builtin::ArrayLength,
+                args: vec![item.clone()],
+            },
+        },
+    );
+    let len = Expression::Variable {
+        loc,
+        ty: Type::Uint(32),
+        var_no: len_var,
+    };
+
+    let elem_ty = match item_ty.deref_any() {
+        Type::Array(elem, _) => elem.as_ref().clone(),
+        _ => Type::Uint(64),
+    };
+
+    // `vec_new_from_linear_memory` reads a contiguous buffer of encoded `Val`s. If the array
+    // elements are already encoded (`SorobanHandle`, e.g. a decoded argument passed straight
+    // through), the array's own buffer is directly usable. Otherwise the array holds raw scalars
+    // (e.g. a freshly built `uint64[]`), so encode each element into a `Val` buffer first.
+    let vals = if matches!(elem_ty, Type::SorobanHandle(_)) {
+        item.clone()
+    } else {
+        let vals_ty = Type::Array(Box::new(Type::Uint(64)), vec![ArrayLength::Dynamic]);
+        let vals_var = vartab.temp_name("encoded_vec", &vals_ty);
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc,
+                res: vals_var,
+                expr: Expression::AllocDynamicBytes {
+                    loc,
+                    ty: vals_ty.clone(),
+                    size: Box::new(len.clone()),
+                    initializer: None,
+                },
+            },
+        );
+        let vals = Expression::Variable {
+            loc,
+            ty: vals_ty.clone(),
+            var_no: vals_var,
+        };
+
+        let i_var = vartab.temp_name("i", &Type::Uint(32));
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc,
+                res: i_var,
+                expr: Expression::NumberLiteral {
+                    loc,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(0_u64),
+                },
+            },
+        );
+        let i = Expression::Variable {
+            loc,
+            ty: Type::Uint(32),
+            var_no: i_var,
+        };
+
+        let cond_block = cfg.new_basic_block("vec_encode_cond".to_string());
+        let body_block = cfg.new_basic_block("vec_encode_body".to_string());
+        let done_block = cfg.new_basic_block("vec_encode_done".to_string());
+
+        // Track the loop counter so a phi node is emitted at the loop header. Without this the
+        // counter would be folded to its initial value (0) at every use, giving an infinite loop.
+        // `i_var` was created before this call, so it falls under the tracker; the temporaries
+        // created inside `soroban_encode_arg` are created afterwards and stay out of this set.
+        vartab.new_dirty_tracker();
+
+        cfg.add(vartab, Instr::Branch { block: cond_block });
+        cfg.set_basic_block(cond_block);
+        cfg.add(
+            vartab,
+            Instr::BranchCond {
+                cond: Expression::Less {
+                    loc,
+                    signed: false,
+                    left: Box::new(i.clone()),
+                    right: Box::new(len.clone()),
+                },
+                true_block: body_block,
+                false_block: done_block,
+            },
+        );
+
+        cfg.set_basic_block(body_block);
+        // Load the value at index `i` (Subscript yields the element address, so read through it).
+        let elem = Expression::Load {
+            loc,
+            ty: elem_ty.clone(),
+            expr: Box::new(Expression::Subscript {
+                loc,
+                ty: Type::Ref(Box::new(elem_ty.clone())),
+                array_ty: item_ty.clone(),
+                expr: Box::new(item.clone()),
+                index: Box::new(i.clone()),
+            }),
+        };
+        let encoded = soroban_encode_arg(elem, cfg, vartab, ns);
+        cfg.add(
+            vartab,
+            Instr::Store {
+                dest: Expression::Subscript {
+                    loc,
+                    ty: Type::Ref(Box::new(Type::Uint(64))),
+                    array_ty: vals_ty.clone(),
+                    expr: Box::new(vals.clone()),
+                    index: Box::new(i.clone()),
+                },
+                data: encoded,
+            },
+        );
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc,
+                res: i_var,
+                expr: Expression::Add {
+                    loc,
+                    ty: Type::Uint(32),
+                    overflowing: false,
+                    left: Box::new(i.clone()),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(1_u64),
+                    }),
+                },
+            },
+        );
+        cfg.add(vartab, Instr::Branch { block: cond_block });
+
+        cfg.set_basic_block(done_block);
+
+        let phis = vartab.pop_dirty_tracker();
+        cfg.set_phis(cond_block, phis.clone());
+        cfg.set_phis(body_block, phis.clone());
+        cfg.set_phis(done_block, phis);
+
+        vals
     };
 
     let data_ptr = Expression::VectorData {
-        pointer: Box::new(item.clone()),
+        pointer: Box::new(vals),
     };
 
     // VectorNewFromLinearMemory expects (ptr_u32val, len_u32val).
-    let encoded_ptr = encode_object(item.loc(), data_ptr, 32, tags::U32);
-    let encoded_len = encode_object(item.loc(), len, 32, tags::U32);
+    let encoded_ptr = encode_object(loc, data_ptr, 32, tags::U32);
+    let encoded_len = encode_object(loc, len, 32, tags::U32);
 
     let obj = vartab.temp_name("vec_obj", &Type::Uint(64));
     cfg.add(
@@ -1983,7 +2138,7 @@ fn encode_vector(
     );
 
     Expression::Variable {
-        loc: item.loc(),
+        loc,
         ty: Type::Uint(64),
         var_no: obj,
     }

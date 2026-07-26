@@ -2,6 +2,7 @@
 mod abi_encode;
 mod alloc;
 mod array_args;
+mod array_return;
 mod atomic_swap;
 mod auth;
 mod block_number;
@@ -20,6 +21,7 @@ mod integer_width_warnings;
 mod liquidity_pool;
 mod mappings;
 mod math;
+mod other_custom_types;
 mod print;
 mod sha256;
 mod storage;

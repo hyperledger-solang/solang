@@ -57,9 +57,9 @@ fn array_and_multiple_return_abi_types_are_rejected() {
         return Item({ value: 1 });
     }
 
-    function array_return() public returns (uint64[] memory) {
-        uint64[] memory values = new uint64[](1);
-        values[0] = 1;
+    function array_return() public returns (bytes[] memory) {
+        bytes[] memory values = new bytes[](1);
+        values[0] = hex"01";
         return values;
     }
 
@@ -79,7 +79,7 @@ fn array_and_multiple_return_abi_types_are_rejected() {
     assert!(errors.iter().any(|diagnostic| diagnostic.message
         == "type 'bytes[] memory' is not supported as a Soroban external function parameter"));
     assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "type 'uint64[] memory' is not supported as a Soroban external function return value"));
+        == "type 'bytes[] memory' is not supported as a Soroban external function return value"));
     assert!(errors.iter().any(|diagnostic| diagnostic.message
         == "Soroban external functions can return at most one value"));
 }

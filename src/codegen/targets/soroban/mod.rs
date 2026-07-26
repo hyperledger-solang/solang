@@ -1098,7 +1098,16 @@ fn unsupported_return_type(ty: &Type, ns: &Namespace) -> Option<String> {
         Type::Struct(_) => {
             soroban_struct_field_unsupported(ty, ns).map(|_| format!("{} memory", ty.to_string(ns)))
         }
-        Type::Array(_, _) => Some(format!("{} memory", ty.to_string(ns))),
+        // Arrays of scalar elements round-trip (`encode_vector` encodes each element into a
+        // `Val` buffer before building the host Vec). Reject arrays whose element type is
+        // unsupported (structs, `bytes`/`bytesN`), and `string` elements, which have no
+        // verified return encoding yet.
+        Type::Array(elem, _)
+            if has_unsupported_soroban_array_element(elem.as_ref())
+                || matches!(elem.as_ref(), Type::String) =>
+        {
+            Some(format!("{} memory", ty.to_string(ns)))
+        }
         _ => None,
     }
 }
