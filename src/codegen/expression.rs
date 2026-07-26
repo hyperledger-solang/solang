@@ -3078,14 +3078,17 @@ pub fn assign_single(
                         ty: ty.clone(),
                         var_no: pos,
                     };
-                    if !target.storage_array_subscript_store(
-                        &left.loc(),
-                        value.clone(),
-                        &dest,
-                        cfg,
-                        vartab,
-                        ns,
-                    ) {
+                    if target
+                        .storage_array_subscript_store(
+                            &left.loc(),
+                            value.clone(),
+                            &dest,
+                            cfg,
+                            vartab,
+                            ns,
+                        )
+                        .is_none()
+                    {
                         let value = target.prepare_storage_value(value, &dest, cfg, vartab, ns);
                         cfg.add(
                             vartab,

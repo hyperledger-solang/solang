@@ -258,7 +258,7 @@ pub(crate) trait TargetCodegen {
         _cfg: &mut ControlFlowGraph,
         _vartab: &mut Vartable,
         _ns: &Namespace,
-    ) -> bool {
-        false
+    ) -> Option<()> {
+        None
     }
 }

@@ -2,7 +2,8 @@
 
 use crate::build_solidity;
 use soroban_sdk::{
-    contracttype, Bytes, BytesN, FromVal, IntoVal, String, TryFromVal, Val, I256, U256,
+    contracttype, testutils::Address as _, Address, Bytes, BytesN, FromVal, IntoVal, String,
+    TryFromVal, Val, I256, U256,
 };
 
 #[test]
@@ -957,4 +958,161 @@ fn storage_array_struct_ref_test() {
         |env, s| make_doc(env, s).into_val(env),
         |env, val, s| ArrDoc::from_val(env, val) == make_doc(env, s),
     );
+}
+
+#[test]
+fn storage_array_cross_tx_scalar_test() {
+    let contract_src = r#"
+        contract storage_array_persist_scalar {
+            int32[] mylist;
+
+            function push_val(int32 v) public { mylist.push(v); }
+            function pop() public { mylist.pop(); }
+            function set(uint32 i, int32 v) public { mylist[i] = v; }
+            function get(uint32 i) public returns (int32) { return mylist[i]; }
+            function length() public returns (uint32) { return uint32(mylist.length); }
+        }
+    "#;
+
+    let runtime = build_solidity(contract_src, |_| {});
+    let addr = runtime.contracts.last().unwrap();
+
+    runtime.invoke_contract(addr, "push_val", vec![10_i32.into_val(&runtime.env)]);
+    let res = runtime.invoke_contract(addr, "length", vec![]);
+    let exp: Val = 1_u32.into_val(&runtime.env);
+    assert!(exp.shallow_eq(&res));
+
+    runtime.invoke_contract(addr, "push_val", vec![20_i32.into_val(&runtime.env)]);
+    runtime.invoke_contract(addr, "push_val", vec![30_i32.into_val(&runtime.env)]);
+    let r0 = runtime.invoke_contract(addr, "get", vec![0_u32.into_val(&runtime.env)]);
+    let r1 = runtime.invoke_contract(addr, "get", vec![1_u32.into_val(&runtime.env)]);
+    let r2 = runtime.invoke_contract(addr, "get", vec![2_u32.into_val(&runtime.env)]);
+    let e10: Val = 10_i32.into_val(&runtime.env);
+    let e20: Val = 20_i32.into_val(&runtime.env);
+    let e30: Val = 30_i32.into_val(&runtime.env);
+    assert!(e10.shallow_eq(&r0));
+    assert!(e20.shallow_eq(&r1));
+    assert!(e30.shallow_eq(&r2));
+
+    runtime.invoke_contract(
+        addr,
+        "set",
+        vec![1_u32.into_val(&runtime.env), 99_i32.into_val(&runtime.env)],
+    );
+    let got = runtime.invoke_contract(addr, "get", vec![1_u32.into_val(&runtime.env)]);
+    let e99: Val = 99_i32.into_val(&runtime.env);
+    assert!(e99.shallow_eq(&got));
+
+    runtime.invoke_contract(addr, "pop", vec![]);
+    let len2: Val = runtime.invoke_contract(addr, "length", vec![]);
+    let exp2: Val = 2_u32.into_val(&runtime.env);
+    assert!(exp2.shallow_eq(&len2));
+    let a0 = runtime.invoke_contract(addr, "get", vec![0_u32.into_val(&runtime.env)]);
+    let a1 = runtime.invoke_contract(addr, "get", vec![1_u32.into_val(&runtime.env)]);
+    assert!(e10.shallow_eq(&a0));
+    assert!(e99.shallow_eq(&a1));
+}
+
+#[test]
+fn storage_array_cross_tx_string_test() {
+    let contract_src = r#"
+        contract storage_array_persist_string {
+            string[] mylist;
+
+            function push_val(string memory v) public { mylist.push(v); }
+            function pop() public { mylist.pop(); }
+            function set(uint32 i, string memory v) public { mylist[i] = v; }
+            function get(uint32 i) public returns (string memory) { return mylist[i]; }
+            function length() public returns (uint32) { return uint32(mylist.length); }
+        }
+    "#;
+
+    let runtime = build_solidity(contract_src, |_| {});
+    let addr = runtime.contracts.last().unwrap();
+
+    let mk = |s: &str| -> Val { String::from_str(&runtime.env, s).into_val(&runtime.env) };
+    let eq_str = |val: &Val, s: &str| {
+        String::from_val(&runtime.env, val) == String::from_str(&runtime.env, s)
+    };
+
+    runtime.invoke_contract(addr, "push_val", vec![mk("hello")]);
+    let len: Val = runtime.invoke_contract(addr, "length", vec![]);
+    let exp1: Val = 1_u32.into_val(&runtime.env);
+    assert!(exp1.shallow_eq(&len));
+    let got = runtime.invoke_contract(addr, "get", vec![0_u32.into_val(&runtime.env)]);
+    assert!(eq_str(&got, "hello"));
+
+    runtime.invoke_contract(addr, "push_val", vec![mk("")]);
+    runtime.invoke_contract(addr, "push_val", vec![mk("soroban")]);
+    let g1 = runtime.invoke_contract(addr, "get", vec![1_u32.into_val(&runtime.env)]);
+    let g2 = runtime.invoke_contract(addr, "get", vec![2_u32.into_val(&runtime.env)]);
+    assert!(eq_str(&g1, ""));
+    assert!(eq_str(&g2, "soroban"));
+
+    runtime.invoke_contract(
+        addr,
+        "set",
+        vec![0_u32.into_val(&runtime.env), mk("replaced")],
+    );
+    let r = runtime.invoke_contract(addr, "get", vec![0_u32.into_val(&runtime.env)]);
+    assert!(eq_str(&r, "replaced"));
+
+    runtime.invoke_contract(addr, "pop", vec![]);
+    let len2: Val = runtime.invoke_contract(addr, "length", vec![]);
+    let exp2: Val = 2_u32.into_val(&runtime.env);
+    assert!(exp2.shallow_eq(&len2));
+    let s0 = runtime.invoke_contract(addr, "get", vec![0_u32.into_val(&runtime.env)]);
+    let s1 = runtime.invoke_contract(addr, "get", vec![1_u32.into_val(&runtime.env)]);
+    assert!(eq_str(&s0, "replaced"));
+    assert!(eq_str(&s1, ""));
+}
+
+#[test]
+fn storage_array_address_test() {
+    let contract_src = r#"
+        contract storage_array_address {
+            address[] mylist;
+
+            function push_val(address v) public { mylist.push(v); }
+            function pop() public { mylist.pop(); }
+            function set(uint32 i, address v) public { mylist[i] = v; }
+            function get(uint32 i) public returns (address) { return mylist[i]; }
+            function length() public returns (uint32) { return uint32(mylist.length); }
+        }
+    "#;
+
+    let runtime = build_solidity(contract_src, |_| {});
+    let addr = runtime.contracts.last().unwrap();
+
+    let a0 = Address::generate(&runtime.env);
+    let a1 = Address::generate(&runtime.env);
+    let a2 = Address::generate(&runtime.env);
+
+    runtime.invoke_contract(addr, "push_val", vec![a0.clone().into_val(&runtime.env)]);
+    runtime.invoke_contract(addr, "push_val", vec![a1.clone().into_val(&runtime.env)]);
+    let expected: Val = 2_u32.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "length", vec![]);
+    assert!(expected.shallow_eq(&res));
+    let g0 = runtime.invoke_contract(addr, "get", vec![0_u32.into_val(&runtime.env)]);
+    let g1 = runtime.invoke_contract(addr, "get", vec![1_u32.into_val(&runtime.env)]);
+    assert!(Address::from_val(&runtime.env, &g0) == a0);
+    assert!(Address::from_val(&runtime.env, &g1) == a1);
+
+    runtime.invoke_contract(
+        addr,
+        "set",
+        vec![
+            0_u32.into_val(&runtime.env),
+            a2.clone().into_val(&runtime.env),
+        ],
+    );
+    let got = runtime.invoke_contract(addr, "get", vec![0_u32.into_val(&runtime.env)]);
+    assert!(Address::from_val(&runtime.env, &got) == a2);
+
+    runtime.invoke_contract(addr, "pop", vec![]);
+    let expected: Val = 1_u32.into_val(&runtime.env);
+    let res = runtime.invoke_contract(addr, "length", vec![]);
+    assert!(expected.shallow_eq(&res));
+    let remaining = runtime.invoke_contract(addr, "get", vec![0_u32.into_val(&runtime.env)]);
+    assert!(Address::from_val(&runtime.env, &remaining) == a2);
 }

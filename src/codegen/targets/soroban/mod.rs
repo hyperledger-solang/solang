@@ -74,24 +74,22 @@ impl TargetCodegen for SorobanTarget {
         ns: &Namespace,
     ) -> Option<Expression> {
         if let Expression::Subscript {
-            array_ty,
+            array_ty: Type::StorageRef(_, inner),
             expr,
             index,
             ..
         } = storage
         {
-            if let Type::StorageRef(_, inner) = array_ty {
-                if matches!(inner.as_ref(), Type::Array(..)) {
-                    return Some(arrays::soroban_storage_subscript_read(
-                        loc,
-                        elem_ty,
-                        (**expr).clone(),
-                        (**index).clone(),
-                        cfg,
-                        vartab,
-                        ns,
-                    ));
-                }
+            if matches!(inner.as_ref(), Type::Array(..)) {
+                return Some(arrays::soroban_storage_subscript_read(
+                    loc,
+                    elem_ty,
+                    (**expr).clone(),
+                    (**index).clone(),
+                    cfg,
+                    vartab,
+                    ns,
+                ));
             }
         }
         None
@@ -105,30 +103,28 @@ impl TargetCodegen for SorobanTarget {
         cfg: &mut ControlFlowGraph,
         vartab: &mut Vartable,
         ns: &Namespace,
-    ) -> bool {
+    ) -> Option<()> {
         if let Expression::Subscript {
-            array_ty,
+            array_ty: Type::StorageRef(_, inner),
             expr,
             index,
             ..
         } = storage
         {
-            if let Type::StorageRef(_, inner) = array_ty {
-                if matches!(inner.as_ref(), Type::Array(..)) {
-                    arrays::soroban_storage_subscript_write(
-                        loc,
-                        value,
-                        (**expr).clone(),
-                        (**index).clone(),
-                        cfg,
-                        vartab,
-                        ns,
-                    );
-                    return true;
-                }
+            if matches!(inner.as_ref(), Type::Array(..)) {
+                arrays::soroban_storage_subscript_write(
+                    loc,
+                    value,
+                    (**expr).clone(),
+                    (**index).clone(),
+                    cfg,
+                    vartab,
+                    ns,
+                );
+                return Some(());
             }
         }
-        false
+        None
     }
 
     /// Soroban lazy decode path: if memory contains encoded handles, decode on demand.
@@ -1910,23 +1906,21 @@ fn soroban_load_storage_handle(
 ) -> Expression {
     let storage = expression(var, cfg, contract_no, func, ns, vartab, opt, target);
     if let Expression::Subscript {
-        array_ty,
+        array_ty: Type::StorageRef(_, inner),
         expr,
         index,
         ..
     } = &storage
     {
-        if let Type::StorageRef(_, inner) = array_ty {
-            if matches!(inner.as_ref(), Type::Array(..)) {
-                return arrays::soroban_storage_subscript_handle(
-                    loc,
-                    (**expr).clone(),
-                    (**index).clone(),
-                    cfg,
-                    vartab,
-                    ns,
-                );
-            }
+        if matches!(inner.as_ref(), Type::Array(..)) {
+            return arrays::soroban_storage_subscript_handle(
+                loc,
+                (**expr).clone(),
+                (**index).clone(),
+                cfg,
+                vartab,
+                ns,
+            );
         }
     }
     load_raw_handle(loc, storage, cfg, vartab)
