@@ -56,7 +56,7 @@ Documented Counterparts
      - `docs/examples/soroban/token.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/token.sol>`_
      - Token-style contract with balances, allowances, and Soroban auth.
    * - `events <https://github.com/stellar/soroban-examples/tree/main/events>`_
-     - `tests/soroban_testcases/events.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/events.rs>`_
+     - `docs/examples/soroban/events.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/events.sol>`_
      - Solidity ``event`` declarations and ``emit`` statements, with indexed fields mapping to Soroban topics and non-indexed fields mapping to event data.
    * - `pause <https://github.com/stellar/soroban-examples/tree/main/pause>`_
      - `docs/examples/soroban/pause/pause.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/pause/pause.sol>`_ and `tests/soroban_testcases/example_pause.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_pause.rs>`_
@@ -218,6 +218,26 @@ Solang Solidity example: `docs/examples/soroban/ttl_storage.sol <https://github.
 
         function extend_temp_ttl() public view returns (int64) {
             return tCount.extendTtl(3000, 7000);
+        }
+    }
+
+events
+^^^^^^
+
+Upstream Soroban example: `events <https://github.com/stellar/soroban-examples/tree/main/events>`_
+
+Solang Solidity example: `docs/examples/soroban/events.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/events.sol>`_
+
+.. code-block:: solidity
+
+    contract IncrementContract {
+        uint32 public instance count = 0;
+        event IncrementEvent(string indexed action, string indexed method, uint32 count);
+
+        function increment() public returns (uint32) {
+            count += 1;
+            emit IncrementEvent("COUNTER", "increment", count);
+            return count;
         }
     }
 
