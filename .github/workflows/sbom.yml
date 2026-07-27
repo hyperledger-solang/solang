@@ -1,0 +1,19 @@
+name: Submit SBOM to PG Atlas
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  sbom:
+    name: Submit SBOM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # for GitHub Dependency Graph API
+      id-token: write # for OIDC authentication to PG Atlas
+    steps:
+      - uses: SCF-Public-Goods-Maintenance/pg-atlas-sbom-action@bca8911b12604b102c41dab217b20c0a005fb126 # v1.0.0
