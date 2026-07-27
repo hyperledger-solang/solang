@@ -828,7 +828,8 @@ impl TargetCodegen for SorobanTarget {
                 Some(call_res_var)
             }
             ast::Builtin::ExtendTtl => {
-                let mut arguments: Vec<Expression> = args
+                assert_eq!(args.len(), 3, "extendTtl expects 3 arguments");
+                let arguments: Vec<Expression> = args
                     .iter()
                     .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt, self))
                     .collect();
@@ -852,17 +853,71 @@ impl TargetCodegen for SorobanTarget {
                     ),
                 };
 
-                arguments.push(Expression::NumberLiteral {
+                let slot = Expression::NumberLiteral {
                     loc: *loc,
-                    ty: Type::Uint(32),
+                    ty: Type::Uint(64),
+                    value: BigInt::from(var_no),
+                };
+                let storage_type = Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Uint(64),
                     value: BigInt::from(storage_type_usize),
-                });
+                };
+                let threshold =
+                    encoding::encode_object(*loc, arguments[1].clone(), 32, encoding::tags::U32);
+                let extend_to =
+                    encoding::encode_object(*loc, arguments[2].clone(), 32, encoding::tags::U32);
 
-                Some(Expression::Builtin {
+                // The host functions return Void, so the result is not decoded.
+                let res = vartab.temp_name("extend_ttl", &Type::Int(64));
+                cfg.add(
+                    vartab,
+                    Instr::Call {
+                        res: vec![res],
+                        return_tys: vec![Type::Int(64)],
+                        call: InternalCallTy::HostFunction {
+                            name: HostFunctions::ExtendContractDataTtl.name().to_string(),
+                        },
+                        args: vec![slot, storage_type, threshold, extend_to],
+                    },
+                );
+                Some(Expression::Variable {
                     loc: *loc,
-                    tys: vec![Type::Int(64)],
-                    kind: (&builtin).into(),
-                    args: arguments,
+                    ty: Type::Int(64),
+                    var_no: res,
+                })
+            }
+            ast::Builtin::ExtendInstanceTtl => {
+                assert_eq!(args.len(), 2, "extendInstanceTtl expects 2 arguments");
+                let arguments: Vec<Expression> = args
+                    .iter()
+                    .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt, self))
+                    .collect();
+
+                let threshold =
+                    encoding::encode_object(*loc, arguments[0].clone(), 32, encoding::tags::U32);
+                let extend_to =
+                    encoding::encode_object(*loc, arguments[1].clone(), 32, encoding::tags::U32);
+
+                // The host functions return Void, so the result is not decoded.
+                let res = vartab.temp_name("extend_instance_ttl", &Type::Int(64));
+                cfg.add(
+                    vartab,
+                    Instr::Call {
+                        res: vec![res],
+                        return_tys: vec![Type::Int(64)],
+                        call: InternalCallTy::HostFunction {
+                            name: HostFunctions::ExtendCurrentContractInstanceAndCodeTtl
+                                .name()
+                                .to_string(),
+                        },
+                        args: vec![threshold, extend_to],
+                    },
+                );
+                Some(Expression::Variable {
+                    loc: *loc,
+                    ty: Type::Int(64),
+                    var_no: res,
                 })
             }
             _ => None,
