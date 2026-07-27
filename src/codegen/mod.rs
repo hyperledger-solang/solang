@@ -93,6 +93,7 @@ impl From<inkwell::OptimizationLevel> for OptimizationLevel {
 
 pub enum HostFunctions {
     ComputeHashSha256,
+    ComputeHashKeccak256,
     PutContractData,
     GetContractData,
     HasContractData,
@@ -158,6 +159,7 @@ impl HostFunctions {
     pub fn name(&self) -> &str {
         match self {
             HostFunctions::ComputeHashSha256 => "c._",
+            HostFunctions::ComputeHashKeccak256 => "c.1",
             HostFunctions::PutContractData => "l._",
             HostFunctions::GetContractData => "l.1",
             HostFunctions::HasContractData => "l.0",
