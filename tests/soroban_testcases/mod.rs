@@ -18,6 +18,7 @@ mod i128_u128;
 mod i256_u256;
 mod integer_width_rounding;
 mod integer_width_warnings;
+mod keccak256;
 mod liquidity_pool;
 mod mappings;
 mod math;
