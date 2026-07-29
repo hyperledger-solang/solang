@@ -12,6 +12,7 @@ mod cross_contract_calls;
 mod events;
 mod example_custom_types;
 mod example_events;
+mod example_increment_with_pause;
 mod example_pause;
 mod hello_world;
 mod i128_u128;

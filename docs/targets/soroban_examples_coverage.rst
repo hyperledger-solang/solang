@@ -43,6 +43,9 @@ Documented Counterparts
    * - `increment <https://github.com/stellar/soroban-examples/tree/main/increment>`_
      - `integration/soroban/counter.sol <https://github.com/hyperledger-solang/solang/blob/main/integration/soroban/counter.sol>`_
      - Closest local counterpart for a stored counter that can be incremented.
+   * - `increment_with_pause <https://github.com/stellar/soroban-examples/tree/main/increment_with_pause>`_
+     - `docs/examples/soroban/increment_with_pause.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/increment_with_pause.sol>`_ and `tests/soroban_testcases/example_increment_with_pause.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_increment_with_pause.rs>`_
+     - Counter that first checks a separate ``Pause`` contract. Demonstrates a cross-contract ``call`` with ``abi.encode``/``abi.decode``, a ``require`` guard, and extending instance storage TTL via ``extendInstanceTtl``. Works together with the `pause <https://github.com/stellar/soroban-examples/tree/main/pause>`_ example. Tested via ``example_increment_with_pause_*`` test cases.
    * - `liquidity_pool <https://github.com/stellar/soroban-examples/tree/main/liquidity_pool>`_
      - `docs/examples/soroban/liquidity_pool <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/liquidity_pool>`_
      - Liquidity-pool and token-swap example with companion token contracts.
@@ -237,6 +240,35 @@ Solang Solidity example: `docs/examples/soroban/events.sol <https://github.com/h
         function increment() public returns (uint32) {
             count += 1;
             emit IncrementEvent("COUNTER", "increment", count);
+            return count;
+        }
+    }
+
+increment_with_pause
+^^^^^^^^^^^^^^^^^^^^
+
+Upstream Soroban example: `increment_with_pause <https://github.com/stellar/soroban-examples/tree/main/increment_with_pause>`_
+
+Solang Solidity example: `docs/examples/soroban/increment_with_pause.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/increment_with_pause.sol>`_
+
+.. code-block:: solidity
+
+    contract IncrementContract {
+        address public instance pause_contract;
+        uint32 public instance count = 0;
+
+        constructor(address _pause) {
+            pause_contract = _pause;
+        }
+
+        function increment() public returns (uint32) {
+            bytes payload = abi.encode("paused");
+            (, bytes memory ret) = pause_contract.call(payload);
+            bool is_paused = abi.decode(ret, (bool));
+            require(!is_paused, "Paused");
+
+            count += 1;
+            extendInstanceTtl(50, 100);
             return count;
         }
     }
