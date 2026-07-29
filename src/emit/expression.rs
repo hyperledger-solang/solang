@@ -1581,7 +1581,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder
                     .build_call(
                         bin.module.get_function("soroban_alloc_init").unwrap(),
-                        &[size.into(), init.into()],
+                        &[size.into(), elem_size.into(), init.into()],
                         "soroban_alloc",
                     )
                     .unwrap_or_else(|err| {
