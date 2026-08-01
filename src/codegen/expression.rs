@@ -13,9 +13,11 @@ use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::polkadot::return_code as polkadot;
+use crate::codegen::targets::soroban::bytes::{
+    soroban_bytes_length, soroban_bytes_subscript_read, soroban_strings_length,
+};
 use crate::codegen::targets::soroban::{
-    soroban_bytes_length, soroban_strings_length, soroban_struct_load, soroban_struct_member_load,
-    soroban_struct_member_store,
+    soroban_storage_array_length_ast, soroban_storage_assign, soroban_storage_load,
 };
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
@@ -62,36 +64,19 @@ pub fn expression(
         }
         ast::Expression::StorageLoad { loc, ty, expr } => {
             if ns.target == Target::Soroban {
-                if let ast::Expression::StructMember {
-                    expr: var, field, ..
-                } = expr.as_ref()
-                {
-                    return soroban_struct_member_load(
-                        loc,
-                        var,
-                        *field,
-                        cfg,
-                        contract_no,
-                        func,
-                        ns,
-                        vartab,
-                        opt,
-                        target,
-                    );
-                }
-                if matches!(ty, Type::Struct(_)) {
-                    return soroban_struct_load(
-                        loc,
-                        expr,
-                        ty,
-                        cfg,
-                        contract_no,
-                        func,
-                        ns,
-                        vartab,
-                        opt,
-                        target,
-                    );
+                if let Some(loaded) = soroban_storage_load(
+                    loc,
+                    expr,
+                    ty,
+                    cfg,
+                    contract_no,
+                    func,
+                    ns,
+                    vartab,
+                    opt,
+                    target,
+                ) {
+                    return loaded;
                 }
             }
 
@@ -791,6 +776,22 @@ pub fn expression(
             array,
             elem_ty,
         } => {
+            if ns.target == Target::Soroban {
+                if let Some(len) = soroban_storage_array_length_ast(
+                    array,
+                    ty,
+                    cfg,
+                    contract_no,
+                    func,
+                    ns,
+                    vartab,
+                    opt,
+                    target,
+                ) {
+                    return len;
+                }
+            }
+
             // TODO-refactor : a good change to move the implementation of storage array length
             // to CFG instead of llvm-ir.
             // right now for bytes and strings we simply use a host function
@@ -2986,30 +2987,18 @@ pub fn assign_single(
         }
         _ => {
             if ns.target == Target::Soroban {
-                if let ast::Expression::StructMember {
-                    expr: var,
-                    field,
-                    ty: member_ty,
-                    ..
-                } = left
-                {
-                    if member_ty.is_contract_storage()
-                        && matches!(var.ty().deref_any(), Type::Struct(_))
-                    {
-                        return soroban_struct_member_store(
-                            &left.loc(),
-                            var,
-                            *field,
-                            cfg_right,
-                            cfg,
-                            contract_no,
-                            func,
-                            ns,
-                            vartab,
-                            opt,
-                            target,
-                        );
-                    }
+                if let Some(result) = soroban_storage_assign(
+                    left,
+                    cfg_right.clone(),
+                    cfg,
+                    contract_no,
+                    func,
+                    ns,
+                    vartab,
+                    opt,
+                    target,
+                ) {
+                    return result;
                 }
             }
 
@@ -3078,28 +3067,16 @@ pub fn assign_single(
                         ty: ty.clone(),
                         var_no: pos,
                     };
-                    if target
-                        .storage_array_subscript_store(
-                            &left.loc(),
-                            value.clone(),
-                            &dest,
-                            cfg,
-                            vartab,
-                            ns,
-                        )
-                        .is_none()
-                    {
-                        let value = target.prepare_storage_value(value, &dest, cfg, vartab, ns);
-                        cfg.add(
-                            vartab,
-                            Instr::SetStorage {
-                                value,
-                                ty: ty.deref_any().clone(),
-                                storage: dest,
-                                storage_type,
-                            },
-                        );
-                    }
+                    let value = target.prepare_storage_value(value, &dest, cfg, vartab, ns);
+                    cfg.add(
+                        vartab,
+                        Instr::SetStorage {
+                            value,
+                            ty: ty.deref_any().clone(),
+                            storage: dest,
+                            storage_type,
+                        },
+                    );
                 }
                 Type::Ref(_) => {
                     let data = target.prepare_storage_value(
@@ -3665,12 +3642,23 @@ fn array_subscript(
     opt: &Options,
     target: &dyn TargetCodegen,
 ) -> Expression {
-    // TODO: the function handling many subscript
-    // e.g array - bytes - map - ...
-    // i prefer to split it and dispatch to separte functions
-    // TODO: for bytes storage subscript we can write it in CFG
-    // instead of llvm-ir.
     if array_ty.is_storage_bytes() {
+        if ns.target == Target::Soroban {
+            if let Some(byte) = soroban_bytes_subscript_read(
+                array,
+                index,
+                elem_ty,
+                cfg,
+                contract_no,
+                func,
+                ns,
+                vartab,
+                opt,
+                target,
+            ) {
+                return byte;
+            }
+        }
         return Expression::Subscript {
             loc: *loc,
             ty: elem_ty.clone(),

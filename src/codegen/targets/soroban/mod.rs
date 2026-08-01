@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub(crate) mod arrays;
+pub(crate) mod bytes;
 pub(crate) mod dispatch;
 pub(crate) mod encoding;
 pub(crate) mod events;
+pub(crate) mod storage_path;
 
 use self::encoding::{
     soroban_decode, soroban_decode_arg, soroban_encode, soroban_encode_arg,
     soroban_storage_decode_arg, soroban_storage_encode_arg,
 };
 use self::events::SorobanEventEmitter;
+use self::storage_path::{is_descent_storage_expr, lower_storage_path, path_load, path_store};
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::error::CodegenError;
 use crate::codegen::expression::expression;
@@ -90,38 +93,6 @@ impl TargetCodegen for SorobanTarget {
                     vartab,
                     ns,
                 ));
-            }
-        }
-        None
-    }
-
-    fn storage_array_subscript_store(
-        &self,
-        loc: &pt::Loc,
-        value: Expression,
-        storage: &Expression,
-        cfg: &mut ControlFlowGraph,
-        vartab: &mut Vartable,
-        ns: &Namespace,
-    ) -> Option<()> {
-        if let Expression::Subscript {
-            array_ty: Type::StorageRef(_, inner),
-            expr,
-            index,
-            ..
-        } = storage
-        {
-            if matches!(inner.as_ref(), Type::Array(..)) {
-                arrays::soroban_storage_subscript_write(
-                    loc,
-                    value,
-                    (**expr).clone(),
-                    (**index).clone(),
-                    cfg,
-                    vartab,
-                    ns,
-                );
-                return Some(());
             }
         }
         None
@@ -223,7 +194,17 @@ impl TargetCodegen for SorobanTarget {
         opt: &Options,
     ) -> Expression {
         if args[0].ty().is_storage_bytes() {
-            return soroban_bytes_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self);
+            return bytes::soroban_bytes_push(
+                loc,
+                args,
+                cfg,
+                contract_no,
+                func,
+                ns,
+                vartab,
+                opt,
+                self,
+            );
         }
         arrays::soroban_storage_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
     }
@@ -243,7 +224,7 @@ impl TargetCodegen for SorobanTarget {
         // `bytes` in storage is a host BytesObject (not a Vec): pop via the dedicated
         // host `bytes_pop`, read-modify-write on the stored handle.
         if args[0].ty().is_storage_bytes() {
-            soroban_bytes_pop(
+            bytes::soroban_bytes_pop(
                 loc,
                 args,
                 return_ty,
@@ -1063,6 +1044,210 @@ impl TargetCodegen for SorobanTarget {
     }
 }
 
+pub(crate) fn soroban_storage_assign(
+    left: &ast::Expression,
+    cfg_right: Expression,
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    func: Option<&Function>,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    opt: &Options,
+    target: &dyn TargetCodegen,
+) -> Option<Expression> {
+    if !left.ty().is_contract_storage() {
+        return None;
+    }
+    if let ast::Expression::Subscript {
+        array_ty,
+        array,
+        index,
+        ..
+    } = left
+    {
+        if array_ty.is_storage_bytes() {
+            if !is_descent_storage_expr(array) {
+                return None;
+            }
+            let val_ty = cfg_right.ty();
+            let pos = vartab.temp_anonymous(&val_ty);
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: left.loc(),
+                    res: pos,
+                    expr: cfg_right,
+                },
+            );
+            let value = Expression::Variable {
+                loc: left.loc(),
+                ty: val_ty,
+                var_no: pos,
+            };
+            bytes::soroban_storage_bytes_subscript_write(
+                array,
+                index,
+                value.clone(),
+                cfg,
+                contract_no,
+                func,
+                ns,
+                vartab,
+                opt,
+                target,
+            );
+            return Some(value);
+        }
+    }
+
+    let val_ty = cfg_right.ty();
+    let pos = vartab.temp_anonymous(&val_ty);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: left.loc(),
+            res: pos,
+            expr: cfg_right,
+        },
+    );
+    let value = Expression::Variable {
+        loc: left.loc(),
+        ty: val_ty,
+        var_no: pos,
+    };
+    let encoded = soroban_storage_encode_arg(value.clone(), cfg, vartab, ns);
+    let (_, loc, storage_type) =
+        lower_storage_path(left, cfg, contract_no, func, ns, vartab, opt, target);
+    path_store(&loc, encoded, &storage_type, cfg, vartab, ns);
+
+    Some(value)
+}
+
+pub(crate) fn soroban_storage_load(
+    loc: &pt::Loc,
+    base: &ast::Expression,
+    ty: &Type,
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    func: Option<&Function>,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    opt: &Options,
+    target: &dyn TargetCodegen,
+) -> Option<Expression> {
+    let is_bytes_subscript = matches!(base,
+        ast::Expression::Subscript { array_ty, .. } if array_ty.is_storage_bytes());
+
+    if !is_bytes_subscript && is_descent_storage_expr(base) {
+        let (_, path, storage_type) =
+            lower_storage_path(base, cfg, contract_no, func, ns, vartab, opt, target);
+        let handle = path_load(&path, &storage_type, cfg, vartab, ns);
+        return Some(soroban_storage_decode_arg(
+            handle,
+            cfg,
+            vartab,
+            ns,
+            Some(ty.clone()),
+        ));
+    }
+
+    if matches!(ty, Type::Struct(_)) {
+        let storage = expression(base, cfg, contract_no, func, ns, vartab, opt, target);
+        let handle = load_raw_handle(loc, storage, cfg, vartab);
+        return Some(soroban_storage_decode_arg(
+            handle,
+            cfg,
+            vartab,
+            ns,
+            Some(ty.clone()),
+        ));
+    }
+
+    None
+}
+
+pub(crate) fn soroban_storage_array_length_ast(
+    array: &ast::Expression,
+    ty: &Type,
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    func: Option<&Function>,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    opt: &Options,
+    target: &dyn TargetCodegen,
+) -> Option<Expression> {
+    let aty = array.ty();
+    let len_kind = match &aty {
+        Type::StorageRef(_, inner) => match inner.as_ref() {
+            Type::Array(_, dims) if dims.last() == Some(&ast::ArrayLength::Dynamic) => {
+                LengthKind::Vec
+            }
+            Type::DynamicBytes => LengthKind::Bytes,
+            Type::String => LengthKind::String,
+            _ => return None,
+        },
+        _ => return None,
+    };
+
+    let (_, path, storage_type) =
+        lower_storage_path(array, cfg, contract_no, func, ns, vartab, opt, target);
+    let handle = path_load(&path, &storage_type, cfg, vartab, ns);
+    Some(match len_kind {
+        LengthKind::Vec => arrays::soroban_vec_len(&array.loc(), ty, handle, cfg, vartab, ns),
+        LengthKind::Bytes => bytes::soroban_obj_length(
+            &array.loc(),
+            handle,
+            HostFunctions::BytesLen,
+            cfg,
+            vartab,
+            ns,
+        ),
+        LengthKind::String => bytes::soroban_obj_length(
+            &array.loc(),
+            handle,
+            HostFunctions::StringLen,
+            cfg,
+            vartab,
+            ns,
+        ),
+    })
+}
+
+enum LengthKind {
+    Vec,
+    Bytes,
+    String,
+}
+
+pub(crate) fn soroban_host_call(
+    loc: &pt::Loc,
+    name: &str,
+    host_fn: HostFunctions,
+    ret_ty: &Type,
+    args: Vec<Expression>,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let no = vartab.temp_name(name, ret_ty);
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: vec![no],
+            return_tys: vec![ret_ty.clone()],
+            call: InternalCallTy::HostFunction {
+                name: host_fn.name().to_string(),
+            },
+            args,
+        },
+    );
+    Expression::Variable {
+        loc: *loc,
+        ty: ret_ty.clone(),
+        var_no: no,
+    }
+}
+
 pub(super) fn validate_accessor_abi_types(contract_no: usize, ns: &mut Namespace) {
     for variable in &ns.contracts[contract_no].variables {
         if !matches!(variable.visibility, pt::Visibility::Public(_)) {
@@ -1376,332 +1561,6 @@ fn soroban_field_index_val(
     )
 }
 
-pub(crate) fn soroban_struct_load(
-    loc: &pt::Loc,
-    var: &ast::Expression,
-    struct_ty: &Type,
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    target: &dyn TargetCodegen,
-) -> Expression {
-    let handle =
-        soroban_load_storage_handle(loc, var, cfg, contract_no, func, ns, vartab, opt, target);
-    encoding::soroban_storage_decode_arg(handle, cfg, vartab, ns, Some(struct_ty.clone()))
-}
-
-pub(crate) fn soroban_struct_member_load(
-    loc: &pt::Loc,
-    var: &ast::Expression,
-    field_no: usize,
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    target: &dyn TargetCodegen,
-) -> Expression {
-    let struct_ty = var.ty().deref_any().clone();
-    let field_ty = match &struct_ty {
-        Type::Struct(st) => st.definition(ns).fields[field_no].ty.clone(),
-        _ => unreachable!("soroban struct member on non-struct"),
-    };
-    let vec_obj =
-        soroban_load_storage_handle(loc, var, cfg, contract_no, func, ns, vartab, opt, target);
-    let idx = soroban_field_index_val(loc, field_no, cfg, vartab, ns);
-    let field_val_no = vartab.temp_name("struct_member_get", &Type::Uint(64));
-    cfg.add(
-        vartab,
-        Instr::Call {
-            res: vec![field_val_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::VecGet.name().to_string(),
-            },
-            args: vec![vec_obj, idx],
-        },
-    );
-    let field_val = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(64),
-        var_no: field_val_no,
-    };
-    soroban_decode_arg(field_val, cfg, vartab, ns, Some(field_ty))
-}
-
-pub(crate) fn soroban_struct_member_store(
-    loc: &pt::Loc,
-    var: &ast::Expression,
-    field_no: usize,
-    value: Expression,
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    target: &dyn TargetCodegen,
-) -> Expression {
-    let val_ty = value.ty();
-    let val_no = vartab.temp_anonymous(&val_ty);
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: *loc,
-            res: val_no,
-            expr: value,
-        },
-    );
-    let val = Expression::Variable {
-        loc: *loc,
-        ty: val_ty,
-        var_no: val_no,
-    };
-
-    let struct_ty = var.ty().deref_any().clone();
-    let vec_obj =
-        soroban_load_storage_handle(loc, var, cfg, contract_no, func, ns, vartab, opt, target);
-    let encoded = soroban_encode_arg(val.clone(), cfg, vartab, ns);
-
-    let idx = soroban_field_index_val(loc, field_no, cfg, vartab, ns);
-    let new_vec_no = vartab.temp_name("struct_member_put", &Type::Uint(64));
-    cfg.add(
-        vartab,
-        Instr::Call {
-            res: vec![new_vec_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::VecPut.name().to_string(),
-            },
-            args: vec![vec_obj, idx, encoded],
-        },
-    );
-    let new_vec = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(64),
-        var_no: new_vec_no,
-    };
-
-    let base_slot = expression(var, cfg, contract_no, func, ns, vartab, opt, target);
-    cfg.add(
-        vartab,
-        Instr::SetStorage {
-            ty: struct_ty,
-            value: new_vec,
-            storage: base_slot,
-            storage_type: None,
-        },
-    );
-    val
-}
-
-/// Storage `bytes.push(x)` on Soroban. A storage `bytes` slot holds a host
-/// `BytesObject` handle, so this is a read-modify-write on the handle:
-/// load the raw handle, `bytes_push(handle, U32Val(byte))`, store the new handle.
-pub(crate) fn soroban_bytes_push(
-    loc: &pt::Loc,
-    args: &[ast::Expression],
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    target: &dyn TargetCodegen,
-) -> Expression {
-    /*
-     * old_handle : BytesObject = BytesObject(args[0]);
-     * element    : U32Val = U32Val(args[1]);
-     * new_handle : BytesObject = bytes_push(old_handle, element);
-     * args[0] = new_handle;
-     * */
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
-    let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target);
-    let bytes_ty = args[0].ty();
-
-    let handle = load_raw_handle(loc, var_expr.clone(), cfg, vartab);
-
-    let byte_u32 = value.cast(&Type::Uint(8), ns).cast(&Type::Uint(32), ns);
-    let value_encoded = soroban_encode_arg(byte_u32, cfg, vartab, ns);
-
-    let new_no = vartab.temp_name("bytes_push", &Type::Uint(64));
-    cfg.add(
-        vartab,
-        Instr::Call {
-            res: vec![new_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::BytesPush.name().to_string(),
-            },
-            args: vec![handle, value_encoded],
-        },
-    );
-    let new_handle = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(64),
-        var_no: new_no,
-    };
-
-    cfg.add(
-        vartab,
-        Instr::SetStorage {
-            ty: bytes_ty,
-            value: new_handle,
-            storage: var_expr.clone(),
-            storage_type: None,
-        },
-    );
-
-    var_expr
-}
-
-/// Storage `bytes.pop()` on Soroban: load the raw handle, `bytes_pop(handle)`, store
-/// the new handle. Solidity storage `.pop()` is void, so no value is returned.
-pub(crate) fn soroban_bytes_pop(
-    loc: &pt::Loc,
-    args: &[ast::Expression],
-    return_ty: &Type,
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    target: &dyn TargetCodegen,
-) -> Expression {
-    /*
-     * old_handle : BytesObject = BytesObject(args[0]);
-     * new_handle : BytesObject = bytes_pop(old_handle);
-     * args[0] = new_handle;
-     * */
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
-    let bytes_ty = args[0].ty();
-
-    let handle = load_raw_handle(loc, var_expr.clone(), cfg, vartab);
-
-    let new_no = vartab.temp_name("bytes_pop", &Type::Uint(64));
-    cfg.add(
-        vartab,
-        Instr::Call {
-            res: vec![new_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::BytesPop.name().to_string(),
-            },
-            args: vec![handle],
-        },
-    );
-    let new_handle = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(64),
-        var_no: new_no,
-    };
-
-    cfg.add(
-        vartab,
-        Instr::SetStorage {
-            ty: bytes_ty,
-            value: new_handle,
-            storage: var_expr,
-            storage_type: None,
-        },
-    );
-
-    Expression::Undefined {
-        ty: return_ty.clone(),
-    }
-}
-
-pub(crate) fn soroban_bytes_length(
-    loc: &pt::Loc,
-    bytes_var: Expression,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-    ns: &Namespace,
-) -> Expression {
-    /*
-     * bytes_handle : BytesObject = BytesObject(bytes_var);
-     * length       : U32Val      = BytesLength(bytes_handle);
-     * encoded_len  : u32         = soroban_decode_arg(length);
-     * */
-    let bytes_handle = load_raw_handle(loc, bytes_var, cfg, vartab);
-    let var_no = vartab.temp_name("bytes_obj_length", &Type::Uint(64));
-    let var = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(64),
-        var_no,
-    };
-    cfg.add(
-        vartab,
-        Instr::Call {
-            res: vec![var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::BytesLen.name().to_string(),
-            },
-            args: vec![bytes_handle],
-        },
-    );
-    soroban_decode_arg(var, cfg, vartab, ns, Some(Type::Uint(32)))
-}
-
-pub(crate) fn soroban_strings_length(
-    loc: &pt::Loc,
-    bytes_var: Expression,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-    ns: &Namespace,
-) -> Expression {
-    let string_handle = load_raw_handle(loc, bytes_var, cfg, vartab);
-    let var_no = vartab.temp_name("string_obj_length", &Type::Uint(64));
-    let var = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(64),
-        var_no,
-    };
-    cfg.add(
-        vartab,
-        Instr::Call {
-            res: vec![var_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::StringLen.name().to_string(),
-            },
-            args: vec![string_handle],
-        },
-    );
-    soroban_decode_arg(var, cfg, vartab, ns, Some(Type::Uint(32)))
-}
-
-pub(crate) fn soroban_bytes_new(
-    loc: &pt::Loc,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-) -> Expression {
-    let ty = Type::SorobanHandle(Box::new(Type::DynamicBytes));
-    let bytes_no = vartab.temp_name("bytes_obj_new", &ty);
-    cfg.add(
-        vartab,
-        Instr::Call {
-            res: vec![bytes_no],
-            return_tys: vec![ty.clone()],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::BytesNew.name().to_string(),
-            },
-            args: vec![],
-        },
-    );
-    Expression::Variable {
-        loc: *loc,
-        ty,
-        var_no: bytes_no,
-    }
-}
-
 fn soroban_struct_default_vec(
     loc: &pt::Loc,
     struct_no: usize,
@@ -1824,7 +1683,7 @@ pub(crate) fn soroban_default_handle(
             soroban_scval_zero(loc, ty, cfg, vartab)
         }
         Type::Address(_) => soroban_scval_zero(loc, &Type::Void, cfg, vartab),
-        Type::DynamicBytes => soroban_bytes_new(loc, cfg, vartab),
+        Type::DynamicBytes => bytes::soroban_bytes_new(loc, cfg, vartab),
         Type::Bytes(_) => {
             let zero = Expression::NumberLiteral {
                 loc: *loc,
@@ -1891,37 +1750,4 @@ pub(crate) fn load_raw_handle(
         ty: Type::Uint(64),
         var_no: handle_no,
     }
-}
-
-fn soroban_load_storage_handle(
-    loc: &pt::Loc,
-    var: &ast::Expression,
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    target: &dyn TargetCodegen,
-) -> Expression {
-    let storage = expression(var, cfg, contract_no, func, ns, vartab, opt, target);
-    if let Expression::Subscript {
-        array_ty: Type::StorageRef(_, inner),
-        expr,
-        index,
-        ..
-    } = &storage
-    {
-        if matches!(inner.as_ref(), Type::Array(..)) {
-            return arrays::soroban_storage_subscript_handle(
-                loc,
-                (**expr).clone(),
-                (**index).clone(),
-                cfg,
-                vartab,
-                ns,
-            );
-        }
-    }
-    load_raw_handle(loc, storage, cfg, vartab)
 }

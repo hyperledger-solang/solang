@@ -1116,3 +1116,63 @@ fn storage_array_address_test() {
     let remaining = runtime.invoke_contract(addr, "get", vec![0_u32.into_val(&runtime.env)]);
     assert!(Address::from_val(&runtime.env, &remaining) == a2);
 }
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ArrPoint {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[test]
+fn storage_array_struct_member_write_test() {
+    let src = r#"
+        contract storage_array_struct_member_write {
+            struct Point { int32 x; int32 y; }
+            Point[] mylist;
+
+            function push(Point memory v) public { mylist.push(v); }
+            function get(uint32 i) public returns (Point memory) { return mylist[i]; }
+            function length() public returns (uint32) { return uint32(mylist.length); }
+            function set_y(uint32 i, int32 v) public { mylist[i].y = v; }
+            function get_x(uint32 i) public returns (int32) { return mylist[i].x; }
+            function get_y(uint32 i) public returns (int32) { return mylist[i].y; }
+        }
+    "#;
+
+    let runtime = build_solidity(src, |_| {});
+    let addr = runtime.contracts.last().unwrap();
+    let env = &runtime.env;
+
+    for (x, y) in [(1_i32, 2_i32), (3, 4), (5, 6)] {
+        runtime.invoke_contract(addr, "push", vec![ArrPoint { x, y }.into_val(env)]);
+    }
+
+    runtime.invoke_contract(
+        addr,
+        "set_y",
+        vec![1_u32.into_val(env), 99_i32.into_val(env)],
+    );
+
+    let got_y = runtime.invoke_contract(addr, "get_y", vec![1_u32.into_val(env)]);
+    let exp_99: Val = 99_i32.into_val(env);
+    assert!(exp_99.shallow_eq(&got_y), "mylist[1].y should be 99");
+
+    let got_x = runtime.invoke_contract(addr, "get_x", vec![1_u32.into_val(env)]);
+    let exp_3: Val = 3_i32.into_val(env);
+    assert!(exp_3.shallow_eq(&got_x), "mylist[1].x should still be 3");
+
+    let got_y0 = runtime.invoke_contract(addr, "get_y", vec![0_u32.into_val(env)]);
+    let exp_2: Val = 2_i32.into_val(env);
+    assert!(exp_2.shallow_eq(&got_y0), "mylist[0].y should still be 2");
+
+    let got_y2 = runtime.invoke_contract(addr, "get_y", vec![2_u32.into_val(env)]);
+    let exp_6: Val = 6_i32.into_val(env);
+    assert!(exp_6.shallow_eq(&got_y2), "mylist[2].y should still be 6");
+
+    let got_s1 = runtime.invoke_contract(addr, "get", vec![1_u32.into_val(env)]);
+    assert!(
+        ArrPoint::from_val(env, &got_s1) == ArrPoint { x: 3, y: 99 },
+        "mylist[1] whole-struct mismatch after field write"
+    );
+}

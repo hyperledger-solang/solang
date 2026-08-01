@@ -3,8 +3,9 @@
 use super::encoding::{
     soroban_decode_arg, soroban_encode_arg, soroban_storage_decode_arg, soroban_storage_encode_arg,
 };
-use super::{load_raw_handle, soroban_vec_handle_ty};
-use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy};
+use super::storage_path::{lower_storage_path, path_load, path_store};
+use super::{load_raw_handle, soroban_host_call, soroban_vec_handle_ty};
+use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::expression::expression;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::vartable::Vartable;
@@ -25,25 +26,15 @@ fn soroban_vec_push_back(
 ) -> Expression {
     let value_encoded = soroban_storage_encode_arg(value, cfg, vartab, ns);
     let handle_ty = soroban_vec_handle_ty(vec_ty);
-
-    let new_vec_no = vartab.temp_name("soroban_vec_push", &handle_ty);
-
-    let new_vec_var = Expression::Variable {
-        loc: *loc,
-        ty: handle_ty.clone(),
-        var_no: new_vec_no,
-    };
-
-    let instr = Instr::Call {
-        res: vec![new_vec_no],
-        return_tys: vec![handle_ty],
-        call: InternalCallTy::HostFunction {
-            name: HostFunctions::VecPushBack.name().to_string(),
-        },
-        args: vec![vec_obj, value_encoded],
-    };
-    cfg.add(vartab, instr);
-    new_vec_var
+    soroban_host_call(
+        loc,
+        "soroban_vec_push",
+        HostFunctions::VecPushBack,
+        &handle_ty,
+        vec![vec_obj, value_encoded],
+        cfg,
+        vartab,
+    )
 }
 
 pub(crate) fn soroban_storage_push(
@@ -57,30 +48,21 @@ pub(crate) fn soroban_storage_push(
     opt: &Options,
     target: &dyn TargetCodegen,
 ) -> Expression {
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
-    let vec_ty = args[0].ty();
+    let base = &args[0];
+    let vec_ty = base.ty();
 
-    // `arr.push()` with no argument appends a default-valued element.
     let value = if args.len() > 1 {
         expression(&args[1], cfg, contract_no, func, ns, vartab, opt, target)
     } else {
         let elem_ty = vec_ty.storage_array_elem().deref_into();
         elem_ty.default(ns).unwrap()
     };
-
-    let old_vec_obj = load_raw_handle(loc, var_expr.clone(), cfg, vartab);
+    let (dest, path, storage_type) =
+        lower_storage_path(base, cfg, contract_no, func, ns, vartab, opt, target);
+    let old_vec_obj = path_load(&path, &storage_type, cfg, vartab, ns);
     let new_vec_var = soroban_vec_push_back(loc, old_vec_obj, &vec_ty, value, cfg, ns, vartab);
-
-    let store_instr = Instr::SetStorage {
-        ty: vec_ty,
-        value: new_vec_var.clone(),
-        storage: var_expr.clone(),
-        storage_type: None,
-    };
-
-    cfg.add(vartab, store_instr);
-
-    var_expr
+    path_store(&path, new_vec_var, &storage_type, cfg, vartab, ns);
+    dest
 }
 
 fn soroban_vec_pop_back(
@@ -91,22 +73,15 @@ fn soroban_vec_pop_back(
     vartab: &mut Vartable,
 ) -> Expression {
     let handle_ty = soroban_vec_handle_ty(vec_ty);
-    let new_vec_no = vartab.temp_name("soroban_vec_pop", &handle_ty);
-    let new_vec_var = Expression::Variable {
-        loc: *loc,
-        ty: handle_ty.clone(),
-        var_no: new_vec_no,
-    };
-    let instr = Instr::Call {
-        res: vec![new_vec_no],
-        return_tys: vec![handle_ty],
-        call: InternalCallTy::HostFunction {
-            name: HostFunctions::VecPopBack.name().to_string(),
-        },
-        args: vec![vec_obj],
-    };
-    cfg.add(vartab, instr);
-    new_vec_var
+    soroban_host_call(
+        loc,
+        "soroban_vec_pop",
+        HostFunctions::VecPopBack,
+        &handle_ty,
+        vec![vec_obj],
+        cfg,
+        vartab,
+    )
 }
 
 pub(crate) fn soroban_storage_pop(
@@ -121,19 +96,15 @@ pub(crate) fn soroban_storage_pop(
     opt: &Options,
     target: &dyn TargetCodegen,
 ) -> Expression {
-    let var_expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, target);
-    let vec_ty = args[0].ty();
+    let base = &args[0];
+    let vec_ty = base.ty();
 
-    let old_vec_obj = load_raw_handle(loc, var_expr.clone(), cfg, vartab);
+    let (_, path, storage_type) =
+        lower_storage_path(base, cfg, contract_no, func, ns, vartab, opt, target);
+    let old_vec_obj = path_load(&path, &storage_type, cfg, vartab, ns);
     let new_vec_var = soroban_vec_pop_back(loc, old_vec_obj, &vec_ty, cfg, vartab);
+    path_store(&path, new_vec_var, &storage_type, cfg, vartab, ns);
 
-    let store_instr = Instr::SetStorage {
-        ty: vec_ty,
-        value: new_vec_var,
-        storage: var_expr,
-        storage_type: None,
-    };
-    cfg.add(vartab, store_instr);
     Expression::Undefined {
         ty: return_ty.clone(),
     }
@@ -148,31 +119,30 @@ pub(crate) fn soroban_storage_array_length(
     ns: &Namespace,
 ) -> Expression {
     let vec_obj = load_raw_handle(loc, array, cfg, vartab);
-    let len_no = vartab.temp_name("soroban_vec_len", &Type::Uint(64));
-    let len_var = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(64),
-        var_no: len_no,
-    };
-    cfg.add(
-        vartab,
-        Instr::Call {
-            res: vec![len_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::VecLen.name().to_string(),
-            },
-            args: vec![vec_obj],
-        },
-    );
+    soroban_vec_len(loc, ty, vec_obj, cfg, vartab, ns)
+}
 
+pub(crate) fn soroban_vec_len(
+    loc: &pt::Loc,
+    ty: &Type,
+    vec_obj: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) -> Expression {
+    let len_var = soroban_host_call(
+        loc,
+        "soroban_vec_len",
+        HostFunctions::VecLen,
+        &Type::Uint(64),
+        vec![vec_obj],
+        cfg,
+        vartab,
+    );
     let len_u32 = soroban_decode_arg(len_var, cfg, vartab, ns, Some(Type::Uint(32)));
     len_u32.cast(ty, ns)
 }
 
-// Load the raw element handle (u64 Val) at `index` of a storage array VecObject:
-// load the array handle, then vec_get. The caller decodes (scalar/composite) or, for
-// composite elements, keeps the handle to read a field.
 pub(crate) fn soroban_storage_subscript_handle(
     loc: &pt::Loc,
     base: Expression,
@@ -183,24 +153,15 @@ pub(crate) fn soroban_storage_subscript_handle(
 ) -> Expression {
     let vec_obj = load_raw_handle(loc, base, cfg, vartab);
     let index_val = soroban_encode_arg(index.cast(&Type::Uint(32), ns), cfg, vartab, ns);
-    let elem_no = vartab.temp_name("soroban_vec_get", &Type::Uint(64));
-    let elem_var = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(64),
-        var_no: elem_no,
-    };
-    cfg.add(
+    soroban_host_call(
+        loc,
+        "soroban_vec_get",
+        HostFunctions::VecGet,
+        &Type::Uint(64),
+        vec![vec_obj, index_val],
+        cfg,
         vartab,
-        Instr::Call {
-            res: vec![elem_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::VecGet.name().to_string(),
-            },
-            args: vec![vec_obj, index_val],
-        },
-    );
-    elem_var
+    )
 }
 
 pub(crate) fn soroban_storage_subscript_read(
@@ -214,48 +175,4 @@ pub(crate) fn soroban_storage_subscript_read(
 ) -> Expression {
     let elem_var = soroban_storage_subscript_handle(loc, base, index, cfg, vartab, ns);
     soroban_storage_decode_arg(elem_var, cfg, vartab, ns, Some(elem_ty.clone()))
-}
-
-pub(crate) fn soroban_storage_subscript_write(
-    loc: &pt::Loc,
-    value: Expression,
-    base: Expression,
-    index: Expression,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-    ns: &Namespace,
-) {
-    let vec_ty = base.ty();
-    let vec_obj = load_raw_handle(loc, base.clone(), cfg, vartab);
-
-    let index_val = soroban_encode_arg(index.cast(&Type::Uint(32), ns), cfg, vartab, ns);
-    let value_encoded = soroban_storage_encode_arg(value, cfg, vartab, ns);
-
-    let new_vec_no = vartab.temp_name("soroban_vec_put", &Type::Uint(64));
-    let new_vec_var = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(64),
-        var_no: new_vec_no,
-    };
-    cfg.add(
-        vartab,
-        Instr::Call {
-            res: vec![new_vec_no],
-            return_tys: vec![Type::Uint(64)],
-            call: InternalCallTy::HostFunction {
-                name: HostFunctions::VecPut.name().to_string(),
-            },
-            args: vec![vec_obj, index_val, value_encoded],
-        },
-    );
-
-    cfg.add(
-        vartab,
-        Instr::SetStorage {
-            ty: vec_ty,
-            value: new_vec_var,
-            storage: base,
-            storage_type: None,
-        },
-    );
 }

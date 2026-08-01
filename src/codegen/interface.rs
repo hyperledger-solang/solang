@@ -249,16 +249,4 @@ pub(crate) trait TargetCodegen {
     ) -> Option<Expression> {
         None
     }
-
-    fn storage_array_subscript_store(
-        &self,
-        _loc: &Loc,
-        _value: Expression,
-        _storage: &Expression,
-        _cfg: &mut ControlFlowGraph,
-        _vartab: &mut Vartable,
-        _ns: &Namespace,
-    ) -> Option<()> {
-        None
-    }
 }
