@@ -1891,15 +1891,10 @@ pub(crate) fn populate_arguments<T: FunctionAttributes>(
 }
 
 fn soroban_runtime_arg_ty(ty: &Type) -> Type {
-    match ty {
-        Type::Array(elem_ty, dims) if dims.last() == Some(&ast::ArrayLength::Dynamic) => {
-            Type::Array(
-                Box::new(Type::SorobanHandle(Box::new(elem_ty.as_ref().clone()))),
-                dims.clone(),
-            )
-        }
-        _ => ty.clone(),
-    }
+    // Array parameters arrive fully decoded into a native `T[]` buffer (the wrapper's
+    // `decode_vector` eagerly decodes every element), so the function body treats them
+    // as ordinary native arrays — no lazy `SorobanHandle(T)[]` representation.
+    ty.clone()
 }
 
 /// Populate returns of functions that have named returns

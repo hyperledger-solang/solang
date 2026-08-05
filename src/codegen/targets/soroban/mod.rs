@@ -1445,14 +1445,19 @@ fn unsupported_return_type(ty: &Type, ns: &Namespace) -> Option<String> {
         Type::Struct(_) => {
             soroban_struct_field_unsupported(ty, ns).map(|_| format!("{} memory", ty.to_string(ns)))
         }
-        Type::Array(_, _) => Some(format!("{} memory", ty.to_string(ns))),
+        Type::Array(elem, _) if has_unsupported_soroban_array_element(elem.as_ref()) => {
+            Some(format!("{} memory", ty.to_string(ns)))
+        }
         _ => None,
     }
 }
 
 fn has_unsupported_soroban_array_element(ty: &Type) -> bool {
     match ty {
-        Type::DynamicBytes | Type::Bytes(_) | Type::Struct(_) => true,
+        // Scalar, string/bytes/bytesN, struct and nested-array elements are all
+        // supported; the encode/decode paths recurse into nested arrays. Mappings
+        // cannot live in a memory array (sema rejects them earlier); guard anyway.
+        Type::Mapping(..) => true,
         Type::Array(elem, _) => has_unsupported_soroban_array_element(elem.as_ref()),
         _ => false,
     }

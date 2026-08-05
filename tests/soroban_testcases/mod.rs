@@ -2,6 +2,10 @@
 mod abi_encode;
 mod alloc;
 mod array_args;
+mod array_bytes_strings;
+mod array_nested;
+mod array_scalars;
+mod array_structs;
 mod atomic_swap;
 mod auth;
 mod block_number;
