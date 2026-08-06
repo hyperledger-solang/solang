@@ -40,6 +40,7 @@ mod strings;
 mod struct_abi_member_count;
 mod struct_abi_single_field;
 mod struct_member_count;
+mod struct_nested_abi;
 mod struct_single_field;
 mod struct_whole_rw;
 mod structs;

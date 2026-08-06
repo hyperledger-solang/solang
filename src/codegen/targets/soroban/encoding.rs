@@ -284,9 +284,6 @@ pub fn soroban_storage_decode_arg(
         Type::Struct(StructType::UserDefined(n)) => {
             decode_struct_storage(arg, wrapper_cfg, vartab, n, ns, ty)
         }
-        // Storage arrays decode elements with the storage representation so struct
-        // elements match the positional Vec form used by member access. A StorageRef
-        // handle is passed through (the array lives behind the ref, decoded lazily).
         Type::Array(..) if !matches!(arg.ty(), Type::StorageRef(_, _)) => {
             decode_vector(arg, &ty, ns, wrapper_cfg, vartab, true)
         }
@@ -302,8 +299,6 @@ pub fn soroban_storage_encode_arg(
 ) -> Expression {
     match item.ty() {
         Type::Struct(StructType::UserDefined(n)) => encode_struct_storage(item, cfg, vartab, ns, n),
-        // Storage arrays encode elements with the storage representation (struct
-        // elements as positional Vecs), matching struct member access.
         Type::Array(..) => encode_vector(item, cfg, vartab, ns, true),
         _ => soroban_encode_arg(item, cfg, vartab, ns),
     }
@@ -1872,10 +1867,14 @@ fn encode_struct_map(
             expr: Box::new(item.clone()),
             member: index,
         };
-        let value = Expression::Load {
-            loc: Loc::Codegen,
-            ty: field.ty.clone(),
-            expr: Box::new(member),
+        let value = if matches!(field.ty, Type::Struct(_)) {
+            member
+        } else {
+            Expression::Load {
+                loc: Loc::Codegen,
+                ty: field.ty.clone(),
+                expr: Box::new(member),
+            }
         };
         let value = soroban_encode_arg(value, cfg, vartab, ns);
         cfg.add(
@@ -1928,10 +1927,14 @@ fn encode_struct_storage(
             expr: Box::new(item.clone()),
             member: index,
         };
-        let loaded = Expression::Load {
-            loc: Loc::Codegen,
-            ty: field_ty.clone(),
-            expr: Box::new(member),
+        let loaded = if matches!(field_ty, Type::Struct(_)) {
+            member
+        } else {
+            Expression::Load {
+                loc: Loc::Codegen,
+                ty: field_ty.clone(),
+                expr: Box::new(member),
+            }
         };
         let encoded = soroban_encode_arg(loaded, cfg, vartab, ns);
 

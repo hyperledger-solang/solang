@@ -1385,7 +1385,15 @@ pub(super) fn validate_abi_types(all_cfg: &[ControlFlowGraph], ns: &mut Namespac
 
 fn soroban_struct_field_unsupported(ty: &Type, ns: &Namespace) -> Option<String> {
     match ty {
-        Type::Array(..) => Some(ty.to_string(ns)),
+        Type::Array(elem, dims) => {
+            if dims.last() != Some(&ast::ArrayLength::Dynamic)
+                || has_unsupported_soroban_array_element(elem.as_ref())
+            {
+                Some(ty.to_string(ns))
+            } else {
+                soroban_struct_field_unsupported(elem.as_ref(), ns)
+            }
+        }
         Type::Struct(struct_ty) => struct_ty
             .definition(ns)
             .fields
@@ -1454,9 +1462,6 @@ fn unsupported_return_type(ty: &Type, ns: &Namespace) -> Option<String> {
 
 fn has_unsupported_soroban_array_element(ty: &Type) -> bool {
     match ty {
-        // Scalar, string/bytes/bytesN, struct and nested-array elements are all
-        // supported; the encode/decode paths recurse into nested arrays. Mappings
-        // cannot live in a memory array (sema rejects them earlier); guard anyway.
         Type::Mapping(..) => true,
         Type::Array(elem, _) => has_unsupported_soroban_array_element(elem.as_ref()),
         _ => false,
