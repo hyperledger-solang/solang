@@ -31,6 +31,7 @@ mod sha256;
 mod storage;
 mod storage_array;
 mod storage_array_batch;
+mod storage_composite_incdec;
 mod strings;
 mod struct_abi_member_count;
 mod struct_abi_single_field;

@@ -17,7 +17,8 @@ use crate::codegen::targets::soroban::bytes::{
     soroban_bytes_length, soroban_bytes_subscript_read, soroban_strings_length,
 };
 use crate::codegen::targets::soroban::{
-    soroban_storage_array_length_ast, soroban_storage_assign, soroban_storage_load,
+    soroban_storage_array_length_ast, soroban_storage_assign, soroban_storage_incdec,
+    soroban_storage_load,
 };
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
@@ -1618,6 +1619,25 @@ fn post_incdec(
     opt: &Options,
     target: &dyn TargetCodegen,
 ) -> Expression {
+    if ns.target == Target::Soroban {
+        if let Some(result) = soroban_storage_incdec(
+            loc,
+            var,
+            ty,
+            expr,
+            overflowing,
+            cfg,
+            contract_no,
+            func,
+            ns,
+            vartab,
+            opt,
+            target,
+        ) {
+            return result;
+        }
+    }
+
     let res = vartab.temp_anonymous(ty);
     let v = expression(var, cfg, contract_no, func, ns, vartab, opt, target);
 
@@ -1763,6 +1783,25 @@ fn pre_incdec(
     opt: &Options,
     target: &dyn TargetCodegen,
 ) -> Expression {
+    if ns.target == Target::Soroban {
+        if let Some(result) = soroban_storage_incdec(
+            loc,
+            var,
+            ty,
+            expr,
+            overflowing,
+            cfg,
+            contract_no,
+            func,
+            ns,
+            vartab,
+            opt,
+            target,
+        ) {
+            return result;
+        }
+    }
+
     let res = vartab.temp_anonymous(ty);
     let v = expression(var, cfg, contract_no, func, ns, vartab, opt, target);
     let storage_type = storage_type(var, ns);
@@ -4140,12 +4179,6 @@ pub fn load_storage(
     ns: &Namespace,
     target: &dyn TargetCodegen,
 ) -> Expression {
-    // Let the target intercept a storage-array subscript load (Soroban does vec_get
-    // in codegen); other targets and untouched cases fall through to LoadStorage.
-    if let Some(loaded) = target.storage_array_subscript_load(loc, ty, &storage, cfg, vartab, ns) {
-        return loaded;
-    }
-
     let res = vartab.temp_anonymous(ty);
 
     cfg.add(

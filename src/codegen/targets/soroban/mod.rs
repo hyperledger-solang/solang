@@ -67,37 +67,6 @@ impl TargetCodegen for SorobanTarget {
         arrays::soroban_storage_array_length(loc, ty, array, cfg, vartab, ns)
     }
 
-    fn storage_array_subscript_load(
-        &self,
-        loc: &pt::Loc,
-        elem_ty: &Type,
-        storage: &Expression,
-        cfg: &mut ControlFlowGraph,
-        vartab: &mut Vartable,
-        ns: &Namespace,
-    ) -> Option<Expression> {
-        if let Expression::Subscript {
-            array_ty: Type::StorageRef(_, inner),
-            expr,
-            index,
-            ..
-        } = storage
-        {
-            if matches!(inner.as_ref(), Type::Array(..)) {
-                return Some(arrays::soroban_storage_subscript_read(
-                    loc,
-                    elem_ty,
-                    (**expr).clone(),
-                    (**index).clone(),
-                    cfg,
-                    vartab,
-                    ns,
-                ));
-            }
-        }
-        None
-    }
-
     /// Soroban lazy decode path: if memory contains encoded handles, decode on demand.
     fn lower_load(
         &self,
@@ -1164,6 +1133,95 @@ pub(crate) fn soroban_storage_load(
     }
 
     None
+}
+
+pub(crate) fn soroban_storage_incdec(
+    loc: &pt::Loc,
+    var: &ast::Expression,
+    ty: &Type,
+    node: &ast::Expression,
+    overflowing: bool,
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    func: Option<&Function>,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    opt: &Options,
+    target: &dyn TargetCodegen,
+) -> Option<Expression> {
+    if !is_descent_storage_expr(var) {
+        return None;
+    }
+
+    let (is_decrement, is_post) = match node {
+        ast::Expression::PostDecrement { .. } => (true, true),
+        ast::Expression::PostIncrement { .. } => (false, true),
+        ast::Expression::PreDecrement { .. } => (true, false),
+        ast::Expression::PreIncrement { .. } => (false, false),
+        _ => unreachable!("soroban_storage_incdec: not an inc/dec node"),
+    };
+
+    let (_, path, storage_type) =
+        lower_storage_path(var, cfg, contract_no, func, ns, vartab, opt, target);
+
+    let handle = path_load(&path, &storage_type, cfg, vartab, ns);
+    let old = soroban_storage_decode_arg(handle, cfg, vartab, ns, Some(ty.clone()));
+    let old_no = vartab.temp_anonymous(ty);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: *loc,
+            res: old_no,
+            expr: old,
+        },
+    );
+    let old_var = Expression::Variable {
+        loc: *loc,
+        ty: ty.clone(),
+        var_no: old_no,
+    };
+
+    let one = Box::new(Expression::NumberLiteral {
+        loc: *loc,
+        ty: ty.clone(),
+        value: BigInt::from(1u8),
+    });
+    let new_expr = if is_decrement {
+        Expression::Subtract {
+            loc: *loc,
+            ty: ty.clone(),
+            overflowing,
+            left: Box::new(old_var.clone()),
+            right: one,
+        }
+    } else {
+        Expression::Add {
+            loc: *loc,
+            ty: ty.clone(),
+            overflowing,
+            left: Box::new(old_var.clone()),
+            right: one,
+        }
+    };
+    let new_no = vartab.temp_anonymous(ty);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: *loc,
+            res: new_no,
+            expr: new_expr,
+        },
+    );
+    let new_var = Expression::Variable {
+        loc: *loc,
+        ty: ty.clone(),
+        var_no: new_no,
+    };
+
+    let encoded = soroban_storage_encode_arg(new_var.clone(), cfg, vartab, ns);
+    path_store(&path, encoded, &storage_type, cfg, vartab, ns);
+
+    Some(if is_post { old_var } else { new_var })
 }
 
 pub(crate) fn soroban_storage_array_length_ast(
