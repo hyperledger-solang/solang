@@ -81,13 +81,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
-        if let Some(Type::StorageRef(_, inner)) = slot_ty {
-            if let Type::Array(inner_ty, _) = inner.as_ref() {
-                if !is_reference_type(inner_ty) {
-                    return get_storage_vec_subscript(bin, function, *slot);
-                }
-            }
-        }
+        // Scalar-element storage-array subscript reads are handled in codegen now
+        // (arrays.rs, vec_get); this path only serves other storage loads.
         let storage_type = storage_type_to_int(storage_type);
         emit_context!(bin);
 
@@ -169,14 +164,8 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
         function: FunctionValue<'a>,
         storage_type: &Option<StorageType>,
     ) {
-        if let Some(Type::StorageRef(_, inner)) = slot_ty {
-            if let Type::Array(inner_ty, _) = inner.as_ref() {
-                if !is_reference_type(inner_ty) {
-                    return set_storage_vec_subscript(bin, function, *slot, dest.into_int_value());
-                }
-            }
-        }
-
+        // Scalar-element storage-array subscript writes are handled in codegen now
+        // (arrays.rs, vec_put); this path only serves other storage stores.
         emit_context!(bin);
 
         let storage_type = storage_type_to_int(storage_type);
@@ -378,55 +367,14 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
     fn storage_subscript(
         &self,
         bin: &Binary<'a>,
-        function: FunctionValue<'a>,
-        ty: &Type,
+        _function: FunctionValue<'a>,
+        _ty: &Type,
         slot: IntValue<'a>,
         index: BasicValueEnum<'a>,
     ) -> IntValue<'a> {
-        if let Type::StorageRef(_, ty) = ty {
-            if let Type::Array(inner, _) = *ty.clone() {
-                if !is_reference_type(&inner) {
-                    // here, we return a memory array with the following format: [ slot, index ]
-
-                    let arr = bin
-                        .builder
-                        .build_array_alloca(
-                            bin.context.i64_type(),
-                            bin.context.i64_type().const_int(2, false),
-                            "array_subscript",
-                        )
-                        .unwrap();
-
-                    bin.builder.build_store(arr, slot).unwrap();
-
-                    // advance pointer to index
-
-                    let index_ptr = unsafe {
-                        bin.builder
-                            .build_gep(
-                                bin.context.i64_type().array_type(1),
-                                arr,
-                                &[
-                                    bin.context.i64_type().const_zero(),
-                                    bin.context.i64_type().const_int(1, false),
-                                ],
-                                "index_ptr",
-                            )
-                            .unwrap()
-                    };
-
-                    bin.builder.build_store(index_ptr, index).unwrap();
-
-                    // now return the pointer as int value
-                    let arr_ptr_as_int = bin
-                        .builder
-                        .build_ptr_to_int(arr, bin.context.i64_type(), "array_ptr_as_int")
-                        .unwrap();
-                    return arr_ptr_as_int;
-                }
-            }
-        }
-
+        // Storage arrays are read/written in codegen now (arrays.rs, vec_get/vec_put).
+        // This path still serves other subscript storage (e.g. mappings): the key is a
+        // VecObject of [slot, index].
         let vec_new = bin
             .builder
             .build_call(
@@ -513,83 +461,13 @@ impl<'a> TargetRuntime<'a> for SorobanTarget {
 
     fn storage_array_length(
         &self,
-        bin: &Binary<'a>,
+        _bin: &Binary<'a>,
         _function: FunctionValue,
-        slot: IntValue<'a>,
-        elem_ty: &Type,
+        _slot: IntValue<'a>,
+        _elem_ty: &Type,
     ) -> IntValue<'a> {
-        if !is_reference_type(elem_ty) {
-            // Native arrays use VecObject layout: load vec object then call VecLen.
-            let load_storage = bin
-                .builder
-                .build_call(
-                    bin.module
-                        .get_function(HostFunctions::GetContractData.name())
-                        .unwrap(),
-                    &[
-                        slot.into(),
-                        bin.context.i64_type().const_int(1, false).into(), // persistent storage
-                    ],
-                    "load_storage",
-                )
-                .unwrap()
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value();
-
-            let u32_val = bin
-                .builder
-                .build_call(
-                    bin.module
-                        .get_function(HostFunctions::VecLen.name())
-                        .unwrap(),
-                    &[load_storage.into()],
-                    "vec_len",
-                )
-                .unwrap()
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value();
-
-            // VecLen returns U32Val => payload in top 32 bits.
-            return bin
-                .builder
-                .build_right_shift(
-                    u32_val,
-                    bin.context.i64_type().const_int(32, false),
-                    false,
-                    "length",
-                )
-                .unwrap();
-        }
-        // Reference arrays keep old layout: length encoded in slot as U64Small.
-        let storage_ty = bin.context.i64_type().const_int(1, false);
-        let loaded_len = bin
-            .builder
-            .build_call(
-                bin.module
-                    .get_function(HostFunctions::GetContractData.name())
-                    .unwrap(),
-                &[slot.into(), storage_ty.into()],
-                "get_len",
-            )
-            .unwrap()
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
-        // U64Small payload is shifted by 8 bits.
-        bin.builder
-            .build_right_shift(
-                loaded_len,
-                bin.context.i64_type().const_int(8, false),
-                false,
-                "length",
-            )
-            .unwrap()
+        // Every storage array length is computed in codegen now (arrays.rs, vec_len).
+        unsupported_soroban(Loc::Codegen, "storage array length")
     }
 
     /// keccak256 hash
@@ -947,145 +825,6 @@ fn encode_value<'a>(
         .unwrap()
 }
 
-fn load_slot_index_from_key_ptr<'a>(
-    bin: &Binary<'a>,
-    key_ptr: PointerValue<'a>,
-) -> (IntValue<'a>, IntValue<'a>) {
-    let slot_val = bin
-        .builder
-        .build_load(bin.context.i64_type(), key_ptr, "key_slot")
-        .unwrap()
-        .into_int_value(); // slot loaded from key array
-    let index_ptr = unsafe {
-        bin.builder
-            .build_gep(
-                bin.context.i64_type(),
-                key_ptr,
-                &[bin.context.i64_type().const_int(1, false)],
-                "key_index_ptr",
-            )
-            .unwrap()
-    }; // pointer to index element
-    let index_val = bin
-        .builder
-        .build_load(bin.context.i64_type(), index_ptr, "key_index")
-        .unwrap()
-        .into_int_value(); // index loaded from key array
-    (slot_val, index_val)
-}
-
-fn get_storage_vec_subscript<'a>(
-    bin: &Binary<'a>,
-    _function: FunctionValue<'a>,
-    key_vec: IntValue<'a>,
-) -> BasicValueEnum<'a> {
-    let key_ptr = bin
-        .builder
-        .build_int_to_ptr(key_vec, bin.context.ptr_type(Default::default()), "key_ptr")
-        .unwrap(); // pointer to key array
-    let (slot_val, index_val) = load_slot_index_from_key_ptr(bin, key_ptr); // slot/index from key array
-
-    let vec_obj = bin
-        .builder
-        .build_call(
-            bin.module
-                .get_function(HostFunctions::GetContractData.name())
-                .unwrap(),
-            &[
-                slot_val.into(),
-                bin.context.i64_type().const_int(1, false).into(),
-            ],
-            "load_storage",
-        )
-        .unwrap()
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value(); // vec object from storage
-    let index_val = encode_value(index_val, 32, 4, bin); // index encoded as u32 val
-    let elem_val = bin
-        .builder
-        .build_call(
-            bin.module
-                .get_function(HostFunctions::VecGet.name())
-                .unwrap(),
-            &[vec_obj.into(), index_val.into()],
-            "vec_get",
-        )
-        .unwrap()
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value(); // element from vec
-    elem_val.as_basic_value_enum()
-}
-
-fn set_storage_vec_subscript<'a>(
-    bin: &Binary<'a>,
-    _function: FunctionValue<'a>,
-    key_vec: IntValue<'a>,
-    value: IntValue<'a>,
-) {
-    let key_ptr = bin
-        .builder
-        .build_int_to_ptr(key_vec, bin.context.ptr_type(Default::default()), "key_ptr")
-        .unwrap(); // pointer to key array
-    let (slot_val, index_val) = load_slot_index_from_key_ptr(bin, key_ptr); // slot/index from key array
-
-    // encode index as u32 val
-    let index_val = encode_value(index_val, 32, 4, bin); // index encoded as u32 val
-
-    let vec_obj = bin
-        .builder
-        .build_call(
-            bin.module
-                .get_function(HostFunctions::GetContractData.name())
-                .unwrap(),
-            &[
-                slot_val.into(),
-                bin.context.i64_type().const_int(1, false).into(),
-            ],
-            "load_storage",
-        )
-        .unwrap()
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value(); // vec object from storage
-    let new_vec_obj = bin
-        .builder
-        .build_call(
-            bin.module
-                .get_function(HostFunctions::VecPut.name())
-                .unwrap(),
-            &[vec_obj.into(), index_val.into(), value.into()],
-            "vec_put",
-        )
-        .unwrap()
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value(); // updated vec object
-    let _store_storage = bin
-        .builder
-        .build_call(
-            bin.module
-                .get_function(HostFunctions::PutContractData.name())
-                .unwrap(),
-            &[
-                slot_val.into(),
-                new_vec_obj.into(),
-                bin.context.i64_type().const_int(1, false).into(),
-            ],
-            "store_storage",
-        )
-        .unwrap()
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value(); // store updated vec
-}
-
 fn is_val_true<'ctx>(bin: &Binary<'ctx>, val: IntValue<'ctx>) -> IntValue<'ctx> {
     let tag_mask = bin.context.i64_type().const_int(0xff, false);
     let tag_true = bin.context.i64_type().const_int(1, false);
@@ -1131,24 +870,4 @@ pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<
     // All zero body + tag in lower 8 bits
     let tag_val: u64 = tag;
     i64_type.const_int(tag_val, false)
-}
-
-fn is_reference_type(ty: &Type) -> bool {
-    match ty {
-        Type::Bool => false,
-        Type::Address(_) => false,
-        Type::Int(_) => false,
-        Type::Uint(_) => false,
-        Type::Rational => false,
-        Type::Bytes(_) => false,
-        Type::Enum(_) => false,
-        Type::Struct(_) => true,
-        Type::Array(..) => true,
-        Type::DynamicBytes => true,
-        Type::String => true,
-        Type::Mapping(..) => true,
-        Type::Contract(_) => false,
-        Type::InternalFunction { .. } => false,
-        _ => false,
-    }
 }
