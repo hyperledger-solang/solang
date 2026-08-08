@@ -38,8 +38,8 @@ Documented Counterparts
      - `docs/examples/soroban/deep_auth <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/deep_auth>`_
      - Nested contract authorization via ``authAsCurrContract(...)``.
    * - `hello_world <https://github.com/stellar/soroban-examples/tree/main/hello_world>`_
-     - `integration/soroban/callee.sol <https://github.com/hyperledger-solang/solang/blob/main/integration/soroban/callee.sol>`_
-     - Closest local Solidity counterpart for a minimal callable contract. Solang does not currently ship a string-vector hello-world example with the same interface.
+     - `docs/examples/soroban/hello_world.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/hello_world.sol>`_ and `tests/soroban_testcases/example_hello_world.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_hello_world.rs>`_
+     - Minimal ``hello(string) -> string[]`` contract mirroring the upstream ``String -> Vec<String>`` example: returns ``["Hello", <name>]``. Demonstrates a ``string`` parameter and a ``string[]`` return value over the Soroban ABI. Tested via ``example_hello_world_*`` test cases.
    * - `increment <https://github.com/stellar/soroban-examples/tree/main/increment>`_
      - `integration/soroban/counter.sol <https://github.com/hyperledger-solang/solang/blob/main/integration/soroban/counter.sol>`_
      - Closest local counterpart for a stored counter that can be incremented.
@@ -270,6 +270,24 @@ Solang Solidity example: `docs/examples/soroban/increment_with_pause.sol <https:
             count += 1;
             extendInstanceTtl(50, 100);
             return count;
+        }
+    }
+
+hello_world
+^^^^^^^^^^^
+
+Upstream Soroban example: `hello_world <https://github.com/stellar/soroban-examples/tree/main/hello_world>`_
+
+Solang Solidity example: `docs/examples/soroban/hello_world.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/hello_world.sol>`_
+
+.. code-block:: solidity
+
+    contract hello_world {
+        function hello(string memory to) public pure returns (string[] memory) {
+            string[] memory result = new string[](2);
+            result[0] = "Hello";
+            result[1] = to;
+            return result;
         }
     }
 
