@@ -2,6 +2,10 @@
 mod abi_encode;
 mod alloc;
 mod array_args;
+mod array_bytes_strings;
+mod array_nested;
+mod array_scalars;
+mod array_structs;
 mod atomic_swap;
 mod auth;
 mod block_number;
@@ -36,6 +40,7 @@ mod strings;
 mod struct_abi_member_count;
 mod struct_abi_single_field;
 mod struct_member_count;
+mod struct_nested_abi;
 mod struct_single_field;
 mod struct_whole_rw;
 mod structs;

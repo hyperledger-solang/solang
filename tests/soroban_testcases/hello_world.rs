@@ -1,41 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use solang::codegen::Options;
-use solang::file_resolver::FileResolver;
-use solang::sema::ast::Namespace;
-use solang::{compile, Target};
-use solang_parser::diagnostics::Level;
-use std::ffi::OsStr;
-
-fn compile_soroban(src: &str) -> Namespace {
-    let tmp_file = OsStr::new("test.sol");
-    let mut cache = FileResolver::default();
-    cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
-    let opt = inkwell::OptimizationLevel::Default;
-
-    let (_, ns) = compile(
-        tmp_file,
-        &mut cache,
-        Target::Soroban,
-        &Options {
-            opt_level: opt.into(),
-            log_runtime_errors: true,
-            log_prints: true,
-            #[cfg(feature = "wasm_opt")]
-            wasm_opt: Some(contract_build::OptimizationPasses::Z),
-            soroban_version: None,
-            ..Default::default()
-        },
-        vec!["unknown".to_string()],
-        "0.0.1",
-    );
-
-    ns
-}
+use crate::build_solidity;
+use soroban_sdk::{IntoVal, String as SString, TryFromVal, Vec as SVec};
 
 #[test]
 fn hello_world() {
-    let ns = compile_soroban(
+    let runtime = build_solidity(
         r#"
         contract HelloWorld {
             function hello(string memory to) public pure returns (string[] memory) {
@@ -45,17 +15,21 @@ fn hello_world() {
                 return res;
             }
         }"#,
+        |_| {},
     );
 
-    let errors = ns
-        .diagnostics
-        .iter()
-        .filter(|diagnostic| diagnostic.level == Level::Error)
-        .collect::<Vec<_>>();
+    let addr = runtime.contracts.last().unwrap();
+    let env = &runtime.env;
 
-    assert_eq!(errors.len(), 1);
+    let to = SString::from_str(env, "Soroban");
+    let res = runtime.invoke_contract(addr, "hello", vec![to.into_val(env)]);
+    let got = SVec::<SString>::try_from_val(env, &res).unwrap();
     assert_eq!(
-        errors[0].message,
-        "type 'string[] memory' is not supported as a Soroban external function return value"
+        got,
+        soroban_sdk::vec![
+            env,
+            SString::from_str(env, "Hello"),
+            SString::from_str(env, "Soroban"),
+        ]
     );
 }
