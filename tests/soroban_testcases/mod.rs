@@ -20,6 +20,7 @@ mod example_custom_types;
 mod example_events;
 mod example_hello_world;
 mod example_increment_with_pause;
+mod example_other_custom_types;
 mod example_pause;
 mod i128_u128;
 mod i256_u256;

@@ -466,7 +466,7 @@ pub fn soroban_encode_arg(
                     right: Box::new(Expression::NumberLiteral {
                         loc: item.loc(),
                         ty: Type::Uint(64),
-                        value: tags::I32.into(),
+                        value: tags::U32.into(),
                     }),
                     overflowing: false,
                 },

@@ -34,6 +34,9 @@ Documented Counterparts
    * - `custom_types <https://github.com/stellar/soroban-examples/tree/main/custom_types>`_
      - `docs/examples/soroban/custom_types.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/custom_types.sol>`_ and `tests/soroban_testcases/example_custom_types.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_custom_types.rs>`_
      - Struct stored in contract state (``State`` with ``count`` and ``last_incr`` fields). Demonstrates struct storage (VecObject path) and struct ABI return (named-field MAP object). Tested via ``example_custom_types_*`` test cases.
+   * - `other_custom_types <https://github.com/stellar/soroban-examples/tree/main/other_custom_types>`_
+     - `docs/examples/soroban/other_custom_types.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/other_custom_types.sol>`_ and `tests/soroban_testcases/example_other_custom_types.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_other_custom_types.rs>`_
+     - Type-showcase contract: ABI round-trips for the supported subset (``uint32``/``int32``/``int64``/``int128``/``uint128``/``int256``/``uint256``, ``bool``, ``string``, ``bytes``, ``bytes9``, ``address``), a ``Symbol`` (string) echo, unit enums (``SimpleEnum``/``RoyalCard``), a ``uint32[]`` vector, a ``Test`` struct round-trip, a ``string[]`` return, composite structs (``TupleStruct`` with a nested struct and an enum field, and ``ComplexStruct`` with an address, ``uint64``, a ``uint32[]`` and enum fields), event emission with host authorization (``requireAuth`` + ``emit``), a persistent counter, multiple arguments, a void method, and ``require``-based error handling. ``TupleStruct``/``ComplexStruct`` mirror the upstream composite structs with their sum-type-enum fields adapted to unit enums and vectors (the closest supported types). The upstream methods relying on sum-type enums with associated data (``ComplexEnum``/``ComplexEnum2``/``ComplexEnum3``), tuples, ``Map``, ``Option`` and the untyped ``Val`` are omitted as those types have no Solidity/Soroban-target counterpart. Tested via ``example_other_custom_types_*`` test cases.
    * - `deep_contract_auth <https://github.com/stellar/soroban-examples/tree/main/deep_contract_auth>`_
      - `docs/examples/soroban/deep_auth <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/deep_auth>`_
      - Nested contract authorization via ``authAsCurrContract(...)``.
@@ -143,6 +146,74 @@ Solang Solidity example: `docs/examples/soroban/custom_types.sol <https://github
             return state;
         }
     }
+
+other_custom_types
+^^^^^^^^^^^^^^^^^^
+
+Upstream Soroban example: `other_custom_types <https://github.com/stellar/soroban-examples/tree/main/other_custom_types>`_
+
+Solang Solidity example: `docs/examples/soroban/other_custom_types.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/other_custom_types.sol>`_
+
+The upstream contract is a showcase of every custom and primitive type the
+Soroban host understands. This port mirrors every upstream method with a
+Solidity/Soroban-target counterpart, following the upstream method names and
+ordering — the primitive echoes, a ``Symbol`` (string) echo, unit enums, a
+``uint32[]`` vector, struct round-trips, event emission with host
+authorization, a persistent counter, multiple arguments, a void method and
+``require``-based error handling. The only names that diverge from upstream are
+``bytes_`` and ``string_`` (``bytes`` and ``string`` are Solidity type
+keywords):
+
+.. code-block:: solidity
+
+    contract other_custom_types {
+        struct Test {
+            uint32 a;
+            bool b;
+            string c;
+        }
+
+        enum SimpleEnum { First, Second, Third }
+
+        event AuthEvent(address indexed hello, string world);
+
+        uint32 persistent count;
+
+        function inc() public returns (uint32) {
+            count += 1;
+            return count;
+        }
+
+        function auth(address addr, string memory world) public returns (address) {
+            addr.requireAuth();
+            emit AuthEvent(addr, world);
+            return addr;
+        }
+
+        function simple(SimpleEnum v) public pure returns (SimpleEnum) {
+            return v;
+        }
+
+        function vec(uint32[] memory v) public pure returns (uint32[] memory) {
+            return v;
+        }
+
+        function strukt(Test memory t) public pure returns (Test memory) {
+            return t;
+        }
+
+        function u32_fail_on_even(uint32 v) public pure returns (uint32) {
+            require(v % 2 == 1, "NumberMustBeOdd");
+            return v;
+        }
+    }
+
+The composite structs ``TupleStruct`` and ``ComplexStruct`` are ported with
+their sum-type-enum fields adapted to unit enums and ``uint32[]`` vectors, the
+closest supported types. The upstream methods relying on sum-type enums with
+associated data (``ComplexEnum``/``ComplexEnum2``/``ComplexEnum3``), tuples,
+``Map``, ``Option`` and the untyped ``Val`` are omitted, as those types have no
+Solidity/Soroban-target counterpart.
 
 token
 ^^^^^
@@ -302,7 +373,6 @@ The following upstream examples do not currently have a documented Solidity coun
 - `fuzzing <https://github.com/stellar/soroban-examples/tree/main/fuzzing>`_
 - `merkle_distribution <https://github.com/stellar/soroban-examples/tree/main/merkle_distribution>`_
 - `mint-lock <https://github.com/stellar/soroban-examples/tree/main/mint-lock>`_
-- `other_custom_types <https://github.com/stellar/soroban-examples/tree/main/other_custom_types>`_
 - `privacy-pools <https://github.com/stellar/soroban-examples/tree/main/privacy-pools>`_
 - `simple_account <https://github.com/stellar/soroban-examples/tree/main/simple_account>`_
 - `single_offer <https://github.com/stellar/soroban-examples/tree/main/single_offer>`_
