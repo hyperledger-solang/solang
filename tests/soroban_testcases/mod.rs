@@ -16,6 +16,7 @@ mod composite_bytes;
 mod constructor;
 mod cross_contract_calls;
 mod events;
+mod example_atomic_multiswap;
 mod example_custom_types;
 mod example_events;
 mod example_hello_world;
