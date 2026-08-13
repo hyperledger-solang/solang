@@ -65,7 +65,7 @@ pub fn expression(
         }
         ast::Expression::StorageLoad { loc, ty, expr } => {
             if ns.target == Target::Soroban {
-                if let Some(loaded) = soroban_storage_load(
+                return soroban_storage_load(
                     loc,
                     expr,
                     ty,
@@ -76,9 +76,7 @@ pub fn expression(
                     vartab,
                     opt,
                     target,
-                ) {
-                    return loaded;
-                }
+                );
             }
 
             let storage_type = storage_type(expr, ns);
@@ -4372,7 +4370,7 @@ pub(crate) fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Express
     }
 }
 
-fn storage_type(expr: &ast::Expression, ns: &Namespace) -> Option<pt::StorageType> {
+pub(crate) fn storage_type(expr: &ast::Expression, ns: &Namespace) -> Option<pt::StorageType> {
     match expr {
         ast::Expression::StorageVariable {
             loc: _,
