@@ -23,8 +23,8 @@ Documented Counterparts
      - `docs/examples/soroban/atomic_swap <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/atomic_swap>`_
      - Atomic swap between two parties, with companion token contracts.
    * - `atomic_multiswap <https://github.com/stellar/soroban-examples/tree/main/atomic_multiswap>`_
-     - `docs/examples/soroban/atomic_swap <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/atomic_swap>`_ and `tests/soroban_testcases/alloc.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/alloc.rs>`_
-     - Closest documented Solang coverage is the atomic-swap example plus array and loop support used for batching-style logic. A dedicated standalone Solidity multiswap example is not yet present in this repository.
+     - `docs/examples/soroban/atomic_multiswap.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/atomic_multiswap.sol>`_ and `tests/soroban_testcases/example_atomic_multiswap.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_atomic_multiswap.rs>`_
+     - Batches a set of atomic token swaps between multiple parties with simple price matching. Demonstrates ``struct[]`` (array-of-struct) parameters, nested loops, dynamic memory array allocation (``new bool[](n)``), and cross-contract ``call`` into the `atomic_swap <https://github.com/hyperledger-solang/solang/tree/main/docs/examples/soroban/atomic_swap>`_ example via ``abi.encode``. Rather than removing a matched ``swaps_b`` entry (Solidity has no ``remove(i)``), a ``used`` flag array marks matched entries. Tested via ``atomic_multiswap_*`` test cases.
    * - `auth <https://github.com/stellar/soroban-examples/tree/main/auth>`_
      - `docs/examples/soroban/auth.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/auth.sol>`_
      - Simple host-managed authorization via ``requireAuth()``.
@@ -78,6 +78,61 @@ Solidity Translations
 +++++++++++++++++++++
 
 The following abridged snippets show how selected upstream Soroban examples are expressed in Solang Solidity.
+
+atomic_multiswap
+^^^^^^^^^^^^^^^^
+
+Upstream Soroban example: `atomic_multiswap <https://github.com/stellar/soroban-examples/tree/main/atomic_multiswap>`_
+
+Solang Solidity example: `docs/examples/soroban/atomic_multiswap.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/atomic_multiswap.sol>`_
+
+Batches a set of atomic token swaps between multiple parties, matching each ``swaps_a`` entry against the first compatible ``swaps_b`` entry and settling it through a deployed ``atomic_swap`` contract. Soroban memory arrays do support ``push``/``pop``, but Solidity has no ``remove(i)`` for deleting an arbitrary element; rather than emulating removal, matched ``swaps_b`` entries are marked in a ``used`` flag array.
+
+.. code-block:: solidity
+
+    contract atomic_multiswap {
+        struct SwapSpec {
+            address addr;
+            int128 amount;
+            int128 min_recv;
+        }
+
+        function multi_swap(
+            address swap_contract,
+            address token_a,
+            address token_b,
+            SwapSpec[] memory swaps_a,
+            SwapSpec[] memory swaps_b
+        ) public {
+            bool[] memory used = new bool[](swaps_b.length);
+
+            for (uint256 i = 0; i < swaps_a.length; i++) {
+                SwapSpec memory acc_a = swaps_a[i];
+                for (uint256 j = 0; j < swaps_b.length; j++) {
+                    if (used[j]) {
+                        continue;
+                    }
+                    SwapSpec memory acc_b = swaps_b[j];
+                    if (acc_a.amount >= acc_b.min_recv && acc_a.min_recv <= acc_b.amount) {
+                        bytes memory payload = abi.encode(
+                            "swap",
+                            acc_a.addr,
+                            acc_b.addr,
+                            token_a,
+                            token_b,
+                            acc_a.amount,
+                            acc_a.min_recv,
+                            acc_b.amount,
+                            acc_b.min_recv
+                        );
+                        swap_contract.call(payload);
+                        used[j] = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
 pause
 ^^^^^
