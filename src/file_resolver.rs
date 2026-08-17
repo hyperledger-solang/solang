@@ -220,17 +220,28 @@ impl FileResolver {
         }
 
         // first check maps
-        let mut remapped = path_filename.clone();
+        let mut best_match: Option<(&OsString, &PathBuf, &Path)> = None;
 
-        for import_map_no in 0..self.import_paths.len() {
-            if let (Some(mapping), target) = &self.import_paths[import_map_no].clone() {
-                if let Ok(relpath) = path_filename.strip_prefix(mapping) {
-                    remapped = target.join(relpath);
-                }
+        for (mapping, target) in &self.import_paths {
+            let Some(mapping) = mapping else {
+                continue;
+            };
+
+            let Ok(relpath) = path_filename.strip_prefix(mapping) else {
+                continue;
+            };
+
+            if best_match
+                .as_ref()
+                .is_none_or(|(best_mapping, _, _)| mapping.len() >= best_mapping.len())
+            {
+                best_match = Some((mapping, target, relpath));
             }
         }
 
-        let path = remapped;
+        let path = best_match
+            .map(|(_, target, relpath)| target.join(relpath))
+            .unwrap_or(path_filename.clone());
 
         // walk over the import paths until we find one that resolves
         for import_no in 0..self.import_paths.len() {
@@ -309,5 +320,78 @@ impl FileResolver {
         begin_column -= old_size - full_line.len();
 
         (full_line, begin_line, begin_column, size)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FileResolver;
+    use std::ffi::OsStr;
+    use std::fs;
+
+    fn resolver_with_remappings(short_first: bool) -> (tempfile::TempDir, FileResolver) {
+        let tempdir = tempfile::tempdir().unwrap();
+        let base_target = tempdir.path().join("vendor/base/math");
+        let math_target = tempdir.path().join("vendor/math");
+
+        fs::create_dir_all(&base_target).unwrap();
+        fs::create_dir_all(&math_target).unwrap();
+        fs::write(base_target.join("Calc.sol"), "base").unwrap();
+        fs::write(math_target.join("Calc.sol"), "math").unwrap();
+
+        let mut resolver = FileResolver::default();
+        let short_target = tempdir.path().join("vendor/base");
+        let long_target = tempdir.path().join("vendor/math");
+
+        if short_first {
+            resolver.add_import_map("@lib/".into(), short_target);
+            resolver.add_import_map("@lib/math/".into(), long_target);
+        } else {
+            resolver.add_import_map("@lib/math/".into(), long_target);
+            resolver.add_import_map("@lib/".into(), short_target);
+        }
+
+        (tempdir, resolver)
+    }
+
+    fn assert_longest_remapping_wins(short_first: bool) {
+        let (_tempdir, mut resolver) = resolver_with_remappings(short_first);
+        let file = resolver
+            .resolve_file(None, OsStr::new("@lib/math/Calc.sol"))
+            .unwrap();
+
+        assert_eq!(file.contents.as_ref(), "math");
+    }
+
+    #[test]
+    fn longest_remapping_wins_when_short_prefix_is_first() {
+        assert_longest_remapping_wins(true);
+    }
+
+    #[test]
+    fn longest_remapping_wins_when_long_prefix_is_first() {
+        assert_longest_remapping_wins(false);
+    }
+
+    #[test]
+    fn duplicate_remapping_prefix_uses_last_target() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let first_target = tempdir.path().join("vendor/first");
+        let second_target = tempdir.path().join("vendor/second");
+
+        fs::create_dir_all(&first_target).unwrap();
+        fs::create_dir_all(&second_target).unwrap();
+        fs::write(first_target.join("Calc.sol"), "first").unwrap();
+        fs::write(second_target.join("Calc.sol"), "second").unwrap();
+
+        let mut resolver = FileResolver::default();
+        resolver.add_import_map("@lib/".into(), first_target);
+        resolver.add_import_map("@lib/".into(), second_target);
+
+        let file = resolver
+            .resolve_file(None, OsStr::new("@lib/Calc.sol"))
+            .unwrap();
+
+        assert_eq!(file.contents.as_ref(), "second");
     }
 }
