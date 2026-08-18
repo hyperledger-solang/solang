@@ -355,10 +355,6 @@ fn cov_dynarr_int_overflow_trap_test() {
     );
 }
 
-// ---- Container ops on a LOCAL (memory) 256-bit array ------------------------
-// set / get / push / pop / len / merge, all taking the memory array as a param
-// and returning it (or a value). No storage. Exercises i256/u256 elements.
-
 const CONTAINER_SRC: &str = r#"
     contract c {
         function len(TY[] memory a) public pure returns (uint32) { return uint32(a.length); }
