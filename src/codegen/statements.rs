@@ -1104,11 +1104,6 @@ fn try_load_and_cast(
         }
         Type::Ref(ty) => match *ty {
             Type::Array(_, _) => expr.cast(to_ty, ns),
-            // Soroban holds/returns structs by pointer (llvm_var_ty(Struct)==ptr),
-            // so keep the reference — loading the whole struct value here yields a
-            // `ret {i64,i64}` in a `ptr`-returning function and ICEs in the LLVM
-            // inliner (doRAUW). Non-Soroban returns a struct value into an sret
-            // pointer and needs the load, so this stays target-gated.
             Type::Struct(_) if ns.target == Target::Soroban => expr.cast(to_ty, ns),
             _ => Expression::Load {
                 loc: pt::Loc::Builtin,

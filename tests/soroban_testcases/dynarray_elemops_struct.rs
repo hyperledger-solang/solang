@@ -945,7 +945,7 @@ fn cov_dynarr_struct_local_member_mixed_test() {
         ],
     );
     let got = SVec::<Mixed>::try_from_val(env, &res).unwrap();
-    assert_eq!(got.get(0).unwrap().flag, false);
+    assert!(!got.get(0).unwrap().flag);
     assert_eq!(got.get(1).unwrap(), m1.clone());
 
     let res = runtime.invoke_contract(
@@ -953,13 +953,12 @@ fn cov_dynarr_struct_local_member_mixed_test() {
         "toggle_flag",
         vec![arr.clone().into_val(env), 1u32.into_val(env)],
     );
-    assert_eq!(
+    assert!(
         SVec::<Mixed>::try_from_val(env, &res)
             .unwrap()
             .get(1)
             .unwrap()
-            .flag,
-        true
+            .flag
     );
 
     let res = runtime.invoke_contract(
