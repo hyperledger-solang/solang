@@ -268,8 +268,7 @@ fn nested_field_init_via_flat_substruct() {
 }
 
 #[test]
-#[ignore = "nested struct whole-literal init ICEs in encode_struct_storage (pre-existing encode gap)"]
-fn nested_whole_literal_init_ice() {
+fn nested_whole_literal_init() {
     let src = r#"
         contract c {
             struct S1 { int32 a; int32 b; }
@@ -277,12 +276,21 @@ fn nested_whole_literal_init_ice() {
             S2 s2;
             function init() public { s2 = S2(S1(5, 6), 7); }
             function get_a() public view returns (int32) { return s2.inner.a; }
+            function get_b() public view returns (int32) { return s2.inner.b; }
+            function get_z() public view returns (int32) { return s2.z; }
+            // whole-struct load round-trip (exercises decode_struct_storage)
+            function get_all() public view returns (S2 memory) { return s2; }
         }
     "#;
     let runtime = build_solidity(src, |_| {});
     let addr = runtime.contracts.last().unwrap();
     let env = &runtime.env;
     runtime.invoke_contract(addr, "init", vec![]);
-    let a: Val = 5_i32.into_val(env);
-    assert!(a.shallow_eq(&runtime.invoke_contract(addr, "get_a", vec![])));
+    let five: Val = 5_i32.into_val(env);
+    let six: Val = 6_i32.into_val(env);
+    let seven: Val = 7_i32.into_val(env);
+    assert!(five.shallow_eq(&runtime.invoke_contract(addr, "get_a", vec![])));
+    assert!(six.shallow_eq(&runtime.invoke_contract(addr, "get_b", vec![])));
+    assert!(seven.shallow_eq(&runtime.invoke_contract(addr, "get_z", vec![])));
+    runtime.invoke_contract(addr, "get_all", vec![]);
 }

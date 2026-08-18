@@ -297,7 +297,11 @@ pub fn soroban_storage_encode_arg(
     vartab: &mut Vartable,
     ns: &Namespace,
 ) -> Expression {
-    match item.ty() {
+    let ty = match item.ty() {
+        Type::Ref(inner) => *inner,
+        other => other,
+    };
+    match ty {
         Type::Struct(StructType::UserDefined(n)) => encode_struct_storage(item, cfg, vartab, ns, n),
         Type::Array(..) => encode_vector(item, cfg, vartab, ns, true),
         _ => soroban_encode_arg(item, cfg, vartab, ns),
@@ -1927,7 +1931,7 @@ fn encode_struct_storage(
             expr: Box::new(item.clone()),
             member: index,
         };
-        let loaded = if matches!(field_ty, Type::Struct(_)) {
+        let arg = if matches!(field_ty, Type::Struct(_)) {
             member
         } else {
             Expression::Load {
@@ -1936,7 +1940,7 @@ fn encode_struct_storage(
                 expr: Box::new(member),
             }
         };
-        let encoded = soroban_encode_arg(loaded, cfg, vartab, ns);
+        let encoded = soroban_storage_encode_arg(arg, cfg, vartab, ns);
 
         let prev_vec = Expression::Variable {
             loc,
@@ -2176,7 +2180,7 @@ fn decode_struct_storage(
             var_no: elem_no,
         };
 
-        let decoded = soroban_decode_arg(elem, cfg, vartab, ns, Some(ty.clone()));
+        let decoded = soroban_storage_decode_arg(elem, cfg, vartab, ns, Some(ty.clone()));
         members.push(decoded);
     }
 

@@ -15,6 +15,7 @@ mod composite_arrays;
 mod composite_bytes;
 mod constructor;
 mod cross_contract_calls;
+mod dynarray_elemops_struct;
 mod events;
 mod example_atomic_multiswap;
 mod example_custom_types;
