@@ -398,6 +398,10 @@ fn contract_results(
         return;
     }
 
+    if ns.target == solang::Target::Riscv {
+        return;
+    }
+
     if verbose {
         if ns.target == solang::Target::Solana {
             eprintln!(
