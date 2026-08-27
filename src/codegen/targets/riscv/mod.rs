@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+pub(crate) mod dispatch;
+
 use crate::codegen::cfg::ControlFlowGraph;
 use crate::codegen::interface::{EventEmitter, TargetCodegen};
 use crate::codegen::storage::{array_pop, array_push};
@@ -35,13 +37,12 @@ pub(crate) struct RiscvTarget;
 impl TargetCodegen for RiscvTarget {
     fn function_dispatch(
         &self,
-        _contract_no: usize,
-        _all_cfg: &mut [ControlFlowGraph],
-        _ns: &mut Namespace,
-        _opt: &Options,
+        contract_no: usize,
+        all_cfg: &mut [ControlFlowGraph],
+        ns: &mut Namespace,
+        opt: &Options,
     ) -> Vec<ControlFlowGraph> {
-        // TODO: implement real RISC-V / r55 function dispatch
-        vec![]
+        dispatch::function_dispatch(contract_no, all_cfg, ns, opt)
     }
 
     fn post_process_program(&self, ns: &mut Namespace, _opt: &Options) {
