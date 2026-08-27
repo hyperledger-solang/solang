@@ -45,16 +45,16 @@ impl TargetCodegen for RiscvTarget {
         dispatch::function_dispatch(contract_no, all_cfg, ns, opt)
     }
 
-    fn post_process_program(&self, ns: &mut Namespace, _opt: &Options) {
-        println!("=== RISC-V AST ===");
-        for contract in &ns.contracts {
-            println!("{:#?}", contract);
-        }
-
-        println!("=== RISC-V CFG ===");
-        for contract in &ns.contracts {
-            print!("{}", contract.print_cfg(ns));
-        }
+    fn post_process_program(&self, _ns: &mut Namespace, _opt: &Options) {
+        // println!("=== RISC-V AST ===");
+        // for contract in &ns.contracts {
+        //     println!("{:#?}", contract);
+        // }
+        //
+        // println!("=== RISC-V CFG ===");
+        // for contract in &ns.contracts {
+        //     print!("{}", contract.print_cfg(ns));
+        // }
     }
 
     fn lower_storage_array_length(

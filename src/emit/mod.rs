@@ -22,6 +22,7 @@ mod instructions;
 mod loop_builder;
 mod math;
 pub mod polkadot;
+pub mod riscv;
 pub mod solana;
 
 #[cfg(feature = "soroban")]

@@ -17,6 +17,7 @@ use tempfile::tempdir;
 use wasm_opt::OptimizationOptions;
 
 use crate::codegen::{cfg::ReturnCode, Options};
+use crate::emit::riscv::RiscvTarget;
 use crate::emit::{polkadot, TargetRuntime};
 use crate::emit::{solana, BinaryOp, Generate};
 use crate::linker::link;
@@ -187,6 +188,7 @@ impl<'a> Binary<'a> {
                 polkadot::PolkadotTarget::build(context, &std_lib, contract, ns, opt)
             }
             Target::Solana => solana::SolanaTarget::build(context, &std_lib, contract, ns, opt),
+            Target::Riscv => RiscvTarget::build(context, &std_lib, contract, ns, opt),
             #[cfg(feature = "soroban")]
             Target::Soroban => {
                 soroban::SorobanTarget::build(context, &std_lib, contract, ns, opt, _contract_no)
