@@ -16,17 +16,24 @@ use std::collections::HashMap;
 pub(crate) struct RiscvTargetRuntime;
 
 impl RiscvTargetRuntime {
-    /// split an i256 (intvalue) into four i64 (big‑endian).
+    /// Split an i256 into four i64 limbs, least-significant first.
+    ///
+    /// r55 reassembles the argument registers with `U256::from_limbs([a0, a1,
+    /// a2, a3])`, and ruint orders limbs little-endian, so `a0` carries the
+    /// low 64 bits. See `Syscall::SStore` in r55/src/exec.rs.
     fn split_256<'a>(
         value: IntValue<'a>,
         ctx: &'a Context,
         builder: &Builder<'a>,
     ) -> Vec<IntValue<'a>> {
         let i64_ty = ctx.i64_type();
+        // The shift amount must have the same type as the value being
+        // shifted, otherwise LLVM rejects the lshr.
+        let value_ty = value.get_type();
         let mut parts = Vec::with_capacity(4);
-        for i in (0..4u64).rev() {
+        for i in 0..4u64 {
             let shifted = builder
-                .build_right_shift(value, i64_ty.const_int(64 * i, false), false, "split_shift")
+                .build_right_shift(value, value_ty.const_int(64 * i, false), false, "split_shift")
                 .unwrap();
             let part = builder
                 .build_int_truncate(shifted, i64_ty, "split_trunc")
@@ -36,7 +43,7 @@ impl RiscvTargetRuntime {
         parts
     }
 
-    /// combine four i64 into an i256 (big‑endian).
+    /// Combine four i64 limbs, least-significant first, into an i256.
     fn combine_256<'a>(
         parts: &[IntValue<'a>],
         ctx: &'a Context,
@@ -49,11 +56,7 @@ impl RiscvTargetRuntime {
                 .build_int_z_extend(*part, i256_ty, "extend")
                 .unwrap();
             let shifted = builder
-                .build_left_shift(
-                    extended,
-                    i256_ty.const_int(64 * (3 - i as u64), false),
-                    "shift",
-                )
+                .build_left_shift(extended, i256_ty.const_int(64 * i as u64, false), "shift")
                 .unwrap();
             result = builder.build_or(result, shifted, "combine").unwrap();
         }
@@ -83,19 +86,28 @@ impl RiscvTargetRuntime {
             .map(|v| v.into())
             .collect::<Vec<BasicMetadataValueEnum>>();
 
-        let call = bin
-            .builder
-            .build_call(func, &args, "syscall_sload")
-            .unwrap();
-        let result = call
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_struct_value();
+        // The callee writes the four result limbs through an out-pointer.
+        let out_ty = i64_ty.array_type(4);
+        let out = bin.builder.build_alloca(out_ty, "sload_out").unwrap();
+
+        let mut args = args;
+        args.push(out.into());
+        let _ = bin.builder.build_call(func, &args, "");
+
         (0..4)
             .map(|i| {
+                let slot = unsafe {
+                    bin.builder
+                        .build_gep(
+                            i64_ty,
+                            out,
+                            &[i64_ty.const_int(i, false)],
+                            &format!("sload_out{i}"),
+                        )
+                        .unwrap()
+                };
                 bin.builder
-                    .build_extract_value(result, i, &format!("ret{}", i))
+                    .build_load(i64_ty, slot, &format!("ret{i}"))
                     .unwrap()
                     .into_int_value()
             })
@@ -139,9 +151,15 @@ pub(crate) fn declare_syscalls(bin: &mut Binary) {
     let i8_ptr_ty = ctx.ptr_type(AddressSpace::default());
     let void_ty = ctx.void_type();
 
-    // __sys_sload: (i64, i64, i64, i64) -> {i64, i64, i64, i64}
-    let sload_ty = i64_ty.fn_type(
-        &[i64_ty.into(), i64_ty.into(), i64_ty.into(), i64_ty.into()],
+    // __sys_sload: (i64, i64, i64, i64, i64*) -> void
+    let sload_ty = void_ty.fn_type(
+        &[
+            i64_ty.into(),
+            i64_ty.into(),
+            i64_ty.into(),
+            i64_ty.into(),
+            i8_ptr_ty.into(),
+        ],
         false,
     );
     let sload = bin.module.add_function("__sys_sload", sload_ty, None);
@@ -225,7 +243,7 @@ impl<'a> TargetRuntime<'a> for RiscvTargetRuntime {
         let slot_ptr = bin.builder.build_alloca(i256_ty, "slot_ptr").unwrap();
         bin.builder.build_store(slot_ptr, *slot).unwrap();
 
-        if let Type::Int(bits) = ty {
+        if let Type::Int(bits) | Type::Uint(bits) = ty {
             let int_ty = bin.context.custom_width_int_type((*bits) as u32);
             let val = self.get_storage_int(bin, function, slot_ptr, int_ty);
             return val.as_basic_value_enum();
@@ -296,6 +314,9 @@ impl<'a> TargetRuntime<'a> for RiscvTargetRuntime {
         let return_fn = bin.module.get_function("__sys_return").unwrap();
         let args: Vec<BasicMetadataValueEnum> = vec![data.into(), len_i64.into()];
         let _ = bin.builder.build_call(return_fn, &args, "");
+        // The Return syscall does not come back, but LLVM still needs the
+        // block to be terminated.
+        bin.builder.build_unreachable().unwrap();
     }
 
     fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b> {
@@ -429,20 +450,33 @@ impl<'a> TargetRuntime<'a> for RiscvTargetRuntime {
         unimplemented!("keccak256_hash")
     }
 
-    fn print<'b>(&self, _bin: &Binary<'b>, _string: PointerValue<'b>, _length: IntValue<'b>) {
-        unimplemented!("print")
+    /// r55 has no debug output syscall, so runtime error messages are dropped.
+    fn print<'b>(&self, _bin: &Binary<'b>, _string: PointerValue<'b>, _length: IntValue<'b>) {}
+
+    fn return_empty_abi(&self, bin: &Binary) {
+        let null = bin.context.ptr_type(AddressSpace::default()).const_null();
+        let return_fn = bin.module.get_function("__sys_return").unwrap();
+        let args: Vec<BasicMetadataValueEnum> =
+            vec![null.into(), bin.context.i64_type().const_zero().into()];
+        let _ = bin.builder.build_call(return_fn, &args, "");
+        bin.builder.build_unreachable().unwrap();
     }
 
-    fn return_empty_abi(&self, _bin: &Binary) {
-        unimplemented!("return_empty_abi")
+    fn return_code<'b>(&self, bin: &'b Binary, _ret: IntValue<'b>) {
+        // r55 signals success/failure through the Return/Revert syscalls
+        // rather than an exit code, so there is nothing to encode here.
+        self.return_empty_abi(bin);
     }
 
-    fn return_code<'b>(&self, _bin: &'b Binary, _ret: IntValue<'b>) {
-        unimplemented!("return_code")
-    }
-
-    fn assert_failure(&self, _bin: &Binary, _data: PointerValue, _length: IntValue) {
-        unimplemented!("assert_failure")
+    fn assert_failure(&self, bin: &Binary, data: PointerValue, length: IntValue) {
+        let len_i64 = bin
+            .builder
+            .build_int_cast(length, bin.context.i64_type(), "revert_len")
+            .unwrap();
+        let revert_fn = bin.module.get_function("__sys_revert").unwrap();
+        let args: Vec<BasicMetadataValueEnum> = vec![data.into(), len_i64.into()];
+        let _ = bin.builder.build_call(revert_fn, &args, "");
+        bin.builder.build_unreachable().unwrap();
     }
 
     fn builtin_function(

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+pub(crate) mod encoding;
 pub(crate) mod dispatch;
 
 use crate::codegen::cfg::ControlFlowGraph;
