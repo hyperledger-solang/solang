@@ -255,9 +255,7 @@ impl<'a> Dispatch<'a> {
             .all_cfg
             .iter()
             .enumerate()
-            .filter(|(_, func_cfg)| {
-                matches!(func_cfg.ty, FunctionTy::Function) && func_cfg.public
-            })
+            .filter(|(_, func_cfg)| matches!(func_cfg.ty, FunctionTy::Function) && func_cfg.public)
             .map(|(func_no, func_cfg)| {
                 // `ReadFromBuffer` loads the selector as a little-endian
                 // integer, so the big-endian ABI bytes must be reversed to

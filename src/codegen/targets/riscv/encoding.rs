@@ -394,7 +394,7 @@ impl AbiEncoding for EthAbiEncoding {
                         return None;
                     }
 
-                    result.extend(std::iter::repeat(0).take(width - bytes.len()));
+                    result.extend(std::iter::repeat_n(0, width - bytes.len()));
                     result.extend_from_slice(&bytes);
                 }
                 _ => return None,

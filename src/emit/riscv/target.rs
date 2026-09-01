@@ -33,7 +33,12 @@ impl RiscvTargetRuntime {
         let mut parts = Vec::with_capacity(4);
         for i in 0..4u64 {
             let shifted = builder
-                .build_right_shift(value, value_ty.const_int(64 * i, false), false, "split_shift")
+                .build_right_shift(
+                    value,
+                    value_ty.const_int(64 * i, false),
+                    false,
+                    "split_shift",
+                )
                 .unwrap();
             let part = builder
                 .build_int_truncate(shifted, i64_ty, "split_trunc")
@@ -319,8 +324,8 @@ impl<'a> TargetRuntime<'a> for RiscvTargetRuntime {
         bin.builder.build_unreachable().unwrap();
     }
 
-    fn value_transferred<'b>(&self, binary: &Binary<'b>) -> IntValue<'b> {
-        let i256_ty = binary.context.custom_width_int_type(256);
+    fn value_transferred<'b>(&self, contract: &Binary<'b>) -> IntValue<'b> {
+        let i256_ty = contract.context.custom_width_int_type(256);
         i256_ty.const_zero()
     }
 

@@ -22,7 +22,9 @@ const LLC_CANDIDATES: [&str; 4] = ["llc-19", "llc-18", "llc-17", "llc"];
 pub(crate) fn object_from_module(module: &Module, assembly: bool) -> Result<Vec<u8>, String> {
     let dir = tempdir().map_err(|e| e.to_string())?;
     let bitcode = dir.path().join("contract.bc");
-    let output = dir.path().join(if assembly { "contract.s" } else { "contract.o" });
+    let output = dir
+        .path()
+        .join(if assembly { "contract.s" } else { "contract.o" });
 
     if !module.write_bitcode_to_path(&bitcode) {
         return Err("failed to write RISC-V bitcode".into());

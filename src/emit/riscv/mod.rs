@@ -56,7 +56,9 @@ impl RiscvTarget {
 
         let func = bin.module.add_function(
             "solang_dispatch",
-            context.void_type().fn_type(&[ptr_ty.into(), i32_ty.into()], false),
+            context
+                .void_type()
+                .fn_type(&[ptr_ty.into(), i32_ty.into()], false),
             None,
         );
 
