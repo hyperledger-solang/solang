@@ -4633,7 +4633,7 @@ dependencies = [
 
 [[package]]
 name = "solang"
-version = "0.3.5"
+version = "0.4.0"
 dependencies = [
  "anchor-syn",
  "ark-bls12-381",
@@ -4665,7 +4665,7 @@ dependencies = [
  "ink_metadata",
  "ink_primitives",
  "inkwell",
- "itertools 0.13.0",
+ "itertools 0.10.5",
  "libc",
  "normalize-path",
  "num-bigint",
@@ -4695,7 +4695,7 @@ dependencies = [
  "sha2",
  "solana_rbpf",
  "solang-forge-fmt 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "solang-parser 0.3.5",
+ "solang-parser 0.4.0",
  "soroban-sdk",
  "tempfile",
  "tiny-keccak",
@@ -4719,7 +4719,7 @@ dependencies = [
  "itertools 0.12.1",
  "serde",
  "similar-asserts",
- "solang-parser 0.3.5",
+ "solang-parser 0.4.0",
  "thiserror",
  "toml",
  "tracing",
@@ -4736,25 +4736,9 @@ dependencies = [
  "ariadne",
  "itertools 0.12.1",
  "serde",
- "solang-parser 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solang-parser 0.3.5",
  "thiserror",
  "tracing",
-]
-
-[[package]]
-name = "solang-parser"
-version = "0.3.5"
-dependencies = [
- "itertools 0.12.1",
- "lalrpop",
- "lalrpop-util",
- "phf",
- "pretty_assertions",
- "regex",
- "serde",
- "thiserror",
- "unicode-xid",
- "walkdir",
 ]
 
 [[package]]
@@ -4769,6 +4753,22 @@ dependencies = [
  "phf",
  "thiserror",
  "unicode-xid",
+]
+
+[[package]]
+name = "solang-parser"
+version = "0.4.0"
+dependencies = [
+ "itertools 0.12.1",
+ "lalrpop",
+ "lalrpop-util",
+ "phf",
+ "pretty_assertions",
+ "regex",
+ "serde",
+ "thiserror",
+ "unicode-xid",
+ "walkdir",
 ]
 
 [[package]]
