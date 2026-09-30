@@ -1,0 +1,138 @@
+# sorobench: run the solc semantic test suite (the pinned testdata/solidity
+# submodule) against the Soroban target of the Solang commit being built, and
+# publish a report that explains every failure.
+#
+# This job is informational: failing tests do not fail the job. It only fails
+# if sorobench cannot build or cannot produce a report.
+# See https://github.com/Islam-Imad/sorobench
+name: sorobench
+
+on:
+  # Every push to main and every release tag: test that exact commit.
+  push:
+    branches: [main]
+    tags: ['v*']
+  # Manual run from the Actions tab, optionally on another ref.
+  workflow_dispatch:
+    inputs:
+      solang_ref:
+        description: 'Solang ref to test (branch, tag or SHA). Empty = the selected branch.'
+        required: false
+        default: ''
+      sorobench_ref:
+        description: 'sorobench branch to use'
+        required: false
+        default: 'main'
+
+# One run per ref at a time; a newer push cancels an older run of the same ref.
+concurrency:
+  group: sorobench-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  SOROBENCH_REPO: Islam-Imad/sorobench
+  SOLANG_REF: ${{ inputs.solang_ref || github.sha }}
+
+jobs:
+  sorobench:
+    name: sorobench (solc semantic tests on Soroban)
+    runs-on: ubuntu-latest
+    # Same image Solang's own CI uses: LLVM 16 is preinstalled and configured.
+    container: ghcr.io/hyperledger/solang-llvm:ci-7
+    timeout-minutes: 240
+    steps:
+      - name: Checkout Solang
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOLANG_REF }}
+          path: solang
+          # testdata/solidity is the pinned solc test suite sorobench runs.
+          submodules: recursive
+          # Full history, so `git describe` can name the release.
+          fetch-depth: 0
+
+      - name: Name this run
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/solang"
+          # Forks don't get upstream's tags when synced; fetch them for `describe`
+          # (a no-op in hyperledger-solang/solang itself).
+          git -C solang fetch --quiet --tags https://github.com/hyperledger-solang/solang
+          SOLANG_VERSION=$(git -C solang describe --tags --always)
+          RUN_TIME=$(date -u +%Y-%m-%d_%H-%M)UTC
+          REPORT_NAME="sorobench_${SOLANG_VERSION}_${RUN_TIME}"
+          echo "SOLANG_VERSION=$SOLANG_VERSION" >> "$GITHUB_ENV"
+          echo "REPORT_NAME=$REPORT_NAME" >> "$GITHUB_ENV"
+          echo "Solang version: $SOLANG_VERSION"
+          echo "Report name:    $REPORT_NAME"
+
+      - name: Checkout sorobench
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SOROBENCH_REPO }}
+          ref: ${{ inputs.sorobench_ref || 'main' }}
+          path: sorobench
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: sorobench -> target
+          # Solang changes on every run; keep the cache keyed on sorobench only.
+          key: sorobench
+
+      - name: Build sorobench against this Solang checkout
+        working-directory: sorobench
+        run: |
+          # sorobench pins Solang by git rev; point it at the checkout instead.
+          sed -i -E 's#^solang = \{ git = "[^"]+", rev = "[^"]+"#solang = { path = "../solang"#' Cargo.toml
+          sed -i -E 's#^solang-parser = \{ git = "[^"]+", rev = "[^"]+"#solang-parser = { path = "../solang/solang-parser"#' Cargo.toml
+          echo "Solang dependency:"
+          grep -n '^solang' Cargo.toml
+          grep -q 'path = "../solang"' Cargo.toml || { echo "::error::could not repoint the solang dependency"; exit 1; }
+          cargo build --release
+
+      - name: Run the solc semantic test suite
+        working-directory: sorobench
+        env:
+          SOROBENCH_CORPUS: ${{ github.workspace }}/solang/testdata/solidity/test/libsolidity/semanticTests
+        run: |
+          echo "Solang: $SOLANG_VERSION"
+          ./target/release/sorobench run-all
+
+      - name: Collect the reports under the run name
+        if: always()
+        run: |
+          mkdir -p "out/$REPORT_NAME"
+          cp sorobench/report/* "out/$REPORT_NAME/" 2>/dev/null || true
+          ls -la "out/$REPORT_NAME"
+
+      - name: Add the headline to the run summary
+        if: always()
+        run: |
+          {
+            echo "## sorobench on Solang $SOLANG_VERSION"
+            echo
+            echo "Report: \`$REPORT_NAME\`"
+            echo
+            if [ -f "out/$REPORT_NAME/EXPLAINED.md" ]; then
+              # Headline paragraph + the category table.
+              sed -n '3p' "out/$REPORT_NAME/EXPLAINED.md"
+              echo
+              sed -n '/^## What the failures are/,/^A file/p' "out/$REPORT_NAME/EXPLAINED.md"
+            else
+              echo "No EXPLAINED.md was produced."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.REPORT_NAME }}
+          path: out/
+          retention-days: 90
