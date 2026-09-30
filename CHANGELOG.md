@@ -4,6 +4,35 @@ will be documented here.
 
 ## Unreleased
 
+## v0.4.0 Thebes
+
+### Added
+- **Soroban** Support for structs in contract storage. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** ABI encode/decode for structs via a named-field `MAP` object. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** Support for arrays in contract storage. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** ABI encode/decode for dynamic memory arrays. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** Encoder/decoder for static (fixed-length) arrays. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** Support for the `mapping` storage type. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** Encode/decode `(u)int256` as a small object. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** Support for the `block.number` builtin. [slash-aech](https://github.com/slash-aech)
+- **Soroban** Support for the `keccak256` builtin. [slash-aech](https://github.com/slash-aech)
+- **Soroban** Support for the `sha256` builtin. [Ahmed0427](https://github.com/Ahmed0427)
+- **Soroban** Ported 14 Stellar example contracts: `hello_world`, `pause`,
+  `increment_with_pause`, `custom_types`, `other_custom_types`, `events`,
+  `single_offer`, `atomic_multiswap`, `upgradeable_contract`, `merkle_distribution`,
+  `eth_abi`, `mint_lock`, `deployer` and `groth16_verifier`. [Islam-Imad](https://github.com/Islam-Imad)
+
+### Changed
+- **Soroban** Lower `extendTtl` and `extendInstanceTtl` in codegen instead of on the emit path. [Ahmad-Faraj](https://github.com/Ahmad-Faraj)
+- **Soroban** Lower the ledger timestamp in codegen instead of on the emit path. [slash-aech](https://github.com/slash-aech)
+- **Soroban** Updated the Soroban support matrix. [Islam-Imad](https://github.com/Islam-Imad)
+
+### Fixed
+- **Soroban** Fixed local-arrays-of-struct handling and improved test coverage. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** Allocate arrays using their element size. [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- **Soroban** Fixed `i64` ABI encode/decode. [Islam-Imad](https://github.com/Islam-Imad)
+- **Soroban** Fixed `i128`/`u128` encoding high-bit truncation and the signed small-form. [Ahmed0427](https://github.com/Ahmed0427)
+
 ## v0.3.5 Luxor
 
 ### Added
