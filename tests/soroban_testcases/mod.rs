@@ -38,6 +38,7 @@ mod example_single_offer;
 mod example_upgradeable_contract;
 mod i128_u128;
 mod i256_u256;
+mod inline_assembly;
 mod integer_width_rounding;
 mod integer_width_warnings;
 mod keccak256;
