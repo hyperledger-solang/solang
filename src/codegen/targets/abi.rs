@@ -15,6 +15,7 @@ use crate::codegen::expression::load_storage;
 use crate::codegen::interface::TargetCodegen;
 use crate::codegen::targets::make_target;
 use crate::codegen::targets::polkadot::encoding::ScaleEncoding;
+use crate::codegen::targets::riscv::encoding::EthAbiEncoding;
 use crate::codegen::targets::solana::encoding::BorshEncoding;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
@@ -1765,6 +1766,7 @@ pub(crate) trait AbiEncoding {
 pub(crate) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncoding> {
     match &ns.target {
         Target::Solana => Box::new(BorshEncoding::new(packed)),
+        Target::Riscv => Box::new(EthAbiEncoding::new()),
         // Solana utilizes Borsh encoding and Polkadot, SCALE encoding.
         // All other targets are using the SCALE encoding, because we have tests for a
         // fake Ethereum target that checks the presence of Instr::AbiDecode and
@@ -1994,7 +1996,12 @@ fn finish_array_loop(for_loop: &ForLoop, vartab: &mut Vartable, cfg: &mut Contro
 }
 
 /// Loads a struct member
-fn load_struct_member(ty: Type, expr: Expression, member: usize, ns: &Namespace) -> Expression {
+pub(crate) fn load_struct_member(
+    ty: Type,
+    expr: Expression,
+    member: usize,
+    ns: &Namespace,
+) -> Expression {
     if ty.is_fixed_reference_type(ns) {
         // We should not dereference a struct or fixed array
         return Expression::StructMember {

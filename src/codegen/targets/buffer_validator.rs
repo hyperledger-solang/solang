@@ -5,6 +5,7 @@ use crate::codegen::revert::{assert_failure, PanicCode, SolidityError};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, Type};
+use crate::Target;
 use num_bigint::BigInt;
 use num_traits::Zero;
 use solang_parser::pt::Loc;
@@ -175,7 +176,7 @@ impl BufferValidator<'_> {
         // Create validation check
         let mut advance = BigInt::zero();
         for i in self.current_arg..=maximum_verifiable {
-            advance.add_assign(self.types[i].memory_size_of(ns));
+            advance.add_assign(encoded_size(&self.types[i], ns));
         }
 
         let reach = Expression::Add {
@@ -246,5 +247,14 @@ impl BufferValidator<'_> {
                 types.len()
             },
         }
+    }
+}
+
+/// The size of a static type in the target's ABI encoding.
+fn encoded_size(ty: &Type, ns: &Namespace) -> BigInt {
+    if ns.target == Target::Riscv {
+        crate::codegen::targets::riscv::encoding::static_size(ty, ns)
+    } else {
+        ty.memory_size_of(ns)
     }
 }
