@@ -21,9 +21,7 @@ $(SOLANA) $(WASM) $(RISCV): | outputs_dirs
 
 $(SOLANA): TARGET_FLAGS=--target=sbf
 $(WASM): TARGET_FLAGS=--target=wasm32
-# Emitting bitcode only needs the clang frontend, so this works even when LLVM
-# was built without the RISC-V backend. r55 loads contracts at 0x80300000,
-# which is out of reach of medlow's absolute lui/addi addressing.
+# r55 loads contracts at 0x80300000, out of reach of medlow addressing.
 $(RISCV): TARGET_FLAGS=--target=riscv64 -mcmodel=medany
 
 bpf/solana.bc: solana.c solana_sdk.h | outputs_dirs

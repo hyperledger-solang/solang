@@ -10,9 +10,7 @@
 #endif
 
 #ifdef __riscv
-// r55 sizes the emulator's memory from the ELF program headers, so the heap
-// has to be a .bss object rather than a region picked past the end of the
-// image, which would fall outside the mapped DRAM.
+// r55 only maps memory described by the ELF program headers.
 #define RISCV_HEAP_SIZE (64 * 1024)
 static uint8_t riscv_heap[RISCV_HEAP_SIZE];
 
