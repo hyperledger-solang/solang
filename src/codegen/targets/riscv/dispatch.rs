@@ -11,13 +11,8 @@ use num_bigint::{BigInt, Sign};
 use solang_parser::pt::{FunctionTy, Loc::Codegen};
 use std::fmt::{Display, Formatter, Result};
 
-/// r55 runs a contract twice with two different binaries: the *deploy* binary
-/// is executed by `CREATE` and receives the raw constructor arguments, and the
-/// *runtime* binary is executed by every later `CALL` and receives the usual
-/// selector-prefixed calldata.
-///
-/// This mirrors the Polkadot target, which likewise emits one dispatcher for
-/// constructors and one for externally callable functions.
+/// The deploy image runs on `CREATE` and gets the bare constructor arguments;
+/// the runtime image runs on `CALL` and gets selector-prefixed calldata.
 pub enum DispatchType {
     Deploy,
     Call,
@@ -57,8 +52,7 @@ pub(crate) fn function_dispatch(
 struct Dispatch<'a> {
     start: usize,
     input_len: usize,
-    /// Points at the calldata *after* the selector on the call dispatcher, and
-    /// at the start of the constructor arguments on the deploy dispatcher.
+    /// The calldata after the selector, if there is one.
     input_ptr: Expression,
     vartab: Vartable,
     cfg: ControlFlowGraph,
@@ -70,8 +64,7 @@ struct Dispatch<'a> {
     ty: FunctionTy,
 }
 
-/// The dispatcher is called from the `_start` assembly stub, which passes a
-/// pointer to the calldata payload and its length.
+/// Dispatchers take the calldata pointer and length.
 fn new_cfg(ty: FunctionTy) -> ControlFlowGraph {
     let mut cfg = ControlFlowGraph::new(DispatchType::from(ty).to_string(), ASTFunction::None);
     let input_ptr = Parameter {
@@ -141,8 +134,6 @@ impl<'a> Dispatch<'a> {
         }
         .into();
 
-        // CREATE hands the constructor its arguments without a selector, so
-        // only the call dispatcher skips over one.
         let input_ptr = match ty {
             FunctionTy::Constructor => input_ptr,
             _ => Expression::AdvancePointer {
@@ -173,11 +164,9 @@ impl<'a> Dispatch<'a> {
         }
     }
 
-    /// The deploy dispatcher runs the constructor (if any) against the raw
-    /// calldata. Returning the runtime code is the responsibility of the emit
-    /// layer, which appends it after this dispatcher returns.
+    /// Runs the constructor, if any, and returns to `solang_dispatch`, which
+    /// then returns the runtime image.
     fn build_deploy(mut self) -> ControlFlowGraph {
-        // Terminate the entry block that `new` populated before moving on.
         self.add(Instr::Branch { block: self.start });
         self.cfg.set_basic_block(self.start);
 
@@ -195,13 +184,13 @@ impl<'a> Dispatch<'a> {
             });
         }
 
-        self.return_empty();
+        // Not `ReturnData`: its output would become the account's code.
+        self.add(Instr::Return { value: vec![] });
         self.vartab.finalize(self.ns, &mut self.cfg);
         self.cfg
     }
 
     fn build_call(mut self) -> ControlFlowGraph {
-        // Anything shorter than a selector cannot be dispatched.
         let cond = Expression::Less {
             loc: Codegen,
             signed: false,
@@ -257,9 +246,7 @@ impl<'a> Dispatch<'a> {
             .enumerate()
             .filter(|(_, func_cfg)| matches!(func_cfg.ty, FunctionTy::Function) && func_cfg.public)
             .map(|(func_no, func_cfg)| {
-                // `ReadFromBuffer` loads the selector as a little-endian
-                // integer, so the big-endian ABI bytes must be reversed to
-                // match.
+                // `ReadFromBuffer` reads the selector as little-endian.
                 let value = BigInt::from_bytes_le(Sign::Plus, &func_cfg.selector);
                 let case = Expression::NumberLiteral {
                     loc: Codegen,
@@ -289,7 +276,6 @@ impl<'a> Dispatch<'a> {
         self.cfg
     }
 
-    /// Length of the calldata that follows the selector.
     fn input_len_expr(&self) -> Expression {
         let len = Expression::Variable {
             loc: Codegen,

@@ -221,18 +221,22 @@ impl<'a> Binary<'a> {
             _ => {}
         }
 
-        // The bundled LLVM has no RISC-V backend, so object code is produced
-        // out of process. Linking still uses the in-tree LLD.
+        // The bundled LLVM has no RISC-V backend, so llc runs out of process.
         if self.ns.target == Target::Riscv {
             let obj = crate::emit::riscv::codegen::object_from_module(
                 &self.module,
                 generate == Generate::Assembly,
             )?;
 
-            let code = if generate == Generate::Linked {
-                link(&obj, &self.name, self.ns.target).to_vec()
-            } else {
-                obj
+            let code = match generate {
+                // The deploy image, which is what gets deployed.
+                Generate::Linked if self.runtime.is_some() => {
+                    let mut code = vec![crate::emit::riscv::R55_CODE_MARKER];
+                    code.extend_from_slice(&link(&obj, &self.name, self.ns.target));
+                    code
+                }
+                Generate::Linked => link(&obj, &self.name, self.ns.target).to_vec(),
+                _ => obj,
             };
 
             *self.code.borrow_mut() = code.clone();

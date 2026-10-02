@@ -93,7 +93,7 @@ impl Target {
         match self {
             // Solana uses ELF dynamic shared object (BPF)
             Target::Solana => "so",
-            Target::Riscv => "o",
+            Target::Riscv => "bin",
             // Everything else generates webassembly
             _ => "wasm",
         }
@@ -104,7 +104,7 @@ impl Target {
         match *self {
             // Solana is BPF, which is 64 bit
             Target::Solana => 64,
-            // All others are WebAssembly / 32 bit mode
+            // All others are WebAssembly in 32 bit mode
             _ => 32,
         }
     }

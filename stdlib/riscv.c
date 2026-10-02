@@ -2,30 +2,25 @@
 
 #include <stdint.h>
 
-// r55 does not set up a stack and does not pass arguments in registers: it
-// places the calldata at 0x80000000 as an 8 byte little-endian length followed
-// by the payload, then jumps straight to the ELF entry point. `_start` points
-// sp at the top of the STACK region declared by the linker script and hands
-// (payload, length) to the dispatcher solang generates.
+// r55 sets up no stack, and places the calldata at 0x80000000 as an 8 byte
+// length followed by the payload.
 asm(".section .text.start\n"
     ".globl _start\n"
     "_start:\n"
     "  la sp, _stack_top\n"
-    // t1 = 0x80000000, the calldata base. `lui` sign-extends on RV64, so
-    // 0x80000000 has to be built by shifting instead.
+    // t1 = 0x80000000; `lui` would sign-extend it on RV64.
     "  li t1, 1\n"
     "  slli t1, t1, 31\n"
     "  lw a1, 0(t1)\n"   // calldata length
     "  addi a0, t1, 8\n" // calldata payload
     "  call solang_dispatch\n"
-    // The dispatcher normally exits through Return or Revert; reaching here
-    // means it fell through, so report success with no return data.
+    // solang_dispatch ends with Return or Revert, so this is a bug. Revert:
+    // returning would deploy an account with no code.
     "  li a0, 0\n"
     "  li a1, 0\n"
-    "  li t0, 0xF3\n"
+    "  li t0, 0xFD\n"
     "  ecall\n");
 
-// these match the r55 syscall abi.
 void __sys_return(const void *data, uint64_t len)
 {
     register uint64_t a0 asm("a0") = (uint64_t)data;
@@ -60,10 +55,8 @@ void __sys_sstore(uint64_t k0, uint64_t k1, uint64_t k2, uint64_t k3, uint64_t v
                  : "memory");
 }
 
-// SLoad returns the 4 limbs of the value in a0..a3. The result is written
-// through `out` rather than returned by value: a 32-byte struct return uses a
-// hidden sret pointer in a0 under the RISC-V LP64 ABI, which would collide
-// with the key we need to pass in a0.
+// The result goes through `out`: returning a 32-byte struct would pass a
+// hidden pointer in a0, which holds the key.
 void __sys_sload(uint64_t k0, uint64_t k1, uint64_t k2, uint64_t k3, uint64_t *out)
 {
     register uint64_t a0 asm("a0") = k0;
@@ -78,8 +71,7 @@ void __sys_sload(uint64_t k0, uint64_t k1, uint64_t k2, uint64_t k3, uint64_t *o
     out[3] = a3;
 }
 
-// __sys_caller returns 20‑byte address in a0..a2 (big‑endian).
-// We'll write to a buffer provided by the caller.
+// Writes the 20 byte address, big-endian.
 void __sys_caller(uint8_t *out)
 {
     register uint64_t a0 asm("a0");
@@ -87,7 +79,6 @@ void __sys_caller(uint8_t *out)
     register uint64_t a2 asm("a2");
     register uint64_t t0 asm("t0") = 0x33; // Caller
     asm volatile("ecall" : "=r"(a0), "=r"(a1), "=r"(a2) : "r"(t0) : "memory");
-    // Write big‑endian bytes.
     for (int i = 0; i < 8; i++)
         out[i] = (a0 >> (56 - i * 8)) & 0xFF;
     for (int i = 0; i < 8; i++)
@@ -96,7 +87,7 @@ void __sys_caller(uint8_t *out)
         out[16 + i] = (a2 >> (56 - i * 8)) & 0xFF;
 }
 
-// __sys_callvalue returns 256‑bit value in a0..a3; we write to buffer.
+// Writes the 32 byte value, big-endian.
 void __sys_callvalue(uint8_t *out)
 {
     register uint64_t a0 asm("a0");
@@ -106,7 +97,6 @@ void __sys_callvalue(uint8_t *out)
     register uint64_t t0 asm("t0") = 0x34; // CallValue
     asm volatile("ecall" : "=r"(a0), "=r"(a1), "=r"(a2), "=r"(a3) : "r"(t0) : "memory");
 
-    // write big‑endian 32‑byte.
     uint64_t parts[4] = {a0, a1, a2, a3};
     for (int i = 0; i < 4; i++)
     {
