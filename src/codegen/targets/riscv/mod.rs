@@ -24,11 +24,10 @@ impl EventEmitter for RiscvEventEmitter {
         _opt: &Options,
         _target: &dyn TargetCodegen,
     ) {
-        // TODO: implement real RISC-V / r55 event emission semantics
+        // TODO: events are dropped until the Log syscall is wired up
     }
 
     fn selector(&self, _emitting_contract_no: usize) -> Vec<u8> {
-        // TODO: implement real RISC-V / r55 event selector semantics
         vec![]
     }
 }
@@ -46,17 +45,7 @@ impl TargetCodegen for RiscvTarget {
         dispatch::function_dispatch(contract_no, all_cfg, ns, opt)
     }
 
-    fn post_process_program(&self, _ns: &mut Namespace, _opt: &Options) {
-        // println!("=== RISC-V AST ===");
-        // for contract in &ns.contracts {
-        //     println!("{:#?}", contract);
-        // }
-        //
-        // println!("=== RISC-V CFG ===");
-        // for contract in &ns.contracts {
-        //     print!("{}", contract.print_cfg(ns));
-        // }
-    }
+    fn post_process_program(&self, _ns: &mut Namespace, _opt: &Options) {}
 
     fn lower_storage_array_length(
         &self,
@@ -68,7 +57,6 @@ impl TargetCodegen for RiscvTarget {
         _vartab: &mut Vartable,
         _ns: &Namespace,
     ) -> Expression {
-        // TODO: implement real RISC-V / r55 storage array length semantics
         Expression::StorageArrayLength {
             loc: *loc,
             ty: ty.clone(),
@@ -88,7 +76,6 @@ impl TargetCodegen for RiscvTarget {
         vartab: &mut Vartable,
         opt: &Options,
     ) -> Expression {
-        // TODO: implement real RISC-V / r55 storage array push semantics
         array_push(loc, args, cfg, contract_no, func, ns, vartab, opt, self)
     }
 
@@ -104,7 +91,6 @@ impl TargetCodegen for RiscvTarget {
         vartab: &mut Vartable,
         opt: &Options,
     ) -> Expression {
-        // TODO: implement real RISC-V / r55 storage array pop semantics
         array_pop(
             loc,
             args,
@@ -126,7 +112,6 @@ impl TargetCodegen for RiscvTarget {
         _args: &'a [ast::Expression],
         _ns: &'a Namespace,
     ) -> Box<dyn EventEmitter + 'a> {
-        // TODO: implement real RISC-V / r55 event emitter
         Box::new(RiscvEventEmitter)
     }
 
@@ -140,7 +125,6 @@ impl TargetCodegen for RiscvTarget {
         _cfg: &mut ControlFlowGraph,
         _vartab: &mut Vartable,
     ) -> Expression {
-        // TODO: implement real RISC-V / r55 struct member storage layout
         let offset: BigInt = struct_ty.definition(ns).fields[..field_no]
             .iter()
             .filter(|field| !field.infinite_size)

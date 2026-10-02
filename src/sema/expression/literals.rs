@@ -133,7 +133,7 @@ pub(crate) fn hex_number_literal(
     if n.starts_with("0x") && !n.chars().any(|c| c == '_') && n.len() == 42 {
         let address = to_hexstr_eip55(n);
 
-        if ns.target == Target::EVM {
+        if ns.target == Target::EVM || ns.target == Target::Riscv {
             return if address == *n {
                 let s: String = address.chars().skip(2).collect();
 

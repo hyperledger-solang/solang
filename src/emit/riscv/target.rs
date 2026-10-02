@@ -1,162 +1,390 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::emit::binary::Binary;
 use crate::emit::{ContractArgs, HashTy, TargetRuntime, Variable};
-use crate::sema::ast::{CallTy, Type};
-use inkwell::builder::Builder;
-use inkwell::context::Context;
+use crate::sema::ast::{ArrayLength, CallTy, Type};
 use inkwell::module::Linkage;
-use inkwell::types::{BasicTypeEnum, IntType};
+use inkwell::types::{BasicType, BasicTypeEnum, IntType};
 use inkwell::values::{
-    BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+    BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
-use inkwell::AddressSpace;
+use inkwell::{AddressSpace, IntPredicate};
+use num_traits::ToPrimitive;
 use solang_parser::pt::Loc;
 use solang_parser::pt::StorageType;
 use std::collections::HashMap;
 
 pub(crate) struct RiscvTargetRuntime;
 
+/// r55 storage maps 256-bit slots to 256-bit words. Every value type takes
+/// one slot; structs and fixed-size arrays take consecutive slots, one per
+/// value inside them. Values are stored as solc stores an unpacked value:
+///
+/// | Solidity type                   | LLVM value  | word in the slot  |
+/// |---------------------------------|-------------|-------------------|
+/// | `uintN`, `intN`, enum, `bytesN` | `iN`        | zero extended     |
+/// | `bool`                          | `i1`        | 0 or 1            |
+/// | `address`, contract             | `[20 x i8]` | uint160           |
 impl RiscvTargetRuntime {
-    /// Split an i256 into four i64 limbs, least-significant first.
-    ///
-    /// r55 reassembles the argument registers with `U256::from_limbs([a0, a1,
-    /// a2, a3])`, and ruint orders limbs little-endian, so `a0` carries the
-    /// low 64 bits. See `Syscall::SStore` in r55/src/exec.rs.
-    fn split_256<'a>(
-        value: IntValue<'a>,
-        ctx: &'a Context,
-        builder: &Builder<'a>,
-    ) -> Vec<IntValue<'a>> {
-        let i64_ty = ctx.i64_type();
-        // The shift amount must have the same type as the value being
-        // shifted, otherwise LLVM rejects the lshr.
-        let value_ty = value.get_type();
-        let mut parts = Vec::with_capacity(4);
-        for i in 0..4u64 {
-            let shifted = builder
-                .build_right_shift(
-                    value,
-                    value_ty.const_int(64 * i, false),
-                    false,
-                    "split_shift",
-                )
-                .unwrap();
-            let part = builder
-                .build_int_truncate(shifted, i64_ty, "split_trunc")
-                .unwrap();
-            parts.push(part);
-        }
-        parts
+    fn sload<'a>(bin: &Binary<'a>, slot: IntValue<'a>) -> IntValue<'a> {
+        let i256_ty = bin.context.custom_width_int_type(256);
+        let key = Self::split_256(slot, bin);
+
+        // The four result limbs, least significant first, are an i256 in
+        // little-endian memory.
+        let out = bin.builder.build_alloca(i256_ty, "sload_out").unwrap();
+        let args: Vec<BasicMetadataValueEnum> = vec![
+            key[0].into(),
+            key[1].into(),
+            key[2].into(),
+            key[3].into(),
+            out.into(),
+        ];
+        bin.builder
+            .build_call(bin.module.get_function("__sys_sload").unwrap(), &args, "")
+            .unwrap();
+
+        bin.builder
+            .build_load(i256_ty, out, "sload")
+            .unwrap()
+            .into_int_value()
     }
 
-    /// Combine four i64 limbs, least-significant first, into an i256.
-    fn combine_256<'a>(
-        parts: &[IntValue<'a>],
-        ctx: &'a Context,
-        builder: &Builder<'a>,
-    ) -> IntValue<'a> {
-        let i256_ty = ctx.custom_width_int_type(256);
-        let mut result = i256_ty.const_zero();
-        for (i, part) in parts.iter().enumerate() {
-            let extended = builder
-                .build_int_z_extend(*part, i256_ty, "extend")
-                .unwrap();
-            let shifted = builder
-                .build_left_shift(extended, i256_ty.const_int(64 * i as u64, false), "shift")
-                .unwrap();
-            result = builder.build_or(result, shifted, "combine").unwrap();
-        }
-        result
-    }
-
-    /// call a syscall that returns a struct of 4 i64 (like sload).
-    fn call_syscall_4_4<'a>(
-        bin: &Binary<'a>,
-        func: FunctionValue<'a>,
-        a0: IntValue<'a>,
-        a1: IntValue<'a>,
-        a2: IntValue<'a>,
-        a3: IntValue<'a>,
-    ) -> Vec<IntValue<'a>> {
-        let i64_ty = bin.context.i64_type();
-        let args = vec![a0, a1, a2, a3]
+    fn sstore<'a>(bin: &Binary<'a>, slot: IntValue<'a>, value: IntValue<'a>) {
+        let args: Vec<BasicMetadataValueEnum> = Self::split_256(slot, bin)
             .into_iter()
-            .map(|v| {
-                if v.get_type() != i64_ty {
-                    v.const_cast(i64_ty, false)
-                } else {
-                    v
-                }
-            })
-            .map(|v| v.as_basic_value_enum())
-            .map(|v| v.into())
-            .collect::<Vec<BasicMetadataValueEnum>>();
+            .chain(Self::split_256(value, bin))
+            .map(Into::into)
+            .collect();
+        bin.builder
+            .build_call(bin.module.get_function("__sys_sstore").unwrap(), &args, "")
+            .unwrap();
+    }
 
-        // The callee writes the four result limbs through an out-pointer.
-        let out_ty = i64_ty.array_type(4);
-        let out = bin.builder.build_alloca(out_ty, "sload_out").unwrap();
-
-        let mut args = args;
-        args.push(out.into());
-        let _ = bin.builder.build_call(func, &args, "");
-
-        (0..4)
+    /// Split an i256 into four i64 limbs, least significant first, the order
+    /// r55 reassembles them in (`U256::from_limbs`).
+    fn split_256<'a>(value: IntValue<'a>, bin: &Binary<'a>) -> Vec<IntValue<'a>> {
+        let i64_ty = bin.context.i64_type();
+        let value_ty = value.get_type();
+        (0..4u64)
             .map(|i| {
-                let slot = unsafe {
-                    bin.builder
-                        .build_gep(
-                            i64_ty,
-                            out,
-                            &[i64_ty.const_int(i, false)],
-                            &format!("sload_out{i}"),
-                        )
-                        .unwrap()
-                };
+                let shifted = bin
+                    .builder
+                    .build_right_shift(value, value_ty.const_int(64 * i, false), false, "limb")
+                    .unwrap();
                 bin.builder
-                    .build_load(i64_ty, slot, &format!("ret{i}"))
+                    .build_int_truncate(shifted, i64_ty, "limb")
                     .unwrap()
-                    .into_int_value()
             })
             .collect()
     }
 
-    /// call a syscall that takes 8 i64 and returns nothing (like sstore).
-    fn call_syscall_8_0<'a>(
+    fn to_slot_word<'a>(bin: &Binary<'a>, ty: &Type, value: BasicValueEnum<'a>) -> IntValue<'a> {
+        let i256_ty = bin.context.custom_width_int_type(256);
+
+        let value = if value.is_pointer_value() {
+            bin.builder
+                .build_load(bin.llvm_type(ty), value.into_pointer_value(), "value")
+                .unwrap()
+        } else {
+            value
+        };
+
+        let int = match ty {
+            // The address bytes are big-endian.
+            Type::Address(_) | Type::Contract(_) => {
+                let i160_ty = bin.context.custom_width_int_type(160);
+                let tmp = bin
+                    .builder
+                    .build_alloca(bin.address_type(), "address")
+                    .unwrap();
+                bin.builder
+                    .build_store(tmp, value.into_array_value())
+                    .unwrap();
+                let swapped = bin
+                    .builder
+                    .build_load(i160_ty, tmp, "address_bytes")
+                    .unwrap()
+                    .into_int_value();
+                bin.builder
+                    .build_call(bin.llvm_bswap(160), &[swapped.into()], "address")
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value()
+            }
+            _ => value.into_int_value(),
+        };
+
+        if int.get_type() == i256_ty {
+            int
+        } else {
+            bin.builder
+                .build_int_z_extend(int, i256_ty, "slot_word")
+                .unwrap()
+        }
+    }
+
+    fn from_slot_word<'a>(bin: &Binary<'a>, ty: &Type, word: IntValue<'a>) -> BasicValueEnum<'a> {
+        match ty {
+            Type::Bool => bin
+                .builder
+                .build_int_compare(IntPredicate::NE, word, word.get_type().const_zero(), "bool")
+                .unwrap()
+                .into(),
+            Type::Address(_) | Type::Contract(_) => {
+                let i160_ty = bin.context.custom_width_int_type(160);
+                let int = bin
+                    .builder
+                    .build_int_truncate(word, i160_ty, "address")
+                    .unwrap();
+                let swapped = bin
+                    .builder
+                    .build_call(bin.llvm_bswap(160), &[int.into()], "address_bytes")
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+                let tmp = bin.builder.build_alloca(i160_ty, "address").unwrap();
+                bin.builder.build_store(tmp, swapped).unwrap();
+                bin.builder
+                    .build_load(bin.address_type(), tmp, "address")
+                    .unwrap()
+            }
+            _ => bin
+                .builder
+                .build_int_truncate_or_bit_cast(word, bin.llvm_type(ty).into_int_type(), "value")
+                .unwrap()
+                .into(),
+        }
+    }
+
+    fn storage_type(bin: &Binary, ty: &Type) -> Type {
+        ty.deref_any().clone().unwrap_user_type(bin.ns)
+    }
+
+    fn check_single_slot(bin: &Binary, ty: &Type) {
+        if !matches!(
+            ty,
+            Type::Bool
+                | Type::Int(_)
+                | Type::Uint(_)
+                | Type::Value
+                | Type::Enum(_)
+                | Type::Bytes(_)
+                | Type::Address(_)
+                | Type::Contract(_)
+        ) {
+            unimplemented!(
+                "the riscv target cannot keep `{}` in storage yet",
+                ty.to_string(bin.ns)
+            );
+        }
+    }
+
+    fn next_slot<'a>(bin: &Binary<'a>, slot: &mut IntValue<'a>) {
+        *slot = bin
+            .builder
+            .build_int_add(*slot, slot.get_type().const_int(1, false), "next_slot")
+            .unwrap();
+    }
+
+    /// The length of the outermost dimension of a fixed-size array.
+    fn fixed_length(dims: &[ArrayLength]) -> Option<u64> {
+        match dims.last() {
+            Some(ArrayLength::Fixed(len)) => len.to_u64(),
+            _ => None,
+        }
+    }
+
+    fn malloc<'a>(bin: &Binary<'a>, ty: &Type) -> PointerValue<'a> {
+        let size = bin
+            .builder
+            .build_int_truncate(
+                bin.llvm_type(ty).size_of().unwrap(),
+                bin.context.i32_type(),
+                "size",
+            )
+            .unwrap();
+        bin.builder
+            .build_call(
+                bin.module.get_function("__malloc").unwrap(),
+                &[size.into()],
+                "",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value()
+    }
+
+    fn member<'a>(
         bin: &Binary<'a>,
-        func: FunctionValue<'a>,
-        k0: IntValue<'a>,
-        k1: IntValue<'a>,
-        k2: IntValue<'a>,
-        k3: IntValue<'a>,
-        v0: IntValue<'a>,
-        v1: IntValue<'a>,
-        v2: IntValue<'a>,
-        v3: IntValue<'a>,
+        ty: &Type,
+        ptr: PointerValue<'a>,
+        index: IntValue<'a>,
+    ) -> PointerValue<'a> {
+        unsafe {
+            bin.builder
+                .build_gep(
+                    bin.llvm_type(ty),
+                    ptr,
+                    &[bin.context.i32_type().const_zero(), index],
+                    "member",
+                )
+                .unwrap()
+        }
+    }
+
+    /// Store a loaded value into a struct field or array element. Nested
+    /// structs and fixed arrays are loaded as pointers, but live inline.
+    fn store_member<'a>(
+        bin: &Binary<'a>,
+        ty: &Type,
+        dest: PointerValue<'a>,
+        value: BasicValueEnum<'a>,
     ) {
-        let i64_ty = bin.context.i64_type();
-        let args = vec![k0, k1, k2, k3, v0, v1, v2, v3]
-            .into_iter()
-            .map(|v| {
-                if v.get_type() != i64_ty {
-                    v.const_cast(i64_ty, false)
-                } else {
-                    v
+        let value = if ty.is_fixed_reference_type(bin.ns) {
+            bin.builder
+                .build_load(bin.llvm_type(ty), value.into_pointer_value(), "member")
+                .unwrap()
+        } else {
+            value
+        };
+        bin.builder.build_store(dest, value).unwrap();
+    }
+
+    fn load_slots<'a>(
+        &self,
+        bin: &Binary<'a>,
+        ty: &Type,
+        slot: &mut IntValue<'a>,
+        function: FunctionValue<'a>,
+    ) -> BasicValueEnum<'a> {
+        let ty = Self::storage_type(bin, ty);
+        match &ty {
+            Type::Struct(struct_ty) => {
+                let new = Self::malloc(bin, &ty);
+                for (i, field) in struct_ty.definition(bin.ns).fields.iter().enumerate() {
+                    let value = self.load_slots(bin, &field.ty, slot, function);
+                    let index = bin.context.i32_type().const_int(i as u64, false);
+                    let dest = Self::member(bin, &ty, new, index);
+                    Self::store_member(bin, &Self::storage_type(bin, &field.ty), dest, value);
                 }
-            })
-            .map(|v| v.as_basic_value_enum())
-            .map(|v| v.into())
-            .collect::<Vec<BasicMetadataValueEnum>>();
-        let _ = bin.builder.build_call(func, &args, "syscall_sstore");
+                new.into()
+            }
+            Type::Array(_, dims) if Self::fixed_length(dims).is_some() => {
+                let len = Self::fixed_length(dims).unwrap();
+                let elem_ty = Self::storage_type(bin, &ty.array_deref());
+                let new = Self::malloc(bin, &ty);
+                bin.emit_static_loop_with_int(
+                    function,
+                    bin.context.i32_type().const_zero(),
+                    bin.context.i32_type().const_int(len, false),
+                    slot,
+                    |index, slot| {
+                        let value = self.load_slots(bin, &elem_ty, slot, function);
+                        let dest = Self::member(bin, &ty, new, index);
+                        Self::store_member(bin, &elem_ty, dest, value);
+                    },
+                );
+                new.into()
+            }
+            _ => {
+                Self::check_single_slot(bin, &ty);
+                let word = Self::sload(bin, *slot);
+                Self::next_slot(bin, slot);
+                Self::from_slot_word(bin, &ty, word)
+            }
+        }
+    }
+
+    fn store_slots<'a>(
+        &self,
+        bin: &Binary<'a>,
+        ty: &Type,
+        slot: &mut IntValue<'a>,
+        value: BasicValueEnum<'a>,
+        function: FunctionValue<'a>,
+    ) {
+        let ty = Self::storage_type(bin, ty);
+        match &ty {
+            Type::Struct(struct_ty) => {
+                for (i, field) in struct_ty.definition(bin.ns).fields.iter().enumerate() {
+                    let index = bin.context.i32_type().const_int(i as u64, false);
+                    let src = Self::member(bin, &ty, value.into_pointer_value(), index);
+                    self.store_slots(bin, &field.ty, slot, src.into(), function);
+                }
+            }
+            Type::Array(_, dims) if Self::fixed_length(dims).is_some() => {
+                let len = Self::fixed_length(dims).unwrap();
+                let elem_ty = Self::storage_type(bin, &ty.array_deref());
+                bin.emit_static_loop_with_int(
+                    function,
+                    bin.context.i32_type().const_zero(),
+                    bin.context.i32_type().const_int(len, false),
+                    slot,
+                    |index, slot| {
+                        let src = Self::member(bin, &ty, value.into_pointer_value(), index);
+                        self.store_slots(bin, &elem_ty, slot, src.into(), function);
+                    },
+                );
+            }
+            _ => {
+                Self::check_single_slot(bin, &ty);
+                let word = Self::to_slot_word(bin, &ty, value);
+                Self::sstore(bin, *slot, word);
+                Self::next_slot(bin, slot);
+            }
+        }
+    }
+
+    fn delete_slots<'a>(
+        &self,
+        bin: &Binary<'a>,
+        ty: &Type,
+        slot: &mut IntValue<'a>,
+        function: FunctionValue<'a>,
+    ) {
+        let ty = Self::storage_type(bin, ty);
+        match &ty {
+            Type::Struct(struct_ty) => {
+                for field in &struct_ty.definition(bin.ns).fields {
+                    self.delete_slots(bin, &field.ty, slot, function);
+                }
+            }
+            Type::Array(_, dims) if Self::fixed_length(dims).is_some() => {
+                let len = Self::fixed_length(dims).unwrap();
+                let elem_ty = Self::storage_type(bin, &ty.array_deref());
+                bin.emit_static_loop_with_int(
+                    function,
+                    bin.context.i32_type().const_zero(),
+                    bin.context.i32_type().const_int(len, false),
+                    slot,
+                    |_, slot| self.delete_slots(bin, &elem_ty, slot, function),
+                );
+            }
+            // As in Solidity, deleting a struct leaves its mappings alone.
+            Type::Mapping(..) => Self::next_slot(bin, slot),
+            _ => {
+                Self::check_single_slot(bin, &ty);
+                let zero = bin.context.custom_width_int_type(256).const_zero();
+                Self::sstore(bin, *slot, zero);
+                Self::next_slot(bin, slot);
+            }
+        }
     }
 }
 
-/// declare external syscall functions in the module.
 pub(crate) fn declare_syscalls(bin: &mut Binary) {
     let ctx = bin.context;
     let i64_ty = ctx.i64_type();
     let i8_ptr_ty = ctx.ptr_type(AddressSpace::default());
     let void_ty = ctx.void_type();
 
-    // __sys_sload: (i64, i64, i64, i64, i64*) -> void
     let sload_ty = void_ty.fn_type(
         &[
             i64_ty.into(),
@@ -170,7 +398,6 @@ pub(crate) fn declare_syscalls(bin: &mut Binary) {
     let sload = bin.module.add_function("__sys_sload", sload_ty, None);
     sload.set_linkage(Linkage::External);
 
-    // __sys_sstore: (i64, i64, i64, i64, i64, i64, i64, i64) -> void
     let sstore_ty = void_ty.fn_type(
         &[
             i64_ty.into(),
@@ -187,24 +414,20 @@ pub(crate) fn declare_syscalls(bin: &mut Binary) {
     let sstore = bin.module.add_function("__sys_sstore", sstore_ty, None);
     sstore.set_linkage(Linkage::External);
 
-    // __sys_return: (i8*, i64) -> void
     let return_ty = void_ty.fn_type(&[i8_ptr_ty.into(), i64_ty.into()], false);
     let return_fn = bin.module.add_function("__sys_return", return_ty, None);
     return_fn.set_linkage(Linkage::External);
 
-    // __sys_caller: (i8*) -> void (writes 20 bytes)
     let caller_ty = void_ty.fn_type(&[i8_ptr_ty.into()], false);
     let caller = bin.module.add_function("__sys_caller", caller_ty, None);
     caller.set_linkage(Linkage::External);
 
-    // __sys_callvalue: (i8*) -> void (writes 32 bytes)
     let callvalue_ty = void_ty.fn_type(&[i8_ptr_ty.into()], false);
     let callvalue = bin
         .module
         .add_function("__sys_callvalue", callvalue_ty, None);
     callvalue.set_linkage(Linkage::External);
 
-    // __sys_revert: (i8*, i64) -> void
     let revert_ty = void_ty.fn_type(&[i8_ptr_ty.into(), i64_ty.into()], false);
     let revert = bin.module.add_function("__sys_revert", revert_ty, None);
     revert.set_linkage(Linkage::External);
@@ -219,19 +442,14 @@ impl<'a> TargetRuntime<'a> for RiscvTargetRuntime {
         ty: IntType<'a>,
     ) -> IntValue<'a> {
         let i256_ty = bin.context.custom_width_int_type(256);
-        let slot_val = bin
+        let slot = bin
             .builder
-            .build_load(i256_ty, slot, "slot_load")
+            .build_load(i256_ty, slot, "slot")
             .unwrap()
             .into_int_value();
-        let parts = RiscvTargetRuntime::split_256(slot_val, bin.context, &bin.builder);
-        let sload_fn = bin.module.get_function("__sys_sload").unwrap();
-        let results = RiscvTargetRuntime::call_syscall_4_4(
-            bin, sload_fn, parts[0], parts[1], parts[2], parts[3],
-        );
-        let value_256 = RiscvTargetRuntime::combine_256(&results, bin.context, &bin.builder);
+        let word = Self::sload(bin, slot);
         bin.builder
-            .build_int_truncate(value_256, ty, "storage_int")
+            .build_int_truncate_or_bit_cast(word, ty, "storage_int")
             .unwrap()
     }
 
@@ -244,65 +462,21 @@ impl<'a> TargetRuntime<'a> for RiscvTargetRuntime {
         function: FunctionValue<'a>,
         _storage_type: &Option<StorageType>,
     ) -> BasicValueEnum<'a> {
-        let i256_ty = bin.context.custom_width_int_type(256);
-        let slot_ptr = bin.builder.build_alloca(i256_ty, "slot_ptr").unwrap();
-        bin.builder.build_store(slot_ptr, *slot).unwrap();
-
-        if let Type::Int(bits) | Type::Uint(bits) = ty {
-            let int_ty = bin.context.custom_width_int_type((*bits) as u32);
-            let val = self.get_storage_int(bin, function, slot_ptr, int_ty);
-            return val.as_basic_value_enum();
-        }
-        // otherwise return the full 256-bit value.
-        let val = self.get_storage_int(bin, function, slot_ptr, i256_ty);
-        val.as_basic_value_enum()
+        self.load_slots(bin, ty, slot, function)
     }
 
     fn storage_store(
         &self,
         bin: &Binary<'a>,
-        _elem_ty: &Type,
+        ty: &Type,
         _existing: bool,
         slot: &mut IntValue<'a>,
         _slot_ty: Option<&Type>,
         dest: BasicValueEnum<'a>,
-        _function: FunctionValue<'a>,
+        function: FunctionValue<'a>,
         _storage_type: &Option<StorageType>,
     ) {
-        // extend dest to 256 bits.
-        let i256_ty = bin.context.custom_width_int_type(256);
-        let value = dest.into_int_value();
-        let value_256 = if value.get_type() == i256_ty {
-            value
-        } else {
-            bin.builder
-                .build_int_z_extend(value, i256_ty, "extend_value")
-                .unwrap()
-        };
-
-        let slot_ptr = bin.builder.build_alloca(i256_ty, "slot_ptr_store").unwrap();
-        bin.builder.build_store(slot_ptr, *slot).unwrap();
-        let slot_val = bin
-            .builder
-            .build_load(i256_ty, slot_ptr, "slot_load_store")
-            .unwrap()
-            .into_int_value();
-        let slot_parts = RiscvTargetRuntime::split_256(slot_val, bin.context, &bin.builder);
-        let value_parts = RiscvTargetRuntime::split_256(value_256, bin.context, &bin.builder);
-
-        let sstore_fn = bin.module.get_function("__sys_sstore").unwrap();
-        RiscvTargetRuntime::call_syscall_8_0(
-            bin,
-            sstore_fn,
-            slot_parts[0],
-            slot_parts[1],
-            slot_parts[2],
-            slot_parts[3],
-            value_parts[0],
-            value_parts[1],
-            value_parts[2],
-            value_parts[3],
-        );
+        self.store_slots(bin, ty, slot, dest, function);
     }
 
     fn return_abi_data<'b>(
@@ -319,8 +493,6 @@ impl<'a> TargetRuntime<'a> for RiscvTargetRuntime {
         let return_fn = bin.module.get_function("__sys_return").unwrap();
         let args: Vec<BasicMetadataValueEnum> = vec![data.into(), len_i64.into()];
         let _ = bin.builder.build_call(return_fn, &args, "");
-        // The Return syscall does not come back, but LLVM still needs the
-        // block to be terminated.
         bin.builder.build_unreachable().unwrap();
     }
 
@@ -331,12 +503,12 @@ impl<'a> TargetRuntime<'a> for RiscvTargetRuntime {
 
     fn storage_delete(
         &self,
-        _bin: &Binary<'a>,
-        _ty: &Type,
-        _slot: &mut IntValue<'a>,
-        _function: FunctionValue<'a>,
+        bin: &Binary<'a>,
+        ty: &Type,
+        slot: &mut IntValue<'a>,
+        function: FunctionValue<'a>,
     ) {
-        unimplemented!("storage_delete")
+        self.delete_slots(bin, ty, slot, function);
     }
 
     fn set_storage_string(
@@ -455,7 +627,7 @@ impl<'a> TargetRuntime<'a> for RiscvTargetRuntime {
         unimplemented!("keccak256_hash")
     }
 
-    /// r55 has no debug output syscall, so runtime error messages are dropped.
+    /// r55 has no debug output syscall.
     fn print<'b>(&self, _bin: &Binary<'b>, _string: PointerValue<'b>, _length: IntValue<'b>) {}
 
     fn return_empty_abi(&self, bin: &Binary) {
@@ -468,8 +640,7 @@ impl<'a> TargetRuntime<'a> for RiscvTargetRuntime {
     }
 
     fn return_code<'b>(&self, bin: &'b Binary, _ret: IntValue<'b>) {
-        // r55 signals success/failure through the Return/Revert syscalls
-        // rather than an exit code, so there is nothing to encode here.
+        // r55 has no exit codes, only the Return and Revert syscalls.
         self.return_empty_abi(bin);
     }
 
