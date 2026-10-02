@@ -1,24 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Object code generation for the RISC-V target.
-//!
-//! Solang links against a purpose-built LLVM that only enables the
-//! WebAssembly and SBF backends, so no in-process `TargetMachine` can be
-//! created for RISC-V. Until that LLVM build gains the RISC-V backend, the
-//! bitcode is handed to an external `llc` instead. Everything else, including
-//! linking, still goes through the in-tree LLD.
-//!
-//! Set `SOLANG_RISCV_LLC` to select a specific `llc`.
+//! Solang's LLVM build has no RISC-V backend, so object code comes from an
+//! external `llc`: `SOLANG_RISCV_LLC`, or the first one on `PATH` that has
+//! the backend.
 
 use inkwell::module::Module;
 use std::fs;
+use std::path::Path;
 use std::process::Command;
+use std::sync::OnceLock;
 use tempfile::tempdir;
 
-/// `llc` binaries to try, in order, when `SOLANG_RISCV_LLC` is not set.
 const LLC_CANDIDATES: [&str; 4] = ["llc-19", "llc-18", "llc-17", "llc"];
 
-/// Compile `module` to a RISC-V ELF object file.
 pub(crate) fn object_from_module(module: &Module, assembly: bool) -> Result<Vec<u8>, String> {
     let dir = tempdir().map_err(|e| e.to_string())?;
     let bitcode = dir.path().join("contract.bc");
@@ -36,8 +30,7 @@ pub(crate) fn object_from_module(module: &Module, assembly: bool) -> Result<Vec<
         .args([
             "-mtriple=riscv64-unknown-none-elf",
             "-mattr=+m,+a,+c",
-            // r55 loads contracts at 0x80300000; medlow's absolute addressing
-            // cannot reach that, so use medany's PC-relative sequences.
+            // r55 loads contracts at 0x80300000, out of reach of medlow.
             "-code-model=medium",
             "-O2",
             if assembly {
@@ -62,26 +55,34 @@ pub(crate) fn object_from_module(module: &Module, assembly: bool) -> Result<Vec<
     fs::read(&output).map_err(|e| e.to_string())
 }
 
-/// Locate an `llc` that has the RISC-V backend enabled.
-fn find_llc() -> Result<String, String> {
-    if let Ok(llc) = std::env::var("SOLANG_RISCV_LLC") {
-        return Ok(llc);
-    }
+/// Searches all of `PATH`: Solang's own LLVM, without the backend, usually
+/// comes first.
+pub fn find_llc() -> Result<String, String> {
+    static LLC: OnceLock<Result<String, String>> = OnceLock::new();
 
-    LLC_CANDIDATES
-        .iter()
-        .find(|llc| has_riscv_backend(llc))
-        .map(|llc| llc.to_string())
-        .ok_or_else(|| {
-            format!(
-                "no llc with a RISC-V backend found (tried {}); \
-                 set SOLANG_RISCV_LLC to point at one",
-                LLC_CANDIDATES.join(", ")
-            )
-        })
+    LLC.get_or_init(|| {
+        if let Ok(llc) = std::env::var("SOLANG_RISCV_LLC") {
+            return Ok(llc);
+        }
+
+        let path = std::env::var_os("PATH").unwrap_or_default();
+        LLC_CANDIDATES
+            .iter()
+            .flat_map(|name| std::env::split_paths(&path).map(move |dir| dir.join(name)))
+            .find(|llc| has_riscv_backend(llc))
+            .map(|llc| llc.display().to_string())
+            .ok_or_else(|| {
+                format!(
+                    "no llc with a RISC-V backend found on PATH (tried {}); \
+                     set SOLANG_RISCV_LLC to point at one",
+                    LLC_CANDIDATES.join(", ")
+                )
+            })
+    })
+    .clone()
 }
 
-fn has_riscv_backend(llc: &str) -> bool {
+fn has_riscv_backend(llc: &Path) -> bool {
     Command::new(llc)
         .arg("--version")
         .output()

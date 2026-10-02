@@ -334,7 +334,6 @@ impl Target {
     fn llvm_target_triple(&self) -> TargetTriple {
         TargetTriple::create(match self {
             Target::Solana => "sbf-unknown-unknown",
-            // r55 runs bare-metal RV64 with no operating system.
             Target::Riscv => "riscv64-unknown-none-elf",
             _ => "wasm32-unknown-unknown-wasm",
         })
