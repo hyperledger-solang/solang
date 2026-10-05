@@ -2222,13 +2222,17 @@ pub(super) fn parse_call_args(
     }
 
     if ns.target == Target::Solana {
-        if res.accounts.is_absent()
-            && !matches!(
-                ns.functions[context.function_no.unwrap()].visibility,
-                Visibility::External(_)
-            )
-            && !ns.functions[context.function_no.unwrap()].is_constructor()
-        {
+        // State-variable initializers are resolved at file scope where context.function_no
+        // is None; treat that as "not external / not a constructor" so the accounts
+        // diagnostic still fires.
+        let caller_excluded = match context.function_no {
+            Some(no) => {
+                matches!(ns.functions[no].visibility, Visibility::External(_))
+                    || ns.functions[no].is_constructor()
+            }
+            None => false,
+        };
+        if res.accounts.is_absent() && !caller_excluded {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 "accounts are required for calling a contract. You can either provide the \
