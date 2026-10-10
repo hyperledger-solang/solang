@@ -31,12 +31,14 @@ pub fn function_dispatch(
             if cfg.name.contains("constructor") {
                 "__constructor".to_string()
             } else {
-                let function = match &cfg.function_no {
-                    ASTFunction::SolidityFunction(no) => &ns.functions[*no],
-
+                let func_no = match (&cfg.function_no, cfg.modifier) {
+                    (ASTFunction::SolidityFunction(no), _) => *no,
+                    // the public CFG of a function with modifiers has no function_no, but records it in `modifier`
+                    (_, Some(no)) => no,
                     // until this stage, we have processed constructor and storage_initializer, so all that is left is the solidity functions
                     _ => unreachable!(),
                 };
+                let function = &ns.functions[func_no];
 
                 if function.mangled_name_contracts.contains(&contract_no) {
                     function.mangled_name.clone()
