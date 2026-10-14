@@ -79,6 +79,9 @@ Documented Counterparts
    * - `pause <https://github.com/stellar/soroban-examples/tree/main/pause>`_
      - `docs/examples/soroban/pause/pause.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/pause/pause.sol>`_ and `tests/soroban_testcases/example_pause.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_pause.rs>`_
      - Simple pause-flag contract: a single ``bool`` in instance storage, readable via ``paused()`` and writable via ``set(bool)``. Tested via ``example_pause_*`` test cases.
+   * - `simple_account <https://github.com/stellar/soroban-examples/tree/main/simple_account>`_
+     - `docs/examples/soroban/simple_account.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/simple_account.sol>`_ and `tests/soroban_testcases/example_simple_account.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_simple_account.rs>`_
+     - Minimal custom account contract owned by one ed25519 public key. ``__check_auth`` verifies the signature over the auth payload with the ``ed25519_verify`` builtin (host ``verify_sig_ed25519``). The authorization context is not read, so only empty contexts are supported for now. Tested via ``example_simple_account_check_auth``.
    * - `single_offer <https://github.com/stellar/soroban-examples/tree/main/single_offer>`_
      - `docs/examples/soroban/single_offer.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/single_offer.sol>`_ and `tests/soroban_testcases/example_single_offer.rs <https://github.com/hyperledger-solang/solang/blob/main/tests/soroban_testcases/example_single_offer.rs>`_
      - Single-offer exchange between a seller and a buyer, using a struct in instance storage, cross-contract token calls, and ``requireAuth()``. Tested via ``example_single_offer_*`` test cases.

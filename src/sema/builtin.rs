@@ -36,7 +36,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 35]> = Lazy::new(|| {
+pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 36]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::ExtendInstanceTtl,
@@ -116,6 +116,17 @@ pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 35]> = Lazy::new(|| {
             ret: vec![Type::Bool],
             target: vec![Target::Soroban],
             doc: "Performs the BLS12-381 multi-pairing check on a vector of G1 points (`bytes[]`) and a vector of G2 points (`bytes[]`), returning true if the pairing product equals one. Maps to the host function `bls12_381_multi_pairing_check`.",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::VerifySigEd25519,
+            namespace: None,
+            method: vec![],
+            name: "ed25519_verify",
+            params: vec![Type::Bytes(32), Type::Bytes(32), Type::DynamicBytes],
+            ret: vec![],
+            target: vec![Target::Soroban],
+            doc: "Verifies an ed25519 `signature` (64-byte `bytes`) of `message` against the 32-byte public `key`. Traps if the signature is invalid. Maps to the host function `verify_sig_ed25519`.",
             constant: false,
         },
         Prototype {

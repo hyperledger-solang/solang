@@ -472,6 +472,34 @@ impl TargetCodegen for SorobanTarget {
                     Some(Type::Bool),
                 ))
             }
+            ast::Builtin::VerifySigEd25519 => {
+                assert_eq!(
+                    args.len(),
+                    3,
+                    "ed25519_verify takes exactly three arguments"
+                );
+                let objs = args
+                    .iter()
+                    .map(|arg| {
+                        let value = expression(arg, cfg, contract_no, func, ns, vartab, opt, self);
+                        soroban_encode_arg(value, cfg, vartab, ns)
+                    })
+                    .collect();
+                // The host traps on an invalid signature, so the result is always Void.
+                let res = vartab.temp_name("ed25519_verify", &Type::Uint(64));
+                cfg.add(
+                    vartab,
+                    Instr::Call {
+                        res: vec![res],
+                        call: InternalCallTy::HostFunction {
+                            name: HostFunctions::VerifySigEd25519.name().to_string(),
+                        },
+                        args: objs,
+                        return_tys: vec![Type::Uint(64)],
+                    },
+                );
+                Some(Expression::Poison)
+            }
             ast::Builtin::Timestamp => {
                 assert_eq!(args.len(), 0, "timestamp expects no arguments");
                 let timestamp_var_no = vartab.temp_name("timestamp", &Type::Uint(64));
