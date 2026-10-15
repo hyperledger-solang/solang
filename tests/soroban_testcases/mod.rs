@@ -17,6 +17,7 @@ mod composite_arrays;
 mod composite_bytes;
 mod constructor;
 mod cross_contract_calls;
+mod custom_errors;
 mod dynarray_elemops_bool;
 mod dynarray_elemops_bytes_string;
 mod dynarray_elemops_int;

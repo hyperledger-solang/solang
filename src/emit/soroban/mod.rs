@@ -31,6 +31,7 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::FailWithError => bin.context.i64_type().fn_type(&[ty.into()], false),
             HostFunctions::GetContractData => bin
                 .context
                 .i64_type()
@@ -617,6 +618,7 @@ impl SorobanTarget {
             HostFunctions::Bls12381G1Mul,
             HostFunctions::Bls12381MultiPairingCheck,
             HostFunctions::VerifySigEd25519,
+            HostFunctions::FailWithError,
         ];
 
         for func in &host_functions {
