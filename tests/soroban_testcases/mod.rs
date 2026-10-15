@@ -11,6 +11,7 @@ mod array_structs;
 mod atomic_swap;
 mod auth;
 mod block_number;
+mod bls12_381_hash_to_g2;
 mod bytes_fail;
 mod bytes_pass;
 mod composite_arrays;

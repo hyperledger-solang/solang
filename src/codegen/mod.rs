@@ -166,6 +166,7 @@ pub enum HostFunctions {
     Bls12381MultiPairingCheck,
     VerifySigEd25519,
     FailWithError,
+    Bls12381HashToG2,
 }
 
 impl HostFunctions {
@@ -245,6 +246,7 @@ impl HostFunctions {
             HostFunctions::Bls12381MultiPairingCheck => "c.g",
             HostFunctions::VerifySigEd25519 => "c.0",
             HostFunctions::FailWithError => "x.5",
+            HostFunctions::Bls12381HashToG2 => "c.f",
         }
     }
 }

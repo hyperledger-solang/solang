@@ -50,7 +50,7 @@ Language Features
      - Not supported on the Soroban target.
    * - Hash and cryptographic builtins
      - Supported
-     - ``sha256`` and ``keccak256`` hashing, the BLS12-381 builtins ``bls12_381_g1_add``, ``bls12_381_g1_mul``, and ``bls12_381_pairing_check``, the ed25519 signature check ``ed25519_verify``, and XDR serialization via ``to_xdr``. Examples: `groth16_verifier.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/groth16_verifier.sol>`_ (BLS12-381 Groth16 proof verification) and `merkle_distribution.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/merkle_distribution.sol>`_ (``sha256`` and ``to_xdr`` Merkle proofs).
+     - ``sha256`` and ``keccak256`` hashing, the BLS12-381 builtins ``bls12_381_g1_add``, ``bls12_381_g1_mul``, ``bls12_381_hash_to_g2``, and ``bls12_381_pairing_check``, the ed25519 signature check ``ed25519_verify``, and XDR serialization via ``to_xdr``. Examples: `groth16_verifier.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/groth16_verifier.sol>`_ (BLS12-381 Groth16 proof verification) and `merkle_distribution.sol <https://github.com/hyperledger-solang/solang/blob/main/docs/examples/soroban/merkle_distribution.sol>`_ (``sha256`` and ``to_xdr`` Merkle proofs).
 
 The exact Solidity support boundary can only be characterized with broader fuzzing and related validation, and that work is still in progress.
 

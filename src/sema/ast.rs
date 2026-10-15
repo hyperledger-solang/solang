@@ -1850,6 +1850,7 @@ pub enum Builtin {
     Bls12381G1Mul,
     Bls12381MultiPairingCheck,
     VerifySigEd25519,
+    Bls12381HashToG2,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
