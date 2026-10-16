@@ -876,11 +876,9 @@ Upstream Examples Not Yet Documented as Supported
 +++++++++++++++++++++++++++++++++++++++++++++++++
 
 The following upstream examples do not currently have a documented Solidity counterpart, as some needed Soroban features are not yet supported.
-- `bls_signature <https://github.com/stellar/soroban-examples/tree/main/bls_signature>`_
 - `errors <https://github.com/stellar/soroban-examples/tree/main/errors>`_
 - `fuzzing <https://github.com/stellar/soroban-examples/tree/main/fuzzing>`_
 - `privacy-pools <https://github.com/stellar/soroban-examples/tree/main/privacy-pools>`_
-- `simple_account <https://github.com/stellar/soroban-examples/tree/main/simple_account>`_
 - `workspace <https://github.com/stellar/soroban-examples/tree/main/workspace>`_
 
 Want to add support for one of the remaining examples? Open a pull request against `hyperledger-solang/solang <https://github.com/hyperledger-solang/solang>`_ and follow the `contribution guide <https://github.com/hyperledger-solang/solang/blob/main/CONTRIBUTING.md>`_.

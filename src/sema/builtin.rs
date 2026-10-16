@@ -1988,7 +1988,7 @@ impl Namespace {
         let builtin_file_no = self
             .files
             .iter()
-            .position(|file| file.cache_no.is_none() && file.path == *"soroban")
+            .position(|file| file.cache_no.is_none() && file.path.as_os_str() == "soroban")
             .expect("soroban builtins are added when the namespace is created");
 
         let builtins: Vec<_> = self
