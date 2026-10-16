@@ -9,6 +9,7 @@ use self::{
     variables::variable_decl,
 };
 use crate::file_resolver::{FileResolver, ResolvedFile};
+use crate::Target;
 use num_bigint::BigInt;
 use solang_parser::{
     doccomment::{parse_doccomments, DocComment},
@@ -131,6 +132,10 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
             }
             _ => (),
         }
+    }
+
+    if ns.target == Target::Soroban {
+        ns.import_soroban_builtins(file_no);
     }
 
     contracts::resolve_base_contracts(&tree.contracts, file_no, ns);

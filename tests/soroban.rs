@@ -151,3 +151,71 @@ impl Default for SorobanEnv {
         Self::new()
     }
 }
+
+/// A token-like contract whose `transfer` needs the authorization of `from`.
+pub const AUTH_TOKEN: &str = r#"
+contract token {
+    function transfer(address from, address to, int128 amount) public {
+        from.requireAuth();
+    }
+}
+"#;
+
+/// Authorizes the next `contract.fn_name(args)` invocation on behalf of the custom `account`,
+/// the way a real transaction does. `sign` gets the payload the host computes and returns the
+/// signature the host passes to the account's `__check_auth`.
+pub fn authorize_custom_account(
+    env: &Env,
+    account: &Address,
+    contract: &Address,
+    fn_name: &str,
+    args: soroban_sdk::Vec<Val>,
+    sign: impl FnOnce(&soroban_sdk::BytesN<32>) -> Val,
+) {
+    use soroban_sdk::xdr::*;
+    use soroban_sdk::TryFromVal;
+
+    let sc_val = |val: &Val| ScVal::try_from_val(env, val).unwrap();
+    let sc_address = |address: &Address| match sc_val(&address.to_val()) {
+        ScVal::Address(address) => address,
+        _ => unreachable!(),
+    };
+
+    let invocation = SorobanAuthorizedInvocation {
+        function: SorobanAuthorizedFunction::ContractFn(InvokeContractArgs {
+            contract_address: sc_address(contract),
+            function_name: ScSymbol(fn_name.try_into().unwrap()),
+            args: args
+                .iter()
+                .map(|arg| sc_val(&arg))
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
+        }),
+        sub_invocations: VecM::default(),
+    };
+    let nonce = rand::random::<u32>() as i64;
+    let signature_expiration_ledger = env.ledger().sequence() + 100;
+
+    let preimage = HashIdPreimage::SorobanAuthorization(HashIdPreimageSorobanAuthorization {
+        network_id: Hash(env.ledger().network_id().to_array()),
+        nonce,
+        signature_expiration_ledger,
+        invocation: invocation.clone(),
+    });
+    let preimage = preimage.to_xdr(Limits::none()).unwrap();
+    let payload = env
+        .crypto()
+        .sha256(&soroban_sdk::Bytes::from_slice(env, &preimage))
+        .to_bytes();
+
+    env.set_auths(&[SorobanAuthorizationEntry {
+        credentials: SorobanCredentials::Address(SorobanAddressCredentials {
+            address: sc_address(account),
+            nonce,
+            signature_expiration_ledger,
+            signature: sc_val(&sign(&payload)),
+        }),
+        root_invocation: invocation,
+    }]);
+}
