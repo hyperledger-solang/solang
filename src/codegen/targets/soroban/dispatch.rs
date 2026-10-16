@@ -156,6 +156,23 @@ fn decode_args(
     let params = wrapper_cfg.params.clone();
 
     for (i, arg) in params.iter().enumerate() {
+        // An unread `Context[]` (e.g. an account that only checks signatures) is not decoded.
+        if let Type::SorobanHandle(ty) = &arg.ty {
+            if is_context_array(ty, ns) && !param_is_read(&wrapper_cfg.function_no, i, ns) {
+                args.push(Expression::AllocDynamicBytes {
+                    loc: pt::Loc::Codegen,
+                    ty: *ty.clone(),
+                    size: Box::new(Expression::NumberLiteral {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(0),
+                    }),
+                    initializer: None,
+                });
+                continue;
+            }
+        }
+
         let arg = Expression::FunctionArg {
             loc: pt::Loc::Codegen,
             ty: arg.ty.clone(),
@@ -168,6 +185,19 @@ fn decode_args(
     }
 
     args
+}
+
+fn is_context_array(ty: &Type, ns: &Namespace) -> bool {
+    matches!(ty, Type::Array(elem, _)
+        if matches!(elem.as_ref(), Type::Struct(ast::StructType::UserDefined(n)) if ns.is_soroban_context(*n)))
+}
+
+fn param_is_read(function_no: &ASTFunction, param_no: usize, ns: &Namespace) -> bool {
+    let ASTFunction::SolidityFunction(function_no) = function_no else {
+        return true;
+    };
+    let symtable = &ns.functions[*function_no].symtable;
+    symtable.arguments[param_no].is_some_and(|var_no| symtable.vars[&var_no].read)
 }
 
 fn encode_return(

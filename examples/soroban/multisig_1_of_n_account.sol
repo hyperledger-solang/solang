@@ -25,7 +25,7 @@ contract multisig_1_of_n_account {
     function __check_auth(
         bytes32 signature_payload,
         Signature memory signature,
-        bytes[] auth_contexts
+        Context[] auth_contexts
     ) public view {
         if (!signers[signature.public_key]) {
             revert UnknownSigner();

@@ -31,7 +31,7 @@ contract bls_signature {
     function __check_auth(
         bytes32 signature_payload,
         bytes agg_sig,
-        bytes[] auth_contexts
+        Context[] auth_contexts
     ) public view {
         // The negated generator point of the G1 group.
         bytes neg_g1 = hex"17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb114d1d6855d545a8aa7d76c8cf2e21f267816aef1db507c96655b9d5caac42364e6f38ba0ecb751bad54dcd6b939c2ca";

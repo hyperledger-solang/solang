@@ -16,7 +16,7 @@ contract simple_account {
     function __check_auth(
         bytes32 signature_payload,
         bytes signature,
-        bytes[] auth_contexts
+        Context[] auth_contexts
     ) public view {
         ed25519_verify(owner, signature_payload, signature);
     }

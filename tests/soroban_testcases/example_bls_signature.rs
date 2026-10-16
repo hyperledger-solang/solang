@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::SorobanEnv;
+use crate::{authorize_custom_account, SorobanEnv};
 use soroban_sdk::{
     crypto::bls12_381::{Fr, G1Affine},
     testutils::BytesN as _,
@@ -100,4 +100,33 @@ fn example_bls_signature_increment_requires_own_auth() {
     assert_eq!(count, 1);
     // The account contract itself is the address that had to authorize.
     assert_eq!(env.auths()[0].0, addr);
+}
+
+#[test]
+fn example_bls_signature_authorizes_increment() {
+    let mut runtime = SorobanEnv::new();
+    let agg_pk = aggregate_pk(&runtime.env);
+    let addr = runtime.deploy_contract_with_args(CONTRACT, (agg_pk,));
+    let env = &runtime.env;
+
+    // `increment` calls `requireAuth()` on the account itself, so the host runs its
+    // `__check_auth` with the aggregated signature attached to the transaction.
+    let increment = |good_signature: bool| {
+        authorize_custom_account(env, &addr, &addr, "increment", vec![env], |payload| {
+            if good_signature {
+                aggregate_sig(env, payload)
+            } else {
+                aggregate_sig(env, &BytesN::random(env))
+            }
+        });
+        env.try_invoke_contract::<u32, Error>(
+            &addr,
+            &soroban_sdk::Symbol::new(env, "increment"),
+            vec![env],
+        )
+    };
+
+    assert_eq!(increment(true), Ok(Ok(1)));
+    assert!(increment(false).is_err());
+    assert_eq!(increment(true), Ok(Ok(2)));
 }
