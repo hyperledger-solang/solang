@@ -16,4 +16,4 @@ jobs:
       contents: read # for GitHub Dependency Graph API
       id-token: write # for OIDC authentication to PG Atlas
     steps:
-      - uses: SCF-Public-Goods-Maintenance/pg-atlas-sbom-action@bca8911b12604b102c41dab217b20c0a005fb126 # v1.0.0
+      - uses: SCF-Public-Goods-Maintenance/pg-atlas-sbom-action@20d2cff7ec9335c43e5e50451dc2576572ff7d49 # v1.0.1
