@@ -820,9 +820,17 @@ impl<'a> Binary<'a> {
             .collect::<Vec<BasicMetadataTypeEnum>>();
 
         if self.ns.target == Target::Soroban {
-            match returns.iter().next() {
-                Some(ret) => return self.llvm_var_ty(ret).fn_type(&args, false),
-                None => return self.context.void_type().fn_type(&args, false),
+            match returns {
+                [] => return self.context.void_type().fn_type(&args, false),
+                [ret] => return self.llvm_var_ty(ret).fn_type(&args, false),
+                // Several return values are written through pointers, as on the other targets,
+                // but Soroban has no return code.
+                _ => {
+                    for _ in returns {
+                        args.push(self.context.ptr_type(AddressSpace::default()).into());
+                    }
+                    return self.context.void_type().fn_type(&args, false);
+                }
             }
         }
         // add return values

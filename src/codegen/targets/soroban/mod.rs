@@ -1713,15 +1713,6 @@ pub(super) fn validate_abi_types(all_cfg: &[ControlFlowGraph], ns: &mut Namespac
             continue;
         }
 
-        if cfg.returns.len() > 1 {
-            let loc = cfg.returns[1].ty_loc.unwrap_or(cfg.returns[1].loc);
-            ns.diagnostics.push(Diagnostic::error(
-                loc,
-                "Soroban external functions can return at most one value".to_string(),
-            ));
-            continue;
-        }
-
         for param in cfg.params.as_ref() {
             if let Some(unsupported_type) = unsupported_parameter_type(&param.ty, ns) {
                 ns.diagnostics.push(Diagnostic::error(

@@ -38,7 +38,7 @@ fn compile_soroban(src: &str) -> Namespace {
 }
 
 #[test]
-fn arrays_accepted_multiple_returns_rejected() {
+fn arrays_and_multiple_returns_accepted() {
     let ns = compile_soroban(
         r#"contract test {
     struct Item {
@@ -80,9 +80,7 @@ fn arrays_accepted_multiple_returns_rejected() {
     assert!(!errors.iter().any(|diagnostic| diagnostic.message
         == "type 'struct test.Item[] memory' is not supported as a Soroban external function parameter"));
 
-    assert_eq!(errors.len(), 1);
-    assert!(errors.iter().any(|diagnostic| diagnostic.message
-        == "Soroban external functions can return at most one value"));
+    assert!(errors.is_empty(), "{errors:?}");
 }
 
 #[test]

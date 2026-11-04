@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub(super) mod target;
-use crate::codegen::{cfg::ControlFlowGraph, HostFunctions, Options};
+use crate::codegen::{
+    cfg::{ASTFunction, ControlFlowGraph},
+    HostFunctions, Options,
+};
 
 use crate::emit::cfg::emit_cfg;
 use crate::{emit::Binary, sema::ast};
@@ -13,8 +16,8 @@ use inkwell::{
 };
 use soroban_sdk::xdr::{
     Limited, Limits, ScEnvMetaEntry, ScEnvMetaEntryInterfaceVersion, ScSpecEntry,
-    ScSpecFunctionInputV0, ScSpecFunctionV0, ScSpecTypeDef, ScSpecTypeUdt, ScSpecTypeVec,
-    ScSpecUdtStructFieldV0, ScSpecUdtStructV0, StringM, WriteXdr,
+    ScSpecFunctionInputV0, ScSpecFunctionV0, ScSpecTypeDef, ScSpecTypeTuple, ScSpecTypeUdt,
+    ScSpecTypeVec, ScSpecUdtStructFieldV0, ScSpecUdtStructV0, StringM, WriteXdr,
 };
 
 const SOROBAN_ENV_INTERFACE_VERSION: ScEnvMetaEntryInterfaceVersion =
@@ -269,6 +272,30 @@ impl SorobanTarget {
         }
     }
 
+    /// The dispatch wrapper returns a single Val. When the Solidity function has several
+    /// return values, that Val is a Vec of them, described in the spec as one tuple.
+    fn outputs_to_spec(cfg: &ControlFlowGraph, ns: &ast::Namespace) -> Vec<ScSpecTypeDef> {
+        if let ASTFunction::SolidityFunction(function_no) = cfg.function_no {
+            let returns = &ns.functions[function_no].returns;
+            if returns.len() > 1 {
+                let value_types = returns
+                    .iter()
+                    .map(|ret| Self::type_to_spec(&ret.ty, ns))
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .expect("function return count exceeds tuple limit");
+                return vec![ScSpecTypeDef::Tuple(Box::new(ScSpecTypeTuple {
+                    value_types,
+                }))];
+            }
+        }
+
+        cfg.returns
+            .iter()
+            .map(|return_type| Self::type_to_spec(&return_type.ty, ns))
+            .collect()
+    }
+
     fn udt_spec_type(struct_no: usize, ns: &ast::Namespace) -> ScSpecTypeDef {
         let name = ns.structs[struct_no].id.name.as_str();
         ScSpecTypeDef::Udt(ScSpecTypeUdt {
@@ -417,11 +444,7 @@ impl SorobanTarget {
                     .collect::<Vec<_>>()
                     .try_into()
                     .expect("function input count exceeds limit"),
-                outputs: cfg
-                    .returns
-                    .iter()
-                    .map(|return_type| Self::type_to_spec(&return_type.ty, ns))
-                    .collect::<Vec<_>>()
+                outputs: Self::outputs_to_spec(cfg, ns)
                     .try_into()
                     .expect("function output count exceeds limit"),
                 doc: StringM::default(), // TODO: Add doc.

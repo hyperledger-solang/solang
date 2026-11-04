@@ -55,6 +55,21 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_return(Some(&bin.return_values[&ReturnCode::Success]))
                 .unwrap();
         }
+        Instr::Return { value } if value.len() > 1 => {
+            // Soroban function with several return values: store them through the
+            // pointer parameters that follow the regular parameters.
+            let returns_offset = cfg.params.len();
+            for (i, val) in value.iter().enumerate() {
+                let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
+                let retval = expression(target, bin, val, &w.vars, function);
+
+                bin.builder
+                    .build_store(arg.into_pointer_value(), retval)
+                    .unwrap();
+            }
+
+            bin.builder.build_return(None).unwrap();
+        }
         Instr::Return { value } => match value.iter().next() {
             Some(val) => {
                 let retval = expression(target, bin, val, &w.vars, function);
@@ -491,8 +506,18 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .map(|p| expression(target, bin, p, &w.vars, function).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
-            // Soroban doesn't write return values to imported memory
-            if !res.is_empty() && bin.ns.target != Target::Soroban {
+            // Soroban returns a single value directly; several values are written through
+            // pointers, which the callee always expects.
+            let soroban_multi_return = bin.ns.target == Target::Soroban && f.returns.len() > 1;
+
+            if soroban_multi_return {
+                for v in f.returns.iter() {
+                    parms.push(
+                        bin.build_alloca(function, bin.llvm_var_ty(&v.ty), v.name_as_str())
+                            .into(),
+                    );
+                }
+            } else if !res.is_empty() && bin.ns.target != Target::Soroban {
                 for v in f.returns.iter() {
                     parms.push(if bin.ns.target == Target::Solana {
                         bin.build_alloca(function, bin.llvm_var_ty(&v.ty), v.name_as_str())
@@ -517,7 +542,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .try_as_basic_value()
                 .left();
 
-            // Soroban doesn't have return codes, and only returns a single i64 value
+            // Soroban doesn't have return codes
             if bin.ns.target != Target::Soroban {
                 let success = bin
                     .builder
@@ -539,7 +564,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 bin.builder.build_return(Some(&ret.unwrap())).unwrap();
                 bin.builder.position_at_end(success_block);
+            }
 
+            if bin.ns.target != Target::Soroban || soroban_multi_return {
                 if !res.is_empty() {
                     for (i, v) in f.returns.iter().enumerate() {
                         let load_ty = bin.llvm_var_ty(&v.ty);

@@ -5,9 +5,12 @@ use crate::sema::ast;
 use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy},
-        targets::soroban::encoding::{soroban_decode_arg, soroban_encode_arg},
+        targets::soroban::{
+            encoding::{soroban_decode_arg, soroban_encode_arg},
+            soroban_host_call,
+        },
         vartable::Vartable,
-        Expression, Options,
+        Expression, HostFunctions, Options,
     },
     sema::ast::{Namespace, Type},
 };
@@ -58,19 +61,18 @@ pub fn function_dispatch(
             params.push(param);
         }
 
-        let mut returns = Vec::new();
-        for ret in cfg.returns.as_ref() {
-            let ret = ast::Parameter::new_default(Type::SorobanHandle(Box::new(ret.ty.clone())));
-            returns.push(ret);
-        }
+        // Soroban functions return exactly one Val. Several Solidity return values are
+        // packed into one Vec, so the wrapper returns a single handle. The spec entry
+        // describes that Vec as a tuple of the original return types.
+        let ret_ty = match cfg.returns.as_slice() {
+            [ret] => ret.ty.clone(),
+            _ => Type::Void,
+        };
+        let returns = vec![ast::Parameter::new_default(Type::SorobanHandle(Box::new(
+            ret_ty,
+        )))];
 
         wrapper_cfg.params = Arc::new(params);
-
-        if returns.is_empty() {
-            returns.push(ast::Parameter::new_default(Type::SorobanHandle(Box::new(
-                Type::Void,
-            ))));
-        }
         wrapper_cfg.returns = Arc::new(returns);
 
         wrapper_cfg.public = true;
@@ -176,13 +178,37 @@ fn encode_return(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> Expression {
-    if returns.len() == 1 {
-        soroban_encode_arg(returns[0].clone(), cfg, vartab, ns)
-    } else {
-        Expression::NumberLiteral {
+    match returns.len() {
+        0 => Expression::NumberLiteral {
             loc: Loc::Codegen,
             ty: Type::Uint(64),
             value: BigInt::from(2),
+        },
+        1 => soroban_encode_arg(returns[0].clone(), cfg, vartab, ns),
+        _ => {
+            // Multiple return values are returned as a Vec, the way Rust contracts return tuples.
+            let mut vec_obj = soroban_host_call(
+                &Loc::Codegen,
+                "ret_vec",
+                HostFunctions::VectorNew,
+                &Type::Uint(64),
+                vec![],
+                cfg,
+                vartab,
+            );
+            for ret in returns {
+                let encoded = soroban_encode_arg(ret, cfg, vartab, ns);
+                vec_obj = soroban_host_call(
+                    &Loc::Codegen,
+                    "ret_vec",
+                    HostFunctions::VecPushBack,
+                    &Type::Uint(64),
+                    vec![vec_obj, encoded],
+                    cfg,
+                    vartab,
+                );
+            }
+            vec_obj
         }
     }
 }
