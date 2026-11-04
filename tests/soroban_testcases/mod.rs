@@ -45,6 +45,7 @@ mod liquidity_pool;
 mod mappings;
 mod mappings_batch;
 mod math;
+mod modifiers;
 mod nested_structs;
 mod print;
 mod sha256;
