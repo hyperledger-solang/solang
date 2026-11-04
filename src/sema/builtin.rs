@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::ast::{
-    ArrayLength, Builtin, Diagnostic, Expression, File, Function, Namespace, Parameter, StructType,
-    Symbol, Type,
+    ArrayLength, Builtin, Diagnostic, EnumDecl, Expression, File, Function, Namespace, Parameter,
+    StructDecl, StructType, Symbol, Type,
 };
 use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
@@ -36,7 +36,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 35]> = Lazy::new(|| {
+pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 37]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::ExtendInstanceTtl,
@@ -116,6 +116,28 @@ pub static BUILTIN_FUNCTIONS: Lazy<[Prototype; 35]> = Lazy::new(|| {
             ret: vec![Type::Bool],
             target: vec![Target::Soroban],
             doc: "Performs the BLS12-381 multi-pairing check on a vector of G1 points (`bytes[]`) and a vector of G2 points (`bytes[]`), returning true if the pairing product equals one. Maps to the host function `bls12_381_multi_pairing_check`.",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::Bls12381HashToG2,
+            namespace: None,
+            method: vec![],
+            name: "bls12_381_hash_to_g2",
+            params: vec![Type::DynamicBytes, Type::DynamicBytes],
+            ret: vec![Type::DynamicBytes],
+            target: vec![Target::Soroban],
+            doc: "Hashes `message` to a BLS12-381 G2 point (192-byte `bytes`) using the domain separation tag `dst`. Maps to the host function `bls12_381_hash_to_g2`.",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::VerifySigEd25519,
+            namespace: None,
+            method: vec![],
+            name: "ed25519_verify",
+            params: vec![Type::Bytes(32), Type::Bytes(32), Type::DynamicBytes],
+            ret: vec![],
+            target: vec![Target::Soroban],
+            doc: "Verifies an ed25519 `signature` (64-byte `bytes`) of `message` against the 32-byte public `key`. Traps if the signature is invalid. Maps to the host function `verify_sig_ed25519`.",
             constant: false,
         },
         Prototype {
@@ -1888,7 +1910,105 @@ impl Namespace {
     }
 
     pub fn add_soroban_builtins(&mut self) {
-        // TODO: add soroban builtins
+        let loc = pt::Loc::Builtin;
+        let identifier = |name: &str| Identifier {
+            name: name.into(),
+            loc,
+        };
+
+        let file_no = self.files.len();
+        self.files.push(File {
+            path: PathBuf::from("soroban"),
+            line_starts: Vec::new(),
+            cache_no: None,
+            import_no: None,
+        });
+
+        // The kind of invocation a custom account's `__check_auth` is asked to authorize,
+        // mirroring the variants of the Soroban SDK's `auth::Context`.
+        let enum_no = self.enums.len();
+        self.enums.push(EnumDecl {
+            tags: Vec::new(),
+            id: identifier("ContextKind"),
+            contract: None,
+            loc,
+            ty: Type::Uint(8),
+            values: ["Contract", "CreateContract", "CreateContractWithCtor"]
+                .into_iter()
+                .map(|value| (value.to_string(), loc))
+                .collect(),
+        });
+        assert!(self.add_symbol(
+            file_no,
+            None,
+            &identifier("ContextKind"),
+            Symbol::Enum(loc, enum_no)
+        ));
+
+        // One authorized invocation, as passed to `__check_auth`. Fields that do not apply to
+        // the `kind` are left zero.
+        let field = |name: &str, ty: Type| Parameter {
+            loc,
+            id: Some(identifier(name)),
+            ty,
+            ty_loc: Some(loc),
+            indexed: false,
+            readonly: false,
+            infinite_size: false,
+            recursive: false,
+            annotation: None,
+        };
+        let struct_no = self.structs.len();
+        self.structs.push(StructDecl {
+            tags: Vec::new(),
+            id: identifier("Context"),
+            loc,
+            contract: None,
+            fields: vec![
+                field("kind", Type::Enum(enum_no)),
+                field("contract_address", Type::Address(false)),
+                field("fn_name", Type::String),
+                field("args", Type::DynamicBytes),
+                field("wasm_hash", Type::Bytes(32)),
+            ],
+            offsets: Vec::new(),
+            storage_offsets: Vec::new(),
+        });
+        assert!(self.add_symbol(
+            file_no,
+            None,
+            &identifier("Context"),
+            Symbol::Struct(loc, StructType::UserDefined(struct_no))
+        ));
+    }
+
+    /// Make the Soroban builtin types visible in `file_no` without an import, unless the file
+    /// already declares or imports a symbol with the same name.
+    pub fn import_soroban_builtins(&mut self, file_no: usize) {
+        let builtin_file_no = self
+            .files
+            .iter()
+            .position(|file| file.cache_no.is_none() && file.path.as_os_str() == "soroban")
+            .expect("soroban builtins are added when the namespace is created");
+
+        let builtins: Vec<_> = self
+            .variable_symbols
+            .iter()
+            .filter(|((file, contract, _), _)| *file == builtin_file_no && contract.is_none())
+            .map(|((_, _, name), symbol)| (name.clone(), symbol.clone()))
+            .collect();
+
+        for (name, symbol) in builtins {
+            self.variable_symbols
+                .entry((file_no, None, name))
+                .or_insert(symbol);
+        }
+    }
+
+    /// Is this the builtin Soroban `Context` struct
+    pub fn is_soroban_context(&self, struct_no: usize) -> bool {
+        let decl = &self.structs[struct_no];
+        decl.loc == pt::Loc::Builtin && decl.id.name == "Context"
     }
     pub fn add_polkadot_builtins(&mut self) {
         let loc = pt::Loc::Builtin;

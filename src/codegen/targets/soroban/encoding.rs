@@ -29,6 +29,7 @@ pub(super) mod tags {
     pub const I128_SML: u64 = 11;
     pub const U256_SML: u64 = 12;
     pub const I256_SML: u64 = 13;
+    pub const SYMBOL_SML: u64 = 14;
 
     // Object-handle tags (host allocates; handle stored in bits 32-63)
     pub const U64_OBJ: u64 = 64;
@@ -240,6 +241,9 @@ pub fn soroban_decode_arg(
             }),
         },
         Type::Int(64) => decode_i64(wrapper_cfg, vartab, arg),
+        Type::Struct(StructType::UserDefined(n)) if ns.is_soroban_context(n) => {
+            decode_context(arg, wrapper_cfg, vartab, ns, ty)
+        }
         Type::Struct(StructType::UserDefined(n)) => {
             decode_struct_map(arg, wrapper_cfg, vartab, n, ns, ty)
         }
@@ -2246,6 +2250,335 @@ fn decode_struct_map(
         ty: struct_ty,
         values: members,
     }
+}
+
+/// Decodes one `Context` of the `Vec<Context>` that the host passes to `__check_auth`. The host
+/// encodes this Rust enum as `Vec[Symbol(variant), Map{fields}]`, where the variant is one of
+/// `Contract{contract, fn_name, args}`, `CreateContractHostFn{executable, salt}` or
+/// `CreateContractWithCtorHostFn{executable, salt, constructor_args}`.
+fn decode_context(
+    arg: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+    struct_ty: Type,
+) -> Expression {
+    let loc = Loc::Codegen;
+    let u32val = |n: u64| Expression::NumberLiteral {
+        loc,
+        ty: Type::Uint(64),
+        value: BigInt::from((n << 32) | tags::U32),
+    };
+    let call = |cfg: &mut ControlFlowGraph, vartab: &mut Vartable, f, args| {
+        let res = vartab.temp_name("context", &Type::Uint(64));
+        cfg.add(vartab, host_call(vec![res], f, args));
+        Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: res,
+        }
+    };
+    let map_get = |cfg: &mut ControlFlowGraph, vartab: &mut Vartable, map: &Expression, key| {
+        let key = struct_field_key(key, loc, cfg, vartab, ns);
+        call(cfg, vartab, HostFunctions::MapGet, vec![map.clone(), key])
+    };
+
+    let tag = call(
+        cfg,
+        vartab,
+        HostFunctions::VecGet,
+        vec![arg.clone(), u32val(0)],
+    );
+    let payload = call(cfg, vartab, HostFunctions::VecGet, vec![arg, u32val(1)]);
+
+    // The fields, zero unless the kind sets them
+    let Type::Struct(StructType::UserDefined(struct_no)) = &struct_ty else {
+        unreachable!()
+    };
+    let field_tys: Vec<Type> = ns.structs[*struct_no]
+        .fields
+        .iter()
+        .map(|f| f.ty.clone())
+        .collect();
+    let [kind, contract, fn_name, args, wasm_hash] = [0, 1, 2, 3, 4].map(|i| {
+        // A Soroban address is a 64-bit host handle, but an address literal is 32 bytes
+        let ty = match &field_tys[i] {
+            Type::Address(_) => &Type::Uint(64),
+            ty => ty,
+        };
+        let var_no = vartab.temp_name("context_field", ty);
+        let zero = match ty {
+            Type::String | Type::DynamicBytes => Expression::AllocDynamicBytes {
+                loc,
+                ty: ty.clone(),
+                size: Box::new(Expression::NumberLiteral {
+                    loc,
+                    ty: Type::Uint(32),
+                    value: BigInt::zero(),
+                }),
+                initializer: None,
+            },
+            _ => Expression::NumberLiteral {
+                loc,
+                ty: ty.clone(),
+                value: BigInt::zero(),
+            },
+        };
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc,
+                res: var_no,
+                expr: zero,
+            },
+        );
+        var_no
+    });
+    let set = |cfg: &mut ControlFlowGraph, vartab: &mut Vartable, res, expr| {
+        cfg.add(vartab, Instr::Set { loc, res, expr });
+    };
+    let kind_value = |n: u64| Expression::NumberLiteral {
+        loc,
+        ty: field_tys[0].clone(),
+        value: BigInt::from(n),
+    };
+
+    let contract_block = cfg.new_basic_block("context_contract".to_string());
+    let create_block = cfg.new_basic_block("context_create".to_string());
+    let ctor_block = cfg.new_basic_block("context_create_ctor".to_string());
+    let end_block = cfg.new_basic_block("context_end".to_string());
+    vartab.new_dirty_tracker();
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: Expression::Equal {
+                loc,
+                left: Box::new(tag),
+                right: Box::new(small_symbol("Contract")),
+            },
+            true_block: contract_block,
+            false_block: create_block,
+        },
+    );
+
+    // Contract{contract, fn_name, args}
+    cfg.set_basic_block(contract_block);
+    let value = map_get(cfg, vartab, &payload, "contract");
+    set(cfg, vartab, contract, value);
+    let value = map_get(cfg, vartab, &payload, "fn_name");
+    let value = symbol_to_string(value, cfg, vartab, ns);
+    set(cfg, vartab, fn_name, value);
+    let value = map_get(cfg, vartab, &payload, "args");
+    let value = vals_to_buffer(value, cfg, vartab);
+    set(cfg, vartab, args, value);
+    cfg.add(vartab, Instr::Branch { block: end_block });
+
+    // CreateContractHostFn{executable, salt}; `executable` is `Vec[Symbol("Wasm"), hash]`
+    cfg.set_basic_block(create_block);
+    set(cfg, vartab, kind, kind_value(1));
+    let executable = map_get(cfg, vartab, &payload, "executable");
+    let hash = call(
+        cfg,
+        vartab,
+        HostFunctions::VecGet,
+        vec![executable, u32val(1)],
+    );
+    let value = soroban_decode_arg(hash, cfg, vartab, ns, Some(Type::Bytes(32)));
+    set(cfg, vartab, wasm_hash, value);
+    let key = struct_field_key("constructor_args", loc, cfg, vartab, ns);
+    let has_ctor = call(
+        cfg,
+        vartab,
+        HostFunctions::MapHas,
+        vec![payload.clone(), key],
+    );
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: Expression::Equal {
+                loc,
+                left: Box::new(has_ctor),
+                right: Box::new(Expression::NumberLiteral {
+                    loc,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(tags::TRUE),
+                }),
+            },
+            true_block: ctor_block,
+            false_block: end_block,
+        },
+    );
+
+    // CreateContractWithCtorHostFn{executable, salt, constructor_args}
+    cfg.set_basic_block(ctor_block);
+    set(cfg, vartab, kind, kind_value(2));
+    let value = map_get(cfg, vartab, &payload, "constructor_args");
+    let value = vals_to_buffer(value, cfg, vartab);
+    set(cfg, vartab, args, value);
+    cfg.add(vartab, Instr::Branch { block: end_block });
+
+    cfg.set_basic_block(end_block);
+    let phis = vartab.pop_dirty_tracker();
+    cfg.set_phis(end_block, phis);
+
+    Expression::StructLiteral {
+        loc,
+        ty: struct_ty,
+        values: [kind, contract, fn_name, args, wasm_hash]
+            .into_iter()
+            .zip(field_tys)
+            .map(|(var_no, ty)| Expression::Variable { loc, ty, var_no })
+            .collect(),
+    }
+}
+
+/// A symbol of at most 9 characters, which the host always passes inline as a `SymbolSmall`.
+fn small_symbol(name: &str) -> Expression {
+    let body = name.bytes().fold(0u64, |acc, c| {
+        let code = match c {
+            b'_' => 1,
+            b'0'..=b'9' => 2 + (c - b'0'),
+            b'A'..=b'Z' => 12 + (c - b'A'),
+            _ => 38 + (c - b'a'),
+        };
+        (acc << 6) | code as u64
+    });
+    Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Uint(64),
+        value: BigInt::from((body << 8) | tags::SYMBOL_SML),
+    }
+}
+
+/// Copies the characters of a symbol into a `string`. The XDR of a symbol is the type (4 bytes),
+/// the length (4 bytes, at most 32) and then the characters.
+fn symbol_to_string(
+    symbol: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) -> Expression {
+    let loc = Loc::Codegen;
+    let var = |vartab: &mut Vartable| vartab.temp_name("symbol_xdr", &Type::Uint(64));
+    let variable = |var_no| Expression::Variable {
+        loc,
+        ty: Type::Uint(64),
+        var_no,
+    };
+    let u32val = |n: u64| Expression::NumberLiteral {
+        loc,
+        ty: Type::Uint(64),
+        value: BigInt::from((n << 32) | tags::U32),
+    };
+
+    let xdr = var(vartab);
+    cfg.add(
+        vartab,
+        host_call(vec![xdr], HostFunctions::SerializeToBytes, vec![symbol]),
+    );
+    let len = var(vartab);
+    cfg.add(
+        vartab,
+        host_call(
+            vec![len],
+            HostFunctions::BytesGet,
+            vec![variable(xdr), u32val(7)],
+        ),
+    );
+    // U32Val(len + 8)
+    let end = Expression::Add {
+        loc,
+        ty: Type::Uint(64),
+        overflowing: false,
+        left: Box::new(variable(len)),
+        right: Box::new(Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(8u64 << 32),
+        }),
+    };
+    let chars = var(vartab);
+    cfg.add(
+        vartab,
+        host_call(
+            vec![chars],
+            HostFunctions::BytesSlice,
+            vec![variable(xdr), u32val(8), end],
+        ),
+    );
+
+    decode_bytes(variable(chars), cfg, vartab).cast(&Type::String, ns)
+}
+
+/// Unpacks a host `Vec` into the buffer of 8-byte `Val`s that `abi.decode` reads on Soroban.
+fn vals_to_buffer(
+    vec: Expression,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let loc = Loc::Codegen;
+
+    let len = vartab.temp_name("vals_len", &Type::Uint(64));
+    cfg.add(
+        vartab,
+        host_call(vec![len], HostFunctions::VecLen, vec![vec.clone()]),
+    );
+    let len = Expression::Variable {
+        loc,
+        ty: Type::Uint(64),
+        var_no: len,
+    };
+
+    let buf = vartab.temp_name("vals_buf", &Type::DynamicBytes);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc,
+            res: buf,
+            expr: Expression::AllocDynamicBytes {
+                loc,
+                ty: Type::DynamicBytes,
+                size: Box::new(Expression::Multiply {
+                    loc,
+                    ty: Type::Uint(32),
+                    overflowing: false,
+                    left: Box::new(decode_object(loc, len.clone(), 32)),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(8),
+                    }),
+                }),
+                initializer: None,
+            },
+        },
+    );
+    let buf = Expression::Variable {
+        loc,
+        ty: Type::DynamicBytes,
+        var_no: buf,
+    };
+
+    let unused = vartab.temp_name("vals_unpack_ret", &Type::Uint(64));
+    let lm_pos = encode_object(
+        loc,
+        Expression::VectorData {
+            pointer: Box::new(buf.clone()),
+        },
+        32,
+        tags::U32,
+    );
+    cfg.add(
+        vartab,
+        host_call(
+            vec![unused],
+            HostFunctions::VecUnpackToLinearMemory,
+            vec![vec, lm_pos, len],
+        ),
+    );
+
+    buf
 }
 
 pub(crate) fn encode_as_symbol(

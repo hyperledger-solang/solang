@@ -402,6 +402,41 @@ impl TargetCodegen for SorobanTarget {
                     Some(Type::DynamicBytes),
                 ))
             }
+            ast::Builtin::Bls12381HashToG2 => {
+                assert_eq!(
+                    args.len(),
+                    2,
+                    "bls12_381_hash_to_g2 takes exactly two arguments"
+                );
+                let msg = expression(&args[0], cfg, contract_no, func, ns, vartab, opt, self);
+                let dst = expression(&args[1], cfg, contract_no, func, ns, vartab, opt, self);
+                let msg_obj = soroban_encode_arg(msg, cfg, vartab, ns);
+                let dst_obj = soroban_encode_arg(dst, cfg, vartab, ns);
+                let res = vartab.temp_name("bls_hash_to_g2", &Type::Uint(64));
+                cfg.add(
+                    vartab,
+                    Instr::Call {
+                        res: vec![res],
+                        call: InternalCallTy::HostFunction {
+                            name: HostFunctions::Bls12381HashToG2.name().to_string(),
+                        },
+                        args: vec![msg_obj, dst_obj],
+                        return_tys: vec![Type::Uint(64)],
+                    },
+                );
+                let res_expr = Expression::Variable {
+                    loc: pt::Loc::Codegen,
+                    ty: Type::Uint(64),
+                    var_no: res,
+                };
+                Some(soroban_decode_arg(
+                    res_expr,
+                    cfg,
+                    vartab,
+                    ns,
+                    Some(Type::DynamicBytes),
+                ))
+            }
             ast::Builtin::Bls12381G1Mul => {
                 assert_eq!(
                     args.len(),
@@ -471,6 +506,34 @@ impl TargetCodegen for SorobanTarget {
                     ns,
                     Some(Type::Bool),
                 ))
+            }
+            ast::Builtin::VerifySigEd25519 => {
+                assert_eq!(
+                    args.len(),
+                    3,
+                    "ed25519_verify takes exactly three arguments"
+                );
+                let objs = args
+                    .iter()
+                    .map(|arg| {
+                        let value = expression(arg, cfg, contract_no, func, ns, vartab, opt, self);
+                        soroban_encode_arg(value, cfg, vartab, ns)
+                    })
+                    .collect();
+                // The host traps on an invalid signature, so the result is always Void.
+                let res = vartab.temp_name("ed25519_verify", &Type::Uint(64));
+                cfg.add(
+                    vartab,
+                    Instr::Call {
+                        res: vec![res],
+                        call: InternalCallTy::HostFunction {
+                            name: HostFunctions::VerifySigEd25519.name().to_string(),
+                        },
+                        args: objs,
+                        return_tys: vec![Type::Uint(64)],
+                    },
+                );
+                Some(Expression::Poison)
             }
             ast::Builtin::Timestamp => {
                 assert_eq!(args.len(), 0, "timestamp expects no arguments");
