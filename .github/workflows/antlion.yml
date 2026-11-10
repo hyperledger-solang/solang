@@ -1,0 +1,197 @@
+# Workflow fails only if Solang, stellar-cli or antlion cannot be built.
+
+name: antlion
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+  workflow_dispatch:
+    inputs:
+      solang_ref:
+        description: "Solang ref to test (branch, tag or SHA). Empty = the selected branch."
+        type: string
+        required: false
+        default: ""
+
+      antlion_ref:
+        description: "antlion ref to use (branch, tag or SHA)"
+        type: string
+        required: false
+        default: "v0.1.1"
+
+concurrency:
+  group: antlion-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ANTLION_REPO: aryanbaranwal001/antlion
+  SOLANG_REF: ${{ inputs.solang_ref || github.sha }}
+  STELLAR_CLI_VERSION: 28.1.0
+
+jobs:
+  solang:
+    name: Build Solang
+    runs-on: ubuntu-latest
+    container: ghcr.io/hyperledger/solang-llvm:ci-7
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.name.outputs.version }}
+    steps:
+      - name: Checkout Solang
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOLANG_REF }}
+          path: solang
+          fetch-depth: 0
+
+      - name: Name this run
+        id: name
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/solang"
+          git -C solang fetch --quiet --tags https://github.com/hyperledger-solang/solang
+          SOLANG_VERSION=$(git -C solang describe --tags --always)
+          echo "version=$SOLANG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Solang version: $SOLANG_VERSION"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.90.0
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: solang -> target
+          key: cache-solang
+
+      - name: Build Solang
+        working-directory: solang
+        run: |
+          cargo build --release
+          ./target/release/solang --version
+
+      - name: Upload the Solang binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: solang
+          path: solang/target/release/solang
+          retention-days: 1
+
+  antlion:
+    name: antlion
+    needs: solang
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SOLANG_VERSION: ${{ needs.solang.outputs.version }}
+    steps:
+      - name: Download the Solang binary
+        uses: actions/download-artifact@v4
+        with:
+          name: solang
+          path: bin
+
+      - name: Put Solang on PATH
+        run: |
+          chmod 755 bin/solang
+          echo "$PWD/bin" >> "$GITHUB_PATH"
+
+      - name: Name this run
+        run: |
+          REPORT_NAME="antlion_${SOLANG_VERSION}_$(date -u +%Y-%m-%d_%H-%M)UTC"
+          echo "REPORT_NAME=$REPORT_NAME" >> "$GITHUB_ENV"
+          echo "Report name: $REPORT_NAME"
+
+      - name: Checkout antlion
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ANTLION_REPO }}
+          ref: ${{ inputs.antlion_ref || 'v0.1.1' }}
+          path: antlion
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.92.0
+        with:
+          targets: wasm32v1-none
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: antlion -> target
+          key: cache-antlion
+
+      - name: Install stellar-cli
+        run: |
+          mkdir -p "$HOME/stellar-cli"
+          curl -sSfL "https://github.com/stellar/stellar-cli/releases/download/v${STELLAR_CLI_VERSION}/stellar-cli-${STELLAR_CLI_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C "$HOME/stellar-cli"
+          STELLAR_BIN=$(dirname "$(find "$HOME/stellar-cli" -type f -name stellar | head -n1)")
+          "$STELLAR_BIN/stellar" --version
+          echo "$STELLAR_BIN" >> "$GITHUB_PATH"
+
+      - name: Build antlion
+        working-directory: antlion
+        run: |
+          cargo build --release
+          ./target/release/antlion --version
+          solang --version
+          stellar --version
+
+      - name: Build every pair
+        working-directory: antlion
+        run: |
+          : > build_failed.txt
+          for dir in contracts/*/; do
+            name=$(basename "$dir")
+            echo "::group::build $name"
+            ./target/release/antlion --build "$dir" || echo "$name" >> build_failed.txt
+            echo "::endgroup::"
+          done
+
+      - name: Compare every pair
+        working-directory: antlion
+        run: |
+          report="$GITHUB_WORKSPACE/out/$REPORT_NAME"
+          mkdir -p "$report"
+          : > compare_failed.txt
+          for dir in contracts/*/; do
+            name=$(basename "$dir")
+            [ -f "out/$name/sdk.wasm" ] && [ -f "out/$name/solang.wasm" ] || continue
+            ./target/release/antlion --compare "$name" --report all > "$report/$name.txt" 2>&1 \
+              || echo "$name" >> compare_failed.txt
+          done
+          cp build_failed.txt compare_failed.txt "$report/"
+
+      - name: Add the status to the run summary
+        if: always()
+        run: |
+          report="out/$REPORT_NAME"
+          {
+            echo "## antlion on Solang $SOLANG_VERSION"
+            echo
+            echo "Reports: artifact \`$REPORT_NAME\`, one full \`--report all\` per pair."
+            echo
+            if [ ! -f "$report/build_failed.txt" ]; then
+              echo "No reports: the job stopped before the compare step. See the log."
+            elif [ -s "$report/build_failed.txt" ] || [ -s "$report/compare_failed.txt" ]; then
+              if [ -s "$report/build_failed.txt" ]; then
+                echo "Pairs that did not build: $(tr '\n' ' ' < "$report/build_failed.txt")"
+              fi
+              if [ -s "$report/compare_failed.txt" ]; then
+                echo "Pairs that antlion could not compare: $(tr '\n' ' ' < "$report/compare_failed.txt")"
+              fi
+            else
+              echo "All pairs built and compared."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.REPORT_NAME }}
+          path: out/
+          retention-days: 90
