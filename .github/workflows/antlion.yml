@@ -4,8 +4,7 @@ name: antlion
 
 on:
   push:
-    # TEMPORARY: ci/antlion is here only to test on the fork. Remove it before the PR.
-    branches: [main, ci/antlion]
+    branches: [main]
     tags: ["v*"]
 
   workflow_dispatch:
