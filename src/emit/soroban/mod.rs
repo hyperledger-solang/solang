@@ -31,6 +31,15 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into(), ty.into()], false),
+            HostFunctions::FailWithError => bin.context.i64_type().fn_type(&[ty.into()], false),
+            HostFunctions::Bls12381HashToG2 => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::BytesSlice => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
             HostFunctions::GetContractData => bin
                 .context
                 .i64_type()
@@ -233,6 +242,10 @@ impl HostFunctions {
                 .context
                 .i64_type()
                 .fn_type(&[ty.into(), ty.into()], false),
+            HostFunctions::VerifySigEd25519 => bin
+                .context
+                .i64_type()
+                .fn_type(&[ty.into(), ty.into(), ty.into()], false),
         }
     }
 }
@@ -612,6 +625,10 @@ impl SorobanTarget {
             HostFunctions::Bls12381G1Add,
             HostFunctions::Bls12381G1Mul,
             HostFunctions::Bls12381MultiPairingCheck,
+            HostFunctions::VerifySigEd25519,
+            HostFunctions::FailWithError,
+            HostFunctions::Bls12381HashToG2,
+            HostFunctions::BytesSlice,
         ];
 
         for func in &host_functions {
