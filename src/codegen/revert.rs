@@ -7,8 +7,9 @@ use super::encoding::{abi_encode, create_encoder};
 use super::expression::expression;
 use super::Options;
 use super::{
-    cfg::{ControlFlowGraph, Instr},
+    cfg::{ControlFlowGraph, Instr, InternalCallTy},
     vartable::Vartable,
+    HostFunctions,
 };
 
 use crate::codegen::interface::TargetCodegen;
@@ -408,6 +409,29 @@ pub(super) fn revert(
                 log_runtime_error(opt.log_runtime_errors, &reason, *loc, cfg, vartab, ns);
             }
         }
+    }
+
+    // On Soroban, `revert MyError()` returns `Error(Contract, n)`, where `n` is the
+    // 1-based position of `MyError` among the declared errors.
+    if let (Target::Soroban, Some(error_no)) = (ns.target, error_no) {
+        let error = Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Type::Uint(64),
+            // Error Val: code in the upper 32 bits, ScErrorType::Contract (0), tag Error (3)
+            value: (BigInt::from(*error_no + 1) << 32) + 3,
+        };
+        let res = vartab.temp_name("fail_with_error", &Type::Uint(64));
+        cfg.add(
+            vartab,
+            Instr::Call {
+                res: vec![res],
+                return_tys: vec![Type::Uint(64)],
+                call: InternalCallTy::HostFunction {
+                    name: HostFunctions::FailWithError.name().to_string(),
+                },
+                args: vec![error],
+            },
+        );
     }
 
     let error = match (*error_no, exprs.first()) {
