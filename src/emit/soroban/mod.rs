@@ -276,7 +276,7 @@ impl SorobanTarget {
             ast::Type::Int(_) => ScSpecTypeDef::I32,
             ast::Type::Uint(_) => ScSpecTypeDef::U32,
             ast::Type::Bool => ScSpecTypeDef::Bool,
-            ast::Type::Address(_) => ScSpecTypeDef::Address,
+            ast::Type::Address(_) | ast::Type::Contract(_) => ScSpecTypeDef::Address,
             ast::Type::Bytes(_) | ast::Type::DynamicBytes => ScSpecTypeDef::Bytes,
             ast::Type::String => ScSpecTypeDef::String,
             ast::Type::Void => ScSpecTypeDef::Void,

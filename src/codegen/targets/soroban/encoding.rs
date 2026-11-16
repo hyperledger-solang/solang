@@ -184,7 +184,7 @@ pub fn soroban_decode_arg(
         },
         Type::Uint(64) => decode_u64(wrapper_cfg, vartab, arg),
 
-        Type::Address(_) => arg.clone(),
+        Type::Address(_) | Type::Contract(_) => arg.clone(),
         Type::String => decode_string(arg, wrapper_cfg, vartab),
         Type::DynamicBytes => decode_bytes(arg, wrapper_cfg, vartab),
         Type::Bytes(n) => {
@@ -496,7 +496,7 @@ pub fn soroban_encode_arg(
                 expr: encoded,
             }
         }
-        Type::Address(_) => {
+        Type::Address(_) | Type::Contract(_) => {
             if let Expression::Cast {
                 loc: _,
                 ty: _,

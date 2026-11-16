@@ -2169,7 +2169,7 @@ pub(crate) fn soroban_default_handle(
         Type::Bool | Type::Uint(_) | Type::Int(_) | Type::Enum(_) => {
             soroban_scval_zero(loc, ty, cfg, vartab)
         }
-        Type::Address(_) => soroban_scval_zero(loc, &Type::Void, cfg, vartab),
+        Type::Address(_) | Type::Contract(_) => soroban_scval_zero(loc, &Type::Void, cfg, vartab),
         Type::DynamicBytes => bytes::soroban_bytes_new(loc, cfg, vartab),
         Type::Bytes(_) => {
             let zero = Expression::NumberLiteral {
