@@ -53,6 +53,7 @@ mod liquidity_pool;
 mod mappings;
 mod mappings_batch;
 mod math;
+mod modifiers;
 mod multiple_returns;
 mod nested_structs;
 mod print;

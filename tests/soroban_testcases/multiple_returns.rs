@@ -235,3 +235,27 @@ fn function_pointer_call_returns_all_values() {
     let res = runtime.invoke_contract(addr, "via_pointer", args);
     assert_eq!(<(u64, u64)>::try_from_val(env, &res).unwrap(), (10, 15));
 }
+
+#[test]
+fn modifier_keeps_tuple_spec() {
+    let (wasm, _) = build_wasm(
+        r#"contract test {
+        modifier positive(uint64 x) {
+            require(x > 0);
+            _;
+        }
+
+        function pair(uint64 x) public pure positive(x) returns (uint64, bool) {
+            return (x, true);
+        }
+    }"#,
+    );
+
+    match spec_outputs(&wasm, "pair").as_slice() {
+        [ScSpecTypeDef::Tuple(t)] => assert_eq!(
+            t.value_types.to_vec(),
+            vec![ScSpecTypeDef::U64, ScSpecTypeDef::Bool]
+        ),
+        other => panic!("expected one tuple output, got {other:?}"),
+    }
+}

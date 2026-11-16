@@ -362,6 +362,11 @@ impl SorobanTarget {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
+            // modifiers and functions without a body get an empty placeholder cfg;
+            // there is nothing to emit for them
+            if cfg.is_placeholder() {
+                continue;
+            }
             let ftype = bin.function_type(
                 &cfg.params.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
                 &cfg.returns.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),

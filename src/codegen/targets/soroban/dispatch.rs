@@ -29,15 +29,19 @@ pub fn function_dispatch(
 
     let mut wrapper_cfgs = Vec::new();
 
-    for cfg in all_cfg.iter_mut() {
+    for (cfg_no, cfg) in all_cfg.iter_mut().enumerate() {
+        // A function with modifiers is public through its outermost modifier cfg. That cfg has
+        // no function_no; it keeps the function number in `modifier` instead.
+        let function_no = match cfg.modifier {
+            Some(no) => ASTFunction::SolidityFunction(no),
+            None => cfg.function_no,
+        };
         let wrapper_name = if cfg.public {
             if cfg.name.contains("constructor") {
                 "__constructor".to_string()
             } else {
-                let function = match &cfg.function_no {
-                    ASTFunction::SolidityFunction(no) => &ns.functions[*no],
-
-                    // until this stage, we have processed constructor and storage_initializer, so all that is left is the solidity functions
+                let function = match function_no {
+                    ASTFunction::SolidityFunction(no) => &ns.functions[no],
                     _ => unreachable!(),
                 };
 
@@ -76,7 +80,7 @@ pub fn function_dispatch(
         wrapper_cfg.returns = Arc::new(returns);
 
         wrapper_cfg.public = true;
-        wrapper_cfg.function_no = cfg.function_no;
+        wrapper_cfg.function_no = function_no;
 
         let mut vartab = Vartable::new(ns.next_id);
 
@@ -110,7 +114,7 @@ pub fn function_dispatch(
             wrapper_cfg.add(&mut vartab, placeholder);
 
             // check if constructor exists. If it does, we need to call it
-            if let ASTFunction::SolidityFunction(cfg_no) = cfg.function_no {
+            if let ASTFunction::SolidityFunction(_) = cfg.function_no {
                 // add a call to the constructor
                 let placeholder = Instr::Call {
                     res: call_returns.clone(),
@@ -123,11 +127,6 @@ pub fn function_dispatch(
         }
 
         if wrapper_cfg.name != "__constructor" {
-            let cfg_no = match cfg.function_no {
-                ASTFunction::SolidityFunction(no) => no,
-                _ => unreachable!(),
-            };
-
             let placeholder = Instr::Call {
                 res: call_returns,
                 call: InternalCallTy::Static { cfg_no },
