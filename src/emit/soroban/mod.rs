@@ -281,6 +281,7 @@ impl SorobanTarget {
             ast::Type::String => ScSpecTypeDef::String,
             ast::Type::Void => ScSpecTypeDef::Void,
             ast::Type::Struct(ast::StructType::UserDefined(n)) => Self::udt_spec_type(*n, ns),
+            ast::Type::UserType(n) => Self::type_to_spec(&ns.user_types[*n].ty, ns),
             _ => panic!("unsupported type in spec: {ty:?}"),
         }
     }

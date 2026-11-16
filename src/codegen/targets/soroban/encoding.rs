@@ -173,6 +173,13 @@ pub fn soroban_decode_arg(
     };
 
     match ty {
+        Type::UserType(n) => soroban_decode_arg(
+            arg,
+            wrapper_cfg,
+            vartab,
+            ns,
+            Some(ns.user_types[n].ty.clone()),
+        ),
         Type::Bool => Expression::NotEqual {
             loc: Loc::Codegen,
             left: arg.into(),
@@ -183,7 +190,6 @@ pub fn soroban_decode_arg(
             }),
         },
         Type::Uint(64) => decode_u64(wrapper_cfg, vartab, arg),
-
         Type::Address(_) | Type::Contract(_) => arg.clone(),
         Type::String => decode_string(arg, wrapper_cfg, vartab),
         Type::DynamicBytes => decode_bytes(arg, wrapper_cfg, vartab),
@@ -318,6 +324,11 @@ pub fn soroban_encode_arg(
     vartab: &mut Vartable,
     ns: &Namespace,
 ) -> Expression {
+    if let Type::UserType(n) = item.ty() {
+        let inner = ns.user_types[n].ty.clone();
+        return soroban_encode_arg(item.cast(&inner, ns), cfg, vartab, ns);
+    }
+
     if let Type::Bytes(n) = item.ty() {
         let as_dyn = Expression::BytesCast {
             loc: item.loc(),
