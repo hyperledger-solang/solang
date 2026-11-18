@@ -58,6 +58,7 @@ mod modifiers;
 mod multiple_returns;
 mod nested_structs;
 mod print;
+mod range_checks;
 mod sha256;
 mod storage;
 mod storage_array;
