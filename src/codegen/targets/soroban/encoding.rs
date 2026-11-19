@@ -2666,6 +2666,27 @@ fn vals_to_buffer(
     buf
 }
 
+pub(crate) fn returned_vec_to_buffer(
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let vec = Expression::Builtin {
+        loc: Loc::Codegen,
+        tys: vec![Type::Uint(64)],
+        kind: Builtin::ReadFromBuffer,
+        args: vec![
+            Expression::ReturnData { loc: Loc::Codegen },
+            Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(32),
+                value: BigInt::zero(),
+            },
+        ],
+    };
+    let vec = save_in_temp(vec, Type::Uint(64), cfg, vartab);
+    vals_to_buffer(vec, cfg, vartab)
+}
+
 pub(crate) fn encode_as_symbol(
     item: Expression,
     cfg: &mut ControlFlowGraph,
