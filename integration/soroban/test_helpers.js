@@ -91,7 +91,17 @@ export async function call_contract_function(method, server, keypair, contract, 
             method,
             params
         );
-        const preparedTransaction = await server.prepareTransaction(builtTransaction);
+        // Simulate first: on failure, the contract's logs and the host's error
+        // messages are in the diagnostic events, not in the error string.
+        const simulation = await server.simulateTransaction(builtTransaction);
+        if (StellarSdk.rpc.Api.isSimulationError(simulation)) {
+            result.status = "ERROR";
+            result.error = "Simulation failed: " + simulation.error + "\n" + describeEvents(simulation.events);
+            result.raw = simulation;
+            return result;
+        }
+
+        const preparedTransaction = StellarSdk.rpc.assembleTransaction(builtTransaction, simulation).build();
         preparedTransaction.sign(keypair);
 
         const sendResponse = await server.sendTransaction(preparedTransaction);
@@ -146,6 +156,15 @@ export function extractLogMessagesFromDiagnosticEvents(raw) {
       .map(ev => (Array.isArray(ev.data) ? ev.data.join(" ") : ev.data));
   } catch (e) {
     return [];
+  }
+}
+
+// Turns diagnostic events into readable text (logs, host error messages)
+function describeEvents(events) {
+  try {
+    return toSafeJson(StellarSdk.humanizeEvents(events ?? []));
+  } catch (e) {
+    return (events ?? []).map(ev => ev.toXDR('base64')).join("\n");
   }
 }
 
