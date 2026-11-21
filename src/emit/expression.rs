@@ -1713,16 +1713,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 })
                 .into()
         }
+
         Expression::ShiftLeft { left, right, .. } => {
             let left = expression(target, bin, left, vartab, function).into_int_value();
             let right = expression(target, bin, right, vartab, function).into_int_value();
 
+            let shifted = bin.builder.build_left_shift(left, right, "").unwrap();
+            // LLVM leaves a shift by the bit width or more undefined; Solidity gives 0.
+            let too_big = shift_too_big(bin, left, right);
             bin.builder
-                .build_left_shift(left, right, "")
-                .unwrap_or_else(|err| {
-                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
-                })
-                .into()
+                .build_select(too_big, left.get_type().const_zero(), shifted, "")
+                .unwrap()
         }
         Expression::ShiftRight {
             left,
@@ -1733,13 +1734,26 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let left = expression(target, bin, left, vartab, function).into_int_value();
             let right = expression(target, bin, right, vartab, function).into_int_value();
 
-            bin.builder
+            let shifted = bin
+                .builder
                 .build_right_shift(left, right, *signed, "")
-                .unwrap_or_else(|err| {
-                    panic!("{}", CodegenError::llvm_builder("emitting expression", err))
-                })
-                .into()
+                .unwrap();
+            // Shifting out every bit leaves 0, or -1 (all sign bits) for a negative signed value.
+            let all_out = if *signed {
+                let width_minus_one = left.get_type().get_bit_width() as u64 - 1;
+                let max_shift = left.get_type().const_int(width_minus_one, false);
+                bin.builder
+                    .build_right_shift(left, max_shift, true, "")
+                    .unwrap()
+            } else {
+                left.get_type().const_zero()
+            };
+            let too_big = shift_too_big(bin, left, right);
+            bin.builder
+                .build_select(too_big, all_out, shifted, "")
+                .unwrap()
         }
+
         Expression::Subscript {
             loc,
             ty: elem_ty,
@@ -3428,4 +3442,13 @@ fn basic_value_to_slice<'a>(
             "unsupported source expression",
         ),
     }
+}
+
+fn shift_too_big<'a>(bin: &Binary<'a>, left: IntValue<'a>, right: IntValue<'a>) -> IntValue<'a> {
+    let width = right
+        .get_type()
+        .const_int(left.get_type().get_bit_width() as u64, false);
+    bin.builder
+        .build_int_compare(IntPredicate::UGE, right, width, "shift_too_big")
+        .unwrap()
 }

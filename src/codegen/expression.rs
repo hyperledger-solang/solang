@@ -3436,18 +3436,40 @@ pub fn emit_function_call(
                     }
                 };
 
-                let selector = dest_func.selector(ns, &caller_contract_no);
+                if ns.target == Target::Soroban {
+                    // Soroban picks the function by name, not by a 4-byte selector. Use the
+                    // name the callee exports (same rule as soroban/dispatch.rs).
+                    let name = match dest_func.contract_no {
+                        Some(no) if dest_func.mangled_name_contracts.contains(&no) => {
+                            dest_func.mangled_name.clone()
+                        }
+                        _ => dest_func.id.name.clone(),
+                    };
 
-                tys.insert(0, Type::Bytes(selector.len() as u8));
+                    tys.insert(0, Type::String);
 
-                args.insert(
-                    0,
-                    Expression::BytesLiteral {
-                        loc: *loc,
-                        ty: Type::Bytes(selector.len() as u8),
-                        value: selector,
-                    },
-                );
+                    args.insert(
+                        0,
+                        Expression::BytesLiteral {
+                            loc: *loc,
+                            ty: Type::String,
+                            value: name.into_bytes(),
+                        },
+                    );
+                } else {
+                    let selector = dest_func.selector(ns, &caller_contract_no);
+
+                    tys.insert(0, Type::Bytes(selector.len() as u8));
+
+                    args.insert(
+                        0,
+                        Expression::BytesLiteral {
+                            loc: *loc,
+                            ty: Type::Bytes(selector.len() as u8),
+                            value: selector,
+                        },
+                    );
+                }
 
                 let (payload, _) = target.abi_encode(loc, args, ns, vartab, cfg, false);
 
@@ -3492,15 +3514,14 @@ pub fn emit_function_call(
                         .iter()
                         .map(|e| e.ty.clone())
                         .collect::<Vec<Type>>();
-                    target.abi_decode(
-                        loc,
-                        &Expression::ReturnData { loc: *loc },
-                        &tys,
-                        ns,
-                        vartab,
-                        cfg,
-                        None,
-                    )
+                    let buffer = if ns.target == Target::Soroban && tys.len() > 1 {
+                        crate::codegen::targets::soroban::encoding::returned_vec_to_buffer(
+                            cfg, vartab,
+                        )
+                    } else {
+                        Expression::ReturnData { loc: *loc }
+                    };
+                    target.abi_decode(loc, &buffer, &tys, ns, vartab, cfg, None)
                 } else {
                     vec![Expression::Poison]
                 }

@@ -276,11 +276,12 @@ impl SorobanTarget {
             ast::Type::Int(_) => ScSpecTypeDef::I32,
             ast::Type::Uint(_) => ScSpecTypeDef::U32,
             ast::Type::Bool => ScSpecTypeDef::Bool,
-            ast::Type::Address(_) => ScSpecTypeDef::Address,
+            ast::Type::Address(_) | ast::Type::Contract(_) => ScSpecTypeDef::Address,
             ast::Type::Bytes(_) | ast::Type::DynamicBytes => ScSpecTypeDef::Bytes,
             ast::Type::String => ScSpecTypeDef::String,
             ast::Type::Void => ScSpecTypeDef::Void,
             ast::Type::Struct(ast::StructType::UserDefined(n)) => Self::udt_spec_type(*n, ns),
+            ast::Type::UserType(n) => Self::type_to_spec(&ns.user_types[*n].ty, ns),
             _ => panic!("unsupported type in spec: {ty:?}"),
         }
     }
@@ -362,6 +363,11 @@ impl SorobanTarget {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in contract.cfg.iter().enumerate() {
+            // modifiers and functions without a body get an empty placeholder cfg;
+            // there is nothing to emit for them
+            if cfg.is_placeholder() {
+                continue;
+            }
             let ftype = bin.function_type(
                 &cfg.params.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
                 &cfg.returns.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),

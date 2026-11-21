@@ -173,18 +173,44 @@ pub fn soroban_decode_arg(
     };
 
     match ty {
-        Type::Bool => Expression::NotEqual {
-            loc: Loc::Codegen,
-            left: arg.into(),
-            right: Box::new(Expression::NumberLiteral {
-                loc: Loc::Codegen,
-                ty: Type::Uint(64),
-                value: 0u64.into(),
-            }),
-        },
-        Type::Uint(64) => decode_u64(wrapper_cfg, vartab, arg),
+        Type::UserType(n) => soroban_decode_arg(
+            arg,
+            wrapper_cfg,
+            vartab,
+            ns,
+            Some(ns.user_types[n].ty.clone()),
+        ),
 
-        Type::Address(_) => arg.clone(),
+        Type::Bool => {
+            // A bool Val is exactly 0 (false) or 1 (true); anything else reverts.
+            let val = save_in_temp(arg, Type::Uint(64), wrapper_cfg, vartab);
+            let not_bool = Expression::More {
+                loc: Loc::Codegen,
+                signed: false,
+                left: val.clone().into(),
+                right: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: 1u64.into(),
+                }
+                .into(),
+            };
+            revert_if(not_bool, "bool", wrapper_cfg, vartab);
+
+            Expression::NotEqual {
+                loc: Loc::Codegen,
+                left: val.into(),
+                right: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: 0u64.into(),
+                }
+                .into(),
+            }
+        }
+
+        Type::Uint(64) => decode_u64(wrapper_cfg, vartab, arg),
+        Type::Address(_) | Type::Contract(_) => arg.clone(),
         Type::String => decode_string(arg, wrapper_cfg, vartab),
         Type::DynamicBytes => decode_bytes(arg, wrapper_cfg, vartab),
         Type::Bytes(n) => {
@@ -199,7 +225,23 @@ pub fn soroban_decode_arg(
 
         Type::Enum(enum_no) => {
             let decoded = soroban_decode_arg(arg, wrapper_cfg, vartab, ns, Some(Type::Uint(32)));
-            decoded.cast(&Type::Enum(enum_no), ns)
+            let value = save_in_temp(decoded, Type::Uint(32), wrapper_cfg, vartab);
+
+            // Solidity reverts when the number is not a member of the enum.
+            let members = Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(32),
+                value: BigInt::from(ns.enums[enum_no].values.len()),
+            };
+            let too_big = Expression::MoreEqual {
+                loc: Loc::Codegen,
+                signed: false,
+                left: value.clone().into(),
+                right: members.into(),
+            };
+            revert_if(too_big, "enum", wrapper_cfg, vartab);
+
+            value.cast(&Type::Enum(enum_no), ns)
         }
 
         Type::Int(128) | Type::Uint(128) => decode_i128(wrapper_cfg, vartab, arg, &ty),
@@ -267,6 +309,44 @@ pub fn soroban_decode_arg(
     }
 }
 
+fn save_in_temp(
+    expr: Expression,
+    ty: Type,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let var_no = vartab.temp_anonymous(&ty);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Loc::Codegen,
+            res: var_no,
+            expr,
+        },
+    );
+    Expression::Variable {
+        loc: Loc::Codegen,
+        ty,
+        var_no,
+    }
+}
+
+fn revert_if(cond: Expression, name: &str, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
+    let invalid = cfg.new_basic_block(format!("{name}_invalid"));
+    let valid = cfg.new_basic_block(format!("{name}_valid"));
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond,
+            true_block: invalid,
+            false_block: valid,
+        },
+    );
+    cfg.set_basic_block(invalid);
+    cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
+    cfg.set_basic_block(valid);
+}
+
 pub fn soroban_storage_decode_arg(
     arg: Expression,
     wrapper_cfg: &mut ControlFlowGraph,
@@ -318,6 +398,11 @@ pub fn soroban_encode_arg(
     vartab: &mut Vartable,
     ns: &Namespace,
 ) -> Expression {
+    if let Type::UserType(n) = item.ty() {
+        let inner = ns.user_types[n].ty.clone();
+        return soroban_encode_arg(item.cast(&inner, ns), cfg, vartab, ns);
+    }
+
     if let Type::Bytes(n) = item.ty() {
         let as_dyn = Expression::BytesCast {
             loc: item.loc(),
@@ -496,7 +581,7 @@ pub fn soroban_encode_arg(
                 expr: encoded,
             }
         }
-        Type::Address(_) => {
+        Type::Address(_) | Type::Contract(_) => {
             if let Expression::Cast {
                 loc: _,
                 ty: _,
@@ -2579,6 +2664,27 @@ fn vals_to_buffer(
     );
 
     buf
+}
+
+pub(crate) fn returned_vec_to_buffer(
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> Expression {
+    let vec = Expression::Builtin {
+        loc: Loc::Codegen,
+        tys: vec![Type::Uint(64)],
+        kind: Builtin::ReadFromBuffer,
+        args: vec![
+            Expression::ReturnData { loc: Loc::Codegen },
+            Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(32),
+                value: BigInt::zero(),
+            },
+        ],
+    };
+    let vec = save_in_temp(vec, Type::Uint(64), cfg, vartab);
+    vals_to_buffer(vec, cfg, vartab)
 }
 
 pub(crate) fn encode_as_symbol(
