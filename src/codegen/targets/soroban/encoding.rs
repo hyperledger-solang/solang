@@ -181,6 +181,52 @@ pub fn soroban_decode_arg(
             Some(ns.user_types[n].ty.clone()),
         ),
 
+        // uint8, int40, ...: the Val holds the wider Soroban width (uint8 comes in as a U32).
+        // Decode at that width, revert if the value doesn't fit in n bits, then keep the low n bits.
+        Type::Uint(n) | Type::Int(n) if Type::get_soroban_int_width(n) != n => {
+            let wire = ty.soroban_wire_type();
+            let signed = matches!(ty, Type::Int(_));
+            let decoded = soroban_decode_arg(arg, wrapper_cfg, vartab, ns, Some(wire.clone()));
+            let value = save_in_temp(decoded, wire.clone(), wrapper_cfg, vartab);
+
+            let bound = |value: BigInt| {
+                Box::new(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: wire.clone(),
+                    value,
+                })
+            };
+            let (min, max) = if signed {
+                let half = BigInt::from(1) << (n as usize - 1);
+                (-half.clone(), half - 1)
+            } else {
+                (BigInt::zero(), (BigInt::from(1) << n as usize) - 1)
+            };
+
+            let too_big = Expression::More {
+                loc: Loc::Codegen,
+                signed,
+                left: value.clone().into(),
+                right: bound(max),
+            };
+            revert_if(too_big, "int_range", wrapper_cfg, vartab);
+            if signed {
+                let too_small = Expression::Less {
+                    loc: Loc::Codegen,
+                    signed,
+                    left: value.clone().into(),
+                    right: bound(min),
+                };
+                revert_if(too_small, "int_range", wrapper_cfg, vartab);
+            }
+
+            Expression::Trunc {
+                loc: Loc::Codegen,
+                ty: ty.clone(),
+                expr: value.into(),
+            }
+        }
+
         Type::Bool => {
             // A bool Val is exactly 0 (false) or 1 (true); anything else reverts.
             let val = save_in_temp(arg, Type::Uint(64), wrapper_cfg, vartab);
@@ -411,6 +457,30 @@ pub fn soroban_encode_arg(
             expr: Box::new(item),
         };
         return soroban_encode_arg(as_dyn, cfg, vartab, ns);
+    }
+
+    // uint8, int40, ...: widen to the Soroban width first (uint8 leaves as a U32).
+    // uint is padded with zeros, int with copies of its sign bit.
+    if let ty @ (Type::Uint(_) | Type::Int(_)) = item.ty() {
+        let wire = ty.soroban_wire_type();
+        if wire != ty {
+            let loc = item.loc();
+            let expr = Box::new(item);
+            let widened = if let Type::Int(_) = ty {
+                Expression::SignExt {
+                    loc,
+                    ty: wire,
+                    expr,
+                }
+            } else {
+                Expression::ZeroExt {
+                    loc,
+                    ty: wire,
+                    expr,
+                }
+            };
+            return soroban_encode_arg(widened, cfg, vartab, ns);
+        }
     }
 
     let obj = vartab.temp_name("obj_".to_string().as_str(), &Type::Uint(64));
@@ -1641,11 +1711,8 @@ fn decode_i256(
 }
 
 fn decode_u64(cfg: &mut ControlFlowGraph, vartab: &mut Vartable, arg: Expression) -> Expression {
-    let ty = match arg.ty() {
-        Type::Ref(inner_ty) => *inner_ty.clone(),
-        Type::SorobanHandle(inner_ty) => *inner_ty.clone(),
-        _ => arg.ty(),
-    };
+    // Always uint64, even if `arg` is typed e.g. uint40 (which travels as a U64).
+    let ty = Type::Uint(64);
 
     let ret_var = vartab.temp_anonymous(&ty);
 

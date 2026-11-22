@@ -196,6 +196,17 @@ impl Type {
         }
     }
 
+    /// The type a value has when it crosses the Soroban boundary. Soroban only has
+    /// 32, 64, 128 and 256-bit integers, so e.g. `uint8` travels as `uint32` and
+    /// `int40` as `int64`. Every other type is returned unchanged.
+    pub fn soroban_wire_type(&self) -> Type {
+        match self {
+            Type::Uint(n) => Type::Uint(Self::get_soroban_int_width(*n)),
+            Type::Int(n) => Type::Int(Self::get_soroban_int_width(*n)),
+            _ => self.clone(),
+        }
+    }
+
     /// Check if an integer width is Soroban-compatible
     pub fn is_soroban_compatible_width(width: u16) -> bool {
         matches!(width, 32 | 64 | 128 | 256)

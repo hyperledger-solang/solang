@@ -2113,7 +2113,7 @@ fn soroban_scval_zero(
     vartab: &mut Vartable,
 ) -> Expression {
     use encoding::tags;
-    let tag: u64 = match ty {
+    let tag: u64 = match ty.soroban_wire_type() {
         Type::Bool => tags::FALSE,
         Type::Uint(32) => tags::U32,
         Type::Int(32) => tags::I32,

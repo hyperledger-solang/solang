@@ -1192,14 +1192,7 @@ impl Namespace {
                         Type::Address(true)
                     }
                 }
-                _ => {
-                    let mut ty = Type::from(ty);
-                    // Apply Soroban integer width rounding if target is Soroban
-                    if self.target == Target::Soroban {
-                        ty = ty.round_soroban_width(self, id.loc());
-                    }
-                    ty
-                }
+                _ => Type::from(ty),
             };
 
             return if dimensions.is_empty() {
