@@ -1635,7 +1635,11 @@ pub(super) fn resolve_method_call(
 
     let funcs: Vec<_> = BUILTIN_METHODS
         .iter()
-        .filter(|func| func.name == id.name && func.method.contains(deref_ty))
+        .filter(|func| {
+            func.name == id.name
+                && func.method.contains(deref_ty)
+                && (func.target.is_empty() || func.target.contains(&ns.target))
+        })
         .collect();
 
     // try to resolve the arguments, give up if there are any errors
@@ -1713,6 +1717,19 @@ pub(super) fn resolve_method_call(
     }
 
     if funcs.is_empty() {
+        if BUILTIN_METHODS
+            .iter()
+            .any(|func| func.name == id.name && func.method.contains(deref_ty))
+        {
+            diagnostics.push(Diagnostic::error(
+                id.loc,
+                format!(
+                    "method '{}' is not available on target {}",
+                    id.name, ns.target
+                ),
+            ));
+            return Err(());
+        }
         Ok(None)
     } else {
         diagnostics.extend(call_diagnostics);
