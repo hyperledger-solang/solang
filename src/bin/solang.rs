@@ -498,6 +498,16 @@ fn save_intermediates(
 
             bin.dump_llvm(&llvm_filename).unwrap();
 
+            if let Some(runtime) = &bin.runtime {
+                let runtime_filename = output_file(
+                    compiler_output,
+                    &format!("{}.runtime", bin.name),
+                    "ll",
+                    false,
+                );
+                runtime.dump_llvm(&runtime_filename).unwrap();
+            }
+
             true
         }
 
