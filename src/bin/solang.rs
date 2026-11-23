@@ -129,12 +129,7 @@ fn doc(doc_args: Doc) {
     let mut files = Vec::new();
 
     for filename in doc_args.package.input {
-        let ns = solang::parse_and_resolve_with_options(
-            filename.as_os_str(),
-            &mut resolver,
-            target,
-            None,
-        );
+        let ns = solang::parse_and_resolve(filename.as_os_str(), &mut resolver, target);
 
         ns.print_diagnostics(&resolver, verbose);
 
@@ -327,8 +322,7 @@ fn process_file(
     };
 
     // resolve phase
-    let mut ns =
-        solang::parse_and_resolve_with_options(filepath.as_os_str(), resolver, target, Some(opt));
+    let mut ns = solang::parse_and_resolve(filepath.as_os_str(), resolver, target);
 
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, opt);

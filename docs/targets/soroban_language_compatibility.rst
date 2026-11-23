@@ -154,17 +154,23 @@ See `tests/soroban_testcases/events.rs <https://github.com/hyperledger-solang/so
 Integer Widths
 ++++++++++++++
 
-Soroban only natively supports integer widths ``32``, ``64``, ``128``, and ``256``.
-When a contract uses another integer width, Solang rounds the width up to the next supported Soroban size:
+Soroban values only have integer widths ``32``, ``64``, ``128``, and ``256``.
+Other widths, such as ``uint8`` or ``int56``, keep their declared width inside the contract,
+so overflow checks, shifts, ``~`` and conversions to ``bytesN`` behave as in Solidity.
+For example, ``uint8(200) + uint8(100)`` reverts.
 
-- ``1..=32`` becomes ``32``
-- ``33..=64`` becomes ``64``
-- ``65..=128`` becomes ``128``
-- ``129..=256`` becomes ``256``
+When such a value crosses the contract boundary (function arguments and return values,
+storage, events, and elements of vectors and structs), it travels as the next Soroban width,
+and the contract spec describes it with that type:
 
-By default, this produces a warning. If you compile with ``--strict-soroban-types``, the same cases become compilation errors instead.
+- ``1..=32`` travels as ``U32`` / ``I32``
+- ``33..=64`` travels as ``U64`` / ``I64``
+- ``65..=128`` travels as ``U128`` / ``I128``
+- ``129..=256`` travels as ``U256`` / ``I256``
 
-This is another case where Solang preserves Solidity source compatibility where practical, but makes the Soroban-specific constraint visible rather than silently pretending arbitrary integer widths are native to the runtime.
+A value coming in that does not fit the declared width reverts. For example, passing the
+``U32`` value ``256`` to a ``uint8`` parameter reverts. This matches how a Rust Soroban
+contract converts a ``u32`` argument into a ``u8`` with ``try_into()``.
 
 Current Expectation
 +++++++++++++++++++

@@ -146,45 +146,6 @@ impl Type {
         }
     }
 
-    /// Round integer width to Soroban-compatible size and emit warning if needed
-    pub fn round_soroban_width(&self, ns: &mut Namespace, loc: pt::Loc) -> Type {
-        match self {
-            Type::Int(width) => {
-                let rounded_width = Self::get_soroban_int_width(*width);
-                if rounded_width != *width {
-                    let message = format!(
-                        "int{width} is not supported by the Soroban runtime and will be rounded up to int{rounded_width}"
-                    );
-                    if ns.strict_soroban_types {
-                        ns.diagnostics.push(Diagnostic::error(loc, message));
-                    } else {
-                        ns.diagnostics.push(Diagnostic::warning(loc, message));
-                    }
-                    Type::Int(rounded_width)
-                } else {
-                    Type::Int(*width)
-                }
-            }
-            Type::Uint(width) => {
-                let rounded_width = Self::get_soroban_int_width(*width);
-                if rounded_width != *width {
-                    let message = format!(
-                        "uint{width} is not supported by the Soroban runtime and will be rounded up to uint{rounded_width}"
-                    );
-                    if ns.strict_soroban_types {
-                        ns.diagnostics.push(Diagnostic::error(loc, message));
-                    } else {
-                        ns.diagnostics.push(Diagnostic::warning(loc, message));
-                    }
-                    Type::Uint(rounded_width)
-                } else {
-                    Type::Uint(*width)
-                }
-            }
-            _ => self.clone(),
-        }
-    }
-
     /// Get the Soroban-compatible integer width by rounding up to the next supported size
     pub fn get_soroban_int_width(width: u16) -> u16 {
         match width {
@@ -205,11 +166,6 @@ impl Type {
             Type::Int(n) => Type::Int(Self::get_soroban_int_width(*n)),
             _ => self.clone(),
         }
-    }
-
-    /// Check if an integer width is Soroban-compatible
-    pub fn is_soroban_compatible_width(width: u16) -> bool {
-        matches!(width, 32 | 64 | 128 | 256)
     }
 }
 
@@ -771,8 +727,6 @@ pub struct Namespace {
     pub var_constants: HashMap<pt::Loc, codegen::Expression>,
     /// Overrides for hover in the language server
     pub hover_overrides: HashMap<pt::Loc, String>,
-    /// Strict mode for Soroban integer width checking
-    pub strict_soroban_types: bool,
 }
 
 #[derive(Debug)]

@@ -4,7 +4,7 @@
 //! width inside the contract, and cross the boundary as the next Soroban width.
 
 use crate::build_solidity;
-use soroban_sdk::{Bytes, Env, FromVal, IntoVal, Symbol, Val, Vec as SVec};
+use soroban_sdk::{Bytes, Env, FromVal, IntoVal, Symbol, Val, Vec as SVec, U256};
 
 fn reverts(env: &Env, addr: &soroban_sdk::Address, f: &str, args: SVec<Val>) -> bool {
     env.try_invoke_contract::<Val, Val>(addr, &Symbol::new(env, f), args)
@@ -159,5 +159,72 @@ fn small_int_storage_and_arrays() {
         addr,
         "arr",
         soroban_sdk::vec![env, bad.into_val(env)]
+    ));
+}
+
+#[test]
+fn odd_widths_travel_as_next_soroban_width() {
+    let runtime = build_solidity(
+        r#"contract C {
+            function i56(int56 a) public pure returns (int56) { return a; }
+            function u96(uint96 a) public pure returns (uint96) { return a; }
+            function i96(int96 a) public pure returns (int96) { return a; }
+            function u200(uint200 a) public pure returns (uint200) { return a; }
+        }"#,
+        |_| {},
+    );
+    let addr = runtime.contracts.last().unwrap();
+    let env = &runtime.env;
+
+    // int56 is an I64: [-2^55, 2^55 - 1]
+    for v in [-(1_i64 << 55), (1_i64 << 55) - 1] {
+        let res = runtime.invoke_contract(addr, "i56", vec![v.into_val(env)]);
+        assert_eq!(i64::from_val(env, &res), v);
+    }
+    assert!(reverts(
+        env,
+        addr,
+        "i56",
+        soroban_sdk::vec![env, (1_i64 << 55).into_val(env)]
+    ));
+    assert!(reverts(
+        env,
+        addr,
+        "i56",
+        soroban_sdk::vec![env, (-(1_i64 << 55) - 1).into_val(env)]
+    ));
+
+    // uint96 is a U128: [0, 2^96 - 1]
+    let max96 = (1_u128 << 96) - 1;
+    let res = runtime.invoke_contract(addr, "u96", vec![max96.into_val(env)]);
+    assert_eq!(u128::from_val(env, &res), max96);
+    assert!(reverts(
+        env,
+        addr,
+        "u96",
+        soroban_sdk::vec![env, (1_u128 << 96).into_val(env)]
+    ));
+
+    // int96 is an I128: [-2^95, 2^95 - 1]
+    let min96 = -(1_i128 << 95);
+    let res = runtime.invoke_contract(addr, "i96", vec![min96.into_val(env)]);
+    assert_eq!(i128::from_val(env, &res), min96);
+    assert!(reverts(
+        env,
+        addr,
+        "i96",
+        soroban_sdk::vec![env, (min96 - 1).into_val(env)]
+    ));
+
+    // uint200 is a U256: [0, 2^200 - 1]
+    let max200 = U256::from_u32(env, 1).shl(200).sub(&U256::from_u32(env, 1));
+    let res = runtime.invoke_contract(addr, "u200", vec![max200.clone().into_val(env)]);
+    assert_eq!(U256::from_val(env, &res), max200);
+    let too_big = U256::from_u32(env, 1).shl(200);
+    assert!(reverts(
+        env,
+        addr,
+        "u200",
+        soroban_sdk::vec![env, too_big.into_val(env)]
     ));
 }

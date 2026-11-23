@@ -66,7 +66,6 @@ impl Namespace {
             next_id: 0,
             var_constants: HashMap::new(),
             hover_overrides: HashMap::new(),
-            strict_soroban_types: false,
         };
 
         match target {

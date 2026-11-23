@@ -651,7 +651,7 @@ fn single_bytes32_field() {
 }
 
 #[test]
-fn single_uint8_rounds_to_u32() {
+fn single_uint8_travels_as_u32() {
     let runtime = build_solidity(
         r#"
         contract test {
