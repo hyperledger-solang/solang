@@ -791,7 +791,7 @@ pub fn type_to_tagged_zero_val<'ctx>(bin: &Binary<'ctx>, ty: &Type) -> IntValue<
     let i64_type = context.i64_type();
 
     // Tag definitions from CAP-0046
-    let tag = match ty {
+    let tag = match ty.soroban_wire_type() {
         Type::Bool => 0,                            // Tag::False
         Type::Uint(32) => 4,                        // Tag::U32Val
         Type::Int(32) => 5,                         // Tag::I32Val

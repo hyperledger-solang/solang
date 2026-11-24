@@ -273,8 +273,10 @@ impl SorobanTarget {
             ast::Type::Uint(128) => ScSpecTypeDef::U128,
             ast::Type::Int(256) => ScSpecTypeDef::I256,
             ast::Type::Uint(256) => ScSpecTypeDef::U256,
-            ast::Type::Int(_) => ScSpecTypeDef::I32,
-            ast::Type::Uint(_) => ScSpecTypeDef::U32,
+            // uint8, int40, ...: described by the Soroban width they travel as.
+            ast::Type::Int(_) | ast::Type::Uint(_) => {
+                Self::type_to_spec(&ty.soroban_wire_type(), ns)
+            }
             ast::Type::Bool => ScSpecTypeDef::Bool,
             ast::Type::Address(_) | ast::Type::Contract(_) => ScSpecTypeDef::Address,
             ast::Type::Bytes(_) | ast::Type::DynamicBytes => ScSpecTypeDef::Bytes,

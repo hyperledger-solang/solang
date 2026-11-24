@@ -215,7 +215,6 @@ mod tests {
                     log_prints: true,
                     generate_debug_info: false,
                     release: false,
-                    strict_soroban_types: false,
                 },
                 optimizations: cli::Optimizations {
                     dead_storage: true,
@@ -271,7 +270,6 @@ mod tests {
                     log_prints: true,
                     generate_debug_info: false,
                     release: false,
-                    strict_soroban_types: false,
                 },
                 optimizations: cli::Optimizations {
                     dead_storage: false,
