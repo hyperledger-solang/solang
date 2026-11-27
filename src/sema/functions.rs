@@ -462,6 +462,22 @@ pub fn contract_function(
         ))
     }
 
+    if ns.target == Target::Soroban
+        && (matches!(
+            visibility,
+            pt::Visibility::Public(_) | pt::Visibility::External(_)
+        ) || func.ty == pt::FunctionTy::Constructor)
+        && params.len() > 10
+    {
+        ns.diagnostics.push(Diagnostic::error(
+            func.loc_prototype,
+            format!(
+                "Soroban functions can have at most 10 parameters, found {}",
+                params.len()
+            ),
+        ))
+    }
+
     let mut fdecl = Function::new(
         func.loc_prototype,
         func.loc,
