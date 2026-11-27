@@ -123,3 +123,74 @@ fn unsupported_event_parameters_are_rejected() {
     assert!(errors.iter().any(|diagnostic| diagnostic.message
         == "type 'struct test.Item' is not supported as a Soroban event parameter"));
 }
+
+#[test]
+fn function_parameter_count_limit() {
+    // 10 parameters on a public function and 11 parameters on an internal function are allowed.
+    let ns = compile_soroban(
+        r#"contract test {
+    function ten_params(
+        uint32 a, uint32 b, uint32 c, uint32 d, uint32 e,
+        uint32 f, uint32 g, uint32 h, uint32 i, uint32 j
+    ) public pure returns (uint32) {
+        return a;
+    }
+
+    function eleven_internal(
+        uint32 a, uint32 b, uint32 c, uint32 d, uint32 e,
+        uint32 f, uint32 g, uint32 h, uint32 i, uint32 j, uint32 k
+    ) internal pure returns (uint32) {
+        return a + k;
+    }
+}"#,
+    );
+
+    let errors = ns
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.level == Level::Error)
+        .collect::<Vec<_>>();
+    assert!(errors.is_empty(), "{errors:?}");
+
+    // 11 parameters on a public function should emit a diagnostic instead of panicking.
+    let ns = compile_soroban(
+        r#"contract test {
+    function eleven_public(
+        uint32 a, uint32 b, uint32 c, uint32 d, uint32 e,
+        uint32 f, uint32 g, uint32 h, uint32 i, uint32 j, uint32 k
+    ) public pure returns (uint32) {
+        return a;
+    }
+}"#,
+    );
+
+    let errors = ns
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.level == Level::Error)
+        .collect::<Vec<_>>();
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(errors.iter().any(|diagnostic| {
+        diagnostic.message == "Soroban functions can have at most 10 parameters, found 11"
+    }));
+
+    // 11 parameters on a constructor should also emit a diagnostic instead of panicking.
+    let ns = compile_soroban(
+        r#"contract test {
+    constructor(
+        uint32 a, uint32 b, uint32 c, uint32 d, uint32 e,
+        uint32 f, uint32 g, uint32 h, uint32 i, uint32 j, uint32 k
+    ) {}
+}"#,
+    );
+
+    let errors = ns
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.level == Level::Error)
+        .collect::<Vec<_>>();
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(errors.iter().any(|diagnostic| {
+        diagnostic.message == "Soroban functions can have at most 10 parameters, found 11"
+    }));
+}
